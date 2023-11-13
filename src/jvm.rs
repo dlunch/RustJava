@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use crate::{class::Class, class_loader::ClassLoader};
+use crate::{class::Class, class_loader::ClassLoader, JvmResult};
 
 #[derive(Default)]
 pub struct Jvm {
@@ -19,7 +19,7 @@ impl Jvm {
         self.class_loaders.push(Box::new(class_loader));
     }
 
-    pub fn resolve_class(&mut self, class_name: &str) -> anyhow::Result<Option<Class>> {
+    pub fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Class>> {
         for class_loader in &mut self.class_loaders {
             if let Some(x) = class_loader.load(class_name)? {
                 return Ok(Some(x));
