@@ -17,7 +17,7 @@ impl FileClassLoader {
 impl ClassLoader for FileClassLoader {
     fn load(&mut self, class_name: &str) -> anyhow::Result<Option<Class>> {
         if class_name == self.class_name {
-            let class = FileClassLoader::parse_class(&self.data)?;
+            let class = Class::from_classfile(&self.data)?;
 
             Ok(Some(class))
         } else {
@@ -33,8 +33,12 @@ fn test_hello() -> anyhow::Result<()> {
     let mut jvm = Jvm::new();
     jvm.add_class_loader(FileClassLoader::new("Hello", hello));
 
-    let class = jvm.resolve_class("Hello")?;
-    assert!(class.is_some());
+    let class = jvm.resolve_class("Hello")?.unwrap();
+
+    assert_eq!(class.name, "Hello");
+    assert_eq!(class.methods.len(), 2);
+    assert!(class.method("<init>", "()V").is_some());
+    assert!(class.method("main", "([Ljava/lang/String;)V").is_some());
 
     Ok(())
 }

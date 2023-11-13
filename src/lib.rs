@@ -4,6 +4,7 @@ extern crate alloc;
 mod class;
 mod class_loader;
 mod jvm;
+mod method;
 
 pub type JvmResult<T> = anyhow::Result<T>;
 
