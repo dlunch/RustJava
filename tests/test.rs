@@ -33,12 +33,7 @@ fn test_hello() -> anyhow::Result<()> {
     let mut jvm = Jvm::new();
     jvm.add_class_loader(FileClassLoader::new("Hello", hello));
 
-    let class = jvm.resolve_class("Hello")?.unwrap();
-
-    assert_eq!(class.name, "Hello");
-    assert_eq!(class.methods.len(), 2);
-    assert!(class.method("<init>", "()V").is_some());
-    assert!(class.method("main", "([Ljava/lang/String;)V").is_some());
+    jvm.invoke_static_method("Hello", "main", "([Ljava/lang/String;)V")?;
 
     Ok(())
 }
