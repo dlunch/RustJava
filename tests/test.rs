@@ -28,7 +28,7 @@ impl ClassLoader for FileClassLoader {
 
 #[test]
 fn test_hello() -> anyhow::Result<()> {
-    let hello = include_bytes!("./test_data/Hello.class");
+    let hello = include_bytes!("../test_data/Hello.class");
 
     let mut jvm = Jvm::new();
     jvm.add_class_loader(FileClassLoader::new("Hello", hello));
