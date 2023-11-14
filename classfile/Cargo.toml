@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "^1.0" }
+nom = { version = "^7.1" }
+nom-derive = { version = "^0.10" }
