@@ -3,7 +3,7 @@ use alloc::{
     vec::Vec,
 };
 
-use cafebabe::{attributes::AttributeData, MethodInfo};
+use classfile::{AttributeInfoCode, ClassInfo, MethodInfo};
 
 pub struct Method {
     pub name: String,
@@ -12,21 +12,22 @@ pub struct Method {
 }
 
 impl Method {
-    pub fn from_methodinfo(method_info: &MethodInfo) -> Self {
-        let name = method_info.name.to_string();
-        let signature = method_info.descriptor.to_string();
+    pub fn from_methodinfo(class: &ClassInfo, method_info: &MethodInfo) -> Self {
+        let name = class.constant_utf8(method_info.name_index).unwrap().to_string();
+        let signature = class.constant_utf8(method_info.descriptor_index).unwrap().to_string();
 
-        let body = Self::extract_body(method_info).unwrap();
+        let body = Self::extract_body(class, method_info).unwrap();
 
         Self { name, signature, body }
     }
 
-    fn extract_body(method_info: &MethodInfo) -> Option<Vec<u8>> {
+    fn extract_body(class_file: &ClassInfo, method_info: &MethodInfo) -> Option<Vec<u8>> {
         for attribute in &method_info.attributes {
-            if attribute.name == "Code" {
-                if let AttributeData::Code(x) = &attribute.data {
-                    return Some(x.code.to_vec());
-                }
+            let name = class_file.constant_utf8(attribute.attribute_name_index).unwrap();
+            if name == "Code" {
+                let attribute = AttributeInfoCode::parse(&attribute.info).unwrap();
+
+                return Some(attribute.code);
             }
         }
 

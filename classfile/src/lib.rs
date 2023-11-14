@@ -2,16 +2,20 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::str;
 
-use nom::{combinator::map, number::complete::be_u16};
+use nom::{
+    combinator::map,
+    number::complete::{be_u16, be_u32},
+};
 use nom_derive::{NomBE, Parse};
 
-type ClassFileResult<T> = anyhow::Result<T>;
+pub type ClassFileResult<T> = anyhow::Result<T>;
 
 #[derive(NomBE)]
 #[nom(Exact)]
 #[nom(Complete)]
-pub struct ClassFile {
+pub struct ClassInfo {
     #[nom(Verify = "*magic == 0xCAFEBABE")]
     pub magic: u32,
     pub minor_version: u16,
@@ -29,6 +33,16 @@ pub struct ClassFile {
     pub methods: Vec<MethodInfo>,
     #[nom(LengthCount = "be_u16")]
     pub attributes: Vec<AttributeInfo>,
+}
+
+impl ClassInfo {
+    pub fn constant_utf8(&self, index: u16) -> Option<&str> {
+        if let ConstantPoolValue::Utf8(x) = &self.constant_pool[index as usize - 1].value {
+            Some(str::from_utf8(&x.bytes).unwrap())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(NomBE)]
@@ -120,8 +134,36 @@ pub struct AttributeInfo {
     pub info: Vec<u8>,
 }
 
-pub fn parse_class(file: &[u8]) -> ClassFileResult<ClassFile> {
-    let result = ClassFile::parse(file).map(|x| x.1).map_err(|e| anyhow::anyhow!("{}", e))?;
+#[derive(NomBE)]
+pub struct CodeAttributeExceptionTable {
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: u16,
+}
+
+#[derive(NomBE)]
+pub struct AttributeInfoCode {
+    pub max_stack: u16,
+    pub max_locals: u16,
+    #[nom(LengthCount = "be_u32")]
+    pub code: Vec<u8>,
+    #[nom(LengthCount = "be_u16")]
+    pub exception_table: Vec<CodeAttributeExceptionTable>,
+    #[nom(LengthCount = "be_u16")]
+    pub attributes: Vec<AttributeInfo>,
+}
+
+impl AttributeInfoCode {
+    pub fn parse(data: &[u8]) -> ClassFileResult<Self> {
+        let result = Parse::parse(data).map(|x| x.1).map_err(|e| anyhow::anyhow!("{}", e))?;
+
+        Ok(result)
+    }
+}
+
+pub fn parse_class(file: &[u8]) -> ClassFileResult<ClassInfo> {
+    let result = ClassInfo::parse(file).map(|x| x.1).map_err(|e| anyhow::anyhow!("{}", e))?;
 
     Ok(result)
 }
