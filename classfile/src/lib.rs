@@ -156,14 +156,14 @@ pub struct AttributeInfoCode {
 
 impl AttributeInfoCode {
     pub fn parse(data: &[u8]) -> ClassFileResult<Self> {
-        let result = Parse::parse(data).map(|x| x.1).map_err(|e| anyhow::anyhow!("{}", e))?;
+        let result = Parse::parse(data).map_err(|e| anyhow::anyhow!("{}", e))?.1;
 
         Ok(result)
     }
 }
 
 pub fn parse_class(file: &[u8]) -> ClassFileResult<ClassInfo> {
-    let result = ClassInfo::parse(file).map(|x| x.1).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let result = ClassInfo::parse(file).map_err(|e| anyhow::anyhow!("{}", e))?.1;
 
     Ok(result)
 }
