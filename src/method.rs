@@ -1,11 +1,11 @@
 use alloc::{string::String, vec::Vec};
 
-use classfile::{AttributeInfo, MethodInfo};
+use classfile::{AttributeInfo, MethodInfo, Opcode};
 
 pub struct Method {
     pub name: String,
     pub signature: String,
-    pub body: Vec<u8>,
+    pub body: Vec<Opcode>,
 }
 
 impl Method {
@@ -19,7 +19,7 @@ impl Method {
         }
     }
 
-    fn extract_body(method_info: &MethodInfo) -> Option<Vec<u8>> {
+    fn extract_body(method_info: &MethodInfo) -> Option<Vec<Opcode>> {
         for attribute in &method_info.attributes {
             if let AttributeInfo::Code(x) = attribute {
                 return Some(x.code.clone());

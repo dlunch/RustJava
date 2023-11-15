@@ -7,5 +7,6 @@ mod constant_pool;
 mod field;
 mod interface;
 mod method;
+mod opcode;
 
-pub use {attribute::AttributeInfo, class::ClassInfo, field::FieldInfo, method::MethodInfo};
+pub use {attribute::AttributeInfo, class::ClassInfo, field::FieldInfo, method::MethodInfo, opcode::Opcode};

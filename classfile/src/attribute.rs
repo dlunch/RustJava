@@ -4,14 +4,14 @@ use alloc::{
 };
 
 use nom::{
-    multi::length_count,
+    multi::{length_count, many0},
     number::complete::{be_u16, be_u32, u8},
     sequence::tuple,
     IResult,
 };
 use nom_derive::{NomBE, Parse};
 
-use crate::constant_pool::ConstantPoolItem;
+use crate::{constant_pool::ConstantPoolItem, opcode::Opcode};
 
 pub enum AttributeInfoConstant {
     Long(u64),
@@ -51,7 +51,7 @@ pub struct CodeAttributeExceptionTable {
 pub struct AttributeInfoCode {
     pub max_stack: u16,
     pub max_locals: u16,
-    pub code: Vec<u8>,
+    pub code: Vec<Opcode>,
     pub exception_table: Vec<CodeAttributeExceptionTable>,
     pub attributes: Vec<AttributeInfo>,
 }
@@ -64,6 +64,8 @@ impl AttributeInfoCode {
             length_count(be_u32, u8),
             length_count(be_u16, CodeAttributeExceptionTable::parse),
         ))(data)?;
+
+        let code = many0(Opcode::parse_with_tag)(code.as_slice()).unwrap().1;
 
         let (remaining, attributes) = length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool))(remaining)?;
 
