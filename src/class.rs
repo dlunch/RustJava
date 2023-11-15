@@ -1,11 +1,8 @@
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{string::String, vec::Vec};
 
 use crate::{method::Method, JvmResult};
 
-use classfile::parse_class;
+use classfile::ClassInfo;
 
 pub struct Class {
     pub name: String,
@@ -15,10 +12,10 @@ pub struct Class {
 
 impl Class {
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
-        let class = parse_class(data)?;
+        let class = ClassInfo::parse(data)?;
 
-        let name = class.this_class.to_string();
-        let methods = class.methods.iter().map(|x| Method::from_methodinfo(&class, x)).collect::<Vec<_>>();
+        let name = class.this_class;
+        let methods = class.methods.iter().map(Method::from_methodinfo).collect::<Vec<_>>();
 
         Ok(Self { name, methods })
     }
