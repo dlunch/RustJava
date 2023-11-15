@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use nom::number::complete::u8;
 use nom_derive::{NomBE, Parse};
 
-#[derive(NomBE, Clone)]
+#[derive(NomBE)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 #[nom(Selector = "u8")]
 

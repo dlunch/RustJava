@@ -15,7 +15,7 @@ impl Class {
         let class = ClassInfo::parse(data)?;
 
         let name = class.this_class;
-        let methods = class.methods.iter().map(Method::from_methodinfo).collect::<Vec<_>>();
+        let methods = class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>();
 
         Ok(Self {
             name,
@@ -24,7 +24,7 @@ impl Class {
         })
     }
 
-    pub fn method(&self, name: &str, signature: &str) -> Option<&Method> {
-        self.methods.iter().find(|&method| method.name == name && method.signature == signature)
+    pub fn method(&self, name: &str, descriptor: &str) -> Option<&Method> {
+        self.methods.iter().find(|&method| method.name == name && method.descriptor == descriptor)
     }
 }

@@ -4,25 +4,23 @@ use classfile::{AttributeInfo, MethodInfo, Opcode};
 
 pub struct Method {
     pub name: String,
-    pub signature: String,
+    pub descriptor: String,
     pub body: Vec<Opcode>,
 }
 
 impl Method {
-    pub fn from_methodinfo(method_info: &MethodInfo) -> Self {
-        let body = Self::extract_body(method_info).unwrap();
+    pub fn from_methodinfo(method_info: MethodInfo) -> Self {
+        let name = method_info.name;
+        let descriptor = method_info.descriptor;
+        let body = Self::extract_body(method_info.attributes).unwrap();
 
-        Self {
-            name: method_info.name.clone(),
-            signature: method_info.descriptor.clone(),
-            body,
-        }
+        Self { name, descriptor, body }
     }
 
-    fn extract_body(method_info: &MethodInfo) -> Option<Vec<Opcode>> {
-        for attribute in &method_info.attributes {
+    fn extract_body(attributes: Vec<AttributeInfo>) -> Option<Vec<Opcode>> {
+        for attribute in attributes {
             if let AttributeInfo::Code(x) = attribute {
-                return Some(x.code.clone());
+                return Some(x.code);
             }
         }
 
