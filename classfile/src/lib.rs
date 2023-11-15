@@ -9,4 +9,4 @@ mod interface;
 mod method;
 mod opcode;
 
-pub use {attribute::AttributeInfo, class::ClassInfo, field::FieldInfo, method::MethodInfo, opcode::Opcode};
+pub use {attribute::AttributeInfo, class::ClassInfo, constant_pool::ConstantPoolItem, field::FieldInfo, method::MethodInfo, opcode::Opcode};

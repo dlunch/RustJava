@@ -2,11 +2,11 @@ use alloc::{string::String, vec::Vec};
 
 use crate::{method::Method, JvmResult};
 
-use classfile::ClassInfo;
+use classfile::{ClassInfo, ConstantPoolItem};
 
 pub struct Class {
     pub name: String,
-
+    pub constant_pool: Vec<ConstantPoolItem>,
     pub methods: Vec<Method>,
 }
 
@@ -17,7 +17,11 @@ impl Class {
         let name = class.this_class;
         let methods = class.methods.iter().map(Method::from_methodinfo).collect::<Vec<_>>();
 
-        Ok(Self { name, methods })
+        Ok(Self {
+            name,
+            constant_pool: class.constant_pool,
+            methods,
+        })
     }
 
     pub fn method(&self, name: &str, signature: &str) -> Option<&Method> {

@@ -30,7 +30,7 @@ impl Jvm {
         self.stack.push(StackFrame::new());
 
         let last = self.stack.len() - 1;
-        Interpreter::run(&self.stack[last], &method.body)
+        Interpreter::run(&self.stack[last], &class.constant_pool, &method.body)
     }
 
     fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Class>> {

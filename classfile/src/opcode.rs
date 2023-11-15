@@ -4,6 +4,7 @@ use nom::number::complete::u8;
 use nom_derive::{NomBE, Parse};
 
 #[derive(NomBE, Clone)]
+#[cfg_attr(debug_assertions, derive(Debug))]
 #[nom(Selector = "u8")]
 
 pub enum Opcode {
