@@ -1,18 +1,26 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 
-use crate::{class::Class, class_loader::ClassLoader, interpreter::Interpreter, stack_frame::StackFrame, JvmResult};
+use crate::{
+    class::Class,
+    class_loader::ClassLoader,
+    interpreter::Interpreter,
+    thread::{ThreadContext, ThreadId},
+    JvmResult,
+};
 
 #[derive(Default)]
 pub struct Jvm {
     class_loaders: Vec<Box<dyn ClassLoader>>,
-    stack: Vec<StackFrame>, // TODO move to thread
+    thread_contexts: BTreeMap<ThreadId, ThreadContext>,
 }
 
 impl Jvm {
-    pub fn new() -> Jvm {
-        Jvm {
+    pub fn new() -> Self {
+        let thread_contexts = [(Self::current_thread_id(), ThreadContext::new())].into_iter().collect();
+
+        Self {
             class_loaders: Vec::new(),
-            stack: Vec::new(),
+            thread_contexts,
         }
     }
 
@@ -27,10 +35,16 @@ impl Jvm {
         let class = self.resolve_class(class_name)?.unwrap();
         let method = class.method(name, signature).unwrap();
 
-        self.stack.push(StackFrame::new());
+        self.current_thread_context().push_stack_frame();
+        Interpreter::run(self, &class.constant_pool, &method.body)
+    }
 
-        let last = self.stack.len() - 1;
-        Interpreter::run(&self.stack[last], &class.constant_pool, &method.body)
+    pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
+        self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap()
+    }
+
+    fn current_thread_id() -> ThreadId {
+        0 // TODO
     }
 
     fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Class>> {
