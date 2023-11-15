@@ -3,31 +3,29 @@ use alloc::{
     vec::Vec,
 };
 
-use nom::{combinator::map, number::complete::be_u16};
+use nom::{combinator::map, number::complete::be_u16, IResult};
 use nom_derive::{NomBE, Parse};
 
 use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
 
-fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> nom::IResult<&'a [u8], String> {
-    let (remaining, index) = be_u16(data)?;
-
-    let class = constant_pool[index as usize - 1].class();
-    let name = constant_pool[class.name_index as usize - 1].utf8().to_string();
-
-    Ok((remaining, name))
+fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], String> {
+    map(be_u16, |x| {
+        let class = constant_pool[x as usize - 1].class();
+        constant_pool[class.name_index as usize - 1].utf8().to_string()
+    })(data)
 }
 
-fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> nom::IResult<&'a [u8], Option<String>> {
-    let (remaining, index) = be_u16(data)?;
+fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Option<String>> {
+    map(be_u16, |x| {
+        if x != 0 {
+            let class = constant_pool[x as usize - 1].class();
+            let name = constant_pool[class.name_index as usize - 1].utf8().to_string();
 
-    if index != 0 {
-        let class = constant_pool[index as usize - 1].class();
-        let name = constant_pool[class.name_index as usize - 1].utf8().to_string();
-
-        Ok((remaining, Some(name)))
-    } else {
-        Ok((remaining, None))
-    }
+            Some(name)
+        } else {
+            None
+        }
+    })(data)
 }
 
 #[derive(NomBE)]

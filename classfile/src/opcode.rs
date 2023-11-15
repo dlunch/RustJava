@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use nom::number::complete::u8;
+use nom::{combinator::flat_map, number::complete::u8, IResult};
 use nom_derive::{NomBE, Parse};
 
 #[derive(NomBE)]
@@ -411,9 +411,7 @@ pub enum Opcode {
 }
 
 impl Opcode {
-    pub fn parse_with_tag(data: &[u8]) -> nom::IResult<&[u8], Self> {
-        let (remaining, tag) = u8(data)?;
-
-        Opcode::parse(remaining, tag)
+    pub fn parse_with_tag(data: &[u8]) -> IResult<&[u8], Self> {
+        flat_map(u8, |x| move |i| Self::parse(i, x))(data)
     }
 }

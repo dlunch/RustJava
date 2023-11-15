@@ -1,6 +1,7 @@
 use alloc::string::String;
 
 use nom::{
+    combinator::{flat_map, map},
     multi::length_count,
     number::complete::{be_u16, u8},
     IResult,
@@ -8,11 +9,7 @@ use nom::{
 use nom_derive::{NomBE, Parse};
 
 fn parse_utf8(data: &[u8]) -> IResult<&[u8], String> {
-    let (remaining, data) = length_count(be_u16, u8)(data)?;
-
-    let string = String::from_utf8(data).unwrap();
-
-    Ok((remaining, string))
+    map(length_count(be_u16, u8), |x| String::from_utf8(x.to_vec()).unwrap())(data)
 }
 
 #[derive(NomBE)]
@@ -67,9 +64,7 @@ pub enum ConstantPoolItem {
 impl ConstantPoolItem {
     // TODO is there some proc_macro to generate this?
     pub fn parse_with_tag(data: &[u8]) -> IResult<&[u8], Self> {
-        let (remaining, tag) = u8(data)?;
-
-        ConstantPoolItem::parse(remaining, tag)
+        flat_map(u8, |x| move |i| Self::parse(i, x))(data)
     }
 
     pub fn utf8(&self) -> &str {
