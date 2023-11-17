@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use crate::constant_pool::ConstantPoolItem;
+use crate::constant_pool::{ConstantPoolItem, ReferenceConstant, ValueConstant};
 
 #[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug))]
@@ -96,7 +96,7 @@ pub enum Opcode {
     Fstore3,
     Fsub,
     Getfield(u16),
-    Getstatic(u16),
+    Getstatic(ReferenceConstant),
     Goto(i16),
     GotoW(i32),
     I2b,
@@ -142,11 +142,11 @@ pub enum Opcode {
     Imul,
     Ineg,
     Instanceof(u16),
-    Invokedynamic(u16),
-    Invokeinterface(u16, u8, u8),
-    Invokespecial(u16),
-    Invokestatic(u16),
-    Invokevirtual(u16),
+    Invokedynamic(ReferenceConstant),
+    Invokeinterface(ReferenceConstant, u8, u8),
+    Invokespecial(ReferenceConstant),
+    Invokestatic(ReferenceConstant),
+    Invokevirtual(ReferenceConstant),
     Ior,
     Irem,
     Ireturn,
@@ -172,9 +172,9 @@ pub enum Opcode {
     Lcmp,
     Lconst0,
     Lconst1,
-    Ldc(u8),
-    LdcW(u16),
-    Ldc2W(u16),
+    Ldc(ValueConstant),
+    LdcW(ValueConstant),
+    Ldc2W(ValueConstant),
     Ldiv,
     Lload(u8),
     Lload0,
@@ -222,7 +222,7 @@ impl Opcode {
         flat_map(u8, |x| move |i| Self::parse_opcode(x, i, constant_pool))(data)
     }
 
-    fn parse_opcode<'a>(opcode: u8, data: &'a [u8], _constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    fn parse_opcode<'a>(opcode: u8, data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
         match opcode {
             0x32 => success(Opcode::Aaload)(data),
             0x53 => success(Opcode::Aastore)(data),
@@ -307,7 +307,9 @@ impl Opcode {
             0x46 => success(Opcode::Fstore3)(data),
             0x66 => success(Opcode::Fsub)(data),
             0xb4 => map(be_u16, Opcode::Getfield)(data),
-            0xb2 => map(be_u16, Opcode::Getstatic)(data),
+            0xb2 => map(be_u16, |x| {
+                Opcode::Getstatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xa7 => map(be_i16, Opcode::Goto)(data),
             0xc8 => map(be_i32, Opcode::GotoW)(data),
             0x91 => success(Opcode::I2b)(data),
@@ -353,13 +355,21 @@ impl Opcode {
             0x68 => success(Opcode::Imul)(data),
             0x74 => success(Opcode::Ineg)(data),
             0xc1 => map(be_u16, Opcode::Instanceof)(data),
-            0xba => map(be_u16, Opcode::Invokedynamic)(data),
-            0xb9 => map(tuple((be_u16, u8, u8)), |(index, count, zero)| {
-                Opcode::Invokeinterface(index, count, zero)
+            0xba => map(be_u16, |x| {
+                Opcode::Invokedynamic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
             })(data),
-            0xb7 => map(be_u16, Opcode::Invokespecial)(data),
-            0xb8 => map(be_u16, Opcode::Invokestatic)(data),
-            0xb6 => map(be_u16, Opcode::Invokevirtual)(data),
+            0xb9 => map(be_u16, |x| {
+                Opcode::Invokeinterface(ReferenceConstant::from_constant_pool(constant_pool, x as _), 0, 0)
+            })(data),
+            0xb7 => map(be_u16, |x| {
+                Opcode::Invokespecial(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+            })(data),
+            0xb8 => map(be_u16, |x| {
+                Opcode::Invokestatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+            })(data),
+            0xb6 => map(be_u16, |x| {
+                Opcode::Invokevirtual(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+            })(data),
             0x80 => success(Opcode::Ior)(data),
             0x70 => success(Opcode::Irem)(data),
             0xac => success(Opcode::Ireturn)(data),
@@ -385,9 +395,9 @@ impl Opcode {
             0x94 => success(Opcode::Lcmp)(data),
             0x09 => success(Opcode::Lconst0)(data),
             0x0a => success(Opcode::Lconst1)(data),
-            0x12 => map(u8, Opcode::Ldc)(data),
-            0x13 => map(be_u16, Opcode::LdcW)(data),
-            0x14 => map(be_u16, Opcode::Ldc2W)(data),
+            0x12 => map(u8, |x| Opcode::Ldc(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0x13 => map(be_u16, |x| Opcode::LdcW(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0x14 => map(be_u16, |x| Opcode::Ldc2W(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
             0x6d => success(Opcode::Ldiv)(data),
             0x16 => map(u8, Opcode::Lload)(data),
             0x1e => success(Opcode::Lload0)(data),

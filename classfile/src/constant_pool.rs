@@ -1,4 +1,4 @@
-use alloc::string::String;
+use alloc::string::{String, ToString};
 
 use nom::{
     combinator::{flat_map, map},
@@ -87,11 +87,74 @@ impl ConstantPoolItem {
         }
     }
 
-    pub fn method(&self) -> &ConstantReferenceInfo {
-        if let ConstantPoolItem::Methodref(x) = self {
+    pub fn name_and_type(&self) -> &ConstantNameAndTypeInfo {
+        if let ConstantPoolItem::NameAndType(x) = self {
             x
         } else {
             panic!("Invalid constant pool item");
+        }
+    }
+}
+
+#[derive(Clone)]
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub enum ValueConstant {
+    Integer(u32),
+    Float(f32),
+    Long(u64),
+    Double(f64),
+    String(String),
+    Class(String),
+    Method(ReferenceConstant),
+    Field(ReferenceConstant),
+}
+
+impl ValueConstant {
+    pub fn from_constant_pool(constant_pool: &[ConstantPoolItem], index: usize) -> Self {
+        match &constant_pool[index - 1] {
+            ConstantPoolItem::Integer(x) => Self::Integer(*x),
+            ConstantPoolItem::Float(x) => Self::Float(*x),
+            ConstantPoolItem::Long(x) => Self::Long(*x),
+            ConstantPoolItem::Double(x) => Self::Double(*x),
+            ConstantPoolItem::String(x) => Self::String(constant_pool[x.string_index as usize - 1].utf8().to_string()),
+            ConstantPoolItem::Class(x) => Self::Class(constant_pool[x.name_index as usize - 1].utf8().to_string()),
+            ConstantPoolItem::Utf8(x) => Self::String(x.to_string()),
+            ConstantPoolItem::Methodref(x) => Self::Method(ReferenceConstant::from_reference_info(constant_pool, x)),
+            ConstantPoolItem::Fieldref(x) => Self::Field(ReferenceConstant::from_reference_info(constant_pool, x)),
+            _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
+        }
+    }
+}
+
+#[derive(Clone)]
+#[cfg_attr(debug_assertions, derive(Debug))]
+pub struct ReferenceConstant {
+    pub class: String,
+    pub name: String,
+    pub descriptor: String,
+}
+
+impl ReferenceConstant {
+    pub fn from_constant_pool(constant_pool: &[ConstantPoolItem], index: usize) -> Self {
+        match &constant_pool[index - 1] {
+            ConstantPoolItem::Fieldref(x) => Self::from_reference_info(constant_pool, x),
+            ConstantPoolItem::Methodref(x) => Self::from_reference_info(constant_pool, x),
+            _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
+        }
+    }
+
+    pub fn from_reference_info(constant_pool: &[ConstantPoolItem], reference_info: &ConstantReferenceInfo) -> Self {
+        let class = constant_pool[reference_info.class_index as usize - 1].class();
+        let class_name = constant_pool[class.name_index as usize - 1].utf8().to_string();
+
+        let name_and_type = constant_pool[reference_info.name_and_type_index as usize - 1].name_and_type();
+        let name = constant_pool[name_and_type.name_index as usize - 1].utf8().to_string();
+        let descriptor = constant_pool[name_and_type.descriptor_index as usize - 1].utf8().to_string();
+
+        Self {
+            class: class_name,
+            name,
+            descriptor,
         }
     }
 }

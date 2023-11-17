@@ -1,4 +1,4 @@
-use classfile::{AttributeInfo, ClassInfo, Opcode};
+use classfile::{AttributeInfo, ClassInfo, Opcode, ValueConstant};
 
 #[test]
 fn test_hello() -> anyhow::Result<()> {
@@ -24,7 +24,9 @@ fn test_hello() -> anyhow::Result<()> {
     if let AttributeInfo::Code(x) = &class.methods[0].attributes[0] {
         assert_eq!(x.code.len(), 3);
         assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload0));
-        assert!(matches!(x.code.get(&1).unwrap(), Opcode::Invokespecial(1)));
+        assert!(
+            matches!(x.code.get(&1).unwrap(), Opcode::Invokespecial(x) if x.class == "java/lang/Object" && x.name == "<init>" && x.descriptor == "()V")
+        );
         assert!(matches!(x.code.get(&4).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");
@@ -35,9 +37,13 @@ fn test_hello() -> anyhow::Result<()> {
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
         assert_eq!(x.code.len(), 4);
-        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Getstatic(7)));
-        assert!(matches!(x.code.get(&3).unwrap(), Opcode::Ldc(8)));
-        assert!(matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(15)));
+        assert!(
+            matches!(x.code.get(&0).unwrap(), Opcode::Getstatic(x) if x.class == "java/lang/System" && x.name == "out" && x.descriptor == "Ljava/io/PrintStream;")
+        );
+        assert!(matches!(x.code.get(&3).unwrap(), Opcode::Ldc(x) if matches!(x, ValueConstant::String(y) if y == "Hello, world!")));
+        assert!(
+            matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(x) if x.class == "java/io/PrintStream" && x.name == "println" && x.descriptor == "(Ljava/lang/String;)V")
+        );
         assert!(matches!(x.code.get(&8).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");
