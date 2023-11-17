@@ -14,32 +14,6 @@ fn parse_utf8(data: &[u8]) -> IResult<&[u8], Rc<String>> {
 
 #[derive(NomBE)]
 #[cfg_attr(debug_assertions, derive(Debug))]
-pub struct ConstantClassInfo {
-    pub name_index: u16,
-}
-
-#[derive(NomBE)]
-#[cfg_attr(debug_assertions, derive(Debug))]
-pub struct ConstantStringInfo {
-    pub string_index: u16,
-}
-
-#[derive(NomBE)]
-#[cfg_attr(debug_assertions, derive(Debug))]
-pub struct ConstantReferenceInfo {
-    pub class_index: u16,
-    pub name_and_type_index: u16,
-}
-
-#[derive(NomBE)]
-#[cfg_attr(debug_assertions, derive(Debug))]
-pub struct ConstantNameAndTypeInfo {
-    pub name_index: u16,
-    pub descriptor_index: u16,
-}
-
-#[derive(NomBE)]
-#[cfg_attr(debug_assertions, derive(Debug))]
 #[nom(Selector = "u8")]
 pub enum ConstantPoolItem {
     #[nom(Selector = "1")]
@@ -53,17 +27,17 @@ pub enum ConstantPoolItem {
     #[nom(Selector = "6")]
     Double(f64),
     #[nom(Selector = "7")]
-    Class(ConstantClassInfo),
+    Class { name_index: u16 },
     #[nom(Selector = "8")]
-    String(ConstantStringInfo),
+    String { string_index: u16 },
     #[nom(Selector = "9")]
-    Fieldref(ConstantReferenceInfo),
+    Fieldref { class_index: u16, name_and_type_index: u16 },
     #[nom(Selector = "10")]
-    Methodref(ConstantReferenceInfo),
+    Methodref { class_index: u16, name_and_type_index: u16 },
     #[nom(Selector = "11")]
-    InstanceMethodref(ConstantReferenceInfo),
+    InstanceMethodref { class_index: u16, name_and_type_index: u16 },
     #[nom(Selector = "12")]
-    NameAndType(ConstantNameAndTypeInfo),
+    NameAndType { name_index: u16, descriptor_index: u16 },
 }
 
 impl ConstantPoolItem {
@@ -79,17 +53,21 @@ impl ConstantPoolItem {
         }
     }
 
-    pub fn class(&self) -> &ConstantClassInfo {
-        if let ConstantPoolItem::Class(x) = self {
-            x
+    pub fn class_name_index(&self) -> u16 {
+        if let ConstantPoolItem::Class { name_index } = self {
+            *name_index
         } else {
             panic!("Invalid constant pool item");
         }
     }
 
-    pub fn name_and_type(&self) -> &ConstantNameAndTypeInfo {
-        if let ConstantPoolItem::NameAndType(x) = self {
-            x
+    pub fn name_and_type(&self) -> (u16, u16) {
+        if let ConstantPoolItem::NameAndType {
+            name_index,
+            descriptor_index,
+        } = self
+        {
+            (*name_index, *descriptor_index)
         } else {
             panic!("Invalid constant pool item");
         }
@@ -116,11 +94,25 @@ impl ValueConstant {
             ConstantPoolItem::Float(x) => Self::Float(*x),
             ConstantPoolItem::Long(x) => Self::Long(*x),
             ConstantPoolItem::Double(x) => Self::Double(*x),
-            ConstantPoolItem::String(x) => Self::String(constant_pool[x.string_index as usize - 1].utf8()),
-            ConstantPoolItem::Class(x) => Self::Class(constant_pool[x.name_index as usize - 1].utf8()),
+            ConstantPoolItem::String { string_index } => Self::String(constant_pool[*string_index as usize - 1].utf8()),
+            ConstantPoolItem::Class { name_index } => Self::Class(constant_pool[*name_index as usize - 1].utf8()),
             ConstantPoolItem::Utf8(x) => Self::String(x.clone()),
-            ConstantPoolItem::Methodref(x) => Self::Method(ReferenceConstant::from_reference_info(constant_pool, x)),
-            ConstantPoolItem::Fieldref(x) => Self::Field(ReferenceConstant::from_reference_info(constant_pool, x)),
+            ConstantPoolItem::Methodref {
+                class_index,
+                name_and_type_index,
+            } => Self::Method(ReferenceConstant::from_reference_info(
+                constant_pool,
+                *class_index as _,
+                *name_and_type_index as _,
+            )),
+            ConstantPoolItem::Fieldref {
+                class_index,
+                name_and_type_index,
+            } => Self::Field(ReferenceConstant::from_reference_info(
+                constant_pool,
+                *class_index as _,
+                *name_and_type_index as _,
+            )),
             _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
         }
     }
@@ -137,19 +129,25 @@ pub struct ReferenceConstant {
 impl ReferenceConstant {
     pub fn from_constant_pool(constant_pool: &[ConstantPoolItem], index: usize) -> Self {
         match &constant_pool[index - 1] {
-            ConstantPoolItem::Fieldref(x) => Self::from_reference_info(constant_pool, x),
-            ConstantPoolItem::Methodref(x) => Self::from_reference_info(constant_pool, x),
+            ConstantPoolItem::Fieldref {
+                class_index,
+                name_and_type_index,
+            } => Self::from_reference_info(constant_pool, *class_index as _, *name_and_type_index as _),
+            ConstantPoolItem::Methodref {
+                class_index,
+                name_and_type_index,
+            } => Self::from_reference_info(constant_pool, *class_index as _, *name_and_type_index as _),
             _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
         }
     }
 
-    pub fn from_reference_info(constant_pool: &[ConstantPoolItem], reference_info: &ConstantReferenceInfo) -> Self {
-        let class = constant_pool[reference_info.class_index as usize - 1].class();
-        let class_name = constant_pool[class.name_index as usize - 1].utf8();
+    pub fn from_reference_info(constant_pool: &[ConstantPoolItem], class_index: usize, name_and_type_index: usize) -> Self {
+        let class_name_index = constant_pool[class_index - 1].class_name_index();
+        let class_name = constant_pool[class_name_index as usize - 1].utf8();
 
-        let name_and_type = constant_pool[reference_info.name_and_type_index as usize - 1].name_and_type();
-        let name = constant_pool[name_and_type.name_index as usize - 1].utf8();
-        let descriptor = constant_pool[name_and_type.descriptor_index as usize - 1].utf8();
+        let (name_index, descriptor_index) = constant_pool[name_and_type_index - 1].name_and_type();
+        let name = constant_pool[name_index as usize - 1].utf8();
+        let descriptor = constant_pool[descriptor_index as usize - 1].utf8();
 
         Self {
             class: class_name,

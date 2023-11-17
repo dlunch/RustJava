@@ -9,32 +9,7 @@ use nom::{
 };
 use nom_derive::{NomBE, Parse};
 
-use crate::{constant_pool::ConstantPoolItem, opcode::Opcode};
-
-pub enum AttributeInfoConstant {
-    Long(u64),
-    Float(f32),
-    Double(f64),
-    Integer(u32),
-    String(Rc<String>),
-}
-
-impl AttributeInfoConstant {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
-        map(be_u16, |x| {
-            let constant = &constant_pool[x as usize - 1];
-
-            match constant {
-                ConstantPoolItem::Integer(x) => AttributeInfoConstant::Integer(*x),
-                ConstantPoolItem::Float(x) => AttributeInfoConstant::Float(*x),
-                ConstantPoolItem::Long(x) => AttributeInfoConstant::Long(*x),
-                ConstantPoolItem::Double(x) => AttributeInfoConstant::Double(*x),
-                ConstantPoolItem::String(x) => AttributeInfoConstant::String(constant_pool[x.string_index as usize - 1].utf8()),
-                _ => panic!(),
-            }
-        })(data)
-    }
-}
+use crate::{constant_pool::ConstantPoolItem, opcode::Opcode, ValueConstant};
 
 #[derive(NomBE)]
 pub struct CodeAttributeExceptionTable {
@@ -94,7 +69,7 @@ pub struct AttributeInfoLineNumberTableEntry {
 }
 
 pub enum AttributeInfo {
-    ConstantValue(AttributeInfoConstant),
+    ConstantValue(ValueConstant),
     Code(AttributeInfoCode),
     Exceptions,
     InnerClasses,
@@ -110,7 +85,7 @@ impl AttributeInfo {
         map(
             tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), length_count(be_u32, u8))),
             |(name, info)| match name.as_str() {
-                "ConstantValue" => AttributeInfo::ConstantValue(AttributeInfoConstant::parse(&info, constant_pool).unwrap().1),
+                "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(&info, constant_pool).unwrap().1),
                 "Code" => AttributeInfo::Code(AttributeInfoCode::parse(&info, constant_pool).unwrap().1),
                 "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(&info).unwrap().1),
                 "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(&info, constant_pool).unwrap().1),
@@ -121,5 +96,9 @@ impl AttributeInfo {
 
     fn parse_source_file<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
         map(be_u16, |x| constant_pool[x as usize - 1].utf8())(data)
+    }
+
+    fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], ValueConstant> {
+        map(be_u16, |x| ValueConstant::from_constant_pool(constant_pool, x as _))(data)
     }
 }

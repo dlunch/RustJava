@@ -7,16 +7,16 @@ use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::Fi
 
 fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
     map(be_u16, |x| {
-        let class = constant_pool[x as usize - 1].class();
-        constant_pool[class.name_index as usize - 1].utf8()
+        let class_name_index = constant_pool[x as usize - 1].class_name_index();
+        constant_pool[class_name_index as usize - 1].utf8()
     })(data)
 }
 
 fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Option<Rc<String>>> {
     map(be_u16, |x| {
         if x != 0 {
-            let class = constant_pool[x as usize - 1].class();
-            let name = constant_pool[class.name_index as usize - 1].utf8();
+            let class_name_index = constant_pool[x as usize - 1].class_name_index();
+            let name = constant_pool[class_name_index as usize - 1].utf8();
 
             Some(name)
         } else {
