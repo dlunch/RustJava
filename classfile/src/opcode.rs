@@ -6,7 +6,6 @@ use nom_derive::{NomBE, Parse};
 #[derive(NomBE)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 #[nom(Selector = "u8")]
-
 pub enum Opcode {
     #[nom(Selector = "50")]
     Aaload,
