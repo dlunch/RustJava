@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 
-pub enum StackVariable {}
+use crate::value::JavaValue;
 
 pub struct StackFrame {
-    pub local_variables: Vec<StackVariable>,
-    pub operand_stack: Vec<StackVariable>,
+    pub local_variables: Vec<JavaValue>,
+    pub operand_stack: Vec<JavaValue>,
 }
 
 impl StackFrame {

@@ -8,6 +8,7 @@ mod jvm;
 mod method;
 mod stack_frame;
 mod thread;
+mod value;
 
 pub type JvmResult<T> = anyhow::Result<T>;
 

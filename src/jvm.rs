@@ -3,8 +3,6 @@ use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 use crate::{
     class::Class,
     class_loader::ClassLoader,
-    interpreter::Interpreter,
-    method::MethodBody,
     thread::{ThreadContext, ThreadId},
     JvmResult,
 };
@@ -38,11 +36,9 @@ impl Jvm {
 
         self.current_thread_context().push_stack_frame();
 
-        if let MethodBody::ByteCode(x) = &method.body {
-            Interpreter::run(self, &class.constant_pool, x)
-        } else {
-            todo!()
-        }
+        method.run(self, &class, Vec::new())?;
+
+        Ok(())
     }
 
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
