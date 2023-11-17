@@ -1,11 +1,12 @@
 use alloc::{
+    collections::BTreeMap,
     string::{String, ToString},
     vec::Vec,
 };
 
 use nom::{
     combinator::map,
-    multi::{length_count, many0},
+    multi::length_count,
     number::complete::{be_u16, be_u32, u8},
     sequence::tuple,
     IResult,
@@ -50,7 +51,7 @@ pub struct CodeAttributeExceptionTable {
 pub struct AttributeInfoCode {
     pub max_stack: u16,
     pub max_locals: u16,
-    pub code: Vec<Opcode>,
+    pub code: BTreeMap<u32, Opcode>,
     pub exception_table: Vec<CodeAttributeExceptionTable>,
     pub attributes: Vec<AttributeInfo>,
 }
@@ -61,7 +62,7 @@ impl AttributeInfoCode {
             tuple((
                 be_u16,
                 be_u16,
-                map(length_count(be_u32, u8), |x| many0(Opcode::parse_with_tag)(x.as_slice()).unwrap().1),
+                map(length_count(be_u32, u8), Self::parse_code),
                 length_count(be_u16, CodeAttributeExceptionTable::parse),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             )),
@@ -73,6 +74,20 @@ impl AttributeInfoCode {
                 attributes,
             },
         )(data)
+    }
+
+    fn parse_code(code: Vec<u8>) -> BTreeMap<u32, Opcode> {
+        let mut result = BTreeMap::new();
+
+        let mut data = code.as_slice();
+        while let Ok((remaining, opcode)) = Opcode::parse_with_tag(data) {
+            let offset = unsafe { data.as_ptr().offset_from(code.as_slice().as_ptr()) } as u32;
+            result.insert(offset, opcode);
+
+            data = remaining;
+        }
+
+        result
     }
 }
 

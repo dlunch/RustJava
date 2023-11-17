@@ -1,3 +1,4 @@
+use alloc::collections::BTreeMap;
 use classfile::{ConstantPoolItem, Opcode};
 
 use crate::{value::JavaValue, Jvm, JvmResult};
@@ -5,14 +6,18 @@ use crate::{value::JavaValue, Jvm, JvmResult};
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn run(jvm: &mut Jvm, _constant_pool: &[ConstantPoolItem], bytecode: &[Opcode]) -> JvmResult<JavaValue> {
+    pub fn run(jvm: &mut Jvm, _constant_pool: &[ConstantPoolItem], bytecode: &BTreeMap<u32, Opcode>) -> JvmResult<JavaValue> {
         let _stack_frame = jvm.current_thread_context().current_stack_frame();
 
-        for opcode in bytecode {
+        let mut iter = bytecode.range(0..);
+        while let Some((_, opcode)) = iter.next() {
             match opcode {
                 Opcode::Ldc(_) => {}
                 Opcode::Getstatic(_) => {}
                 Opcode::Invokevirtual(_) => {}
+                Opcode::Goto(x) => {
+                    iter = bytecode.range(*x as u32..);
+                }
                 Opcode::Return => {
                     return Ok(JavaValue::Void);
                 }
