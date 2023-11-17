@@ -1,7 +1,4 @@
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{rc::Rc, string::String, vec::Vec};
 
 use nom::{combinator::map, multi::length_count, number::complete::be_u16, sequence::tuple, IResult};
 
@@ -9,8 +6,8 @@ use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem};
 
 pub struct FieldInfo {
     pub access_flags: u16,
-    pub name: String,
-    pub descriptor: String,
+    pub name: Rc<String>,
+    pub descriptor: Rc<String>,
     pub attributes: Vec<AttributeInfo>,
 }
 
@@ -25,8 +22,8 @@ impl FieldInfo {
             )),
             |(access_flags, name, descriptor, attributes)| Self {
                 access_flags,
-                name: name.to_string(),
-                descriptor: descriptor.to_string(),
+                name,
+                descriptor,
                 attributes,
             },
         )(data)

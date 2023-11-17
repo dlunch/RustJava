@@ -1,25 +1,22 @@
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{rc::Rc, string::String, vec::Vec};
 
 use nom::{combinator::map, number::complete::be_u16, IResult};
 use nom_derive::{NomBE, Parse};
 
 use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
 
-fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], String> {
+fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
     map(be_u16, |x| {
         let class = constant_pool[x as usize - 1].class();
-        constant_pool[class.name_index as usize - 1].utf8().to_string()
+        constant_pool[class.name_index as usize - 1].utf8()
     })(data)
 }
 
-fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Option<String>> {
+fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Option<Rc<String>>> {
     map(be_u16, |x| {
         if x != 0 {
             let class = constant_pool[x as usize - 1].class();
-            let name = constant_pool[class.name_index as usize - 1].utf8().to_string();
+            let name = constant_pool[class.name_index as usize - 1].utf8();
 
             Some(name)
         } else {
@@ -40,11 +37,11 @@ pub struct ClassInfo {
     pub constant_pool: Vec<ConstantPoolItem>,
     pub access_flags: u16,
     #[nom(Parse = "{ |x| parse_this_class(x, &constant_pool) }")]
-    pub this_class: String,
+    pub this_class: Rc<String>,
     #[nom(Parse = "{ |x| parse_super_class(x, &constant_pool) }")]
-    pub super_class: Option<String>,
+    pub super_class: Option<Rc<String>>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| parse_interface(x, &constant_pool) }")]
-    pub interfaces: Vec<String>,
+    pub interfaces: Vec<Rc<String>>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| FieldInfo::parse(x, &constant_pool) }")]
     pub fields: Vec<FieldInfo>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| MethodInfo::parse(x, &constant_pool) }")]

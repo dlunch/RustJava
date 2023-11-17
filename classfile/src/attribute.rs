@@ -1,8 +1,4 @@
-use alloc::{
-    collections::BTreeMap,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 
 use nom::{
     combinator::map,
@@ -20,7 +16,7 @@ pub enum AttributeInfoConstant {
     Float(f32),
     Double(f64),
     Integer(u32),
-    String(String),
+    String(Rc<String>),
 }
 
 impl AttributeInfoConstant {
@@ -33,7 +29,7 @@ impl AttributeInfoConstant {
                 ConstantPoolItem::Float(x) => AttributeInfoConstant::Float(*x),
                 ConstantPoolItem::Long(x) => AttributeInfoConstant::Long(*x),
                 ConstantPoolItem::Double(x) => AttributeInfoConstant::Double(*x),
-                ConstantPoolItem::String(x) => AttributeInfoConstant::String(constant_pool[x.string_index as usize - 1].utf8().to_string()),
+                ConstantPoolItem::String(x) => AttributeInfoConstant::String(constant_pool[x.string_index as usize - 1].utf8()),
                 _ => panic!(),
             }
         })(data)
@@ -103,7 +99,7 @@ pub enum AttributeInfo {
     Exceptions,
     InnerClasses,
     Synthetic,
-    SourceFile(String),
+    SourceFile(Rc<String>),
     SourceDebugExtension,
     LineNumberTable(Vec<AttributeInfoLineNumberTableEntry>),
     LocalVariableTable,
@@ -113,7 +109,7 @@ impl AttributeInfo {
     pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
         map(
             tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), length_count(be_u32, u8))),
-            |(name, info)| match name {
+            |(name, info)| match name.as_str() {
                 "ConstantValue" => AttributeInfo::ConstantValue(AttributeInfoConstant::parse(&info, constant_pool).unwrap().1),
                 "Code" => AttributeInfo::Code(AttributeInfoCode::parse(&info, constant_pool).unwrap().1),
                 "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(&info).unwrap().1),
@@ -123,7 +119,7 @@ impl AttributeInfo {
         )(data)
     }
 
-    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], String> {
-        map(be_u16, |x| constant_pool[x as usize - 1].utf8().to_string())(data)
+    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
+        map(be_u16, |x| constant_pool[x as usize - 1].utf8())(data)
     }
 }

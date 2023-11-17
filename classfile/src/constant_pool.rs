@@ -1,4 +1,4 @@
-use alloc::string::{String, ToString};
+use alloc::{rc::Rc, string::String};
 
 use nom::{
     combinator::{flat_map, map},
@@ -8,8 +8,8 @@ use nom::{
 };
 use nom_derive::{NomBE, Parse};
 
-fn parse_utf8(data: &[u8]) -> IResult<&[u8], String> {
-    map(length_count(be_u16, u8), |x| String::from_utf8(x.to_vec()).unwrap())(data)
+fn parse_utf8(data: &[u8]) -> IResult<&[u8], Rc<String>> {
+    map(length_count(be_u16, u8), |x| Rc::new(String::from_utf8(x).unwrap()))(data)
 }
 
 #[derive(NomBE)]
@@ -43,7 +43,7 @@ pub struct ConstantNameAndTypeInfo {
 #[nom(Selector = "u8")]
 pub enum ConstantPoolItem {
     #[nom(Selector = "1")]
-    Utf8(#[nom(Parse = "parse_utf8")] String),
+    Utf8(#[nom(Parse = "parse_utf8")] Rc<String>),
     #[nom(Selector = "3")]
     Integer(u32),
     #[nom(Selector = "4")]
@@ -71,9 +71,9 @@ impl ConstantPoolItem {
         flat_map(u8, |x| move |i| Self::parse(i, x))(data)
     }
 
-    pub fn utf8(&self) -> &str {
+    pub fn utf8(&self) -> Rc<String> {
         if let ConstantPoolItem::Utf8(x) = self {
-            x
+            x.clone()
         } else {
             panic!("Invalid constant pool item");
         }
@@ -103,8 +103,8 @@ pub enum ValueConstant {
     Float(f32),
     Long(u64),
     Double(f64),
-    String(String),
-    Class(String),
+    String(Rc<String>),
+    Class(Rc<String>),
     Method(ReferenceConstant),
     Field(ReferenceConstant),
 }
@@ -116,9 +116,9 @@ impl ValueConstant {
             ConstantPoolItem::Float(x) => Self::Float(*x),
             ConstantPoolItem::Long(x) => Self::Long(*x),
             ConstantPoolItem::Double(x) => Self::Double(*x),
-            ConstantPoolItem::String(x) => Self::String(constant_pool[x.string_index as usize - 1].utf8().to_string()),
-            ConstantPoolItem::Class(x) => Self::Class(constant_pool[x.name_index as usize - 1].utf8().to_string()),
-            ConstantPoolItem::Utf8(x) => Self::String(x.to_string()),
+            ConstantPoolItem::String(x) => Self::String(constant_pool[x.string_index as usize - 1].utf8()),
+            ConstantPoolItem::Class(x) => Self::Class(constant_pool[x.name_index as usize - 1].utf8()),
+            ConstantPoolItem::Utf8(x) => Self::String(x.clone()),
             ConstantPoolItem::Methodref(x) => Self::Method(ReferenceConstant::from_reference_info(constant_pool, x)),
             ConstantPoolItem::Fieldref(x) => Self::Field(ReferenceConstant::from_reference_info(constant_pool, x)),
             _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
@@ -129,9 +129,9 @@ impl ValueConstant {
 #[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub struct ReferenceConstant {
-    pub class: String,
-    pub name: String,
-    pub descriptor: String,
+    pub class: Rc<String>,
+    pub name: Rc<String>,
+    pub descriptor: Rc<String>,
 }
 
 impl ReferenceConstant {
@@ -145,11 +145,11 @@ impl ReferenceConstant {
 
     pub fn from_reference_info(constant_pool: &[ConstantPoolItem], reference_info: &ConstantReferenceInfo) -> Self {
         let class = constant_pool[reference_info.class_index as usize - 1].class();
-        let class_name = constant_pool[class.name_index as usize - 1].utf8().to_string();
+        let class_name = constant_pool[class.name_index as usize - 1].utf8();
 
         let name_and_type = constant_pool[reference_info.name_and_type_index as usize - 1].name_and_type();
-        let name = constant_pool[name_and_type.name_index as usize - 1].utf8().to_string();
-        let descriptor = constant_pool[name_and_type.descriptor_index as usize - 1].utf8().to_string();
+        let name = constant_pool[name_and_type.name_index as usize - 1].utf8();
+        let descriptor = constant_pool[name_and_type.descriptor_index as usize - 1].utf8();
 
         Self {
             class: class_name,
