@@ -62,7 +62,7 @@ impl AttributeInfoCode {
             tuple((
                 be_u16,
                 be_u16,
-                map(length_count(be_u32, u8), Self::parse_code),
+                map(length_count(be_u32, u8), |x| Self::parse_code(x, constant_pool)),
                 length_count(be_u16, CodeAttributeExceptionTable::parse),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             )),
@@ -76,11 +76,11 @@ impl AttributeInfoCode {
         )(data)
     }
 
-    fn parse_code(code: Vec<u8>) -> BTreeMap<u32, Opcode> {
+    fn parse_code(code: Vec<u8>, constant_pool: &[ConstantPoolItem]) -> BTreeMap<u32, Opcode> {
         let mut result = BTreeMap::new();
 
         let mut data = code.as_slice();
-        while let Ok((remaining, opcode)) = Opcode::parse_with_tag(data) {
+        while let Ok((remaining, opcode)) = Opcode::parse(data, constant_pool) {
             let offset = unsafe { data.as_ptr().offset_from(code.as_slice().as_ptr()) } as u32;
             result.insert(offset, opcode);
 

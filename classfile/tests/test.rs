@@ -1,4 +1,4 @@
-use classfile::{AttributeInfo, ClassInfo};
+use classfile::{AttributeInfo, ClassInfo, Opcode};
 
 #[test]
 fn test_hello() -> anyhow::Result<()> {
@@ -23,9 +23,9 @@ fn test_hello() -> anyhow::Result<()> {
     assert!(matches!(class.methods[0].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[0].attributes[0] {
         assert_eq!(x.code.len(), 3);
-        assert!(matches!(x.code.get(&0).unwrap(), classfile::Opcode::Aload0));
-        assert!(matches!(x.code.get(&1).unwrap(), classfile::Opcode::Invokespecial(1)));
-        assert!(matches!(x.code.get(&4).unwrap(), classfile::Opcode::Return));
+        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload0));
+        assert!(matches!(x.code.get(&1).unwrap(), Opcode::Invokespecial(1)));
+        assert!(matches!(x.code.get(&4).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");
     }
@@ -35,10 +35,10 @@ fn test_hello() -> anyhow::Result<()> {
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
         assert_eq!(x.code.len(), 4);
-        assert!(matches!(x.code.get(&0).unwrap(), classfile::Opcode::Getstatic(7)));
-        assert!(matches!(x.code.get(&3).unwrap(), classfile::Opcode::Ldc(13)));
-        assert!(matches!(x.code.get(&5).unwrap(), classfile::Opcode::Invokevirtual(15)));
-        assert!(matches!(x.code.get(&8).unwrap(), classfile::Opcode::Return));
+        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Getstatic(7)));
+        assert!(matches!(x.code.get(&3).unwrap(), Opcode::Ldc(8)));
+        assert!(matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(15)));
+        assert!(matches!(x.code.get(&8).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");
     }
