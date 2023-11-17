@@ -2,7 +2,7 @@ use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 use classfile::{AttributeInfo, MethodInfo, Opcode};
 
-use crate::{class::Class, interpreter::Interpreter, value::JavaValue, Jvm, JvmResult};
+use crate::{interpreter::Interpreter, value::JavaValue, Jvm, JvmResult};
 
 pub enum MethodBody {
     ByteCode(BTreeMap<u32, Opcode>),
@@ -24,9 +24,9 @@ impl Method {
         }
     }
 
-    pub fn run(&self, jvm: &mut Jvm, class: &Class, _parameters: Vec<JavaValue>) -> JvmResult<JavaValue> {
+    pub fn run(&self, jvm: &mut Jvm, _parameters: Vec<JavaValue>) -> JvmResult<JavaValue> {
         Ok(match &self.body {
-            MethodBody::ByteCode(x) => Interpreter::run(jvm, &class.constant_pool, x)?,
+            MethodBody::ByteCode(x) => Interpreter::run(jvm, x)?,
             MethodBody::Rust(x) => x(),
         })
     }

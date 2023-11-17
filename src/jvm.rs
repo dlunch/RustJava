@@ -36,7 +36,7 @@ impl Jvm {
 
         self.current_thread_context().push_stack_frame();
 
-        method.run(self, &class, Vec::new())?;
+        method.run(self, Vec::new())?;
 
         Ok(())
     }
