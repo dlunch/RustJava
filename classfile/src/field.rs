@@ -17,17 +17,17 @@ pub struct FieldInfo {
 impl FieldInfo {
     pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
         map(
-            tuple((be_u16, be_u16, be_u16, length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)))),
-            |(access_flags, name_index, descriptor_index, attributes)| {
-                let name = constant_pool[name_index as usize - 1].utf8();
-                let descriptor = constant_pool[descriptor_index as usize - 1].utf8();
-
-                Self {
-                    access_flags,
-                    name: name.to_string(),
-                    descriptor: descriptor.to_string(),
-                    attributes,
-                }
+            tuple((
+                be_u16,
+                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
+            )),
+            |(access_flags, name, descriptor, attributes)| Self {
+                access_flags,
+                name: name.to_string(),
+                descriptor: descriptor.to_string(),
+                attributes,
             },
         )(data)
     }
