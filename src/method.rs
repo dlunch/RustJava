@@ -1,4 +1,9 @@
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{
+    boxed::Box,
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use classfile::{AttributeInfo, MethodInfo, Opcode};
 
@@ -18,8 +23,8 @@ pub struct Method {
 impl Method {
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
         Self {
-            name: method_info.name,
-            descriptor: method_info.descriptor,
+            name: method_info.name.to_string(),
+            descriptor: method_info.descriptor.to_string(),
             body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
         }
     }

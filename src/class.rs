@@ -1,4 +1,7 @@
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::{method::Method, JvmResult};
 
@@ -14,7 +17,7 @@ impl Class {
         let class = ClassInfo::parse(data)?;
 
         Ok(Self {
-            name: class.this_class,
+            name: class.this_class.to_string(),
             methods: class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>(),
         })
     }
