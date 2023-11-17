@@ -17,11 +17,11 @@ pub struct Method {
 
 impl Method {
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
-        let name = method_info.name;
-        let descriptor = method_info.descriptor;
-        let body = MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap());
-
-        Self { name, descriptor, body }
+        Self {
+            name: method_info.name,
+            descriptor: method_info.descriptor,
+            body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
+        }
     }
 
     pub fn run(&self, jvm: &mut Jvm, class: &Class, _parameters: Vec<JavaValue>) -> JvmResult<JavaValue> {

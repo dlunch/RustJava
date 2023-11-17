@@ -14,13 +14,10 @@ impl Class {
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 
-        let name = class.this_class;
-        let methods = class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>();
-
         Ok(Self {
-            name,
+            name: class.this_class,
             constant_pool: class.constant_pool,
-            methods,
+            methods: class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>(),
         })
     }
 
