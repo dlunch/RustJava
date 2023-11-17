@@ -4,6 +4,7 @@ use crate::{
     class::Class,
     class_loader::ClassLoader,
     interpreter::Interpreter,
+    method::MethodBody,
     thread::{ThreadContext, ThreadId},
     JvmResult,
 };
@@ -36,7 +37,12 @@ impl Jvm {
         let method = class.method(name, signature).unwrap();
 
         self.current_thread_context().push_stack_frame();
-        Interpreter::run(self, &class.constant_pool, &method.body)
+
+        if let MethodBody::ByteCode(x) = &method.body {
+            Interpreter::run(self, &class.constant_pool, x)
+        } else {
+            todo!()
+        }
     }
 
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {

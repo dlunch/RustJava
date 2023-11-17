@@ -1,18 +1,23 @@
-use alloc::{string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 
 use classfile::{AttributeInfo, MethodInfo, Opcode};
+
+pub enum MethodBody {
+    ByteCode(Vec<Opcode>),
+    Rust(Box<dyn Fn()>),
+}
 
 pub struct Method {
     pub name: String,
     pub descriptor: String,
-    pub body: Vec<Opcode>,
+    pub body: MethodBody,
 }
 
 impl Method {
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
         let name = method_info.name;
         let descriptor = method_info.descriptor;
-        let body = Self::extract_body(method_info.attributes).unwrap();
+        let body = MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap());
 
         Self { name, descriptor, body }
     }
