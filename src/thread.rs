@@ -1,11 +1,12 @@
-use alloc::vec::Vec;
+use alloc::{rc::Rc, vec::Vec};
+use core::cell::{RefCell, RefMut};
 
 use crate::stack_frame::StackFrame;
 
 pub type ThreadId = usize;
 
 pub struct ThreadContext {
-    stack: Vec<StackFrame>,
+    stack: Vec<Rc<RefCell<StackFrame>>>, // Wrapping StackFrame in Rc to break borrow chain from Jvm
 }
 
 impl ThreadContext {
@@ -14,10 +15,10 @@ impl ThreadContext {
     }
 
     pub fn push_stack_frame(&mut self) {
-        self.stack.push(StackFrame::new())
+        self.stack.push(Rc::new(RefCell::new(StackFrame::new())))
     }
 
-    pub fn current_stack_frame(&self) -> &StackFrame {
-        &self.stack[self.stack.len() - 1]
+    pub fn current_stack_frame(&self) -> RefMut<'_, StackFrame> {
+        self.stack[self.stack.len() - 1].borrow_mut()
     }
 }
