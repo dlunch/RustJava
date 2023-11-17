@@ -6,7 +6,7 @@ use crate::{class::Class, interpreter::Interpreter, value::JavaValue, Jvm, JvmRe
 
 pub enum MethodBody {
     ByteCode(Vec<Opcode>),
-    Rust(Box<dyn Fn()>),
+    Rust(Box<dyn Fn() -> JavaValue>),
 }
 
 pub struct Method {
@@ -25,12 +25,10 @@ impl Method {
     }
 
     pub fn run(&self, jvm: &mut Jvm, class: &Class, _parameters: Vec<JavaValue>) -> JvmResult<JavaValue> {
-        match &self.body {
+        Ok(match &self.body {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, &class.constant_pool, x)?,
             MethodBody::Rust(x) => x(),
-        }
-
-        todo!()
+        })
     }
 
     fn extract_body(attributes: Vec<AttributeInfo>) -> Option<Vec<Opcode>> {

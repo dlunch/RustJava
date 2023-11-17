@@ -1,1 +1,3 @@
-pub enum JavaValue {}
+pub enum JavaValue {
+    Void,
+}
