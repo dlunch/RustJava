@@ -11,6 +11,7 @@ use crate::{
     class::{Class, ClassInstance},
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
+    value::JavaValue,
     JvmResult,
 };
 
@@ -41,28 +42,24 @@ impl Jvm {
         self.class_loaders.push(Box::new(class_loader));
     }
 
-    pub fn invoke_static_method(&mut self, class_name: &str, name: &str, signature: &str) -> JvmResult<()> {
+    pub fn invoke_static_method(&mut self, class_name: &str, name: &str, signature: &str) -> JvmResult<JavaValue> {
         let class = self.find_class(class_name)?.unwrap();
         let class_definition = &class.borrow().class_definition;
         let method = class_definition.method(name, signature).unwrap();
 
         self.current_thread_context().push_stack_frame();
 
-        method.run(self, Vec::new())?;
-
-        Ok(())
+        method.run(self, Vec::new())
     }
 
-    pub fn invoke_method(&mut self, class_instance: Rc<RefCell<ClassInstance>>, name: &str, signature: &str) -> JvmResult<()> {
+    pub fn invoke_method(&mut self, class_instance: Rc<RefCell<ClassInstance>>, name: &str, signature: &str) -> JvmResult<JavaValue> {
         let class = &class_instance.borrow().class;
         let class_definition = &class.borrow().class_definition;
         let method = class_definition.method(name, signature).unwrap();
 
         self.current_thread_context().push_stack_frame();
 
-        method.run(self, Vec::new())?;
-
-        Ok(())
+        method.run(self, Vec::new())
     }
 
     pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
