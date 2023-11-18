@@ -19,11 +19,11 @@ pub enum ConstantPoolItem {
     #[nom(Selector = "1")]
     Utf8(#[nom(Parse = "parse_utf8")] Rc<String>),
     #[nom(Selector = "3")]
-    Integer(u32),
+    Integer(i32),
     #[nom(Selector = "4")]
     Float(f32),
     #[nom(Selector = "5")]
-    Long(u64),
+    Long(i64),
     #[nom(Selector = "6")]
     Double(f64),
     #[nom(Selector = "7")]
@@ -77,9 +77,9 @@ impl ConstantPoolItem {
 #[derive(Clone)]
 #[cfg_attr(debug_assertions, derive(Debug))]
 pub enum ValueConstant {
-    Integer(u32),
+    Integer(i32),
     Float(f32),
-    Long(u64),
+    Long(i64),
     Double(f64),
     String(Rc<String>),
     Class(Rc<String>),
