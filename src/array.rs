@@ -9,6 +9,7 @@ impl ArrayClass {
         ClassDefinition {
             name: Self::class_name(element_type_name),
             methods: vec![],
+            fields: vec![],
         }
     }
 

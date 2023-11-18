@@ -4,6 +4,7 @@ extern crate alloc;
 mod array;
 mod class;
 mod class_loader;
+mod field;
 mod interpreter;
 mod jvm;
 mod method;

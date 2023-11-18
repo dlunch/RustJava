@@ -6,13 +6,14 @@ use alloc::{
 };
 use core::cell::RefCell;
 
-use crate::{method::Method, value::JavaValue, JvmResult};
+use crate::{field::Field, method::Method, value::JavaValue, JvmResult};
 
 use classfile::ClassInfo;
 
 pub struct ClassDefinition {
     pub name: String,
     pub methods: Vec<Method>,
+    pub fields: Vec<Field>,
 }
 
 impl ClassDefinition {
@@ -22,6 +23,7 @@ impl ClassDefinition {
         Ok(Self {
             name: class.this_class.to_string(),
             methods: class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>(),
+            fields: class.fields.into_iter().map(Field::from_fieldinfo).collect::<Vec<_>>(),
         })
     }
 
