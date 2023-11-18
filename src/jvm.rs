@@ -8,12 +8,11 @@ use alloc::{
 use core::cell::RefCell;
 
 use crate::{
-    array::ArrayClass,
     class::{Class, ClassInstance},
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
-    JvmResult,
+    ClassDefinition, JvmResult,
 };
 
 #[derive(Default)]
@@ -114,13 +113,13 @@ impl Jvm {
     }
 
     fn find_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Rc<RefCell<Class>>>> {
-        let class_name = ArrayClass::class_name(element_type_name);
+        let class_name = ClassDefinition::array_class_name(element_type_name);
 
         if self.loaded_classes.contains_key(&class_name) {
             return Ok(self.loaded_classes.get(&class_name).cloned());
         }
 
-        let class_definition = ArrayClass::class_definition(element_type_name);
+        let class_definition = ClassDefinition::array_class_definition(element_type_name);
         self.loaded_classes.insert(
             class_name.to_string(),
             Rc::new(RefCell::new(Class {
