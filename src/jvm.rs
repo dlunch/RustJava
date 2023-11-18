@@ -8,6 +8,7 @@ use alloc::{
 use core::cell::RefCell;
 
 use crate::{
+    array::ArrayClass,
     class::{Class, ClassInstance},
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
@@ -75,6 +76,19 @@ impl Jvm {
         Ok(class_instance)
     }
 
+    pub fn instantiate_array(&mut self, element_type_name: &str, _count: usize) -> JvmResult<Rc<RefCell<ClassInstance>>> {
+        let class = self.find_array_class(element_type_name)?.unwrap();
+
+        let class_instance = Rc::new(RefCell::new(ClassInstance {
+            class,
+            storage: BTreeMap::new(),
+        }));
+
+        self.class_instances.push(class_instance.clone());
+
+        Ok(class_instance)
+    }
+
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
         self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap()
     }
@@ -103,5 +117,24 @@ impl Jvm {
         }
 
         Ok(None)
+    }
+
+    fn find_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Rc<RefCell<Class>>>> {
+        let class_name = ArrayClass::class_name(element_type_name);
+
+        if self.loaded_classes.contains_key(&class_name) {
+            return Ok(self.loaded_classes.get(&class_name).cloned());
+        }
+
+        let class_definition = ArrayClass::class_definition(element_type_name);
+        self.loaded_classes.insert(
+            class_name.to_string(),
+            Rc::new(RefCell::new(Class {
+                class_definition,
+                storage: BTreeMap::new(),
+            })),
+        );
+
+        Ok(self.loaded_classes.get(&class_name).cloned())
     }
 }

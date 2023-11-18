@@ -1,6 +1,7 @@
 #![no_std]
 extern crate alloc;
 
+mod array;
 mod class;
 mod class_loader;
 mod interpreter;
