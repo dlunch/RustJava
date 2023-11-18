@@ -5,9 +5,10 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
+use core::cell::RefCell;
 
 use crate::{
-    class::LoadedClass,
+    class::{ClassInstance, LoadedClass},
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
     JvmResult,
@@ -17,7 +18,8 @@ use crate::{
 pub struct Jvm {
     class_loaders: Vec<Box<dyn ClassLoader>>,
     thread_contexts: BTreeMap<ThreadId, ThreadContext>,
-    loaded_classes: BTreeMap<String, Rc<LoadedClass>>,
+    loaded_classes: BTreeMap<String, Rc<RefCell<LoadedClass>>>,
+    class_instances: Vec<Rc<RefCell<ClassInstance>>>,
 }
 
 impl Jvm {
@@ -28,6 +30,7 @@ impl Jvm {
             class_loaders: Vec::new(),
             thread_contexts,
             loaded_classes: BTreeMap::new(),
+            class_instances: Vec::new(),
         }
     }
 
@@ -40,7 +43,7 @@ impl Jvm {
 
     pub fn invoke_static_method(&mut self, class_name: &str, name: &str, signature: &str) -> JvmResult<()> {
         let loaded_class = self.find_class(class_name)?.unwrap();
-        let class = &loaded_class.class;
+        let class = &loaded_class.borrow().class;
         let method = class.method(name, signature).unwrap();
 
         self.current_thread_context().push_stack_frame();
@@ -48,6 +51,19 @@ impl Jvm {
         method.run(self, Vec::new())?;
 
         Ok(())
+    }
+
+    pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
+        let loaded_class = self.find_class(class_name)?.unwrap();
+
+        let class_instance = Rc::new(RefCell::new(ClassInstance {
+            class: loaded_class,
+            storage: BTreeMap::new(),
+        }));
+
+        self.class_instances.push(class_instance.clone());
+
+        Ok(class_instance)
     }
 
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
@@ -58,7 +74,7 @@ impl Jvm {
         0 // TODO
     }
 
-    fn find_class(&mut self, class_name: &str) -> JvmResult<Option<Rc<LoadedClass>>> {
+    fn find_class(&mut self, class_name: &str) -> JvmResult<Option<Rc<RefCell<LoadedClass>>>> {
         if self.loaded_classes.contains_key(class_name) {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
@@ -67,10 +83,10 @@ impl Jvm {
             if let Some(x) = class_loader.load(class_name)? {
                 self.loaded_classes.insert(
                     class_name.to_string(),
-                    Rc::new(LoadedClass {
+                    Rc::new(RefCell::new(LoadedClass {
                         class: x,
                         storage: BTreeMap::new(),
-                    }),
+                    })),
                 );
 
                 return Ok(self.loaded_classes.get(class_name).cloned());

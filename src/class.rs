@@ -1,8 +1,10 @@
 use alloc::{
     collections::BTreeMap,
+    rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
+use core::cell::RefCell;
 
 use crate::{method::Method, value::JavaValue, JvmResult};
 
@@ -30,5 +32,10 @@ impl Class {
 
 pub struct LoadedClass {
     pub class: Class,
+    pub storage: BTreeMap<String, JavaValue>,
+}
+
+pub struct ClassInstance {
+    pub class: Rc<RefCell<LoadedClass>>,
     pub storage: BTreeMap<String, JavaValue>,
 }
