@@ -1,19 +1,21 @@
 use alloc::collections::BTreeMap;
+
 use classfile::{Opcode, ValueConstant};
 
-use crate::{stack_frame::StackFrame, value::JavaValue, Jvm, JvmResult};
+use crate::{value::JavaValue, Jvm, JvmResult};
 
 pub struct Interpreter {}
 
 impl Interpreter {
     pub fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>) -> JvmResult<JavaValue> {
-        let mut stack_frame = jvm.current_thread_context().current_stack_frame();
+        let stack_frame = jvm.current_thread_context().current_stack_frame();
+        let mut stack_frame = stack_frame.borrow_mut();
 
         let mut iter = bytecode.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
-                Opcode::Ldc(x) => Self::load_constant(&mut stack_frame, x),
-                Opcode::Getstatic(_) => {}
+                Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(x)),
+                Opcode::Getstatic(x) => stack_frame.operand_stack.push(jvm.get_static_field(&x.class, &x.name)?),
                 Opcode::Invokevirtual(_) => {}
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
@@ -28,12 +30,12 @@ impl Interpreter {
         panic!("Should not reach here")
     }
 
-    fn load_constant(stack_frame: &mut StackFrame, constant: &ValueConstant) {
+    fn constant_to_value(constant: &ValueConstant) -> JavaValue {
         match constant {
-            ValueConstant::Integer(x) => stack_frame.operand_stack.push(JavaValue::Integer(*x)),
-            ValueConstant::Float(x) => stack_frame.operand_stack.push(JavaValue::Float(*x)),
-            ValueConstant::Long(x) => stack_frame.operand_stack.push(JavaValue::Long(*x)),
-            ValueConstant::Double(x) => stack_frame.operand_stack.push(JavaValue::Double(*x)),
+            ValueConstant::Integer(x) => JavaValue::Integer(*x),
+            ValueConstant::Float(x) => JavaValue::Float(*x),
+            ValueConstant::Long(x) => JavaValue::Long(*x),
+            ValueConstant::Double(x) => JavaValue::Double(*x),
             _ => unimplemented!(),
         }
     }

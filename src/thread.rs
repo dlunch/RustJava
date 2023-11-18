@@ -1,5 +1,5 @@
 use alloc::{rc::Rc, vec::Vec};
-use core::cell::{RefCell, RefMut};
+use core::cell::RefCell;
 
 use crate::stack_frame::StackFrame;
 
@@ -18,7 +18,7 @@ impl ThreadContext {
         self.stack.push(Rc::new(RefCell::new(StackFrame::new())))
     }
 
-    pub fn current_stack_frame(&self) -> RefMut<'_, StackFrame> {
-        self.stack[self.stack.len() - 1].borrow_mut()
+    pub fn current_stack_frame(&self) -> Rc<RefCell<StackFrame>> {
+        self.stack[self.stack.len() - 1].clone()
     }
 }

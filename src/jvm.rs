@@ -82,6 +82,10 @@ impl Jvm {
         Ok(class_instance)
     }
 
+    pub fn get_static_field(&mut self, _class_name: &str, _field_name: &str) -> JvmResult<JavaValue> {
+        Ok(JavaValue::Void) // TODO
+    }
+
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
         self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap()
     }
