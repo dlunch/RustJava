@@ -8,7 +8,7 @@ use alloc::{
 use core::cell::RefCell;
 
 use crate::{
-    class::{ClassInstance, LoadedClass},
+    class::{Class, ClassInstance},
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
     JvmResult,
@@ -18,7 +18,7 @@ use crate::{
 pub struct Jvm {
     class_loaders: Vec<Box<dyn ClassLoader>>,
     thread_contexts: BTreeMap<ThreadId, ThreadContext>,
-    loaded_classes: BTreeMap<String, Rc<RefCell<LoadedClass>>>,
+    loaded_classes: BTreeMap<String, Rc<RefCell<Class>>>,
     class_instances: Vec<Rc<RefCell<ClassInstance>>>,
 }
 
@@ -42,9 +42,9 @@ impl Jvm {
     }
 
     pub fn invoke_static_method(&mut self, class_name: &str, name: &str, signature: &str) -> JvmResult<()> {
-        let loaded_class = self.find_class(class_name)?.unwrap();
-        let class = &loaded_class.borrow().class;
-        let method = class.method(name, signature).unwrap();
+        let class = self.find_class(class_name)?.unwrap();
+        let class_definition = &class.borrow().class_definition;
+        let method = class_definition.method(name, signature).unwrap();
 
         self.current_thread_context().push_stack_frame();
 
@@ -54,10 +54,10 @@ impl Jvm {
     }
 
     pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
-        let loaded_class = self.find_class(class_name)?.unwrap();
+        let class = self.find_class(class_name)?.unwrap();
 
         let class_instance = Rc::new(RefCell::new(ClassInstance {
-            class: loaded_class,
+            class,
             storage: BTreeMap::new(),
         }));
 
@@ -74,7 +74,7 @@ impl Jvm {
         0 // TODO
     }
 
-    fn find_class(&mut self, class_name: &str) -> JvmResult<Option<Rc<RefCell<LoadedClass>>>> {
+    fn find_class(&mut self, class_name: &str) -> JvmResult<Option<Rc<RefCell<Class>>>> {
         if self.loaded_classes.contains_key(class_name) {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
@@ -83,8 +83,8 @@ impl Jvm {
             if let Some(x) = class_loader.load(class_name)? {
                 self.loaded_classes.insert(
                     class_name.to_string(),
-                    Rc::new(RefCell::new(LoadedClass {
-                        class: x,
+                    Rc::new(RefCell::new(Class {
+                        class_definition: x,
                         storage: BTreeMap::new(),
                     })),
                 );

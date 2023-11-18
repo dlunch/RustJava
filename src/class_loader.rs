@@ -1,5 +1,5 @@
-use crate::{class::Class, JvmResult};
+use crate::{class::ClassDefinition, JvmResult};
 
 pub trait ClassLoader {
-    fn load(&mut self, class_name: &str) -> JvmResult<Option<Class>>;
+    fn load(&mut self, class_name: &str) -> JvmResult<Option<ClassDefinition>>;
 }

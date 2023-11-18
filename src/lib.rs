@@ -12,6 +12,6 @@ mod value;
 
 pub type JvmResult<T> = anyhow::Result<T>;
 
-pub use class::Class;
+pub use class::ClassDefinition;
 pub use class_loader::ClassLoader;
 pub use jvm::Jvm;

@@ -1,4 +1,4 @@
-use jvm::{Class, ClassLoader, Jvm};
+use jvm::{ClassDefinition, ClassLoader, Jvm};
 
 struct FileClassLoader {
     class_name: String,
@@ -15,9 +15,9 @@ impl FileClassLoader {
 }
 
 impl ClassLoader for FileClassLoader {
-    fn load(&mut self, class_name: &str) -> anyhow::Result<Option<Class>> {
+    fn load(&mut self, class_name: &str) -> anyhow::Result<Option<ClassDefinition>> {
         if class_name == self.class_name {
-            let class = Class::from_classfile(&self.data)?;
+            let class = ClassDefinition::from_classfile(&self.data)?;
 
             Ok(Some(class))
         } else {

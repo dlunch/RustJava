@@ -10,12 +10,12 @@ use crate::{method::Method, value::JavaValue, JvmResult};
 
 use classfile::ClassInfo;
 
-pub struct Class {
+pub struct ClassDefinition {
     pub name: String,
     pub methods: Vec<Method>,
 }
 
-impl Class {
+impl ClassDefinition {
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 
@@ -30,12 +30,12 @@ impl Class {
     }
 }
 
-pub struct LoadedClass {
-    pub class: Class,
+pub struct Class {
+    pub class_definition: ClassDefinition,
     pub storage: BTreeMap<String, JavaValue>,
 }
 
 pub struct ClassInstance {
-    pub class: Rc<RefCell<LoadedClass>>,
+    pub class: Rc<RefCell<Class>>,
     pub storage: BTreeMap<String, JavaValue>,
 }
