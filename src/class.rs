@@ -1,9 +1,10 @@
 use alloc::{
+    collections::BTreeMap,
     string::{String, ToString},
     vec::Vec,
 };
 
-use crate::{method::Method, JvmResult};
+use crate::{method::Method, value::JavaValue, JvmResult};
 
 use classfile::ClassInfo;
 
@@ -25,4 +26,9 @@ impl Class {
     pub fn method(&self, name: &str, descriptor: &str) -> Option<&Method> {
         self.methods.iter().find(|&method| method.name == name && method.descriptor == descriptor)
     }
+}
+
+pub struct LoadedClass {
+    pub class: Class,
+    pub storage: BTreeMap<String, JavaValue>,
 }
