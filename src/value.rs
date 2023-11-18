@@ -9,5 +9,5 @@ pub enum JavaValue {
     Long(i64),
     Float(f32),
     Double(f64),
-    ClassInstance(Rc<RefCell<ClassInstance>>),
+    ObjectRef(Rc<RefCell<ClassInstance>>),
 }
