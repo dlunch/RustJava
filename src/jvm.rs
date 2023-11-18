@@ -53,6 +53,18 @@ impl Jvm {
         Ok(())
     }
 
+    pub fn invoke_method(&mut self, class_instance: Rc<RefCell<ClassInstance>>, name: &str, signature: &str) -> JvmResult<()> {
+        let class = &class_instance.borrow().class;
+        let class_definition = &class.borrow().class_definition;
+        let method = class_definition.method(name, signature).unwrap();
+
+        self.current_thread_context().push_stack_frame();
+
+        method.run(self, Vec::new())?;
+
+        Ok(())
+    }
+
     pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
         let class = self.find_class(class_name)?.unwrap();
 
