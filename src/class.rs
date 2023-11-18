@@ -1,5 +1,4 @@
 use alloc::{
-    collections::BTreeMap,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
@@ -34,10 +33,10 @@ impl ClassDefinition {
 
 pub struct Class {
     pub class_definition: ClassDefinition,
-    pub storage: BTreeMap<String, JavaValue>,
+    pub storage: Vec<JavaValue>,
 }
 
 pub struct ClassInstance {
     pub class: Rc<RefCell<Class>>,
-    pub storage: BTreeMap<String, JavaValue>,
+    pub storage: Vec<JavaValue>,
 }

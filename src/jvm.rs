@@ -66,10 +66,7 @@ impl Jvm {
     pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
         let class = self.find_class(class_name)?.unwrap();
 
-        let class_instance = Rc::new(RefCell::new(ClassInstance {
-            class,
-            storage: BTreeMap::new(),
-        }));
+        let class_instance = Rc::new(RefCell::new(ClassInstance { class, storage: Vec::new() }));
 
         self.class_instances.push(class_instance.clone());
 
@@ -79,10 +76,7 @@ impl Jvm {
     pub fn instantiate_array(&mut self, element_type_name: &str, _count: usize) -> JvmResult<Rc<RefCell<ClassInstance>>> {
         let class = self.find_array_class(element_type_name)?.unwrap();
 
-        let class_instance = Rc::new(RefCell::new(ClassInstance {
-            class,
-            storage: BTreeMap::new(),
-        }));
+        let class_instance = Rc::new(RefCell::new(ClassInstance { class, storage: Vec::new() }));
 
         self.class_instances.push(class_instance.clone());
 
@@ -108,7 +102,7 @@ impl Jvm {
                     class_name.to_string(),
                     Rc::new(RefCell::new(Class {
                         class_definition: x,
-                        storage: BTreeMap::new(),
+                        storage: Vec::new(),
                     })),
                 );
 
@@ -131,7 +125,7 @@ impl Jvm {
             class_name.to_string(),
             Rc::new(RefCell::new(Class {
                 class_definition,
-                storage: BTreeMap::new(),
+                storage: Vec::new(),
             })),
         );
 
