@@ -2,6 +2,7 @@
 extern crate alloc;
 
 mod class;
+mod class_definition;
 mod class_instance;
 mod class_loader;
 mod field;
@@ -16,7 +17,7 @@ mod value;
 pub type JvmResult<T> = anyhow::Result<T>;
 
 pub use self::{
-    class::ClassDefinition,
+    class_definition::ClassDefinition,
     class_loader::ClassLoader,
     jvm::Jvm,
     method::{Method, MethodBody},

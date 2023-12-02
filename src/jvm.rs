@@ -9,11 +9,12 @@ use core::cell::RefCell;
 
 use crate::{
     class::Class,
+    class_definition::ClassDefinition,
     class_instance::ClassInstance,
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
-    ClassDefinition, JvmResult,
+    JvmResult,
 };
 
 #[derive(Default)]
