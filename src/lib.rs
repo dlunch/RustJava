@@ -15,6 +15,10 @@ mod value;
 
 pub type JvmResult<T> = anyhow::Result<T>;
 
-pub use class::ClassDefinition;
-pub use class_loader::ClassLoader;
-pub use jvm::Jvm;
+pub use self::{
+    class::ClassDefinition,
+    class_loader::ClassLoader,
+    jvm::Jvm,
+    method::{Method, MethodBody},
+    value::JavaValue,
+};

@@ -16,6 +16,14 @@ pub struct ClassDefinition {
 }
 
 impl ClassDefinition {
+    pub fn new(name: &str, methods: Vec<Method>, fields: Vec<Field>) -> Self {
+        Self {
+            name: name.to_string(),
+            methods,
+            fields,
+        }
+    }
+
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 

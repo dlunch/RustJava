@@ -21,6 +21,14 @@ pub struct Method {
 }
 
 impl Method {
+    pub fn new(name: &str, descriptor: &str, body: MethodBody) -> Self {
+        Self {
+            name: name.to_string(),
+            descriptor: descriptor.to_string(),
+            body,
+        }
+    }
+
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
         Self {
             name: method_info.name.to_string(),
