@@ -3,6 +3,7 @@ use core::cell::RefCell;
 
 use crate::class_instance::ClassInstance;
 
+#[derive(Clone)]
 pub enum JavaValue {
     Void,
     Integer(i32),

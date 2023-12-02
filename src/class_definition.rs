@@ -27,10 +27,21 @@ impl ClassDefinition {
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 
+        let fields = class
+            .fields
+            .into_iter()
+            .scan(0, |index, field| {
+                let field = Field::from_fieldinfo(field, *index);
+                *index += 1;
+
+                Some(field)
+            })
+            .collect::<Vec<_>>();
+
         Ok(Self {
             name: class.this_class.to_string(),
             methods: class.methods.into_iter().map(Method::from_methodinfo).collect::<Vec<_>>(),
-            fields: class.fields.into_iter().map(Field::from_fieldinfo).collect::<Vec<_>>(),
+            fields,
         })
     }
 

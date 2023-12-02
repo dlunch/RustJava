@@ -84,8 +84,11 @@ impl Jvm {
         Ok(class_instance)
     }
 
-    pub fn get_static_field(&mut self, _class_name: &str, _field_name: &str) -> JvmResult<JavaValue> {
-        Ok(JavaValue::Void) // TODO
+    pub fn get_static_field(&mut self, class_name: &str, field_name: &str) -> JvmResult<JavaValue> {
+        let class = self.find_class(class_name)?.unwrap();
+        let class = class.borrow();
+
+        class.get_static_field(field_name)
     }
 
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
@@ -103,13 +106,7 @@ impl Jvm {
 
         for class_loader in &mut self.class_loaders {
             if let Some(x) = class_loader.load(class_name)? {
-                self.loaded_classes.insert(
-                    class_name.to_string(),
-                    Rc::new(RefCell::new(Class {
-                        class_definition: x,
-                        storage: Vec::new(),
-                    })),
-                );
+                self.loaded_classes.insert(class_name.to_string(), Class::new(x));
 
                 return Ok(self.loaded_classes.get(class_name).cloned());
             }
@@ -126,13 +123,7 @@ impl Jvm {
         }
 
         let class_definition = ClassDefinition::array_class_definition(element_type_name);
-        self.loaded_classes.insert(
-            class_name.to_string(),
-            Rc::new(RefCell::new(Class {
-                class_definition,
-                storage: Vec::new(),
-            })),
-        );
+        self.loaded_classes.insert(class_name.to_string(), Class::new(class_definition));
 
         Ok(self.loaded_classes.get(&class_name).cloned())
     }
