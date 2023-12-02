@@ -19,6 +19,7 @@ pub type JvmResult<T> = anyhow::Result<T>;
 pub use self::{
     class_definition::ClassDefinition,
     class_loader::ClassLoader,
+    field::Field,
     jvm::Jvm,
     method::{Method, MethodBody},
     value::JavaValue,

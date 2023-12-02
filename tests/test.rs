@@ -1,4 +1,4 @@
-use jvm::{ClassDefinition, ClassLoader, JavaValue, Jvm, Method, MethodBody};
+use jvm::{ClassDefinition, ClassLoader, Field, JavaValue, Jvm, Method, MethodBody};
 
 struct FileClassLoader {
     class_name: String,
@@ -28,20 +28,18 @@ impl ClassLoader for FileClassLoader {
 
 struct TestLocalClassLoader {}
 
-impl TestLocalClassLoader {
-    fn java_lang_string_init() -> JavaValue {
-        JavaValue::Void
-    }
-}
-
 impl ClassLoader for TestLocalClassLoader {
     fn load(&mut self, class_name: &str) -> anyhow::Result<Option<ClassDefinition>> {
         if class_name == "java/lang/String" {
             let class = ClassDefinition::new(
                 "java/lang/String",
-                vec![Method::new("<init>", "()V", MethodBody::Rust(Box::new(Self::java_lang_string_init)))],
+                vec![Method::new("<init>", "()V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
                 vec![],
             );
+
+            Ok(Some(class))
+        } else if class_name == "java/lang/System" {
+            let class = ClassDefinition::new("java/lang/System", vec![], vec![Field::new("out", "Ljava/io/PrintStream;", 0)]);
 
             Ok(Some(class))
         } else {

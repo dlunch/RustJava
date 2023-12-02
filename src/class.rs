@@ -1,5 +1,5 @@
 use alloc::{rc::Rc, vec::Vec};
-use core::cell::RefCell;
+use core::{cell::RefCell, iter};
 
 use crate::{class_definition::ClassDefinition, JavaValue, JvmResult};
 
@@ -10,10 +10,9 @@ pub struct Class {
 
 impl Class {
     pub fn new(class_definition: ClassDefinition) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
-            class_definition,
-            storage: Vec::new(),
-        }))
+        let storage = iter::repeat(JavaValue::Void).take(class_definition.fields.len()).collect();
+
+        Rc::new(RefCell::new(Self { class_definition, storage }))
     }
 
     pub fn get_static_field(&self, field_name: &str) -> JvmResult<JavaValue> {
