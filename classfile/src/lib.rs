@@ -11,9 +11,9 @@ mod opcode;
 
 pub use {
     attribute::AttributeInfo,
-    class::ClassInfo,
+    class::{ClassAccessFlags, ClassInfo},
     constant_pool::{ReferenceConstant, ValueConstant},
-    field::FieldInfo,
-    method::MethodInfo,
+    field::{FieldAccessFlags, FieldInfo},
+    method::{MethodAccessFlags, MethodInfo},
     opcode::Opcode,
 };

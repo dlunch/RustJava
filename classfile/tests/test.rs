@@ -1,4 +1,4 @@
-use classfile::{AttributeInfo, ClassInfo, Opcode, ValueConstant};
+use classfile::{AttributeInfo, ClassAccessFlags, ClassInfo, Opcode, ValueConstant};
 
 #[test]
 fn test_hello() -> anyhow::Result<()> {
@@ -10,7 +10,7 @@ fn test_hello() -> anyhow::Result<()> {
     assert_eq!(class.major_version, 65);
     assert_eq!(class.minor_version, 0);
     assert_eq!(class.constant_pool.len(), 28);
-    assert_eq!(class.access_flags, 0x20);
+    assert!(class.access_flags == ClassAccessFlags::SUPER);
     assert_eq!(class.this_class, "Hello".to_string().into());
     assert_eq!(class.super_class, Some("java/lang/Object".to_string().into()));
     assert_eq!(class.interfaces.len(), 0);
