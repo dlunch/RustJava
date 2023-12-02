@@ -8,7 +8,8 @@ use alloc::{
 use core::cell::RefCell;
 
 use crate::{
-    class::{Class, ClassInstance},
+    class::Class,
+    class_instance::ClassInstance,
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
@@ -65,7 +66,7 @@ impl Jvm {
     pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Rc<RefCell<ClassInstance>>> {
         let class = self.find_class(class_name)?.unwrap();
 
-        let class_instance = Rc::new(RefCell::new(ClassInstance { class, storage: Vec::new() }));
+        let class_instance = ClassInstance::new(class);
 
         self.class_instances.push(class_instance.clone());
 
@@ -75,7 +76,7 @@ impl Jvm {
     pub fn instantiate_array(&mut self, element_type_name: &str, _count: usize) -> JvmResult<Rc<RefCell<ClassInstance>>> {
         let class = self.find_array_class(element_type_name)?.unwrap();
 
-        let class_instance = Rc::new(RefCell::new(ClassInstance { class, storage: Vec::new() }));
+        let class_instance = ClassInstance::new(class);
 
         self.class_instances.push(class_instance.clone());
 

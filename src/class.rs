@@ -1,11 +1,9 @@
 use alloc::{
     format,
-    rc::Rc,
     string::{String, ToString},
     vec,
     vec::Vec,
 };
-use core::cell::RefCell;
 
 use crate::{field::Field, method::Method, value::JavaValue, JvmResult};
 
@@ -47,10 +45,5 @@ impl ClassDefinition {
 
 pub struct Class {
     pub class_definition: ClassDefinition,
-    pub storage: Vec<JavaValue>,
-}
-
-pub struct ClassInstance {
-    pub class: Rc<RefCell<Class>>,
     pub storage: Vec<JavaValue>,
 }

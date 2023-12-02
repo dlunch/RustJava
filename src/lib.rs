@@ -2,6 +2,7 @@
 extern crate alloc;
 
 mod class;
+mod class_instance;
 mod class_loader;
 mod field;
 mod interpreter;

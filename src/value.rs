@@ -1,7 +1,7 @@
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
-use crate::class::ClassInstance;
+use crate::class_instance::ClassInstance;
 
 pub enum JavaValue {
     Void,
