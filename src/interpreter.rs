@@ -2,7 +2,7 @@ use alloc::collections::BTreeMap;
 
 use classfile::{Opcode, ValueConstant};
 
-use crate::{value::JavaValue, Jvm, JvmResult};
+use crate::{runtime::JavaLangString, value::JavaValue, Jvm, JvmResult};
 
 pub struct Interpreter {}
 
@@ -14,7 +14,7 @@ impl Interpreter {
         let mut iter = bytecode.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
-                Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(x)),
+                Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x)?),
                 Opcode::Getstatic(x) => stack_frame.operand_stack.push(jvm.get_static_field(&x.class, &x.name)?),
                 Opcode::Invokevirtual(_) => {}
                 Opcode::Goto(x) => {
@@ -30,13 +30,14 @@ impl Interpreter {
         panic!("Should not reach here")
     }
 
-    fn constant_to_value(constant: &ValueConstant) -> JavaValue {
-        match constant {
+    fn constant_to_value(jvm: &mut Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
+        Ok(match constant {
             ValueConstant::Integer(x) => JavaValue::Integer(*x),
             ValueConstant::Float(x) => JavaValue::Float(*x),
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
+            ValueConstant::String(_) => JavaValue::ObjectRef(JavaLangString::new(jvm)?.instance),
             _ => unimplemented!(),
-        }
+        })
     }
 }

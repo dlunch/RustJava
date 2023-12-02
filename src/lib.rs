@@ -8,6 +8,7 @@ mod field;
 mod interpreter;
 mod jvm;
 mod method;
+mod runtime;
 mod stack_frame;
 mod thread;
 mod value;
