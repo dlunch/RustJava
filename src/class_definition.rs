@@ -7,7 +7,7 @@ use alloc::{
 
 use crate::{field::Field, method::Method, JvmResult};
 
-use classfile::ClassInfo;
+use classfile::{ClassInfo, FieldAccessFlags};
 
 pub struct ClassDefinition {
     pub name: String,
@@ -30,11 +30,18 @@ impl ClassDefinition {
         let fields = class
             .fields
             .into_iter()
-            .scan(0, |index, field| {
-                let field = Field::from_fieldinfo(field, *index);
-                *index += 1;
+            .scan((0, 0), |(index, static_index), field| {
+                let index = if field.access_flags.contains(FieldAccessFlags::STATIC) {
+                    *static_index += 1;
 
-                Some(field)
+                    *static_index - 1
+                } else {
+                    *index += 1;
+
+                    *index - 1
+                };
+
+                Some(Field::from_fieldinfo(field, index))
             })
             .collect::<Vec<_>>();
 
@@ -59,5 +66,11 @@ impl ClassDefinition {
 
     pub fn method(&self, name: &str, descriptor: &str) -> Option<&Method> {
         self.methods.iter().find(|&method| method.name == name && method.descriptor == descriptor)
+    }
+
+    pub fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<&Field> {
+        self.fields
+            .iter()
+            .find(|&field| field.name == name && field.descriptor == descriptor && field.is_static == is_static)
     }
 }

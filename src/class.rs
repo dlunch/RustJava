@@ -15,12 +15,9 @@ impl Class {
         Rc::new(RefCell::new(Self { class_definition, storage }))
     }
 
-    pub fn get_static_field(&self, field_name: &str) -> JvmResult<JavaValue> {
-        self.class_definition
-            .fields
-            .iter()
-            .find(|&field| field.name == field_name)
-            .map(|field| self.storage[field.index].clone())
-            .ok_or(anyhow::anyhow!("Field {} not found", field_name))
+    pub fn get_static_field(&self, field_name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        let field = self.class_definition.field(field_name, descriptor, true).unwrap();
+
+        Ok(self.storage[field.index].clone())
     }
 }

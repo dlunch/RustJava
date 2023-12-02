@@ -39,7 +39,7 @@ impl ClassLoader for TestLocalClassLoader {
 
             Ok(Some(class))
         } else if class_name == "java/lang/System" {
-            let class = ClassDefinition::new("java/lang/System", vec![], vec![Field::new("out", "Ljava/io/PrintStream;", 0)]);
+            let class = ClassDefinition::new("java/lang/System", vec![], vec![Field::new("out", "Ljava/io/PrintStream;", true, 0)]);
 
             Ok(Some(class))
         } else {

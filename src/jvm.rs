@@ -84,11 +84,11 @@ impl Jvm {
         Ok(class_instance)
     }
 
-    pub fn get_static_field(&mut self, class_name: &str, field_name: &str) -> JvmResult<JavaValue> {
+    pub fn get_static_field(&mut self, class_name: &str, field_name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let class = self.find_class(class_name)?.unwrap();
         let class = class.borrow();
 
-        class.get_static_field(field_name)
+        class.get_static_field(field_name, descriptor)
     }
 
     pub(crate) fn current_thread_context(&mut self) -> &mut ThreadContext {
