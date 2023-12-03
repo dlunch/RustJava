@@ -1,7 +1,8 @@
 use alloc::vec::Vec;
 
-use crate::value::JavaValue;
+use jvm::JavaValue;
 
+#[derive(Default)]
 pub struct StackFrame {
     pub local_variables: Vec<JavaValue>,
     pub operand_stack: Vec<JavaValue>,

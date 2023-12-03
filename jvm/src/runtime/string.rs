@@ -1,10 +1,10 @@
-use alloc::rc::Rc;
+use alloc::{boxed::Box, rc::Rc};
 use core::cell::RefCell;
 
 use crate::{class_instance::ClassInstance, Jvm, JvmResult};
 
 pub struct JavaLangString {
-    pub instance: Rc<RefCell<ClassInstance>>,
+    pub instance: Rc<RefCell<Box<dyn ClassInstance>>>,
 }
 
 impl JavaLangString {

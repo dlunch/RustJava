@@ -25,12 +25,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
 name = "jvm"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "classfile",
+ "downcast-rs",
  "tracing",
+]
+
+[[package]]
+name = "jvm_impl"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "classfile",
+ "jvm",
+ "tracing",
+]
+
+[[package]]
+name = "jvm_tests"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "jvm",
+ "jvm_impl",
 ]
 
 [[package]]

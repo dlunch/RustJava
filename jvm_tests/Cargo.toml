@@ -1,10 +1,11 @@
 [package]
-name = "jvm"
+name = "jvm_tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 anyhow = { version = "^1.0" }
-downcast-rs = { version = "^1.1" }
-tracing = { version = "^0.1" }
+
+jvm = { path = "../jvm" }
+jvm_impl = { path = "../jvm_impl" }

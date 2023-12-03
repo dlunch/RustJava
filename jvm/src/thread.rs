@@ -1,24 +1,11 @@
-use alloc::{rc::Rc, vec::Vec};
-use core::cell::RefCell;
-
-use crate::stack_frame::StackFrame;
+use alloc::boxed::Box;
+use downcast_rs::{impl_downcast, Downcast};
 
 pub type ThreadId = usize;
 
-pub struct ThreadContext {
-    stack: Vec<Rc<RefCell<StackFrame>>>, // Wrapping StackFrame in Rc to break borrow chain from Jvm
-}
+pub trait ThreadContext: Downcast {}
+impl_downcast!(ThreadContext);
 
-impl ThreadContext {
-    pub fn new() -> Self {
-        Self { stack: Vec::new() }
-    }
-
-    pub fn push_stack_frame(&mut self) {
-        self.stack.push(Rc::new(RefCell::new(StackFrame::new())))
-    }
-
-    pub fn current_stack_frame(&self) -> Rc<RefCell<StackFrame>> {
-        self.stack[self.stack.len() - 1].clone()
-    }
+pub trait ThreadContextProvider {
+    fn thread_context(&self, thread_id: ThreadId) -> Box<dyn ThreadContext>;
 }

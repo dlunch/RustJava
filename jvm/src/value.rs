@@ -1,4 +1,4 @@
-use alloc::rc::Rc;
+use alloc::{boxed::Box, rc::Rc};
 use core::cell::RefCell;
 
 use crate::class_instance::ClassInstance;
@@ -10,5 +10,5 @@ pub enum JavaValue {
     Long(i64),
     Float(f32),
     Double(f64),
-    Object(Option<Rc<RefCell<ClassInstance>>>),
+    Object(Option<Rc<RefCell<Box<dyn ClassInstance>>>>),
 }

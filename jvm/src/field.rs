@@ -1,36 +1,11 @@
-use alloc::string::{String, ToString};
-
-use classfile::{FieldAccessFlags, FieldInfo};
+use downcast_rs::{impl_downcast, Downcast};
 
 use crate::r#type::JavaType;
 
-pub struct Field {
-    pub name: String,
-    pub descriptor: String,
-    pub is_static: bool,
-    pub index: usize,
+pub trait Field: Downcast {
+    fn name(&self) -> &str;
+    fn descriptor(&self) -> &str;
+    fn is_static(&self) -> bool;
+    fn r#type(&self) -> JavaType;
 }
-
-impl Field {
-    pub fn new(name: &str, descriptor: &str, is_static: bool, index: usize) -> Self {
-        Self {
-            name: name.to_string(),
-            descriptor: descriptor.to_string(),
-            is_static,
-            index,
-        }
-    }
-
-    pub fn from_fieldinfo(field_info: FieldInfo, index: usize) -> Self {
-        Self {
-            name: field_info.name.to_string(),
-            descriptor: field_info.descriptor.to_string(),
-            is_static: field_info.access_flags.contains(FieldAccessFlags::STATIC),
-            index,
-        }
-    }
-
-    pub fn r#type(&self) -> JavaType {
-        JavaType::parse_field_descriptor(&self.descriptor)
-    }
-}
+impl_downcast!(Field);

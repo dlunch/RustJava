@@ -2,13 +2,17 @@ use alloc::collections::BTreeMap;
 
 use classfile::{Opcode, ValueConstant};
 
-use crate::{runtime::JavaLangString, value::JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, JavaValue, Jvm, JvmResult};
+
+use crate::thread::ThreadContextImpl;
 
 pub struct Interpreter {}
 
 impl Interpreter {
     pub fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>) -> JvmResult<JavaValue> {
-        let stack_frame = jvm.current_thread_context().current_stack_frame();
+        let thread_context = jvm.current_thread_context().downcast_mut::<ThreadContextImpl>().unwrap();
+
+        let stack_frame = thread_context.push_stack_frame();
         let mut stack_frame = stack_frame.borrow_mut();
 
         let mut iter = bytecode.range(0..);

@@ -1,28 +1,23 @@
-use alloc::{rc::Rc, vec::Vec};
-use core::cell::RefCell;
+use alloc::{boxed::Box, vec::Vec};
 
-use crate::{class_definition::ClassDefinition, JavaValue, JvmResult};
+use crate::{ClassInstance, Field, JavaValue, JvmResult, Method};
 
-pub struct Class {
-    pub class_definition: ClassDefinition,
-    pub storage: Vec<JavaValue>,
-}
+pub trait Class {
+    fn name(&self) -> &str;
+    fn fields(&self) -> Vec<&dyn Field>;
+    fn methods(&self) -> Vec<&dyn Method>;
+    fn instantiate(&self) -> Box<dyn ClassInstance>;
+    fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue>;
 
-impl Class {
-    pub fn new(class_definition: ClassDefinition) -> Rc<RefCell<Self>> {
-        let storage = class_definition
-            .fields
-            .iter()
-            .filter(|x| x.is_static)
-            .map(|x| x.r#type().default())
-            .collect();
-
-        Rc::new(RefCell::new(Self { class_definition, storage }))
+    fn method(&self, name: &str, descriptor: &str) -> Option<&dyn Method> {
+        self.methods()
+            .into_iter()
+            .find(|&method| method.name() == name && method.descriptor() == descriptor)
     }
 
-    pub fn get_static_field(&self, field_name: &str, descriptor: &str) -> JvmResult<JavaValue> {
-        let field = self.class_definition.field(field_name, descriptor, true).unwrap();
-
-        Ok(self.storage[field.index].clone())
+    fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<&dyn Field> {
+        self.fields()
+            .into_iter()
+            .find(|&field| field.name() == name && field.descriptor() == descriptor && field.is_static() == is_static)
     }
 }
