@@ -69,11 +69,28 @@ impl Jvm {
         Ok(class_instance)
     }
 
+    pub fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        let class = self.resolve_class(class_name)?.unwrap();
+        let class = class.borrow();
+
+        let field = class.field(name, descriptor, true).unwrap();
+
+        class.get_static_field(field)
+    }
+
+    pub fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
+        let class = self.resolve_class(class_name)?.unwrap();
+        let class = class.borrow();
+        let method = class.method(name, descriptor).unwrap();
+
+        method.run(self, args)
+    }
+
     pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {
         self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap().as_mut()
     }
 
-    pub fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
         if self.loaded_classes.contains_key(class_name) {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }

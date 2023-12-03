@@ -31,11 +31,7 @@ fn test_hello() -> anyhow::Result<()> {
     jvm.add_class_loader(ClassFileLoader::new(vec![("Hello".to_string(), hello.to_vec())].into_iter().collect()));
     jvm.add_class_loader(TestLocalClassLoader {});
 
-    let class = jvm.resolve_class("Hello")?.unwrap();
-    let class = class.borrow();
-    let method = class.method("main", "([Ljava/lang/String;)V").unwrap();
-
-    method.run(&mut jvm, &[])?;
+    jvm.invoke_static_method("Hello", "main", "([Ljava/lang/String;)V", &[])?;
 
     Ok(())
 }

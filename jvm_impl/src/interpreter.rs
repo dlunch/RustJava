@@ -19,14 +19,7 @@ impl Interpreter {
         while let Some((_, opcode)) = iter.next() {
             match opcode {
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x)?),
-                Opcode::Getstatic(x) => {
-                    let class = jvm.resolve_class(&x.class)?.unwrap();
-                    let class = class.borrow();
-                    let field = class.field(&x.name, &x.descriptor, true).unwrap();
-                    let field_value = class.get_static_field(field)?;
-
-                    stack_frame.operand_stack.push(field_value)
-                }
+                Opcode::Getstatic(x) => stack_frame.operand_stack.push(jvm.get_static_field(&x.class, &x.name, &x.descriptor)?),
                 Opcode::Invokevirtual(_) => {}
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
