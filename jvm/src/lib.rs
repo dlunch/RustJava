@@ -3,6 +3,7 @@ extern crate alloc;
 
 mod array_class;
 mod array_class_instance;
+mod as_any;
 mod class;
 mod class_instance;
 mod class_loader;

@@ -1,11 +1,8 @@
-use downcast_rs::{impl_downcast, Downcast};
+use crate::{as_any::AsAny, r#type::JavaType};
 
-use crate::r#type::JavaType;
-
-pub trait Field: Downcast {
+pub trait Field: AsAny {
     fn name(&self) -> &str;
     fn descriptor(&self) -> &str;
     fn is_static(&self) -> bool;
     fn r#type(&self) -> JavaType;
 }
-impl_downcast!(Field);

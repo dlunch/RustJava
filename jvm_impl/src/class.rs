@@ -50,7 +50,7 @@ impl ClassImpl {
 
 impl Class for ClassImpl {
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
-        let field = field.downcast_ref::<FieldImpl>().unwrap();
+        let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         Ok(self.storage[field.index()].clone())
     }

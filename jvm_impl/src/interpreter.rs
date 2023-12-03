@@ -10,7 +10,7 @@ pub struct Interpreter {}
 
 impl Interpreter {
     pub fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>) -> JvmResult<JavaValue> {
-        let thread_context = jvm.current_thread_context().downcast_mut::<ThreadContextImpl>().unwrap();
+        let thread_context = jvm.current_thread_context().as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
 
         let stack_frame = thread_context.push_stack_frame();
         let mut stack_frame = stack_frame.borrow_mut();

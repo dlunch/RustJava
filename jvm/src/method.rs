@@ -1,11 +1,8 @@
-use downcast_rs::{impl_downcast, Downcast};
+use crate::{as_any::AsAny, JavaValue, Jvm, JvmResult};
 
-use crate::{JavaValue, Jvm, JvmResult};
-
-pub trait Method: Downcast {
+pub trait Method: AsAny {
     fn name(&self) -> &str;
     fn descriptor(&self) -> &str;
 
     fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue>;
 }
-impl_downcast!(Method);

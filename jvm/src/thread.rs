@@ -1,10 +1,10 @@
 use alloc::boxed::Box;
-use downcast_rs::{impl_downcast, Downcast};
+
+use crate::as_any::AsAny;
 
 pub type ThreadId = usize;
 
-pub trait ThreadContext: Downcast {}
-impl_downcast!(ThreadContext);
+pub trait ThreadContext: AsAny {}
 
 pub trait ThreadContextProvider {
     fn thread_context(&self, thread_id: ThreadId) -> Box<dyn ThreadContext>;
