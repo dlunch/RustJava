@@ -19,7 +19,6 @@ use crate::{
 pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
 pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
-#[derive(Default)]
 pub struct Jvm {
     class_loaders: Vec<Box<dyn ClassLoader>>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
