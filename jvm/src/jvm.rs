@@ -93,12 +93,23 @@ impl Jvm {
         }
 
         if let Some(x) = self.class_loader.load(class_name)? {
-            self.loaded_classes.insert(class_name.to_string(), Rc::new(RefCell::new(x)));
+            self.load_class(class_name, x)?;
 
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
 
         Ok(None)
+    }
+
+    fn load_class(&mut self, class_name: &str, class: Box<dyn Class>) -> JvmResult<()> {
+        let class = Rc::new(RefCell::new(class));
+        self.loaded_classes.insert(class_name.to_string(), class.clone());
+
+        if let Some(x) = class.borrow().method("<clinit>", "()V") {
+            x.run(self, &[])?;
+        }
+
+        Ok(())
     }
 
     fn current_thread_id() -> ThreadId {

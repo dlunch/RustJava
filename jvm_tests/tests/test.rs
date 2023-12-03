@@ -26,7 +26,11 @@ impl ClassLoader for TestClassLoader {
 
             Ok(Some(Box::new(class)))
         } else if class_name == "java/lang/System" {
-            let class = ClassImpl::new("java/lang/System", vec![], vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)]);
+            let class = ClassImpl::new(
+                "java/lang/System",
+                vec![MethodImpl::new("<clinit>", "()V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
+                vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)],
+            );
 
             Ok(Some(Box::new(class)))
         } else if self.class_files.contains_key(class_name) {
