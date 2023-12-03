@@ -1,11 +1,11 @@
 [package]
-name = "classfile"
+name = "jvm"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 anyhow = { version = "^1.0" }
-bitflags = { version = "^2.4" }
-nom = { version = "^7.1" }
-nom-derive = { version = "^0.10" }
+tracing = { version = "^0.1" }
+
+classfile = { path = "../classfile" }

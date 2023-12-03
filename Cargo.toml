@@ -1,13 +1,8 @@
 [workspace]
-members = ["classfile"]
+resolver = "2"
+members = ["classfile", "jvm"]
 
-[package]
-name = "jvm"
-version = "0.1.0"
+[workspace.package]
+version = "0.0.1"
 edition = "2021"
-
-[dependencies]
-anyhow = { version = "^1.0" }
-tracing = { version = "^0.1" }
-
-classfile = { path = "./classfile" }
+license = "MIT"
