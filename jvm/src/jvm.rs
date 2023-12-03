@@ -19,31 +19,27 @@ pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
 pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
 pub struct Jvm {
-    class_loaders: Vec<Box<dyn ClassLoader>>,
+    class_loader: Box<dyn ClassLoader>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
     loaded_classes: BTreeMap<String, ClassRef>,
     class_instances: Vec<ClassInstanceRef>,
 }
 
 impl Jvm {
-    pub fn new(context_provider: &dyn ThreadContextProvider) -> Self {
+    pub fn new<T>(class_loader: T, context_provider: &dyn ThreadContextProvider) -> Self
+    where
+        T: ClassLoader + 'static,
+    {
         let thread_contexts = [(Self::current_thread_id(), context_provider.thread_context(Self::current_thread_id()))]
             .into_iter()
             .collect();
 
         Self {
-            class_loaders: Vec::new(),
+            class_loader: Box::new(class_loader),
             thread_contexts,
             loaded_classes: BTreeMap::new(),
             class_instances: Vec::new(),
         }
-    }
-
-    pub fn add_class_loader<T>(&mut self, class_loader: T)
-    where
-        T: ClassLoader + 'static,
-    {
-        self.class_loaders.push(Box::new(class_loader));
     }
 
     pub fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_param: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
@@ -61,8 +57,7 @@ impl Jvm {
     }
 
     pub fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
-        // TODO use element_class's class loader
-        let array_class = self.class_loaders[0].load_array_class(element_type_name)?.unwrap();
+        let array_class = self.class_loader.load_array_class(element_type_name)?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
 
@@ -97,12 +92,10 @@ impl Jvm {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
 
-        for class_loader in &mut self.class_loaders {
-            if let Some(x) = class_loader.load(class_name)? {
-                self.loaded_classes.insert(class_name.to_string(), Rc::new(RefCell::new(x)));
+        if let Some(x) = self.class_loader.load(class_name)? {
+            self.loaded_classes.insert(class_name.to_string(), Rc::new(RefCell::new(x)));
 
-                return Ok(self.loaded_classes.get(class_name).cloned());
-            }
+            return Ok(self.loaded_classes.get(class_name).cloned());
         }
 
         Ok(None)
