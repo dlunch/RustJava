@@ -2,6 +2,8 @@ use alloc::string::{String, ToString};
 
 use classfile::{FieldAccessFlags, FieldInfo};
 
+use crate::r#type::JavaType;
+
 pub struct Field {
     pub name: String,
     pub descriptor: String,
@@ -26,5 +28,9 @@ impl Field {
             is_static: field_info.access_flags.contains(FieldAccessFlags::STATIC),
             index,
         }
+    }
+
+    pub fn r#type(&self) -> JavaType {
+        JavaType::parse_field_descriptor(&self.descriptor)
     }
 }

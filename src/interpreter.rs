@@ -36,7 +36,7 @@ impl Interpreter {
             ValueConstant::Float(x) => JavaValue::Float(*x),
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
-            ValueConstant::String(_) => JavaValue::ObjectRef(JavaLangString::new(jvm)?.instance),
+            ValueConstant::String(_) => JavaValue::Object(Some(JavaLangString::new(jvm)?.instance)),
             _ => unimplemented!(),
         })
     }

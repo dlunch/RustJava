@@ -10,6 +10,15 @@ pub struct ClassInstance {
 
 impl ClassInstance {
     pub fn new(class: Rc<RefCell<Class>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self { class, storage: Vec::new() }))
+        let storage = class
+            .borrow()
+            .class_definition
+            .fields
+            .iter()
+            .filter(|x| !x.is_static)
+            .map(|x| x.r#type().default())
+            .collect();
+
+        Rc::new(RefCell::new(Self { class, storage }))
     }
 }

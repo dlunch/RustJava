@@ -12,6 +12,7 @@ mod method;
 mod runtime;
 mod stack_frame;
 mod thread;
+mod r#type;
 mod value;
 
 pub type JvmResult<T> = anyhow::Result<T>;
