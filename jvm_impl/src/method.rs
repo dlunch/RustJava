@@ -11,9 +11,11 @@ use jvm::{JavaValue, Jvm, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
 
+type RustMethod = dyn Fn(&mut Jvm, &[JavaValue]) -> JavaValue;
+
 pub enum MethodBody {
     ByteCode(BTreeMap<u32, Opcode>),
-    Rust(Box<dyn Fn(&mut Jvm) -> JavaValue>),
+    Rust(Box<RustMethod>),
 }
 
 #[derive(Clone)]
@@ -60,10 +62,10 @@ impl Method for MethodImpl {
         &self.descriptor
     }
 
-    fn run(&self, jvm: &mut Jvm, _parameters: &[JavaValue]) -> JvmResult<JavaValue> {
+    fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue> {
         Ok(match self.body.as_ref() {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, x)?,
-            MethodBody::Rust(x) => x(jvm),
+            MethodBody::Rust(x) => x(jvm, args),
         })
     }
 }

@@ -2,7 +2,7 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 
-use jvm::{ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
 struct TestClassLoader {
@@ -14,11 +14,29 @@ impl TestClassLoader {
         Self { class_files }
     }
 
-    fn system_clinit(jvm: &mut Jvm) -> JavaValue {
+    fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> JavaValue {
         let out = jvm.instantiate_class("java/io/PrintStream", "()V", &[]).unwrap();
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
             .unwrap();
+
+        JavaValue::Void
+    }
+
+    fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> JavaValue {
+        let string = args[0].as_object().unwrap();
+        let chars = args[1].as_object().unwrap();
+
+        jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
+
+        JavaValue::Void
+    }
+
+    fn println(jvm: &mut Jvm, args: &[JavaValue]) -> JavaValue {
+        let string = args[1].as_object().unwrap();
+
+        let str = JavaLangString::from_instance(string.clone());
+        println!("{}", str.to_string(jvm).unwrap());
 
         JavaValue::Void
     }
@@ -29,8 +47,8 @@ impl ClassLoader for TestClassLoader {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
-                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(|_| JavaValue::Void)))],
-                vec![],
+                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(Self::string_init)))],
+                vec![FieldImpl::new("value", "[C", false, 0)],
             );
 
             Ok(Some(Box::new(class)))
@@ -46,8 +64,8 @@ impl ClassLoader for TestClassLoader {
             let class = ClassImpl::new(
                 "java/io/PrintStream",
                 vec![
-                    MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|_| JavaValue::Void))),
-                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(Box::new(|_| JavaValue::Void))),
+                    MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|_, _| JavaValue::Void))),
+                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(Box::new(Self::println))),
                 ],
                 vec![],
             );

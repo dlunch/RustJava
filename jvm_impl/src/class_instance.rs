@@ -5,11 +5,11 @@ use alloc::{
 
 use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 
-use crate::class::ClassImpl;
+use crate::{class::ClassImpl, FieldImpl};
 
 pub struct ClassInstanceImpl {
     class_name: String,
-    _storage: Vec<JavaValue>,
+    storage: Vec<JavaValue>,
 }
 
 impl ClassInstanceImpl {
@@ -18,7 +18,7 @@ impl ClassInstanceImpl {
 
         Self {
             class_name: class.name().to_string(),
-            _storage: storage,
+            storage,
         }
     }
 }
@@ -26,6 +26,24 @@ impl ClassInstanceImpl {
 impl ClassInstance for ClassInstanceImpl {
     fn class_name(&self) -> &str {
         &self.class_name
+    }
+
+    fn get_field(&self, field: &dyn Field) -> jvm::JvmResult<JavaValue> {
+        let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
+
+        Ok(self.storage[field.index()].clone())
+    }
+
+    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> jvm::JvmResult<()> {
+        let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
+
+        self.storage[field.index()] = value;
+
+        Ok(())
+    }
+
+    fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
+        None
     }
 
     fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {

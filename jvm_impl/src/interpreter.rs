@@ -27,11 +27,9 @@ impl Interpreter {
                         .collect::<Vec<_>>();
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
-                    if let JavaValue::Object(Some(instance)) = instance {
-                        jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, &params)?;
-                    } else {
-                        anyhow::bail!("Invalid invoke call") // TODO exception
-                    }
+                    let instance = instance.as_object().unwrap();
+
+                    jvm.invoke_method(instance, &x.class, &x.name, &x.descriptor, &params)?;
                 }
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);

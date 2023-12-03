@@ -42,16 +42,14 @@ impl Jvm {
         }
     }
 
-    pub fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_param: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
+    pub fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_args: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
         let class = self.resolve_class(class_name)?.unwrap();
         let class = class.borrow();
 
         let instance = Rc::new(RefCell::new(class.instantiate()));
 
         self.class_instances.push(instance.clone());
-
-        let method = class.method("<init>", init_descriptor).unwrap();
-        method.run(self, init_param)?;
+        self.invoke_method(&instance, class_name, "<init>", init_descriptor, init_args)?;
 
         Ok(instance)
     }
@@ -84,6 +82,22 @@ impl Jvm {
         class.put_static_field(&*field, value)
     }
 
+    pub fn get_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        let instance = instance.borrow();
+        let class = self.resolve_class(instance.class_name())?.unwrap();
+        let field = class.borrow().field(name, descriptor, false).unwrap();
+
+        instance.get_field(&*field)
+    }
+
+    pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+        let mut instance = instance.borrow_mut();
+        let class = self.resolve_class(instance.class_name())?.unwrap();
+        let field = class.borrow().field(name, descriptor, false).unwrap();
+
+        instance.put_field(&*field, value)
+    }
+
     pub fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
         let class = self.resolve_class(class_name)?.unwrap();
         let class = class.borrow();
@@ -104,7 +118,13 @@ impl Jvm {
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
-        method.run(self, args)
+        let args = [JavaValue::Object(Some(instance.clone()))]
+            .iter()
+            .chain(args.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+
+        method.run(self, &args)
     }
 
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
@@ -112,6 +132,20 @@ impl Jvm {
         let array = array.as_array_instance_mut().unwrap();
 
         array.store(offset, values)
+    }
+
+    pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {
+        let array = array.borrow();
+        let array = array.as_array_instance().unwrap();
+
+        array.load(offset, count)
+    }
+
+    pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {
+        let array = array.borrow();
+        let array = array.as_array_instance().unwrap();
+
+        Ok(array.length())
     }
 
     pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {

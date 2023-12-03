@@ -40,6 +40,8 @@ impl JavaType {
             s => {
                 if s.starts_with('L') && s.ends_with(';') {
                     JavaType::Object(s[1..s.len() - 1].to_string())
+                } else if s.starts_with('[') {
+                    JavaType::Object(s.to_string())
                 } else {
                     panic!("Invalid descriptor: {}", s);
                 }
