@@ -16,9 +16,9 @@ pub enum MethodBody {
 }
 
 pub struct MethodImpl {
-    pub name: String,
-    pub descriptor: String,
-    pub body: MethodBody,
+    name: String,
+    descriptor: String,
+    body: MethodBody,
 }
 
 impl MethodImpl {

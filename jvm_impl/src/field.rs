@@ -5,10 +5,10 @@ use classfile::{FieldAccessFlags, FieldInfo};
 use jvm::{Field, JavaType};
 
 pub struct FieldImpl {
-    pub name: String,
-    pub descriptor: String,
-    pub is_static: bool,
-    pub index: usize,
+    name: String,
+    descriptor: String,
+    is_static: bool,
+    index: usize,
 }
 
 impl FieldImpl {
@@ -28,6 +28,10 @@ impl FieldImpl {
             is_static: field_info.access_flags.contains(FieldAccessFlags::STATIC),
             index,
         }
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
     }
 }
 
