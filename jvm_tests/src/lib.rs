@@ -1,12 +1,14 @@
 #![allow(clippy::type_complexity)]
 extern crate alloc;
 
+use core::cell::RefCell;
+
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 
 use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
-use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl};
+use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
-pub struct TestClassLoader {
+struct TestClassLoader {
     class_files: BTreeMap<String, Vec<u8>>,
     println_handler: Rc<Box<dyn Fn(&str)>>,
 }
@@ -92,4 +94,27 @@ impl ClassLoader for TestClassLoader {
     fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
         Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
     }
+}
+
+pub fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
+    let printed = Rc::new(RefCell::new(String::new()));
+
+    let printed1 = printed.clone();
+    let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
+
+    let mut jvm = Jvm::new(
+        TestClassLoader::new(vec![(name.to_string(), class.to_vec())].into_iter().collect(), Box::new(println_handler)),
+        &ThreadContextProviderImpl {},
+    );
+
+    let args = args
+        .iter()
+        .map(|x| JavaLangString::new(&mut jvm, x).unwrap())
+        .map(|x| JavaValue::Object(Some(x.instance)))
+        .collect::<Vec<_>>();
+
+    jvm.invoke_static_method(name, "main", "([Ljava/lang/String;)V", &args)?;
+
+    let result = printed.borrow().to_string();
+    Ok(result)
 }
