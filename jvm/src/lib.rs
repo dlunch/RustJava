@@ -18,6 +18,8 @@ pub mod runtime;
 pub type JvmResult<T> = anyhow::Result<T>;
 
 pub use self::{
+    array_class::ArrayClass,
+    array_class_instance::ArrayClassInstance,
     class::Class,
     class_instance::ClassInstance,
     class_loader::ClassLoader,

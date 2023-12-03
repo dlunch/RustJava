@@ -1,4 +1,4 @@
-use jvm::{Class, ClassLoader, JavaValue, Jvm, JvmResult};
+use jvm::{ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ClassFileLoader, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
 struct TestLocalClassLoader {}
@@ -8,7 +8,7 @@ impl ClassLoader for TestLocalClassLoader {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
-                vec![MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
+                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
                 vec![],
             );
 
@@ -20,6 +20,10 @@ impl ClassLoader for TestLocalClassLoader {
         } else {
             Ok(None)
         }
+    }
+
+    fn load_array_class(&mut self, _element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
+        Ok(None)
     }
 }
 

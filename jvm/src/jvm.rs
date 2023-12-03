@@ -1,7 +1,6 @@
 use alloc::{
     boxed::Box,
     collections::BTreeMap,
-    format,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
@@ -51,22 +50,25 @@ impl Jvm {
         let class = self.resolve_class(class_name)?.unwrap();
         let class = class.borrow();
 
-        let class_instance = Rc::new(RefCell::new(class.instantiate()));
+        let instance = Rc::new(RefCell::new(class.instantiate()));
 
-        self.class_instances.push(class_instance.clone());
+        self.class_instances.push(instance.clone());
 
         let method = class.method("<init>", init_descriptor).unwrap();
         method.run(self, init_param)?;
 
-        Ok(class_instance)
+        Ok(instance)
     }
 
-    pub fn instantiate_array(&mut self, element_type_name: &str, _count: usize) -> JvmResult<ClassInstanceRef> {
-        let class_name = format!("[{}", element_type_name);
+    pub fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
+        // TODO use element_class's class loader
+        let array_class = self.class_loaders[0].load_array_class(element_type_name)?.unwrap();
 
-        let class_instance = self.instantiate_class(&class_name, "()V", &[])?;
+        let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
 
-        Ok(class_instance)
+        self.class_instances.push(instance.clone());
+
+        Ok(instance)
     }
 
     pub fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {

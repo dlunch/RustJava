@@ -45,6 +45,6 @@ impl Field for FieldImpl {
     }
 
     fn r#type(&self) -> JavaType {
-        JavaType::parse_field_descriptor(&self.descriptor)
+        JavaType::parse(&self.descriptor)
     }
 }

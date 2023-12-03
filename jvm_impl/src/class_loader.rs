@@ -1,8 +1,8 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
-use jvm::{Class, ClassLoader, JvmResult};
+use jvm::{ArrayClass, Class, ClassLoader, JvmResult};
 
-use crate::class::ClassImpl;
+use crate::{array_class::ArrayClassImpl, class::ClassImpl};
 
 pub struct ClassFileLoader {
     class_files: BTreeMap<String, Vec<u8>>,
@@ -21,5 +21,9 @@ impl ClassLoader for ClassFileLoader {
         } else {
             Ok(None)
         }
+    }
+
+    fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
+        Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
     }
 }
