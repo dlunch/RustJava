@@ -1,7 +1,11 @@
-use alloc::string::{String, ToString};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::JavaValue;
 
+#[derive(Eq, PartialEq, Clone)]
 pub enum JavaType {
     Void,
     Integer,
@@ -41,5 +45,55 @@ impl JavaType {
                 }
             }
         }
+    }
+
+    pub fn parse_method_descriptor(descriptor: &str) -> (Vec<JavaType>, JavaType) {
+        let mut chars = descriptor.chars();
+        if chars.next() != Some('(') {
+            panic!("Invalid method descriptor: {}", descriptor);
+        }
+
+        let mut params = Vec::new();
+        while let Some(c) = chars.next() {
+            if c == ')' {
+                break;
+            }
+
+            if c == 'L' {
+                let class_name = chars.by_ref().take_while(|&x| x != ';').collect::<String>();
+                params.push(JavaType::Object(class_name));
+            } else {
+                params.push(JavaType::parse(&c.to_string()));
+            }
+        }
+        let ret = JavaType::parse(&chars.collect::<String>());
+
+        (params, ret)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use alloc::vec;
+
+    use super::JavaType;
+
+    #[test]
+    fn test_parse_method_descriptor() {
+        assert!(
+            JavaType::parse_method_descriptor("(Ljava/lang/String;I)V")
+                == (vec![JavaType::Object("java/lang/String".into()), JavaType::Integer], JavaType::Void)
+        );
+    }
+
+    #[test]
+    fn test_parse() {
+        assert!(JavaType::parse("V") == JavaType::Void);
+        assert!(JavaType::parse("I") == JavaType::Integer);
+        assert!(JavaType::parse("J") == JavaType::Long);
+        assert!(JavaType::parse("F") == JavaType::Float);
+        assert!(JavaType::parse("D") == JavaType::Double);
+        assert!(JavaType::parse("C") == JavaType::Char);
+        assert!(JavaType::parse("Ljava/lang/String;") == JavaType::Object("java/lang/String".into()));
     }
 }

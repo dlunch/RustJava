@@ -1,6 +1,7 @@
 use alloc::{
     boxed::Box,
     collections::BTreeMap,
+    rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
@@ -12,13 +13,14 @@ use crate::interpreter::Interpreter;
 
 pub enum MethodBody {
     ByteCode(BTreeMap<u32, Opcode>),
-    Rust(Box<dyn Fn() -> JavaValue>),
+    Rust(Box<dyn Fn(&mut Jvm) -> JavaValue>),
 }
 
+#[derive(Clone)]
 pub struct MethodImpl {
     name: String,
     descriptor: String,
-    body: MethodBody,
+    body: Rc<MethodBody>,
 }
 
 impl MethodImpl {
@@ -26,7 +28,7 @@ impl MethodImpl {
         Self {
             name: name.to_string(),
             descriptor: descriptor.to_string(),
-            body,
+            body: Rc::new(body),
         }
     }
 
@@ -34,7 +36,7 @@ impl MethodImpl {
         Self {
             name: method_info.name.to_string(),
             descriptor: method_info.descriptor.to_string(),
-            body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
+            body: Rc::new(MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap())),
         }
     }
 
@@ -59,9 +61,9 @@ impl Method for MethodImpl {
     }
 
     fn run(&self, jvm: &mut Jvm, _parameters: &[JavaValue]) -> JvmResult<JavaValue> {
-        Ok(match &self.body {
+        Ok(match self.body.as_ref() {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, x)?,
-            MethodBody::Rust(x) => x(),
+            MethodBody::Rust(x) => x(jvm),
         })
     }
 }

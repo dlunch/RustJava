@@ -3,7 +3,7 @@ use alloc::{
     vec::Vec,
 };
 
-use jvm::{ArrayClassInstance, Class, ClassInstance, JavaValue};
+use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 
 use crate::class::ClassImpl;
 

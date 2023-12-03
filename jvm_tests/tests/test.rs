@@ -13,6 +13,15 @@ impl TestClassLoader {
     fn new(class_files: BTreeMap<String, Vec<u8>>) -> Self {
         Self { class_files }
     }
+
+    fn system_clinit(jvm: &mut Jvm) -> JavaValue {
+        let out = jvm.instantiate_class("java/io/PrintStream", "()V", &[]).unwrap();
+
+        jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
+            .unwrap();
+
+        JavaValue::Void
+    }
 }
 
 impl ClassLoader for TestClassLoader {
@@ -20,7 +29,7 @@ impl ClassLoader for TestClassLoader {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
-                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
+                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(|_| JavaValue::Void)))],
                 vec![],
             );
 
@@ -28,8 +37,19 @@ impl ClassLoader for TestClassLoader {
         } else if class_name == "java/lang/System" {
             let class = ClassImpl::new(
                 "java/lang/System",
-                vec![MethodImpl::new("<clinit>", "()V", MethodBody::Rust(Box::new(|| JavaValue::Void)))],
+                vec![MethodImpl::new("<clinit>", "()V", MethodBody::Rust(Box::new(Self::system_clinit)))],
                 vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)],
+            );
+
+            Ok(Some(Box::new(class)))
+        } else if class_name == "java/io/PrintStream" {
+            let class = ClassImpl::new(
+                "java/io/PrintStream",
+                vec![
+                    MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|_| JavaValue::Void))),
+                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(Box::new(|_| JavaValue::Void))),
+                ],
+                vec![],
             );
 
             Ok(Some(Box::new(class)))

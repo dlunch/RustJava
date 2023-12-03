@@ -72,11 +72,35 @@ impl Jvm {
 
         let field = class.field(name, descriptor, true).unwrap();
 
-        class.get_static_field(field)
+        class.get_static_field(&*field)
+    }
+
+    pub fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+        let class = self.resolve_class(class_name)?.unwrap();
+        let mut class = class.borrow_mut();
+
+        let field = class.field(name, descriptor, true).unwrap();
+
+        class.put_static_field(&*field, value)
     }
 
     pub fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
         let class = self.resolve_class(class_name)?.unwrap();
+        let class = class.borrow();
+        let method = class.method(name, descriptor).unwrap();
+
+        method.run(self, args)
+    }
+
+    pub fn invoke_method(
+        &mut self,
+        instance: &ClassInstanceRef,
+        _class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: &[JavaValue],
+    ) -> JvmResult<JavaValue> {
+        let class = self.resolve_class(instance.borrow().class_name())?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
@@ -112,7 +136,9 @@ impl Jvm {
         let class = Rc::new(RefCell::new(class));
         self.loaded_classes.insert(class_name.to_string(), class.clone());
 
-        if let Some(x) = class.borrow().method("<clinit>", "()V") {
+        let clinit = class.borrow().method("<clinit>", "()V");
+
+        if let Some(x) = clinit {
             x.run(self, &[])?;
         }
 

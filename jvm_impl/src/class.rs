@@ -46,28 +46,46 @@ impl ClassImpl {
 
         Ok(Self::new(&class.this_class, methods, fields))
     }
+
+    pub fn fields(&self) -> &[FieldImpl] {
+        &self.fields
+    }
 }
 
 impl Class for ClassImpl {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn instantiate(&self) -> Box<dyn ClassInstance> {
+        Box::new(ClassInstanceImpl::new(self))
+    }
+
+    fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>> {
+        self.methods
+            .iter()
+            .find(|&method| method.name() == name && method.descriptor() == descriptor)
+            .map(|x| Box::new(x.clone()) as Box<dyn Method>)
+    }
+
+    fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>> {
+        self.fields
+            .iter()
+            .find(|&field| field.name() == name && field.descriptor() == descriptor && field.is_static() == is_static)
+            .map(|x| Box::new(x.clone()) as Box<dyn Field>)
+    }
+
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         Ok(self.storage[field.index()].clone())
     }
 
-    fn name(&self) -> &str {
-        &self.name
-    }
+    fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
+        let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-    fn fields(&self) -> Vec<&dyn Field> {
-        self.fields.iter().map(|x| x as &dyn jvm::Field).collect()
-    }
+        self.storage[field.index()] = value;
 
-    fn methods(&self) -> Vec<&dyn Method> {
-        self.methods.iter().map(|x| x as &dyn jvm::Method).collect()
-    }
-
-    fn instantiate(&self) -> Box<dyn ClassInstance> {
-        Box::new(ClassInstanceImpl::new(self))
+        Ok(())
     }
 }

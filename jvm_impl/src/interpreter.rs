@@ -1,8 +1,8 @@
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, vec::Vec};
 
 use classfile::{Opcode, ValueConstant};
 
-use jvm::{runtime::JavaLangString, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, JavaType, JavaValue, Jvm, JvmResult};
 
 use crate::thread::ThreadContextImpl;
 
@@ -20,7 +20,19 @@ impl Interpreter {
             match opcode {
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x)?),
                 Opcode::Getstatic(x) => stack_frame.operand_stack.push(jvm.get_static_field(&x.class, &x.name, &x.descriptor)?),
-                Opcode::Invokevirtual(_) => {}
+                Opcode::Invokevirtual(x) => {
+                    let (param_type, _return_type) = JavaType::parse_method_descriptor(&x.descriptor);
+                    let params: Vec<JavaValue> = (0..param_type.len())
+                        .map(|_| stack_frame.operand_stack.pop().unwrap())
+                        .collect::<Vec<_>>();
+
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+                    if let JavaValue::Object(Some(instance)) = instance {
+                        jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, &params)?;
+                    } else {
+                        anyhow::bail!("Invalid invoke call") // TODO exception
+                    }
+                }
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
                 }
