@@ -3,14 +3,14 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue};
+use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
 pub struct ArrayClassInstanceImpl {
     class_name: String,
-    _length: usize,
-    _elements: Vec<JavaValue>,
+    length: usize,
+    elements: Vec<JavaValue>,
 }
 
 impl ArrayClassInstanceImpl {
@@ -20,8 +20,8 @@ impl ArrayClassInstanceImpl {
 
         Self {
             class_name: class.name().to_string(),
-            _length: length,
-            _elements: vec![default_value; length],
+            length,
+            elements: vec![default_value; length],
         }
     }
 }
@@ -30,6 +30,18 @@ impl ClassInstance for ArrayClassInstanceImpl {
     fn class_name(&self) -> &str {
         &self.class_name
     }
+
+    fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {
+        Some(self)
+    }
 }
 
-impl ArrayClassInstance for ArrayClassInstanceImpl {}
+impl ArrayClassInstance for ArrayClassInstanceImpl {
+    fn store(&mut self, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
+        anyhow::ensure!(offset + values.len() <= self.length, "Array index out of bounds");
+
+        self.elements[offset..offset + values.len()].clone_from_slice(values);
+
+        Ok(())
+    }
+}

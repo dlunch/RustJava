@@ -3,7 +3,7 @@ use alloc::{
     vec::Vec,
 };
 
-use jvm::{Class, ClassInstance, JavaValue};
+use jvm::{ArrayClassInstance, Class, ClassInstance, JavaValue};
 
 use crate::class::ClassImpl;
 
@@ -26,5 +26,9 @@ impl ClassInstanceImpl {
 impl ClassInstance for ClassInstanceImpl {
     fn class_name(&self) -> &str {
         &self.class_name
+    }
+
+    fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {
+        None
     }
 }

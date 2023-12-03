@@ -83,6 +83,13 @@ impl Jvm {
         method.run(self, args)
     }
 
+    pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
+        let mut array = array.borrow_mut();
+        let array = array.as_array_instance_mut().unwrap();
+
+        array.store(offset, values)
+    }
+
     pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {
         self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap().as_mut()
     }
