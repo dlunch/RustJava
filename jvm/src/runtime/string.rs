@@ -9,12 +9,7 @@ pub struct JavaLangString {
 
 impl JavaLangString {
     pub fn new(jvm: &mut Jvm) -> JvmResult<Self> {
-        let instance = jvm.instantiate_class("java/lang/String")?;
-        let class = jvm.resolve_class(instance.borrow().class_name())?.unwrap();
-        let class = class.borrow();
-        let method = class.method("<init>", "()V").unwrap();
-
-        method.run(jvm, &[])?;
+        let instance = jvm.instantiate_class("java/lang/String", "()V", &[])?;
 
         Ok(Self { instance })
     }

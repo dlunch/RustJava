@@ -13,7 +13,7 @@ use crate::{
     class_instance::ClassInstance,
     class_loader::ClassLoader,
     thread::{ThreadContext, ThreadContextProvider, ThreadId},
-    JvmResult,
+    JavaValue, JvmResult,
 };
 
 pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
@@ -47,12 +47,16 @@ impl Jvm {
         self.class_loaders.push(Box::new(class_loader));
     }
 
-    pub fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
+    pub fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_param: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
         let class = self.resolve_class(class_name)?.unwrap();
+        let class = class.borrow();
 
-        let class_instance = Rc::new(RefCell::new(class.borrow().instantiate()));
+        let class_instance = Rc::new(RefCell::new(class.instantiate()));
 
         self.class_instances.push(class_instance.clone());
+
+        let method = class.method("<init>", init_descriptor).unwrap();
+        method.run(self, init_param)?;
 
         Ok(class_instance)
     }
@@ -60,7 +64,7 @@ impl Jvm {
     pub fn instantiate_array(&mut self, element_type_name: &str, _count: usize) -> JvmResult<ClassInstanceRef> {
         let class_name = format!("[{}", element_type_name);
 
-        let class_instance = self.instantiate_class(&class_name)?;
+        let class_instance = self.instantiate_class(&class_name, "()V", &[])?;
 
         Ok(class_instance)
     }
