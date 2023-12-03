@@ -1,17 +1,23 @@
+#![allow(clippy::type_complexity)]
 extern crate alloc;
 
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, format, rc::Rc, string::String, vec};
+use core::cell::RefCell;
 
 use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
 struct TestClassLoader {
     class_files: BTreeMap<String, Vec<u8>>,
+    println_handler: Rc<Box<dyn Fn(&str)>>,
 }
 
 impl TestClassLoader {
-    fn new(class_files: BTreeMap<String, Vec<u8>>) -> Self {
-        Self { class_files }
+    fn new(class_files: BTreeMap<String, Vec<u8>>, println_handler: Box<dyn Fn(&str)>) -> Self {
+        Self {
+            class_files,
+            println_handler: Rc::new(println_handler),
+        }
     }
 
     fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> JavaValue {
@@ -32,13 +38,19 @@ impl TestClassLoader {
         JavaValue::Void
     }
 
-    fn println(jvm: &mut Jvm, args: &[JavaValue]) -> JavaValue {
-        let string = args[1].as_object().unwrap();
+    fn println(&self) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> JavaValue> {
+        let println_handler = self.println_handler.clone();
 
-        let str = JavaLangString::from_instance(string.clone());
-        println!("{}", str.to_string(jvm).unwrap());
+        let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> JavaValue {
+            let string = args[1].as_object().unwrap();
 
-        JavaValue::Void
+            let str = JavaLangString::from_instance(string.clone());
+            println_handler(&str.to_string(jvm).unwrap());
+
+            JavaValue::Void
+        };
+
+        Box::new(println_body)
     }
 }
 
@@ -65,7 +77,7 @@ impl ClassLoader for TestClassLoader {
                 "java/io/PrintStream",
                 vec![
                     MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|_, _| JavaValue::Void))),
-                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(Box::new(Self::println))),
+                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(self.println())),
                 ],
                 vec![],
             );
@@ -87,12 +99,22 @@ impl ClassLoader for TestClassLoader {
 fn test_hello() -> anyhow::Result<()> {
     let hello = include_bytes!("../../test_data/Hello.class");
 
+    let printed = Rc::new(RefCell::new(String::new()));
+
+    let printed1 = printed.clone();
+    let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
+
     let mut jvm = Jvm::new(
-        TestClassLoader::new(vec![("Hello".to_string(), hello.to_vec())].into_iter().collect()),
+        TestClassLoader::new(
+            vec![("Hello".to_string(), hello.to_vec())].into_iter().collect(),
+            Box::new(println_handler),
+        ),
         &ThreadContextProviderImpl {},
     );
 
     jvm.invoke_static_method("Hello", "main", "([Ljava/lang/String;)V", &[])?;
+
+    assert_eq!(printed.borrow().as_str(), "Hello, world!\n");
 
     Ok(())
 }
