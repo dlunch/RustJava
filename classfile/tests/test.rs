@@ -55,3 +55,33 @@ fn test_hello() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_odd_even() -> anyhow::Result<()> {
+    let odd_even = include_bytes!("../../test_data/OddEven.class");
+
+    let class = ClassInfo::parse(odd_even)?;
+
+    assert_eq!(class.methods[2].name, "run".to_string().into());
+    assert!(matches!(class.methods[2].attributes[0], AttributeInfo::Code { .. }));
+    if let AttributeInfo::Code(code_attribute) = &class.methods[2].attributes[0] {
+        assert!(matches!(code_attribute.attributes[0], AttributeInfo::LineNumberTable { .. }));
+        assert!(matches!(code_attribute.attributes[1], AttributeInfo::LocalVariableTable { .. }));
+        assert!(matches!(code_attribute.attributes[2], AttributeInfo::StackMapTable { .. }));
+
+        if let AttributeInfo::LocalVariableTable(local_variable_table) = &code_attribute.attributes[1] {
+            assert_eq!(local_variable_table.len(), 3);
+            assert_eq!(local_variable_table[0].name, "this".to_string().into());
+            assert_eq!(local_variable_table[0].descriptor, "LOddEven;".to_string().into());
+            assert_eq!(local_variable_table[0].index, 0);
+            assert_eq!(local_variable_table[1].name, "arg".to_string().into());
+            assert_eq!(local_variable_table[1].descriptor, "Ljava/lang/String;".to_string().into());
+            assert_eq!(local_variable_table[1].index, 1);
+            assert_eq!(local_variable_table[2].name, "i".to_string().into());
+            assert_eq!(local_variable_table[2].descriptor, "I".to_string().into());
+            assert_eq!(local_variable_table[2].index, 2);
+        }
+    }
+
+    Ok(())
+}

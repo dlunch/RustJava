@@ -68,16 +68,46 @@ pub struct AttributeInfoLineNumberTableEntry {
     pub line_number: u16,
 }
 
+pub struct LocalVariableTableEntry {
+    pub start_pc: u16,
+    pub length: u16,
+    pub name: Rc<String>,
+    pub descriptor: Rc<String>,
+    pub index: u16,
+}
+
+impl LocalVariableTableEntry {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+        map(
+            tuple((
+                be_u16,
+                be_u16,
+                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                be_u16,
+            )),
+            |(start_pc, length, name, descriptor, index)| Self {
+                start_pc,
+                length,
+                name,
+                descriptor,
+                index,
+            },
+        )(data)
+    }
+}
+
 pub enum AttributeInfo {
     ConstantValue(ValueConstant),
     Code(AttributeInfoCode),
+    StackMapTable(Vec<u8>), // TODO
     Exceptions,
     InnerClasses,
     Synthetic,
     SourceFile(Rc<String>),
     SourceDebugExtension,
     LineNumberTable(Vec<AttributeInfoLineNumberTableEntry>),
-    LocalVariableTable,
+    LocalVariableTable(Vec<LocalVariableTableEntry>),
 }
 
 impl AttributeInfo {
@@ -89,6 +119,8 @@ impl AttributeInfo {
                 "Code" => AttributeInfo::Code(AttributeInfoCode::parse(&info, constant_pool).unwrap().1),
                 "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(&info).unwrap().1),
                 "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(&info, constant_pool).unwrap().1),
+                "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(&info, constant_pool).unwrap().1),
+                "StackMapTable" => AttributeInfo::StackMapTable(info),
                 _ => panic!("Unknown attribute {}", name),
             },
         )(data)
@@ -100,5 +132,9 @@ impl AttributeInfo {
 
     fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], ValueConstant> {
         map(be_u16, |x| ValueConstant::from_constant_pool(constant_pool, x as _))(data)
+    }
+
+    fn parse_local_variable_table<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Vec<LocalVariableTableEntry>> {
+        length_count(be_u16, |x| LocalVariableTableEntry::parse(x, constant_pool))(data)
     }
 }
