@@ -5,8 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = { version = "^1.0" }
-tracing = { version = "^0.1" }
+anyhow = { version = "^1.0", default-features = false }
+tracing = { version = "^0.1", default-features = false }
 
 classfile = { path = "../classfile" }
 jvm = { path = "../jvm" }
