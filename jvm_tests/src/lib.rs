@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 use core::{cell::RefCell, future::Future, pin::Pin};
 
-use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, ClassRegistry, JavaValue, Jvm, JvmDetail, JvmResult};
 use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
 struct TestClassLoader {
@@ -100,16 +100,44 @@ impl ClassLoader for TestClassLoader {
     }
 }
 
+struct JvmDetailImpl {
+    class_loader: TestClassLoader,
+    thread_context_provider: ThreadContextProviderImpl,
+}
+
+impl JvmDetailImpl {
+    pub fn new(class_files: BTreeMap<String, Vec<u8>>, println_handler: Box<dyn Fn(&str)>) -> Self {
+        Self {
+            class_loader: TestClassLoader::new(class_files, println_handler),
+            thread_context_provider: ThreadContextProviderImpl {},
+        }
+    }
+}
+
+impl JvmDetail for JvmDetailImpl {
+    fn class_loader(&mut self) -> &mut dyn ClassLoader {
+        &mut self.class_loader
+    }
+
+    fn class_registry(&mut self) -> &mut dyn ClassRegistry {
+        todo!()
+    }
+
+    fn thread_context_provider(&self) -> &dyn jvm::ThreadContextProvider {
+        &self.thread_context_provider
+    }
+}
+
 pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
     let printed = Rc::new(RefCell::new(String::new()));
 
     let printed1 = printed.clone();
     let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
 
-    let mut jvm = Jvm::new(
-        TestClassLoader::new(vec![(name.to_string(), class.to_vec())].into_iter().collect(), Box::new(println_handler)),
-        &ThreadContextProviderImpl {},
-    );
+    let mut jvm = Jvm::new(JvmDetailImpl::new(
+        vec![(name.to_string(), class.to_vec())].into_iter().collect(),
+        Box::new(println_handler),
+    ));
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {

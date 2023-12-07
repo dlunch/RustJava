@@ -11,6 +11,7 @@ use crate::{
     class::Class,
     class_instance::ClassInstance,
     class_loader::ClassLoader,
+    class_registry::ClassRegistry,
     thread::{ThreadContext, ThreadContextProvider, ThreadId},
     JavaValue, JvmResult,
 };
@@ -18,24 +19,29 @@ use crate::{
 pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
 pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
+pub trait JvmDetail {
+    fn class_loader(&mut self) -> &mut dyn ClassLoader;
+    fn class_registry(&mut self) -> &mut dyn ClassRegistry;
+    fn thread_context_provider(&self) -> &dyn ThreadContextProvider;
+}
+
 pub struct Jvm {
-    class_loader: Box<dyn ClassLoader>,
+    detail: Box<dyn JvmDetail>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
     loaded_classes: BTreeMap<String, ClassRef>,
     class_instances: Vec<ClassInstanceRef>,
 }
 
 impl Jvm {
-    pub fn new<T>(class_loader: T, context_provider: &dyn ThreadContextProvider) -> Self
+    pub fn new<T>(detail: T) -> Self
     where
-        T: ClassLoader + 'static,
+        T: JvmDetail + 'static,
     {
-        let thread_contexts = [(Self::current_thread_id(), context_provider.thread_context(Self::current_thread_id()))]
-            .into_iter()
-            .collect();
+        let thread_context = detail.thread_context_provider().thread_context(Self::current_thread_id());
+        let thread_contexts = [(Self::current_thread_id(), thread_context)].into_iter().collect();
 
         Self {
-            class_loader: Box::new(class_loader),
+            detail: Box::new(detail),
             thread_contexts,
             loaded_classes: BTreeMap::new(),
             class_instances: Vec::new(),
@@ -56,7 +62,7 @@ impl Jvm {
     }
 
     pub fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
-        let array_class = self.class_loader.load_array_class(element_type_name)?.unwrap();
+        let array_class = self.detail.class_loader().load_array_class(element_type_name)?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
 
@@ -162,7 +168,7 @@ impl Jvm {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
 
-        if let Some(x) = self.class_loader.load(class_name)? {
+        if let Some(x) = self.detail.class_loader().load(class_name)? {
             self.load_class(class_name, x).await?;
 
             return Ok(self.loaded_classes.get(class_name).cloned());
