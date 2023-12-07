@@ -8,13 +8,15 @@ pub struct JavaLangString {
 }
 
 impl JavaLangString {
-    pub fn new(jvm: &mut Jvm, string: &str) -> JvmResult<Self> {
+    pub async fn new(jvm: &mut Jvm, string: &str) -> JvmResult<Self> {
         let chars = string.chars().map(JavaValue::Char).collect::<Vec<_>>();
 
         let array = jvm.instantiate_array("C", chars.len())?;
         jvm.store_array(&array, 0, &chars)?;
 
-        let instance = jvm.instantiate_class("java/lang/String", "([C)V", &[JavaValue::Object(Some(array))])?;
+        let instance = jvm
+            .instantiate_class("java/lang/String", "([C)V", &[JavaValue::Object(Some(array))])
+            .await?;
 
         Ok(Self { instance })
     }

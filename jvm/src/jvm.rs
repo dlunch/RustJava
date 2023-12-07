@@ -42,14 +42,15 @@ impl Jvm {
         }
     }
 
-    pub fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_args: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
-        let class = self.resolve_class(class_name)?.unwrap();
+    pub async fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_args: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
+        let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
 
         let instance = Rc::new(RefCell::new(class.instantiate()));
 
         self.class_instances.push(instance.clone());
-        self.invoke_method(&instance, class_name, "<init>", init_descriptor, init_args)?;
+
+        self.invoke_method(&instance, class_name, "<init>", init_descriptor, init_args).await?;
 
         Ok(instance)
     }
@@ -64,8 +65,8 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
-        let class = self.resolve_class(class_name)?.unwrap();
+    pub async fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
 
         let field = class.field(name, descriptor, true).unwrap();
@@ -73,8 +74,8 @@ impl Jvm {
         class.get_static_field(&*field)
     }
 
-    pub fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
-        let class = self.resolve_class(class_name)?.unwrap();
+    pub async fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+        let class = self.resolve_class(class_name).await?.unwrap();
         let mut class = class.borrow_mut();
 
         let field = class.field(name, descriptor, true).unwrap();
@@ -84,7 +85,7 @@ impl Jvm {
 
     pub fn get_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let instance = instance.borrow();
-        let class = self.resolve_class(instance.class_name())?.unwrap();
+        let class = self.get_class(instance.class_name()).unwrap();
         let field = class.borrow().field(name, descriptor, false).unwrap();
 
         instance.get_field(&*field)
@@ -92,21 +93,21 @@ impl Jvm {
 
     pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
         let mut instance = instance.borrow_mut();
-        let class = self.resolve_class(instance.class_name())?.unwrap();
+        let class = self.get_class(instance.class_name()).unwrap();
         let field = class.borrow().field(name, descriptor, false).unwrap();
 
         instance.put_field(&*field, value)
     }
 
-    pub fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
-        let class = self.resolve_class(class_name)?.unwrap();
+    pub async fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
+        let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
-        method.run(self, args)
+        method.run(self, args).await
     }
 
-    pub fn invoke_method(
+    pub async fn invoke_method(
         &mut self,
         instance: &ClassInstanceRef,
         _class_name: &str,
@@ -114,7 +115,7 @@ impl Jvm {
         descriptor: &str,
         args: &[JavaValue],
     ) -> JvmResult<JavaValue> {
-        let class = self.resolve_class(instance.borrow().class_name())?.unwrap();
+        let class = self.resolve_class(instance.borrow().class_name()).await?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
@@ -124,7 +125,7 @@ impl Jvm {
             .cloned()
             .collect::<Vec<_>>();
 
-        method.run(self, &args)
+        method.run(self, &args).await
     }
 
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
@@ -152,13 +153,17 @@ impl Jvm {
         self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap().as_mut()
     }
 
-    fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    fn get_class(&self, class_name: &str) -> Option<ClassRef> {
+        self.loaded_classes.get(class_name).cloned()
+    }
+
+    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
         if self.loaded_classes.contains_key(class_name) {
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
 
         if let Some(x) = self.class_loader.load(class_name)? {
-            self.load_class(class_name, x)?;
+            self.load_class(class_name, x).await?;
 
             return Ok(self.loaded_classes.get(class_name).cloned());
         }
@@ -166,14 +171,14 @@ impl Jvm {
         Ok(None)
     }
 
-    fn load_class(&mut self, class_name: &str, class: Box<dyn Class>) -> JvmResult<()> {
+    async fn load_class(&mut self, class_name: &str, class: Box<dyn Class>) -> JvmResult<()> {
         let class = Rc::new(RefCell::new(class));
         self.loaded_classes.insert(class_name.to_string(), class.clone());
 
         let clinit = class.borrow().method("<clinit>", "()V");
 
         if let Some(x) = clinit {
-            x.run(self, &[])?;
+            x.run(self, &[]).await?;
         }
 
         Ok(())

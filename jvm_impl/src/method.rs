@@ -5,17 +5,61 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
+use core::{future::Future, marker::PhantomData};
 
 use classfile::{AttributeInfo, MethodInfo, Opcode};
 use jvm::{JavaValue, Jvm, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
 
-type RustMethod = dyn Fn(&mut Jvm, &[JavaValue]) -> JavaValue;
+#[async_trait::async_trait(?Send)]
+pub trait RustMethodBody<E, R> {
+    async fn call(&self, jvm: &mut Jvm, args: &[JavaValue]) -> Result<R, E>;
+}
+
+pub trait FnHelper<'a, E, R> {
+    type Output: Future<Output = Result<R, E>> + 'a;
+    fn call(&self, jvm: &'a mut Jvm, args: &'a [JavaValue]) -> Self::Output;
+}
+
+impl<'a, E, R, F, Fut> FnHelper<'a, E, R> for F
+where
+    F: Fn(&'a mut Jvm, &'a [JavaValue]) -> Fut,
+    Fut: Future<Output = Result<R, E>> + 'a,
+{
+    type Output = Fut;
+
+    fn call(&self, jvm: &'a mut Jvm, args: &'a [JavaValue]) -> Fut {
+        self(jvm, args)
+    }
+}
+
+struct MethodHolder<F, R>(pub F, PhantomData<R>);
+
+#[async_trait::async_trait(?Send)]
+impl<F, R, E> RustMethodBody<E, R> for MethodHolder<F, R>
+where
+    F: for<'a> FnHelper<'a, E, R>,
+{
+    async fn call(&self, jvm: &mut Jvm, args: &[JavaValue]) -> Result<R, E> {
+        let result = self.0.call(jvm, args).await?;
+
+        Ok(result)
+    }
+}
 
 pub enum MethodBody {
     ByteCode(BTreeMap<u32, Opcode>),
-    Rust(Box<RustMethod>),
+    Rust(Box<dyn RustMethodBody<anyhow::Error, JavaValue>>),
+}
+
+impl MethodBody {
+    pub fn from_rust<F>(f: F) -> Self
+    where
+        F: for<'a> FnHelper<'a, anyhow::Error, JavaValue> + 'static,
+    {
+        Self::Rust(Box::new(MethodHolder(f, PhantomData)))
+    }
 }
 
 #[derive(Clone)]
@@ -53,6 +97,7 @@ impl MethodImpl {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl Method for MethodImpl {
     fn name(&self) -> &str {
         &self.name
@@ -62,10 +107,10 @@ impl Method for MethodImpl {
         &self.descriptor
     }
 
-    fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue> {
+    async fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue> {
         Ok(match self.body.as_ref() {
-            MethodBody::ByteCode(x) => Interpreter::run(jvm, x)?,
-            MethodBody::Rust(x) => x(jvm, args),
+            MethodBody::ByteCode(x) => Interpreter::run(jvm, x).await?,
+            MethodBody::Rust(x) => x.call(jvm, args).await?,
         })
     }
 }

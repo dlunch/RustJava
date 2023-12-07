@@ -1,9 +1,8 @@
 #![allow(clippy::type_complexity)]
 extern crate alloc;
 
-use core::cell::RefCell;
-
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
+use core::{cell::RefCell, future::Future, pin::Pin};
 
 use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
@@ -21,34 +20,35 @@ impl TestClassLoader {
         }
     }
 
-    fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> JavaValue {
-        let out = jvm.instantiate_class("java/io/PrintStream", "()V", &[]).unwrap();
+    async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<JavaValue> {
+        let out = jvm.instantiate_class("java/io/PrintStream", "()V", &[]).await.unwrap();
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
+            .await
             .unwrap();
 
-        JavaValue::Void
+        Ok(JavaValue::Void)
     }
 
-    fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> JavaValue {
+    async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaValue> {
         let string = args[0].as_object().unwrap();
         let chars = args[1].as_object().unwrap();
 
         jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
 
-        JavaValue::Void
+        Ok(JavaValue::Void)
     }
 
-    fn println(&self) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> JavaValue> {
+    fn println(&self) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>>> {
         let println_handler = self.println_handler.clone();
 
-        let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> JavaValue {
+        let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
             let string = args[1].as_object().unwrap();
 
             let str = JavaLangString::from_instance(string.clone());
             println_handler(&str.to_string(jvm).unwrap());
 
-            JavaValue::Void
+            Box::pin(async { anyhow::Ok(JavaValue::Void) })
         };
 
         Box::new(println_body)
@@ -60,7 +60,7 @@ impl ClassLoader for TestClassLoader {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
-                vec![MethodImpl::new("<init>", "([C)V", MethodBody::Rust(Box::new(Self::string_init)))],
+                vec![MethodImpl::new("<init>", "([C)V", MethodBody::from_rust(Self::string_init))],
                 vec![FieldImpl::new("value", "[C", false, 0)],
             );
 
@@ -68,7 +68,7 @@ impl ClassLoader for TestClassLoader {
         } else if class_name == "java/lang/System" {
             let class = ClassImpl::new(
                 "java/lang/System",
-                vec![MethodImpl::new("<clinit>", "()V", MethodBody::Rust(Box::new(Self::system_clinit)))],
+                vec![MethodImpl::new("<clinit>", "()V", MethodBody::from_rust(Self::system_clinit))],
                 vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)],
             );
 
@@ -77,8 +77,12 @@ impl ClassLoader for TestClassLoader {
             let class = ClassImpl::new(
                 "java/io/PrintStream",
                 vec![
-                    MethodImpl::new("<init>", "()V", MethodBody::Rust(Box::new(|_, _| JavaValue::Void))),
-                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::Rust(self.println())),
+                    MethodImpl::new(
+                        "<init>",
+                        "()V",
+                        MethodBody::from_rust(|_: &mut Jvm, _: &[JavaValue]| async { Ok(JavaValue::Void) }),
+                    ),
+                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::from_rust(self.println())),
                 ],
                 vec![],
             );
@@ -96,7 +100,7 @@ impl ClassLoader for TestClassLoader {
     }
 }
 
-pub fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
+pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
     let printed = Rc::new(RefCell::new(String::new()));
 
     let printed1 = printed.clone();
@@ -107,13 +111,12 @@ pub fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
         &ThreadContextProviderImpl {},
     );
 
-    let args = args
-        .iter()
-        .map(|x| JavaLangString::new(&mut jvm, x).unwrap())
-        .map(|x| JavaValue::Object(Some(x.instance)))
-        .collect::<Vec<_>>();
+    let mut java_args = Vec::with_capacity(args.len());
+    for arg in args {
+        java_args.push(JavaValue::Object(Some(JavaLangString::new(&mut jvm, arg).await?.instance)));
+    }
 
-    jvm.invoke_static_method(name, "main", "([Ljava/lang/String;)V", &args)?;
+    jvm.invoke_static_method(name, "main", "([Ljava/lang/String;)V", &java_args).await?;
 
     let result = printed.borrow().to_string();
     Ok(result)
