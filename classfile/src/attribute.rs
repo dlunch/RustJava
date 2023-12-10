@@ -1,9 +1,10 @@
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 
 use nom::{
-    combinator::map,
+    bytes::complete::take,
+    combinator::{flat_map, map},
     multi::length_count,
-    number::complete::{be_u16, be_u32, u8},
+    number::complete::{be_u16, be_u32},
     sequence::tuple,
     IResult,
 };
@@ -33,7 +34,7 @@ impl AttributeInfoCode {
             tuple((
                 be_u16,
                 be_u16,
-                map(length_count(be_u32, u8), |x| Self::parse_code(x, constant_pool)),
+                map(flat_map(be_u32, take), |x: &[u8]| Self::parse_code(x, constant_pool)),
                 length_count(be_u16, CodeAttributeExceptionTable::parse),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             )),
@@ -47,12 +48,12 @@ impl AttributeInfoCode {
         )(data)
     }
 
-    fn parse_code(code: Vec<u8>, constant_pool: &[ConstantPoolItem]) -> BTreeMap<u32, Opcode> {
+    fn parse_code(code: &[u8], constant_pool: &[ConstantPoolItem]) -> BTreeMap<u32, Opcode> {
         let mut result = BTreeMap::new();
 
-        let mut data = code.as_slice();
+        let mut data = code;
         while let Ok((remaining, opcode)) = Opcode::parse(data, constant_pool) {
-            let offset = unsafe { data.as_ptr().offset_from(code.as_slice().as_ptr()) } as u32;
+            let offset = unsafe { data.as_ptr().offset_from(code.as_ptr()) } as u32;
             result.insert(offset, opcode);
 
             data = remaining;
@@ -113,14 +114,14 @@ pub enum AttributeInfo {
 impl AttributeInfo {
     pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
         map(
-            tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), length_count(be_u32, u8))),
-            |(name, info)| match name.as_str() {
-                "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(&info, constant_pool).unwrap().1),
-                "Code" => AttributeInfo::Code(AttributeInfoCode::parse(&info, constant_pool).unwrap().1),
-                "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(&info).unwrap().1),
-                "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(&info, constant_pool).unwrap().1),
-                "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(&info, constant_pool).unwrap().1),
-                "StackMapTable" => AttributeInfo::StackMapTable(info),
+            tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), flat_map(be_u32, take))),
+            |(name, info): (_, &[u8])| match name.as_str() {
+                "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(info, constant_pool).unwrap().1),
+                "Code" => AttributeInfo::Code(AttributeInfoCode::parse(info, constant_pool).unwrap().1),
+                "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(info).unwrap().1),
+                "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(info, constant_pool).unwrap().1),
+                "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(info, constant_pool).unwrap().1),
+                "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
                 _ => panic!("Unknown attribute {}", name),
             },
         )(data)

@@ -1,15 +1,15 @@
 use alloc::{rc::Rc, string::String};
 
 use nom::{
+    bytes::complete::take,
     combinator::{flat_map, map},
-    multi::length_count,
     number::complete::{be_u16, u8},
     IResult,
 };
 use nom_derive::{NomBE, Parse};
 
 fn parse_utf8(data: &[u8]) -> IResult<&[u8], Rc<String>> {
-    map(length_count(be_u16, u8), |x| Rc::new(String::from_utf8(x).unwrap()))(data)
+    map(flat_map(be_u16, take), |x: &[u8]| Rc::new(String::from_utf8(x.to_vec()).unwrap()))(data)
 }
 
 #[derive(NomBE)]
