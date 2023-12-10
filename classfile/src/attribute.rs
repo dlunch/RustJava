@@ -2,7 +2,7 @@ use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 
 use nom::{
     bytes::complete::take,
-    combinator::{flat_map, map},
+    combinator::{flat_map, map, map_res},
     multi::length_count,
     number::complete::{be_u16, be_u32},
     sequence::tuple,
@@ -113,16 +113,18 @@ pub enum AttributeInfo {
 
 impl AttributeInfo {
     pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
-        map(
+        map_res(
             tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), flat_map(be_u32, take))),
-            |(name, info): (_, &[u8])| match name.as_str() {
-                "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(info, constant_pool).unwrap().1),
-                "Code" => AttributeInfo::Code(AttributeInfoCode::parse(info, constant_pool).unwrap().1),
-                "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(info).unwrap().1),
-                "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(info, constant_pool).unwrap().1),
-                "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(info, constant_pool).unwrap().1),
-                "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
-                _ => panic!("Unknown attribute {}", name),
+            |(name, info): (_, &[u8])| {
+                Ok::<_, nom::Err<_>>(match name.as_str() {
+                    "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(info, constant_pool)?.1),
+                    "Code" => AttributeInfo::Code(AttributeInfoCode::parse(info, constant_pool)?.1),
+                    "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(info)?.1),
+                    "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(info, constant_pool)?.1),
+                    "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(info, constant_pool)?.1),
+                    "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
+                    _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
+                })
             },
         )(data)
     }
