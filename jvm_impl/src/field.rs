@@ -37,12 +37,12 @@ impl FieldImpl {
 }
 
 impl Field for FieldImpl {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
-    fn descriptor(&self) -> &str {
-        &self.descriptor
+    fn descriptor(&self) -> String {
+        self.descriptor.clone()
     }
 
     fn is_static(&self) -> bool {

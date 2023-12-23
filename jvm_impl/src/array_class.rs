@@ -25,8 +25,8 @@ impl ArrayClassImpl {
 }
 
 impl ArrayClass for ArrayClassImpl {
-    fn element_type_name(&self) -> &str {
-        &self.element_type_name
+    fn element_type_name(&self) -> String {
+        self.element_type_name.clone()
     }
 
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance> {
@@ -35,8 +35,8 @@ impl ArrayClass for ArrayClassImpl {
 }
 
 impl Class for ArrayClassImpl {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {

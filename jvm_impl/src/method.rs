@@ -99,12 +99,12 @@ impl MethodImpl {
 
 #[async_trait::async_trait(?Send)]
 impl Method for MethodImpl {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> String {
+        self.name.clone()
     }
 
-    fn descriptor(&self) -> &str {
-        &self.descriptor
+    fn descriptor(&self) -> String {
+        self.descriptor.clone()
     }
 
     async fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue> {

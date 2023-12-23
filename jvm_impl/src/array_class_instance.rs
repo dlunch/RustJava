@@ -16,7 +16,7 @@ pub struct ArrayClassInstanceImpl {
 impl ArrayClassInstanceImpl {
     pub fn new(class: &ArrayClassImpl, length: usize) -> Self {
         let element_type = class.element_type_name();
-        let default_value = JavaType::parse(element_type).default();
+        let default_value = JavaType::parse(&element_type).default();
 
         Self {
             class_name: class.name().to_string(),
@@ -27,8 +27,8 @@ impl ArrayClassInstanceImpl {
 }
 
 impl ClassInstance for ArrayClassInstanceImpl {
-    fn class_name(&self) -> &str {
-        &self.class_name
+    fn class_name(&self) -> String {
+        self.class_name.clone()
     }
 
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {

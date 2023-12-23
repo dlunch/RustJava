@@ -24,8 +24,8 @@ impl ClassInstanceImpl {
 }
 
 impl ClassInstance for ClassInstanceImpl {
-    fn class_name(&self) -> &str {
-        &self.class_name
+    fn class_name(&self) -> String {
+        self.class_name.clone()
     }
 
     fn get_field(&self, field: &dyn Field) -> jvm::JvmResult<JavaValue> {

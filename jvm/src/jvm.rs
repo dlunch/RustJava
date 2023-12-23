@@ -91,7 +91,7 @@ impl Jvm {
 
     pub fn get_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let instance = instance.borrow();
-        let class = self.get_class(instance.class_name()).unwrap();
+        let class = self.get_class(&instance.class_name()).unwrap();
         let field = class.borrow().field(name, descriptor, false).unwrap();
 
         instance.get_field(&*field)
@@ -99,7 +99,7 @@ impl Jvm {
 
     pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
         let mut instance = instance.borrow_mut();
-        let class = self.get_class(instance.class_name()).unwrap();
+        let class = self.get_class(&instance.class_name()).unwrap();
         let field = class.borrow().field(name, descriptor, false).unwrap();
 
         instance.put_field(&*field, value)
@@ -121,7 +121,7 @@ impl Jvm {
         descriptor: &str,
         args: &[JavaValue],
     ) -> JvmResult<JavaValue> {
-        let class = self.resolve_class(instance.borrow().class_name()).await?.unwrap();
+        let class = self.resolve_class(&instance.borrow().class_name()).await?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
