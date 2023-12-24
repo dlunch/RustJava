@@ -21,7 +21,8 @@ impl TestClassLoader {
     }
 
     async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<JavaValue> {
-        let out = jvm.instantiate_class("java/io/PrintStream", "()V", &[]).await.unwrap();
+        let out = jvm.instantiate_class("java/io/PrintStream").await.unwrap();
+        jvm.invoke_method(&out, "java/io/PrintStream", "<init>", "()V", &[]).await.unwrap();
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
             .await
