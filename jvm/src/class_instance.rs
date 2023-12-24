@@ -1,8 +1,8 @@
 use alloc::string::String;
 
-use crate::{ArrayClassInstance, Field, JavaValue, JvmResult};
+use crate::{as_any::AsAny, ArrayClassInstance, Field, JavaValue, JvmResult};
 
-pub trait ClassInstance {
+pub trait ClassInstance: AsAny {
     fn class_name(&self) -> String;
     fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue>;
     fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()>;
