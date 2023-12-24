@@ -48,15 +48,13 @@ impl Jvm {
         }
     }
 
-    pub async fn instantiate_class(&mut self, class_name: &str, init_descriptor: &str, init_args: &[JavaValue]) -> JvmResult<ClassInstanceRef> {
+    pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
         let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
 
         let instance = Rc::new(RefCell::new(class.instantiate()));
 
         self.class_instances.push(instance.clone());
-
-        self.invoke_method(&instance, class_name, "<init>", init_descriptor, init_args).await?;
 
         Ok(instance)
     }
