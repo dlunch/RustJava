@@ -32,8 +32,9 @@ impl JvmDetailImpl {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl JvmDetail for JvmDetailImpl {
-    fn load_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
         let class = (self.class_loader)(class_name)?;
 
         if let Some(x) = class {

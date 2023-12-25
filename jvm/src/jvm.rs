@@ -139,7 +139,7 @@ impl Jvm {
             return Ok(Some(x));
         }
 
-        if let Some(x) = self.detail.load_class(class_name)? {
+        if let Some(x) = self.detail.load_class(class_name).await? {
             let class = x.borrow();
             let clinit = class.method("<clinit>", "()V");
             drop(class);
