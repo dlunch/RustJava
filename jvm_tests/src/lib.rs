@@ -43,12 +43,12 @@ where
     Box::new(println_body)
 }
 
-fn get_class_loader<T>(class_files: BTreeMap<String, Vec<u8>>, println_handler: T) -> Box<dyn Fn(&str) -> JvmResult<Option<Box<dyn Class>>>>
+fn get_class_loader<T>(class_files: BTreeMap<String, Vec<u8>>, println_handler: T) -> impl Fn(&str) -> JvmResult<Option<Box<dyn Class>>>
 where
     T: Fn(&str) + 'static,
 {
     let println_handler = Rc::new(println_handler);
-    Box::new(move |class_name| {
+    move |class_name| {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
@@ -89,7 +89,7 @@ where
         } else {
             Ok(None)
         }
-    })
+    }
 }
 
 pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
