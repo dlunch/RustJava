@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 use core::{cell::RefCell, future::Future, pin::Pin};
 
-use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, ClassRegistry, JavaValue, Jvm, JvmDetail, JvmResult};
+use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, ClassRef, ClassRegistry, JavaValue, Jvm, JvmDetail, JvmResult};
 use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
 
 struct TestClassLoader {
@@ -101,9 +101,30 @@ impl ClassLoader for TestClassLoader {
     }
 }
 
+struct TestClassRegistry {
+    classes: BTreeMap<String, ClassRef>,
+}
+
+impl TestClassRegistry {
+    pub fn new() -> Self {
+        Self { classes: BTreeMap::new() }
+    }
+}
+
+impl ClassRegistry for TestClassRegistry {
+    fn get_class(&self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+        Ok(self.classes.get(class_name).cloned())
+    }
+
+    fn register_class(&mut self, class: Box<dyn Class>) {
+        self.classes.insert(class.name().to_string(), Rc::new(RefCell::new(class)));
+    }
+}
+
 struct JvmDetailImpl {
     class_loader: TestClassLoader,
     thread_context_provider: ThreadContextProviderImpl,
+    class_registry: TestClassRegistry,
 }
 
 impl JvmDetailImpl {
@@ -111,6 +132,7 @@ impl JvmDetailImpl {
         Self {
             class_loader: TestClassLoader::new(class_files, println_handler),
             thread_context_provider: ThreadContextProviderImpl {},
+            class_registry: TestClassRegistry::new(),
         }
     }
 }
@@ -120,8 +142,12 @@ impl JvmDetail for JvmDetailImpl {
         &mut self.class_loader
     }
 
-    fn class_registry(&mut self) -> &mut dyn ClassRegistry {
-        todo!()
+    fn class_registry_mut(&mut self) -> &mut dyn ClassRegistry {
+        &mut self.class_registry
+    }
+
+    fn class_registry(&self) -> &dyn ClassRegistry {
+        &self.class_registry
     }
 
     fn thread_context_provider(&self) -> &dyn jvm::ThreadContextProvider {

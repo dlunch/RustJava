@@ -1,10 +1,4 @@
-use alloc::{
-    boxed::Box,
-    collections::BTreeMap,
-    rc::Rc,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
 use crate::{
@@ -21,14 +15,14 @@ pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
 pub trait JvmDetail {
     fn class_loader(&mut self) -> &mut dyn ClassLoader;
-    fn class_registry(&mut self) -> &mut dyn ClassRegistry;
+    fn class_registry_mut(&mut self) -> &mut dyn ClassRegistry;
+    fn class_registry(&self) -> &dyn ClassRegistry;
     fn thread_context_provider(&self) -> &dyn ThreadContextProvider;
 }
 
 pub struct Jvm {
     detail: Box<dyn JvmDetail>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
-    loaded_classes: BTreeMap<String, ClassRef>,
     class_instances: Vec<ClassInstanceRef>,
 }
 
@@ -43,7 +37,6 @@ impl Jvm {
         Self {
             detail: Box::new(detail),
             thread_contexts,
-            loaded_classes: BTreeMap::new(),
             class_instances: Vec::new(),
         }
     }
@@ -158,28 +151,32 @@ impl Jvm {
     }
 
     fn get_class(&self, class_name: &str) -> Option<ClassRef> {
-        self.loaded_classes.get(class_name).cloned()
+        self.detail.class_registry().get_class(class_name).unwrap()
     }
 
     async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
-        if self.loaded_classes.contains_key(class_name) {
-            return Ok(self.loaded_classes.get(class_name).cloned());
+        let class = self.get_class(class_name);
+        if let Some(x) = class {
+            return Ok(Some(x));
         }
 
         if let Some(x) = self.detail.class_loader().load(class_name)? {
             self.load_class(class_name, x).await?;
+            let class = self.get_class(class_name).unwrap();
 
-            return Ok(self.loaded_classes.get(class_name).cloned());
+            return Ok(Some(class));
         }
 
         Ok(None)
     }
 
     async fn load_class(&mut self, class_name: &str, class: Box<dyn Class>) -> JvmResult<()> {
-        let class = Rc::new(RefCell::new(class));
-        self.loaded_classes.insert(class_name.to_string(), class.clone());
+        self.detail.class_registry_mut().register_class(class);
+        let class = self.detail.class_registry().get_class(class_name)?.unwrap();
+        let class = class.borrow();
 
-        let clinit = class.borrow().method("<clinit>", "()V");
+        let clinit = class.method("<clinit>", "()V");
+        drop(class);
 
         if let Some(x) = clinit {
             x.run(self, &[]).await?;

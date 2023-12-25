@@ -27,7 +27,7 @@ pub use self::{
     class_loader::ClassLoader,
     class_registry::ClassRegistry,
     field::Field,
-    jvm::{Jvm, JvmDetail},
+    jvm::{ClassInstanceRef, ClassRef, Jvm, JvmDetail},
     method::Method,
     r#type::JavaType,
     thread::{ThreadContext, ThreadContextProvider, ThreadId},
