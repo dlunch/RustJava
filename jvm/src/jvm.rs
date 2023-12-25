@@ -23,7 +23,6 @@ pub trait JvmDetail {
 pub struct Jvm {
     detail: Box<dyn JvmDetail>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
-    class_instances: Vec<ClassInstanceRef>,
 }
 
 impl Jvm {
@@ -37,7 +36,6 @@ impl Jvm {
         Self {
             detail: Box::new(detail),
             thread_contexts,
-            class_instances: Vec::new(),
         }
     }
 
@@ -47,8 +45,6 @@ impl Jvm {
 
         let instance = Rc::new(RefCell::new(class.instantiate()));
 
-        self.class_instances.push(instance.clone());
-
         Ok(instance)
     }
 
@@ -56,8 +52,6 @@ impl Jvm {
         let array_class = self.detail.class_loader().load_array_class(element_type_name)?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
-
-        self.class_instances.push(instance.clone());
 
         Ok(instance)
     }
