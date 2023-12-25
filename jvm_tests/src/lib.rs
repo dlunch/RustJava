@@ -4,64 +4,55 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 use core::{cell::RefCell, future::Future, pin::Pin};
 
-use jvm::{runtime::JavaLangString, ArrayClass, Class, ClassLoader, ClassRef, ClassRegistry, JavaValue, Jvm, JvmDetail, JvmResult};
-use jvm_impl::{ArrayClassImpl, ClassImpl, FieldImpl, MethodBody, MethodImpl, ThreadContextProviderImpl};
+use jvm::{runtime::JavaLangString, Class, JavaValue, Jvm, JvmResult};
+use jvm_impl::{ClassImpl, FieldImpl, JvmDetailImpl, MethodBody, MethodImpl};
 
-struct TestClassLoader {
-    class_files: BTreeMap<String, Vec<u8>>,
-    println_handler: Rc<Box<dyn Fn(&str)>>,
+async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<JavaValue> {
+    let out = jvm.instantiate_class("java/io/PrintStream").await.unwrap();
+    jvm.invoke_method(&out, "java/io/PrintStream", "<init>", "()V", &[]).await.unwrap();
+
+    jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
+        .await
+        .unwrap();
+
+    Ok(JavaValue::Void)
 }
 
-impl TestClassLoader {
-    pub fn new(class_files: BTreeMap<String, Vec<u8>>, println_handler: Box<dyn Fn(&str)>) -> Self {
-        Self {
-            class_files,
-            println_handler: Rc::new(println_handler),
-        }
-    }
+async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaValue> {
+    let string = args[0].as_object().unwrap();
+    let chars = args[1].as_object().unwrap();
 
-    async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<JavaValue> {
-        let out = jvm.instantiate_class("java/io/PrintStream").await.unwrap();
-        jvm.invoke_method(&out, "java/io/PrintStream", "<init>", "()V", &[]).await.unwrap();
+    jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
 
-        jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
-            .await
-            .unwrap();
-
-        Ok(JavaValue::Void)
-    }
-
-    async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaValue> {
-        let string = args[0].as_object().unwrap();
-        let chars = args[1].as_object().unwrap();
-
-        jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
-
-        Ok(JavaValue::Void)
-    }
-
-    fn println(&self) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>>> {
-        let println_handler = self.println_handler.clone();
-
-        let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
-            let string = args[1].as_object().unwrap();
-
-            let str = JavaLangString::from_instance(string.clone());
-            println_handler(&str.to_string(jvm).unwrap());
-
-            Box::pin(async { anyhow::Ok(JavaValue::Void) })
-        };
-
-        Box::new(println_body)
-    }
+    Ok(JavaValue::Void)
 }
 
-impl ClassLoader for TestClassLoader {
-    fn load(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+fn get_println<T>(println_handler: Rc<T>) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>>>
+where
+    T: Fn(&str) + 'static,
+{
+    let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
+        let string = args[1].as_object().unwrap();
+
+        let str = JavaLangString::from_instance(string.clone());
+        println_handler(&str.to_string(jvm).unwrap());
+
+        Box::pin(async { anyhow::Ok(JavaValue::Void) })
+    };
+
+    Box::new(println_body)
+}
+
+fn get_class_loader<T>(class_files: BTreeMap<String, Vec<u8>>, println_handler: T) -> Box<dyn Fn(&str) -> JvmResult<Option<Box<dyn Class>>>>
+where
+    T: Fn(&str) + 'static,
+{
+    let println_handler = Rc::new(println_handler);
+    Box::new(move |class_name| {
         if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
-                vec![MethodImpl::new("<init>", "([C)V", MethodBody::from_rust(Self::string_init))],
+                vec![MethodImpl::new("<init>", "([C)V", MethodBody::from_rust(string_init))],
                 vec![FieldImpl::new("value", "[C", false, 0)],
             );
 
@@ -69,7 +60,7 @@ impl ClassLoader for TestClassLoader {
         } else if class_name == "java/lang/System" {
             let class = ClassImpl::new(
                 "java/lang/System",
-                vec![MethodImpl::new("<clinit>", "()V", MethodBody::from_rust(Self::system_clinit))],
+                vec![MethodImpl::new("<clinit>", "()V", MethodBody::from_rust(system_clinit))],
                 vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)],
             );
 
@@ -83,76 +74,22 @@ impl ClassLoader for TestClassLoader {
                         "()V",
                         MethodBody::from_rust(|_: &mut Jvm, _: &[JavaValue]| async { Ok(JavaValue::Void) }),
                     ),
-                    MethodImpl::new("println", "(Ljava/lang/String;)V", MethodBody::from_rust(self.println())),
+                    MethodImpl::new(
+                        "println",
+                        "(Ljava/lang/String;)V",
+                        MethodBody::from_rust(get_println(println_handler.clone())),
+                    ),
                 ],
                 vec![],
             );
 
             Ok(Some(Box::new(class)))
-        } else if self.class_files.contains_key(class_name) {
-            Ok(Some(Box::new(ClassImpl::from_classfile(self.class_files.get(class_name).unwrap())?)))
+        } else if class_files.contains_key(class_name) {
+            Ok(Some(Box::new(ClassImpl::from_classfile(class_files.get(class_name).unwrap())?)))
         } else {
             Ok(None)
         }
-    }
-
-    fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
-        Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
-    }
-}
-
-struct TestClassRegistry {
-    classes: BTreeMap<String, ClassRef>,
-}
-
-impl TestClassRegistry {
-    pub fn new() -> Self {
-        Self { classes: BTreeMap::new() }
-    }
-}
-
-impl ClassRegistry for TestClassRegistry {
-    fn get_class(&self, class_name: &str) -> JvmResult<Option<ClassRef>> {
-        Ok(self.classes.get(class_name).cloned())
-    }
-
-    fn register_class(&mut self, class: Box<dyn Class>) {
-        self.classes.insert(class.name().to_string(), Rc::new(RefCell::new(class)));
-    }
-}
-
-struct JvmDetailImpl {
-    class_loader: TestClassLoader,
-    thread_context_provider: ThreadContextProviderImpl,
-    class_registry: TestClassRegistry,
-}
-
-impl JvmDetailImpl {
-    pub fn new(class_files: BTreeMap<String, Vec<u8>>, println_handler: Box<dyn Fn(&str)>) -> Self {
-        Self {
-            class_loader: TestClassLoader::new(class_files, println_handler),
-            thread_context_provider: ThreadContextProviderImpl {},
-            class_registry: TestClassRegistry::new(),
-        }
-    }
-}
-
-impl JvmDetail for JvmDetailImpl {
-    fn class_loader(&mut self) -> &mut dyn ClassLoader {
-        &mut self.class_loader
-    }
-
-    fn class_registry_mut(&mut self) -> &mut dyn ClassRegistry {
-        &mut self.class_registry
-    }
-
-    fn class_registry(&self) -> &dyn ClassRegistry {
-        &self.class_registry
-    }
-
-    fn thread_context_provider(&self) -> &dyn jvm::ThreadContextProvider {
-        &self.thread_context_provider
-    }
+    })
 }
 
 pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
@@ -161,10 +98,10 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
     let printed1 = printed.clone();
     let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
 
-    let mut jvm = Jvm::new(JvmDetailImpl::new(
+    let mut jvm = Jvm::new(JvmDetailImpl::new(get_class_loader(
         vec![(name.to_string(), class.to_vec())].into_iter().collect(),
         Box::new(println_handler),
-    ));
+    )));
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {

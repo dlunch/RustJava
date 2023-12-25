@@ -1,7 +1,7 @@
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
+use alloc::{rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
-use jvm::{ThreadContext, ThreadContextProvider, ThreadId};
+use jvm::ThreadContext;
 
 use crate::stack_frame::StackFrame;
 
@@ -24,11 +24,3 @@ impl ThreadContextImpl {
 }
 
 impl ThreadContext for ThreadContextImpl {}
-
-pub struct ThreadContextProviderImpl {}
-
-impl ThreadContextProvider for ThreadContextProviderImpl {
-    fn thread_context(&self, _thread_id: ThreadId) -> Box<dyn ThreadContext> {
-        Box::new(ThreadContextImpl::new())
-    }
-}

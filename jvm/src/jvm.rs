@@ -1,28 +1,19 @@
-use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, vec::Vec};
+use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
 use crate::{
     class::Class,
     class_instance::ClassInstance,
-    class_loader::ClassLoader,
-    class_registry::ClassRegistry,
-    thread::{ThreadContext, ThreadContextProvider, ThreadId},
+    detail::JvmDetail,
+    thread::{ThreadContext, ThreadId},
     JavaValue, JvmResult,
 };
 
 pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
 pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
-pub trait JvmDetail {
-    fn class_loader(&mut self) -> &mut dyn ClassLoader;
-    fn class_registry_mut(&mut self) -> &mut dyn ClassRegistry;
-    fn class_registry(&self) -> &dyn ClassRegistry;
-    fn thread_context_provider(&self) -> &dyn ThreadContextProvider;
-}
-
 pub struct Jvm {
     detail: Box<dyn JvmDetail>,
-    thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
 }
 
 impl Jvm {
@@ -30,13 +21,7 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        let thread_context = detail.thread_context_provider().thread_context(Self::current_thread_id());
-        let thread_contexts = [(Self::current_thread_id(), thread_context)].into_iter().collect();
-
-        Self {
-            detail: Box::new(detail),
-            thread_contexts,
-        }
+        Self { detail: Box::new(detail) }
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
@@ -49,7 +34,7 @@ impl Jvm {
     }
 
     pub fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
-        let array_class = self.detail.class_loader().load_array_class(element_type_name)?.unwrap();
+        let array_class = self.detail.load_array_class(element_type_name)?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
 
@@ -141,11 +126,11 @@ impl Jvm {
     }
 
     pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {
-        self.thread_contexts.get_mut(&Jvm::current_thread_id()).unwrap().as_mut()
+        self.detail.thread_context(Jvm::current_thread_id())
     }
 
     fn get_class(&self, class_name: &str) -> Option<ClassRef> {
-        self.detail.class_registry().get_class(class_name).unwrap()
+        self.detail.get_class(class_name).unwrap()
     }
 
     async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
@@ -154,29 +139,21 @@ impl Jvm {
             return Ok(Some(x));
         }
 
-        if let Some(x) = self.detail.class_loader().load(class_name)? {
-            self.load_class(class_name, x).await?;
+        if let Some(x) = self.detail.load_class(class_name)? {
+            let class = x.borrow();
+            let clinit = class.method("<clinit>", "()V");
+            drop(class);
+
+            if let Some(x) = clinit {
+                x.run(self, &[]).await?;
+            }
+
             let class = self.get_class(class_name).unwrap();
 
             return Ok(Some(class));
         }
 
         Ok(None)
-    }
-
-    async fn load_class(&mut self, class_name: &str, class: Box<dyn Class>) -> JvmResult<()> {
-        self.detail.class_registry_mut().register_class(class);
-        let class = self.detail.class_registry().get_class(class_name)?.unwrap();
-        let class = class.borrow();
-
-        let clinit = class.method("<clinit>", "()V");
-        drop(class);
-
-        if let Some(x) = clinit {
-            x.run(self, &[]).await?;
-        }
-
-        Ok(())
     }
 
     fn current_thread_id() -> ThreadId {

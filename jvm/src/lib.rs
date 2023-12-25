@@ -6,8 +6,7 @@ mod array_class_instance;
 mod as_any;
 mod class;
 mod class_instance;
-mod class_loader;
-mod class_registry;
+mod detail;
 mod field;
 mod jvm;
 mod method;
@@ -24,12 +23,11 @@ pub use self::{
     array_class_instance::ArrayClassInstance,
     class::Class,
     class_instance::ClassInstance,
-    class_loader::ClassLoader,
-    class_registry::ClassRegistry,
+    detail::JvmDetail,
     field::Field,
-    jvm::{ClassInstanceRef, ClassRef, Jvm, JvmDetail},
+    jvm::{ClassInstanceRef, ClassRef, Jvm},
     method::Method,
     r#type::JavaType,
-    thread::{ThreadContext, ThreadContextProvider, ThreadId},
+    thread::{ThreadContext, ThreadId},
     value::JavaValue,
 };
