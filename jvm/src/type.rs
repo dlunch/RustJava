@@ -24,7 +24,7 @@ impl JavaType {
             JavaType::Long => JavaValue::Long(0),
             JavaType::Float => JavaValue::Float(0.0),
             JavaType::Double => JavaValue::Double(0.0),
-            JavaType::Char => JavaValue::Char('\0'),
+            JavaType::Char => JavaValue::Char(0),
             JavaType::Object(_) => JavaValue::Object(None),
         }
     }

@@ -9,7 +9,7 @@ pub struct JavaLangString {
 
 impl JavaLangString {
     pub async fn new(jvm: &mut Jvm, string: &str) -> JvmResult<Self> {
-        let chars = string.chars().map(JavaValue::Char).collect::<Vec<_>>();
+        let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
 
         let array = jvm.instantiate_array("C", chars.len()).await?;
         jvm.store_array(&array, 0, &chars)?;
@@ -32,7 +32,7 @@ impl JavaLangString {
         let array = array.as_object().unwrap();
         let chars = jvm.load_array(array, 0, jvm.array_length(array)?)?;
 
-        let string = chars.iter().map(|x| x.as_char()).collect::<String>();
+        let string = chars.iter().map(|x| x.as_char() as u8 as char).collect::<String>(); // TODO proper encoding conversion
 
         Ok(string)
     }

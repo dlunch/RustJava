@@ -3,6 +3,8 @@ use core::cell::RefCell;
 
 use crate::class_instance::ClassInstance;
 
+pub type JavaChar = u16;
+
 #[derive(Clone)]
 pub enum JavaValue {
     Void,
@@ -10,7 +12,7 @@ pub enum JavaValue {
     Long(i64),
     Float(f32),
     Double(f64),
-    Char(char),
+    Char(JavaChar),
     Object(Option<Rc<RefCell<Box<dyn ClassInstance>>>>),
 }
 
@@ -43,7 +45,7 @@ impl JavaValue {
         }
     }
 
-    pub fn as_char(&self) -> char {
+    pub fn as_char(&self) -> JavaChar {
         match self {
             JavaValue::Char(x) => *x,
             _ => panic!("invalid value"),
