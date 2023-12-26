@@ -48,7 +48,7 @@ impl JvmDetail for JvmDetailImpl {
         }
     }
 
-    fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
+    async fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
         Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
     }
 

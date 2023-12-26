@@ -33,8 +33,8 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
-        let array_class = self.detail.load_array_class(element_type_name)?.unwrap();
+    pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
+        let array_class = self.detail.load_array_class(element_type_name).await?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
 

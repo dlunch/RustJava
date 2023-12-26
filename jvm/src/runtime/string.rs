@@ -11,7 +11,7 @@ impl JavaLangString {
     pub async fn new(jvm: &mut Jvm, string: &str) -> JvmResult<Self> {
         let chars = string.chars().map(JavaValue::Char).collect::<Vec<_>>();
 
-        let array = jvm.instantiate_array("C", chars.len())?;
+        let array = jvm.instantiate_array("C", chars.len()).await?;
         jvm.store_array(&array, 0, &chars)?;
 
         let instance = jvm.instantiate_class("java/lang/String").await?;
