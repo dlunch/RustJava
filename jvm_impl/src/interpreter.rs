@@ -37,7 +37,7 @@ impl Interpreter {
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
-                    jvm.invoke_method(instance, &x.class, &x.name, &x.descriptor, &params).await?;
+                    jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, &params).await?;
                 }
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);

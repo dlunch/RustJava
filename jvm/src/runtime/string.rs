@@ -30,7 +30,7 @@ impl JavaLangString {
         let array = jvm.get_field(&self.instance, "value", "[C")?;
 
         let array = array.as_object().unwrap();
-        let chars = jvm.load_array(array, 0, jvm.array_length(array)?)?;
+        let chars = jvm.load_array(&array, 0, jvm.array_length(&array)?)?;
 
         let string = chars.iter().map(|x| x.as_char() as u8 as char).collect::<String>(); // TODO proper encoding conversion
 

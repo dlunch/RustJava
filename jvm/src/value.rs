@@ -75,9 +75,16 @@ impl JavaValue {
         }
     }
 
-    pub fn as_object(&self) -> Option<&Rc<RefCell<Box<dyn ClassInstance>>>> {
+    pub fn as_object_ref(&self) -> Option<&Rc<RefCell<Box<dyn ClassInstance>>>> {
         match self {
             JavaValue::Object(x) => x.as_ref(),
+            _ => panic!("invalid value"),
+        }
+    }
+
+    pub fn as_object(self) -> Option<Rc<RefCell<Box<dyn ClassInstance>>>> {
+        match self {
+            JavaValue::Object(x) => x,
             _ => panic!("invalid value"),
         }
     }

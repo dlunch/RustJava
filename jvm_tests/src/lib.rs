@@ -19,8 +19,8 @@ async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<Jav
 }
 
 async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaValue> {
-    let string = args[0].as_object().unwrap();
-    let chars = args[1].as_object().unwrap();
+    let string = args[0].as_object_ref().unwrap();
+    let chars = args[1].as_object_ref().unwrap();
 
     jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
     Ok(JavaValue::Boolean(true)) // TODO
@@ -31,7 +31,7 @@ where
     T: Fn(&str) + 'static,
 {
     let println_body = move |jvm: &mut Jvm, args: &[JavaValue]| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
-        let string = args[1].as_object().unwrap();
+        let string = args[1].as_object_ref().unwrap();
 
         let str = JavaLangString::from_instance(string.clone());
         println_handler(&str.to_string(jvm).unwrap());
