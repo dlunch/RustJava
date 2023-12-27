@@ -59,7 +59,7 @@ impl Jvm {
         class.put_static_field(&*field, value)
     }
 
-    pub fn get_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+    pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let instance = instance.borrow();
         let class = self.get_class(&instance.class_name()).unwrap();
         let field = class.borrow().field(name, descriptor, false).unwrap();
