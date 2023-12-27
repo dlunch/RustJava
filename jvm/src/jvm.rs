@@ -129,6 +129,15 @@ impl Jvm {
         self.detail.thread_context(Jvm::current_thread_id())
     }
 
+    // temporary until we have working gc
+    pub fn destroy(&mut self, instance: ClassInstanceRef) -> JvmResult<()> {
+        let instance = Rc::into_inner(instance).unwrap().into_inner();
+
+        instance.destroy();
+
+        Ok(())
+    }
+
     fn get_class(&self, class_name: &str) -> Option<ClassRef> {
         self.detail.get_class(class_name).unwrap()
     }

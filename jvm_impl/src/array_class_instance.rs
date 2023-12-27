@@ -1,4 +1,5 @@
 use alloc::{
+    boxed::Box,
     string::{String, ToString},
     vec,
     vec::Vec,
@@ -27,6 +28,8 @@ impl ArrayClassInstanceImpl {
 }
 
 impl ClassInstance for ArrayClassInstanceImpl {
+    fn destroy(self: Box<Self>) {}
+
     fn class_name(&self) -> String {
         self.class_name.clone()
     }
