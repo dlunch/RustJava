@@ -7,19 +7,49 @@ pub type JavaChar = u16;
 
 #[derive(Clone)]
 pub enum JavaValue {
-    Void,
-    Integer(i32),
+    Boolean(bool),
+    Byte(i8),
+    Char(JavaChar),
+    Short(i16),
+    Int(i32),
     Long(i64),
     Float(f32),
     Double(f64),
-    Char(JavaChar),
     Object(Option<Rc<RefCell<Box<dyn ClassInstance>>>>),
 }
 
 impl JavaValue {
-    pub fn as_integer(&self) -> i32 {
+    pub fn as_boolean(&self) -> bool {
         match self {
-            JavaValue::Integer(x) => *x,
+            JavaValue::Boolean(x) => *x,
+            _ => panic!("invalid value"),
+        }
+    }
+
+    pub fn as_byte(&self) -> i8 {
+        match self {
+            JavaValue::Byte(x) => *x,
+            _ => panic!("invalid value"),
+        }
+    }
+
+    pub fn as_char(&self) -> JavaChar {
+        match self {
+            JavaValue::Char(x) => *x,
+            _ => panic!("invalid value"),
+        }
+    }
+
+    pub fn as_short(&self) -> i16 {
+        match self {
+            JavaValue::Short(x) => *x,
+            _ => panic!("invalid value"),
+        }
+    }
+
+    pub fn as_int(&self) -> i32 {
+        match self {
+            JavaValue::Int(x) => *x,
             _ => panic!("invalid value"),
         }
     }
@@ -41,13 +71,6 @@ impl JavaValue {
     pub fn as_double(&self) -> f64 {
         match self {
             JavaValue::Double(x) => *x,
-            _ => panic!("invalid value"),
-        }
-    }
-
-    pub fn as_char(&self) -> JavaChar {
-        match self {
-            JavaValue::Char(x) => *x,
             _ => panic!("invalid value"),
         }
     }

@@ -1,4 +1,5 @@
 use alloc::{
+    boxed::Box,
     string::{String, ToString},
     vec::Vec,
 };
@@ -8,48 +9,61 @@ use crate::JavaValue;
 #[derive(Eq, PartialEq, Clone)]
 pub enum JavaType {
     Void,
-    Integer,
+    Boolean,
+    Byte,
+    Char,
+    Short,
+    Int,
     Long,
     Float,
     Double,
-    Char,
-    Object(String),
+    Class(String),
+    Array(String),
+    Method(Vec<Self>, Box<Self>),
 }
 
 impl JavaType {
     pub fn default(self) -> JavaValue {
         match self {
-            JavaType::Void => JavaValue::Void,
-            JavaType::Integer => JavaValue::Integer(0),
-            JavaType::Long => JavaValue::Long(0),
-            JavaType::Float => JavaValue::Float(0.0),
-            JavaType::Double => JavaValue::Double(0.0),
-            JavaType::Char => JavaValue::Char(0),
-            JavaType::Object(_) => JavaValue::Object(None),
+            Self::Void => panic!("Cannot create default value for void"),
+            Self::Boolean => JavaValue::Boolean(false),
+            Self::Byte => JavaValue::Byte(0),
+            Self::Char => JavaValue::Char(0),
+            Self::Short => JavaValue::Short(0),
+            Self::Int => JavaValue::Int(0),
+            Self::Long => JavaValue::Long(0),
+            Self::Float => JavaValue::Float(0.0),
+            Self::Double => JavaValue::Double(0.0),
+            Self::Class(_) => JavaValue::Object(None),
+            Self::Array(_) => JavaValue::Object(None),
+            Self::Method(_, _) => panic!("Cannot create default value for method"),
         }
     }
 
     pub fn parse(descriptor: &str) -> Self {
         match descriptor {
-            "V" => JavaType::Void,
-            "I" => JavaType::Integer,
-            "J" => JavaType::Long,
-            "F" => JavaType::Float,
-            "D" => JavaType::Double,
-            "C" => JavaType::Char,
+            "V" => Self::Void,
+            "I" => Self::Int,
+            "J" => Self::Long,
+            "F" => Self::Float,
+            "D" => Self::Double,
+            "C" => Self::Char,
             s => {
                 if s.starts_with('L') && s.ends_with(';') {
-                    JavaType::Object(s[1..s.len() - 1].to_string())
+                    Self::Class(s[1..s.len() - 1].to_string())
                 } else if s.starts_with('[') {
-                    JavaType::Object(s.to_string())
+                    Self::Array(s.to_string())
+                } else if s.starts_with('(') {
+                    let (params, ret) = Self::parse_method_type(s);
+                    Self::Method(params, Box::new(ret))
                 } else {
-                    panic!("Invalid descriptor: {}", s);
+                    panic!("Invalid type descriptor: {}", s);
                 }
             }
         }
     }
 
-    pub fn parse_method_descriptor(descriptor: &str) -> (Vec<JavaType>, JavaType) {
+    fn parse_method_type(descriptor: &str) -> (Vec<Self>, Self) {
         let mut chars = descriptor.chars();
         if chars.next() != Some('(') {
             panic!("Invalid method descriptor: {}", descriptor);
@@ -63,12 +77,12 @@ impl JavaType {
 
             if c == 'L' {
                 let class_name = chars.by_ref().take_while(|&x| x != ';').collect::<String>();
-                params.push(JavaType::Object(class_name));
+                params.push(Self::Class(class_name));
             } else {
-                params.push(JavaType::parse(&c.to_string()));
+                params.push(Self::parse(&c.to_string()));
             }
         }
-        let ret = JavaType::parse(&chars.collect::<String>());
+        let ret = Self::parse(&chars.collect::<String>());
 
         (params, ret)
     }
@@ -83,19 +97,19 @@ mod test {
     #[test]
     fn test_parse_method_descriptor() {
         assert!(
-            JavaType::parse_method_descriptor("(Ljava/lang/String;I)V")
-                == (vec![JavaType::Object("java/lang/String".into()), JavaType::Integer], JavaType::Void)
+            JavaType::parse_method_type("(Ljava/lang/String;I)V")
+                == (vec![JavaType::Class("java/lang/String".into()), JavaType::Int], JavaType::Void)
         );
     }
 
     #[test]
     fn test_parse() {
         assert!(JavaType::parse("V") == JavaType::Void);
-        assert!(JavaType::parse("I") == JavaType::Integer);
+        assert!(JavaType::parse("I") == JavaType::Int);
         assert!(JavaType::parse("J") == JavaType::Long);
         assert!(JavaType::parse("F") == JavaType::Float);
         assert!(JavaType::parse("D") == JavaType::Double);
         assert!(JavaType::parse("C") == JavaType::Char);
-        assert!(JavaType::parse("Ljava/lang/String;") == JavaType::Object("java/lang/String".into()));
+        assert!(JavaType::parse("Ljava/lang/String;") == JavaType::Class("java/lang/String".into()));
     }
 }

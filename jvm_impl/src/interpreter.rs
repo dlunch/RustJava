@@ -24,7 +24,12 @@ impl Interpreter {
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Invokevirtual(x) => {
-                    let (param_type, _return_type) = JavaType::parse_method_descriptor(&x.descriptor);
+                    let method_type = JavaType::parse(&x.descriptor);
+                    let param_type = match method_type {
+                        JavaType::Method(x, _) => x,
+                        _ => panic!("Invalid method type: {}", x.descriptor),
+                    };
+
                     let params: Vec<JavaValue> = (0..param_type.len())
                         .map(|_| stack_frame.operand_stack.pop().unwrap())
                         .collect::<Vec<_>>();
@@ -38,7 +43,7 @@ impl Interpreter {
                     iter = bytecode.range(*x as u32..);
                 }
                 Opcode::Return => {
-                    return Ok(JavaValue::Void);
+                    return Ok(JavaValue::Boolean(true)); // TODO: return value
                 }
                 _ => panic!("Unimplemented opcode {:?}", opcode),
             }
@@ -49,7 +54,7 @@ impl Interpreter {
 
     async fn constant_to_value(jvm: &mut Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
         Ok(match constant {
-            ValueConstant::Integer(x) => JavaValue::Integer(*x),
+            ValueConstant::Integer(x) => JavaValue::Int(*x),
             ValueConstant::Float(x) => JavaValue::Float(*x),
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
