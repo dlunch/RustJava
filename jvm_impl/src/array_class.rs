@@ -39,6 +39,10 @@ impl Class for ArrayClassImpl {
         self.name.clone()
     }
 
+    fn super_class_name(&self) -> Option<String> {
+        Some("java/lang/Object".to_string())
+    }
+
     fn instantiate(&self) -> Box<dyn ClassInstance> {
         panic!("Cannot instantiate array class")
     }

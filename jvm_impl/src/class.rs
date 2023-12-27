@@ -57,6 +57,10 @@ impl Class for ClassImpl {
         self.name.clone()
     }
 
+    fn super_class_name(&self) -> Option<String> {
+        Some("java/lang/Object".to_string()) // TODO
+    }
+
     fn instantiate(&self) -> Box<dyn ClassInstance> {
         Box::new(ClassInstanceImpl::new(self))
     }

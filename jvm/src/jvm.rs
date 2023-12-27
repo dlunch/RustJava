@@ -5,8 +5,10 @@ use crate::{
     class::Class,
     class_instance::ClassInstance,
     detail::JvmDetail,
+    field::Field,
     thread::{ThreadContext, ThreadId},
-    JavaValue, JvmResult,
+    value::JavaValue,
+    JvmResult,
 };
 
 pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
@@ -61,16 +63,14 @@ impl Jvm {
 
     pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let instance = instance.borrow();
-        let class = self.get_class(&instance.class_name()).unwrap();
-        let field = class.borrow().field(name, descriptor, false).unwrap();
+        let field = self.find_field(&instance.class_name(), name, descriptor).unwrap();
 
         instance.get_field(&*field)
     }
 
     pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
         let mut instance = instance.borrow_mut();
-        let class = self.get_class(&instance.class_name()).unwrap();
-        let field = class.borrow().field(name, descriptor, false).unwrap();
+        let field = self.find_field(&instance.class_name(), name, descriptor).unwrap();
 
         instance.put_field(&*field, value)
     }
@@ -154,6 +154,19 @@ impl Jvm {
         }
 
         Ok(None)
+    }
+
+    fn find_field(&self, class_name: &str, name: &str, descriptor: &str) -> Option<Box<dyn Field>> {
+        let class = self.get_class(class_name).unwrap();
+        let field = class.borrow().field(name, descriptor, false);
+
+        if let Some(x) = field {
+            Some(x)
+        } else if let Some(x) = class.borrow().super_class_name() {
+            self.find_field(&x, name, descriptor)
+        } else {
+            None
+        }
     }
 
     fn current_thread_id() -> ThreadId {
