@@ -43,11 +43,14 @@ impl JavaType {
     pub fn parse(descriptor: &str) -> Self {
         match descriptor {
             "V" => Self::Void,
+            "Z" => Self::Boolean,
+            "B" => Self::Byte,
+            "C" => Self::Char,
+            "S" => Self::Short,
             "I" => Self::Int,
             "J" => Self::Long,
             "F" => Self::Float,
             "D" => Self::Double,
-            "C" => Self::Char,
             s => {
                 if s.starts_with('L') && s.ends_with(';') {
                     Self::Class(s[1..s.len() - 1].to_string())
