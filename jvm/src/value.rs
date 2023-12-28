@@ -7,6 +7,7 @@ pub type JavaChar = u16;
 
 #[derive(Clone, Debug)]
 pub enum JavaValue {
+    Void,
     Boolean(bool),
     Byte(i8),
     Char(JavaChar),
