@@ -16,5 +16,5 @@ pub use self::{
     class::ClassImpl,
     detail::JvmDetailImpl,
     field::FieldImpl,
-    method::{MethodBody, MethodImpl},
+    method::{MethodBody, MethodImpl, RustMethodBody},
 };
