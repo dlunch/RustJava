@@ -102,7 +102,7 @@ pub enum AttributeInfo {
     ConstantValue(ValueConstant),
     Code(AttributeInfoCode),
     StackMapTable(Vec<u8>), // TODO
-    Exceptions,
+    Exceptions(Vec<u8>),    // TODO
     InnerClasses,
     Synthetic,
     SourceFile(Rc<String>),
@@ -123,6 +123,7 @@ impl AttributeInfo {
                     "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(info, constant_pool)?.1),
                     "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(info, constant_pool)?.1),
                     "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
+                    "Exceptions" => AttributeInfo::Exceptions(info.to_vec()),
                     _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
                 })
             },
