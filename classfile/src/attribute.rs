@@ -101,6 +101,7 @@ impl LocalVariableTableEntry {
 pub enum AttributeInfo {
     ConstantValue(ValueConstant),
     Code(AttributeInfoCode),
+    StackMap(Vec<u8>),      // TODO Older variant of stackmaptable
     StackMapTable(Vec<u8>), // TODO
     Exceptions(Vec<u8>),    // TODO
     InnerClasses,
@@ -122,6 +123,7 @@ impl AttributeInfo {
                     "LineNumberTable" => AttributeInfo::LineNumberTable(length_count(be_u16, AttributeInfoLineNumberTableEntry::parse)(info)?.1),
                     "SourceFile" => AttributeInfo::SourceFile(Self::parse_source_file(info, constant_pool)?.1),
                     "LocalVariableTable" => AttributeInfo::LocalVariableTable(Self::parse_local_variable_table(info, constant_pool)?.1),
+                    "StackMap" => AttributeInfo::StackMap(info.to_vec()),
                     "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
                     "Exceptions" => AttributeInfo::Exceptions(info.to_vec()),
                     _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
