@@ -8,6 +8,7 @@ use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaVa
 
 use crate::array_class::ArrayClassImpl;
 
+#[derive(Debug)]
 pub struct ArrayClassInstanceImpl {
     class_name: String,
     length: usize,

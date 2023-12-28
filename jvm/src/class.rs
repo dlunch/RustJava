@@ -1,8 +1,9 @@
 use alloc::{boxed::Box, string::String};
+use core::fmt::Debug;
 
 use crate::{ClassInstance, Field, JavaValue, JvmResult, Method};
 
-pub trait Class {
+pub trait Class: Debug {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
     fn instantiate(&self) -> Box<dyn ClassInstance>;

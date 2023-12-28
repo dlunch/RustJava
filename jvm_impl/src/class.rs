@@ -9,6 +9,7 @@ use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
+#[derive(Debug)]
 pub struct ClassImpl {
     name: String,
     methods: Vec<MethodImpl>,

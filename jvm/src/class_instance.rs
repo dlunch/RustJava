@@ -1,8 +1,9 @@
 use alloc::{boxed::Box, string::String};
+use core::fmt::Debug;
 
 use crate::{as_any::AsAny, ArrayClassInstance, Field, JavaValue, JvmResult};
 
-pub trait ClassInstance: AsAny {
+pub trait ClassInstance: AsAny + Debug {
     fn destroy(self: Box<Self>);
     fn class_name(&self) -> String;
     fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue>;

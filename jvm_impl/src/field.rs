@@ -4,7 +4,7 @@ use classfile::{FieldAccessFlags, FieldInfo};
 
 use jvm::{Field, JavaType};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FieldImpl {
     name: String,
     descriptor: String,

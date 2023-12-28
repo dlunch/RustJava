@@ -8,6 +8,7 @@ use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 
 use crate::{class::ClassImpl, FieldImpl};
 
+#[derive(Debug)]
 pub struct ClassInstanceImpl {
     class_name: String,
     storage: Vec<JavaValue>,

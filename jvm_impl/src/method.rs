@@ -5,7 +5,11 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::{future::Future, marker::PhantomData};
+use core::{
+    fmt::{self, Debug, Formatter},
+    future::Future,
+    marker::PhantomData,
+};
 
 use classfile::{AttributeInfo, MethodInfo, Opcode};
 use jvm::{JavaValue, Jvm, JvmResult, Method};
@@ -62,7 +66,16 @@ impl MethodBody {
     }
 }
 
-#[derive(Clone)]
+impl Debug for MethodBody {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            MethodBody::ByteCode(_) => write!(f, "ByteCode"),
+            MethodBody::Rust(_) => write!(f, "Rust"),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct MethodImpl {
     name: String,
     descriptor: String,

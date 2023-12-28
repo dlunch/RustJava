@@ -5,7 +5,7 @@ use crate::class_instance::ClassInstance;
 
 pub type JavaChar = u16;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum JavaValue {
     Boolean(bool),
     Byte(i8),
