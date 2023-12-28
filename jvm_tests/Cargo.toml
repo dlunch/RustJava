@@ -6,7 +6,9 @@ license.workspace = true
 
 [dependencies]
 anyhow = { version = "^1.0" }
-futures-test = { version = "^0.3" }
 
 jvm = { path = "../jvm" }
 jvm_impl = { path = "../jvm_impl" }
+
+[dev-dependencies]
+futures-test = { version = "^0.3" }
