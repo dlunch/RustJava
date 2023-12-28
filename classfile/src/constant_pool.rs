@@ -12,8 +12,7 @@ fn parse_utf8(data: &[u8]) -> IResult<&[u8], Rc<String>> {
     map(flat_map(be_u16, take), |x: &[u8]| Rc::new(String::from_utf8(x.to_vec()).unwrap()))(data)
 }
 
-#[derive(NomBE)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(NomBE, Debug)]
 #[nom(Selector = "u8")]
 pub enum ConstantPoolItem {
     #[nom(Selector = "1")]
@@ -74,8 +73,7 @@ impl ConstantPoolItem {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone, Debug)]
 pub enum ValueConstant {
     Integer(i32),
     Float(f32),
@@ -118,8 +116,7 @@ impl ValueConstant {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone, Debug)]
 pub struct ReferenceConstant {
     pub class: Rc<String>,
     pub name: Rc<String>,

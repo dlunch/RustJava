@@ -10,8 +10,7 @@ use nom::{
 
 use crate::constant_pool::{ConstantPoolItem, ReferenceConstant, ValueConstant};
 
-#[derive(Clone)]
-#[cfg_attr(debug_assertions, derive(Debug))]
+#[derive(Clone, Debug)]
 pub enum Opcode {
     Aaload,
     Aastore,
