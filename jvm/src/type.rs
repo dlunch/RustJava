@@ -4,6 +4,14 @@ use alloc::{
     vec::Vec,
 };
 
+use nom::{
+    bytes::complete::{take, take_until},
+    character::complete::anychar,
+    multi::many0,
+    sequence::terminated,
+    IResult,
+};
+
 use crate::JavaValue;
 
 #[derive(Eq, PartialEq, Clone)]
@@ -18,7 +26,7 @@ pub enum JavaType {
     Float,
     Double,
     Class(String),
-    Array(String),
+    Array(Box<Self>),
     Method(Vec<Self>, Box<Self>),
 }
 
@@ -41,68 +49,62 @@ impl JavaType {
     }
 
     pub fn parse(descriptor: &str) -> Self {
-        match descriptor {
-            "V" => Self::Void,
-            "Z" => Self::Boolean,
-            "B" => Self::Byte,
-            "C" => Self::Char,
-            "S" => Self::Short,
-            "I" => Self::Int,
-            "J" => Self::Long,
-            "F" => Self::Float,
-            "D" => Self::Double,
-            s => {
-                if s.starts_with('L') && s.ends_with(';') {
-                    Self::Class(s[1..s.len() - 1].to_string())
-                } else if s.starts_with('[') {
-                    Self::Array(s.to_string())
-                } else if s.starts_with('(') {
-                    let (params, ret) = Self::parse_method_type(s);
-                    Self::Method(params, Box::new(ret))
-                } else {
-                    panic!("Invalid type descriptor: {}", s);
-                }
-            }
-        }
+        Self::parse_type(descriptor).unwrap().1
     }
 
-    fn parse_method_type(descriptor: &str) -> (Vec<Self>, Self) {
-        let mut chars = descriptor.chars();
-        if chars.next() != Some('(') {
-            panic!("Invalid method descriptor: {}", descriptor);
-        }
+    fn parse_type(descriptor: &str) -> IResult<&str, Self> {
+        let (remaining, type_char) = anychar(descriptor)?;
 
-        let mut params = Vec::new();
-        while let Some(c) = chars.next() {
-            if c == ')' {
-                break;
+        match type_char {
+            'V' => Ok((remaining, Self::Void)),
+            'Z' => Ok((remaining, Self::Boolean)),
+            'B' => Ok((remaining, Self::Byte)),
+            'C' => Ok((remaining, Self::Char)),
+            'S' => Ok((remaining, Self::Short)),
+            'I' => Ok((remaining, Self::Int)),
+            'J' => Ok((remaining, Self::Long)),
+            'F' => Ok((remaining, Self::Float)),
+            'D' => Ok((remaining, Self::Double)),
+            'L' => {
+                let (remaining, class_name) = terminated(take_until(";"), take(1usize))(remaining)?;
+                Ok((remaining, Self::Class(class_name.to_string())))
             }
-
-            if c == 'L' {
-                let class_name = chars.by_ref().take_while(|&x| x != ';').collect::<String>();
-                params.push(Self::Class(class_name));
-            } else {
-                params.push(Self::parse(&c.to_string()));
+            '[' => {
+                let (remaining, element_type) = Self::parse_type(remaining)?;
+                Ok((remaining, Self::Array(Box::new(element_type))))
             }
-        }
-        let ret = Self::parse(&chars.collect::<String>());
+            '(' => {
+                let (remaining, params) = terminated(take_until(")"), take(1usize))(remaining)?;
+                let param_types = many0(Self::parse_type)(params)?.1;
 
-        (params, ret)
+                let (remaining, return_type) = Self::parse_type(remaining)?;
+
+                Ok((remaining, Self::Method(param_types, Box::new(return_type))))
+            }
+            _ => panic!("Invalid type descriptor: {}", descriptor),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use alloc::vec;
+    use alloc::{boxed::Box, vec};
 
     use super::JavaType;
 
     #[test]
     fn test_parse_method_descriptor() {
         assert!(
-            JavaType::parse_method_type("(Ljava/lang/String;I)V")
-                == (vec![JavaType::Class("java/lang/String".into()), JavaType::Int], JavaType::Void)
+            JavaType::parse("(Ljava/lang/String;I)V")
+                == JavaType::Method(vec![JavaType::Class("java/lang/String".into()), JavaType::Int], Box::new(JavaType::Void))
         );
+    }
+
+    #[test]
+    fn test_parse_method_descriptor_array() {
+        assert!(
+            JavaType::parse("([CI)V") == JavaType::Method(vec![JavaType::Array(Box::new(JavaType::Char)), JavaType::Int], Box::new(JavaType::Void))
+        )
     }
 
     #[test]
@@ -114,5 +116,10 @@ mod test {
         assert!(JavaType::parse("D") == JavaType::Double);
         assert!(JavaType::parse("C") == JavaType::Char);
         assert!(JavaType::parse("Ljava/lang/String;") == JavaType::Class("java/lang/String".into()));
+        assert!(JavaType::parse("[Ljava/lang/String;") == JavaType::Array(Box::new(JavaType::Class("java/lang/String".into()))));
+        assert!(
+            JavaType::parse("[[Ljava/lang/String;")
+                == JavaType::Array(Box::new(JavaType::Array(Box::new(JavaType::Class("java/lang/String".into())))))
+        );
     }
 }

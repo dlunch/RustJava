@@ -10,4 +10,5 @@ await_holding_refcell_ref = "allow" # There's false positives https://github.com
 [dependencies]
 anyhow = { version = "^1.0", default-features = false }
 async-trait = { version = "^0.1", default-features = false }
+nom = { version = "^7.1", default-features = false }
 tracing = { version = "^0.1", default-features = false }
