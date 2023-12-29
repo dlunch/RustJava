@@ -1,4 +1,4 @@
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 
 use nom::{combinator::map, multi::length_count, number::complete::be_u16, sequence::tuple, IResult};
 
@@ -27,12 +27,12 @@ pub struct FieldInfo {
 }
 
 impl FieldInfo {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         map(
             tuple((
                 be_u16,
-                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
-                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                map(be_u16, |x| constant_pool.get(&x).unwrap().utf8()),
+                map(be_u16, |x| constant_pool.get(&x).unwrap().utf8()),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             )),
             |(access_flags, name, descriptor, attributes)| Self {

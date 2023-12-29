@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use alloc::{collections::BTreeMap, vec::Vec};
 
 use nom::{
     combinator::{flat_map, map, success},
@@ -195,11 +195,11 @@ pub enum Opcode {
 }
 
 impl Opcode {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         flat_map(u8, |x| move |i| Self::parse_opcode(x, i, constant_pool))(data)
     }
 
-    fn parse_opcode<'a>(opcode: u8, data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    fn parse_opcode<'a>(opcode: u8, data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         match opcode {
             0x32 => success(Opcode::Aaload)(data),
             0x53 => success(Opcode::Aastore)(data),

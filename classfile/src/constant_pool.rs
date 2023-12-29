@@ -1,4 +1,4 @@
-use alloc::{rc::Rc, string::String};
+use alloc::{collections::BTreeMap, rc::Rc, string::String};
 
 use nom::{
     bytes::complete::take,
@@ -40,6 +40,37 @@ pub enum ConstantPoolItem {
 }
 
 impl ConstantPoolItem {
+    pub fn parse_all(data: &[u8]) -> IResult<&[u8], BTreeMap<u16, Self>> {
+        let (remaining, count) = be_u16(data)?;
+
+        let mut data = remaining;
+        let mut result = BTreeMap::new();
+        let mut i = 1;
+        loop {
+            let (remaining, item) = Self::parse_with_tag(data)?;
+            let is_double_entry = match &item {
+                Self::Long(_) | Self::Double(_) => {
+                    // long or double constant takes two constant pool entries....
+                    true
+                }
+                _ => false,
+            };
+            result.insert(i, item);
+
+            data = remaining;
+            i += 1;
+            if is_double_entry {
+                i += 1;
+            }
+
+            if i >= count {
+                break;
+            }
+        }
+
+        Ok((data, result))
+    }
+
     pub fn parse_with_tag(data: &[u8]) -> IResult<&[u8], Self> {
         flat_map(u8, |x| move |i| Self::parse(i, x))(data)
     }
@@ -86,14 +117,14 @@ pub enum ValueConstant {
 }
 
 impl ValueConstant {
-    pub fn from_constant_pool(constant_pool: &[ConstantPoolItem], index: usize) -> Self {
-        match &constant_pool[index - 1] {
+    pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Self {
+        match &constant_pool.get(&index).unwrap() {
             ConstantPoolItem::Integer(x) => Self::Integer(*x),
             ConstantPoolItem::Float(x) => Self::Float(*x),
             ConstantPoolItem::Long(x) => Self::Long(*x),
             ConstantPoolItem::Double(x) => Self::Double(*x),
-            ConstantPoolItem::String { string_index } => Self::String(constant_pool[*string_index as usize - 1].utf8()),
-            ConstantPoolItem::Class { name_index } => Self::Class(constant_pool[*name_index as usize - 1].utf8()),
+            ConstantPoolItem::String { string_index } => Self::String(constant_pool.get(string_index).unwrap().utf8()),
+            ConstantPoolItem::Class { name_index } => Self::Class(constant_pool.get(name_index).unwrap().utf8()),
             ConstantPoolItem::Utf8(x) => Self::String(x.clone()),
             ConstantPoolItem::Methodref {
                 class_index,
@@ -111,7 +142,7 @@ impl ValueConstant {
                 *class_index as _,
                 *name_and_type_index as _,
             )),
-            _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
+            _ => panic!("Invalid constant pool item {:?}", constant_pool.get(&index).unwrap()),
         }
     }
 
@@ -132,27 +163,27 @@ pub struct ReferenceConstant {
 }
 
 impl ReferenceConstant {
-    pub fn from_constant_pool(constant_pool: &[ConstantPoolItem], index: usize) -> Self {
-        match &constant_pool[index - 1] {
+    pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Self {
+        match &constant_pool.get(&index).unwrap() {
             ConstantPoolItem::Fieldref {
                 class_index,
                 name_and_type_index,
-            } => Self::from_reference_info(constant_pool, *class_index as _, *name_and_type_index as _),
+            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
             ConstantPoolItem::Methodref {
                 class_index,
                 name_and_type_index,
-            } => Self::from_reference_info(constant_pool, *class_index as _, *name_and_type_index as _),
-            _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
+            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
+            _ => panic!("Invalid constant pool item {:?}", constant_pool.get(&index).unwrap()),
         }
     }
 
-    pub fn from_reference_info(constant_pool: &[ConstantPoolItem], class_index: usize, name_and_type_index: usize) -> Self {
-        let class_name_index = constant_pool[class_index - 1].class_name_index();
-        let class_name = constant_pool[class_name_index as usize - 1].utf8();
+    pub fn from_reference_info(constant_pool: &BTreeMap<u16, ConstantPoolItem>, class_index: u16, name_and_type_index: u16) -> Self {
+        let class_name_index = constant_pool.get(&class_index).unwrap().class_name_index();
+        let class_name = constant_pool.get(&class_name_index).unwrap().utf8();
 
-        let (name_index, descriptor_index) = constant_pool[name_and_type_index - 1].name_and_type();
-        let name = constant_pool[name_index as usize - 1].utf8();
-        let descriptor = constant_pool[descriptor_index as usize - 1].utf8();
+        let (name_index, descriptor_index) = constant_pool.get(&name_and_type_index).unwrap().name_and_type();
+        let name = constant_pool.get(&name_index).unwrap().utf8();
+        let descriptor = constant_pool.get(&descriptor_index).unwrap().utf8();
 
         Self {
             class: class_name,

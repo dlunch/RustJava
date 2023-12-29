@@ -29,7 +29,7 @@ pub struct AttributeInfoCode {
 }
 
 impl AttributeInfoCode {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         map(
             tuple((
                 be_u16,
@@ -48,7 +48,7 @@ impl AttributeInfoCode {
         )(data)
     }
 
-    fn parse_code(code: &[u8], constant_pool: &[ConstantPoolItem]) -> BTreeMap<u32, Opcode> {
+    fn parse_code(code: &[u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> BTreeMap<u32, Opcode> {
         let mut result = BTreeMap::new();
 
         let mut data = code;
@@ -78,13 +78,13 @@ pub struct LocalVariableTableEntry {
 }
 
 impl LocalVariableTableEntry {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         map(
             tuple((
                 be_u16,
                 be_u16,
-                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
-                map(be_u16, |x| constant_pool[x as usize - 1].utf8()),
+                map(be_u16, |x| constant_pool.get(&x).unwrap().utf8()),
+                map(be_u16, |x| constant_pool.get(&x).unwrap().utf8()),
                 be_u16,
             )),
             |(start_pc, length, name, descriptor, index)| Self {
@@ -113,9 +113,9 @@ pub enum AttributeInfo {
 }
 
 impl AttributeInfo {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Self> {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         map_res(
-            tuple((map(be_u16, |x| constant_pool[x as usize - 1].utf8()), flat_map(be_u32, take))),
+            tuple((map(be_u16, |x| constant_pool.get(&x).unwrap().utf8()), flat_map(be_u32, take))),
             |(name, info): (_, &[u8])| {
                 Ok::<_, nom::Err<_>>(match name.as_str() {
                     "ConstantValue" => AttributeInfo::ConstantValue(Self::parse_constant_value(info, constant_pool)?.1),
@@ -132,15 +132,18 @@ impl AttributeInfo {
         )(data)
     }
 
-    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
-        map(be_u16, |x| constant_pool[x as usize - 1].utf8())(data)
+    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Rc<String>> {
+        map(be_u16, |x| constant_pool.get(&x).unwrap().utf8())(data)
     }
 
-    fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], ValueConstant> {
+    fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], ValueConstant> {
         map(be_u16, |x| ValueConstant::from_constant_pool(constant_pool, x as _))(data)
     }
 
-    fn parse_local_variable_table<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Vec<LocalVariableTableEntry>> {
+    fn parse_local_variable_table<'a>(
+        data: &'a [u8],
+        constant_pool: &BTreeMap<u16, ConstantPoolItem>,
+    ) -> IResult<&'a [u8], Vec<LocalVariableTableEntry>> {
         length_count(be_u16, |x| LocalVariableTableEntry::parse(x, constant_pool))(data)
     }
 }

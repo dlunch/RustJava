@@ -1,22 +1,22 @@
-use alloc::{rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 
 use nom::{combinator::map, number::complete::be_u16, IResult};
 use nom_derive::{NomBE, Parse};
 
 use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
 
-fn parse_this_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Rc<String>> {
+fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Rc<String>> {
     map(be_u16, |x| {
-        let class_name_index = constant_pool[x as usize - 1].class_name_index();
-        constant_pool[class_name_index as usize - 1].utf8()
+        let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
+        constant_pool.get(&class_name_index).unwrap().utf8()
     })(data)
 }
 
-fn parse_super_class<'a>(data: &'a [u8], constant_pool: &[ConstantPoolItem]) -> IResult<&'a [u8], Option<Rc<String>>> {
+fn parse_super_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Option<Rc<String>>> {
     map(be_u16, |x| {
         if x != 0 {
-            let class_name_index = constant_pool[x as usize - 1].class_name_index();
-            let name = constant_pool[class_name_index as usize - 1].utf8();
+            let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
+            let name = constant_pool.get(&class_name_index).unwrap().utf8();
 
             Some(name)
         } else {
@@ -53,8 +53,8 @@ pub struct ClassInfo {
     pub magic: u32,
     pub minor_version: u16,
     pub major_version: u16,
-    #[nom(LengthCount = "map(be_u16, |x| x - 1)", Parse = "ConstantPoolItem::parse_with_tag")]
-    pub constant_pool: Vec<ConstantPoolItem>,
+    #[nom(Parse = "ConstantPoolItem::parse_all")]
+    pub constant_pool: BTreeMap<u16, ConstantPoolItem>,
     pub access_flags: ClassAccessFlags,
     #[nom(Parse = "{ |x| parse_this_class(x, &constant_pool) }")]
     pub this_class: Rc<String>,
