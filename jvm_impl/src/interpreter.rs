@@ -41,6 +41,11 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(class)));
                 }
+                Opcode::Dup => {
+                    let value = stack_frame.operand_stack.pop().unwrap();
+                    stack_frame.operand_stack.push(value.clone());
+                    stack_frame.operand_stack.push(value);
+                }
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
                 }
