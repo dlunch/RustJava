@@ -10,7 +10,7 @@ mod method;
 mod opcode;
 
 pub use {
-    attribute::AttributeInfo,
+    attribute::{AttributeInfo, AttributeInfoCode},
     class::{ClassAccessFlags, ClassInfo},
     constant_pool::{ReferenceConstant, ValueConstant},
     field::{FieldAccessFlags, FieldInfo},

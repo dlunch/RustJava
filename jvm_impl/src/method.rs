@@ -1,6 +1,5 @@
 use alloc::{
     boxed::Box,
-    collections::BTreeMap,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
@@ -11,7 +10,7 @@ use core::{
     marker::PhantomData,
 };
 
-use classfile::{AttributeInfo, MethodInfo, Opcode};
+use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
 use jvm::{JavaValue, Jvm, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
@@ -53,7 +52,7 @@ where
 }
 
 pub enum MethodBody {
-    ByteCode(BTreeMap<u32, Opcode>),
+    ByteCode(AttributeInfoCode),
     Rust(Box<dyn RustMethodBody<anyhow::Error, JavaValue>>),
 }
 
@@ -99,10 +98,10 @@ impl MethodImpl {
         }
     }
 
-    fn extract_body(attributes: Vec<AttributeInfo>) -> Option<BTreeMap<u32, Opcode>> {
+    fn extract_body(attributes: Vec<AttributeInfo>) -> Option<AttributeInfoCode> {
         for attribute in attributes {
             if let AttributeInfo::Code(x) = attribute {
-                return Some(x.code);
+                return Some(x);
             }
         }
 

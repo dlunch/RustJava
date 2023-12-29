@@ -1,6 +1,7 @@
-use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
+use core::iter;
 
-use classfile::{Opcode, ValueConstant};
+use classfile::{AttributeInfoCode, Opcode, ValueConstant};
 
 use jvm::{runtime::JavaLangString, JavaType, JavaValue, Jvm, JvmResult};
 
@@ -10,14 +11,17 @@ pub struct Interpreter {}
 
 impl Interpreter {
     #[allow(clippy::await_holding_refcell_ref)]
-    pub async fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+    pub async fn run(jvm: &mut Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         let thread_context = jvm.current_thread_context().as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
 
         let stack_frame = thread_context.push_stack_frame();
         let mut stack_frame = stack_frame.borrow_mut();
         stack_frame.local_variables = args.into_vec();
+        stack_frame
+            .local_variables
+            .extend(iter::repeat(JavaValue::Void).take(code_attribute.max_locals as usize));
 
-        let mut iter = bytecode.range(0..);
+        let mut iter = code_attribute.code.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
                 Opcode::Aload0 => {
@@ -37,7 +41,7 @@ impl Interpreter {
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Goto(x) => {
-                    iter = bytecode.range(*x as u32..);
+                    iter = code_attribute.code.range(*x as u32..);
                 }
                 Opcode::Invokevirtual(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
