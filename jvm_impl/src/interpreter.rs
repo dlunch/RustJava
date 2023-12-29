@@ -61,7 +61,8 @@ impl Interpreter {
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
-                    jvm.invoke_virtual(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_virtual(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Invokespecial(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
@@ -69,12 +70,14 @@ impl Interpreter {
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
-                    jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Invokestatic(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
-                    jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
@@ -99,6 +102,13 @@ impl Interpreter {
         (0..param_type.len())
             .map(|_| stack_frame.operand_stack.pop().unwrap())
             .collect::<Vec<_>>()
+    }
+
+    fn push_invoke_result(stack_frame: &mut StackFrame, value: JavaValue) {
+        match value {
+            JavaValue::Void => {}
+            _ => stack_frame.operand_stack.push(value),
+        }
     }
 
     async fn constant_to_value(jvm: &mut Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
