@@ -48,7 +48,19 @@ where
 {
     let println_handler = Rc::new(println_handler);
     move |class_name| {
-        if class_name == "java/lang/String" {
+        if class_name == "java/lang/Object" {
+            let class = ClassImpl::new(
+                "java/lang/Object",
+                vec![MethodImpl::new(
+                    "<init>",
+                    "()V",
+                    MethodBody::from_rust(|_: &mut Jvm, _: Box<[JavaValue]>| async { Ok(JavaValue::Void) }),
+                )],
+                vec![],
+            );
+
+            Ok(Some(Box::new(class)))
+        } else if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
                 vec![MethodImpl::new("<init>", "([C)V", MethodBody::from_rust(string_init))],
