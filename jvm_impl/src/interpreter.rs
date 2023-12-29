@@ -24,6 +24,10 @@ impl Interpreter {
                     let value = stack_frame.local_variables[0].clone();
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::Astore1 => {
+                    let value = stack_frame.operand_stack.pop();
+                    stack_frame.local_variables[1] = value.unwrap();
+                }
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
                     stack_frame.operand_stack.push(value.clone());
