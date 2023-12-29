@@ -79,6 +79,12 @@ impl Interpreter {
                     let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
+                Opcode::Irem => {
+                    let value2 = stack_frame.operand_stack.pop().unwrap();
+                    let value1 = stack_frame.operand_stack.pop().unwrap();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1.as_int() % value2.as_int()));
+                }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
                     let class = jvm.instantiate_class(x.as_class()).await?;
