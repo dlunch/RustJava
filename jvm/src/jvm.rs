@@ -75,33 +75,38 @@ impl Jvm {
         instance.put_field(&*field, value)
     }
 
-    pub async fn invoke_static_method(&mut self, class_name: &str, name: &str, descriptor: &str, args: &[JavaValue]) -> JvmResult<JavaValue> {
+    pub async fn invoke_static_method<T>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<JavaValue>
+    where
+        T: InvokeArg,
+    {
         let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
-        method.run(self, args).await
+        method.run(self, args.into_arg()).await
     }
 
-    pub async fn invoke_method(
+    pub async fn invoke_method<T>(
         &mut self,
         instance: &ClassInstanceRef,
         _class_name: &str,
         name: &str,
         descriptor: &str,
-        args: &[JavaValue],
-    ) -> JvmResult<JavaValue> {
+        args: T,
+    ) -> JvmResult<JavaValue>
+    where
+        T: InvokeArg,
+    {
         let class = self.resolve_class(&instance.borrow().class_name()).await?.unwrap();
         let class = class.borrow();
         let method = class.method(name, descriptor).unwrap();
 
         let args = [JavaValue::Object(Some(instance.clone()))]
-            .iter()
-            .chain(args.iter())
-            .cloned()
+            .into_iter()
+            .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        method.run(self, &args).await
+        method.run(self, args.into_boxed_slice()).await
     }
 
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
@@ -154,7 +159,7 @@ impl Jvm {
             drop(class);
 
             if let Some(x) = clinit {
-                x.run(self, &[]).await?;
+                x.run(self, Box::new([])).await?;
             }
 
             let class = self.get_class(class_name).unwrap();
@@ -180,5 +185,21 @@ impl Jvm {
 
     fn current_thread_id() -> ThreadId {
         0 // TODO
+    }
+}
+
+pub trait InvokeArg: IntoIterator<Item = JavaValue> {
+    fn into_arg(self) -> Box<[JavaValue]>;
+}
+
+impl InvokeArg for Vec<JavaValue> {
+    fn into_arg(self) -> Box<[JavaValue]> {
+        self.into_boxed_slice()
+    }
+}
+
+impl<const N: usize> InvokeArg for [JavaValue; N] {
+    fn into_arg(self) -> Box<[JavaValue]> {
+        self.into()
     }
 }

@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 
 use classfile::{Opcode, ValueConstant};
 
@@ -10,11 +10,12 @@ pub struct Interpreter {}
 
 impl Interpreter {
     #[allow(clippy::await_holding_refcell_ref)]
-    pub async fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>) -> JvmResult<JavaValue> {
+    pub async fn run(jvm: &mut Jvm, bytecode: &BTreeMap<u32, Opcode>, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         let thread_context = jvm.current_thread_context().as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
 
         let stack_frame = thread_context.push_stack_frame();
         let mut stack_frame = stack_frame.borrow_mut();
+        stack_frame.local_variables = args.into_vec();
 
         let mut iter = bytecode.range(0..);
         while let Some((_, opcode)) = iter.next() {
@@ -46,7 +47,7 @@ impl Interpreter {
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
-                    jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, &params).await?;
+                    jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, params).await?;
                 }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {

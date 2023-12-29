@@ -15,7 +15,7 @@ impl JavaLangString {
         jvm.store_array(&array, 0, &chars)?;
 
         let instance = jvm.instantiate_class("java/lang/String").await?;
-        jvm.invoke_method(&instance, "java/lang/String", "<init>", "([C)V", &[JavaValue::Object(Some(array))])
+        jvm.invoke_method(&instance, "java/lang/String", "<init>", "([C)V", [JavaValue::Object(Some(array))])
             .await?;
 
         Ok(Self { instance })

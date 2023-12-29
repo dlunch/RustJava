@@ -18,22 +18,22 @@ use crate::interpreter::Interpreter;
 
 #[async_trait::async_trait(?Send)]
 pub trait RustMethodBody<E, R> {
-    async fn call(&self, jvm: &mut Jvm, args: &[JavaValue]) -> Result<R, E>;
+    async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> Result<R, E>;
 }
 
 pub trait FnHelper<'a, E, R> {
     type Output: Future<Output = Result<R, E>> + 'a;
-    fn call(&self, jvm: &'a mut Jvm, args: &'a [JavaValue]) -> Self::Output;
+    fn call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Self::Output;
 }
 
 impl<'a, E, R, F, Fut> FnHelper<'a, E, R> for F
 where
-    F: Fn(&'a mut Jvm, &'a [JavaValue]) -> Fut,
+    F: Fn(&'a mut Jvm, Box<[JavaValue]>) -> Fut,
     Fut: Future<Output = Result<R, E>> + 'a,
 {
     type Output = Fut;
 
-    fn call(&self, jvm: &'a mut Jvm, args: &'a [JavaValue]) -> Fut {
+    fn call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Fut {
         self(jvm, args)
     }
 }
@@ -45,7 +45,7 @@ impl<F, R, E> RustMethodBody<E, R> for MethodHolder<F, R>
 where
     F: for<'a> FnHelper<'a, E, R>,
 {
-    async fn call(&self, jvm: &mut Jvm, args: &[JavaValue]) -> Result<R, E> {
+    async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> Result<R, E> {
         let result = self.0.call(jvm, args).await?;
 
         Ok(result)
@@ -120,9 +120,9 @@ impl Method for MethodImpl {
         self.descriptor.clone()
     }
 
-    async fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue> {
+    async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         Ok(match self.body.as_ref() {
-            MethodBody::ByteCode(x) => Interpreter::run(jvm, x).await?,
+            MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args).await?,
             MethodBody::Rust(x) => x.call(jvm, args).await?,
         })
     }

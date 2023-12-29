@@ -8,5 +8,5 @@ pub trait Method: AsAny + Debug {
     fn name(&self) -> String;
     fn descriptor(&self) -> String;
 
-    async fn run(&self, jvm: &mut Jvm, args: &[JavaValue]) -> JvmResult<JavaValue>;
+    async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
 }
