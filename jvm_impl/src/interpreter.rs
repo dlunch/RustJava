@@ -19,6 +19,10 @@ impl Interpreter {
         let mut iter = bytecode.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
+                Opcode::Aload0 => {
+                    let value = stack_frame.local_variables[0].clone();
+                    stack_frame.operand_stack.push(value);
+                }
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
                     stack_frame.operand_stack.push(value.clone());
