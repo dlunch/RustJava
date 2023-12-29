@@ -25,10 +25,7 @@ impl Interpreter {
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Invokevirtual(x) => {
                     let method_type = JavaType::parse(&x.descriptor);
-                    let param_type = match method_type {
-                        JavaType::Method(x, _) => x,
-                        _ => panic!("Invalid method type: {}", x.descriptor),
-                    };
+                    let (param_type, _) = method_type.as_method();
 
                     let params = (0..param_type.len())
                         .map(|_| stack_frame.operand_stack.pop().unwrap())

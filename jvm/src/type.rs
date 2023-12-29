@@ -52,6 +52,14 @@ impl JavaType {
         Self::parse_type(descriptor).unwrap().1
     }
 
+    pub fn as_method(&self) -> (&[Self], &Self) {
+        if let Self::Method(params, return_type) = self {
+            (params, return_type)
+        } else {
+            panic!("Invalid type");
+        }
+    }
+
     fn parse_type(descriptor: &str) -> IResult<&str, Self> {
         let (remaining, type_char) = anychar(descriptor)?;
 
