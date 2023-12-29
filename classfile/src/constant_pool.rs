@@ -114,6 +114,14 @@ impl ValueConstant {
             _ => panic!("Invalid constant pool item {:?}", constant_pool[index]),
         }
     }
+
+    pub fn as_class(&self) -> &str {
+        if let Self::Class(x) = self {
+            x
+        } else {
+            panic!("Invalid constant pool item");
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

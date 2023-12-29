@@ -30,7 +30,7 @@ impl Interpreter {
                         _ => panic!("Invalid method type: {}", x.descriptor),
                     };
 
-                    let params: Vec<JavaValue> = (0..param_type.len())
+                    let params = (0..param_type.len())
                         .map(|_| stack_frame.operand_stack.pop().unwrap())
                         .collect::<Vec<_>>();
 
@@ -38,6 +38,11 @@ impl Interpreter {
                     let instance = instance.as_object().unwrap();
 
                     jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, &params).await?;
+                }
+                Opcode::New(x) => {
+                    let class = jvm.instantiate_class(x.as_class()).await?;
+
+                    stack_frame.operand_stack.push(JavaValue::Object(Some(class)));
                 }
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
