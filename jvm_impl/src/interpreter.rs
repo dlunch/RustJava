@@ -24,6 +24,15 @@ impl Interpreter {
         let mut iter = code_attribute.code.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
+                Opcode::Aaload => {
+                    let index = stack_frame.operand_stack.pop().unwrap();
+                    let array = stack_frame.operand_stack.pop().unwrap();
+
+                    let array = array.as_object().unwrap();
+                    let value = jvm.load_array(&array, index.as_int() as usize, 1).unwrap().pop().unwrap();
+
+                    stack_frame.operand_stack.push(value);
+                }
                 Opcode::Aload(x) => {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
