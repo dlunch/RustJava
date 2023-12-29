@@ -33,11 +33,11 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(value);
                 }
-                Opcode::Aload(x) => {
+                Opcode::Aload(x) | Opcode::Iload(x) => {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
-                Opcode::Istore(x) | Opcode::Astore(x) => {
+                Opcode::Astore(x) | Opcode::Istore(x) => {
                     let value = stack_frame.operand_stack.pop();
                     stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
