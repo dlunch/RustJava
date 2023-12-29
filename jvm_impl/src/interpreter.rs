@@ -61,7 +61,7 @@ impl Interpreter {
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
-                    jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    jvm.invoke_virtual(&instance, &x.class, &x.name, &x.descriptor, params).await?;
                 }
                 Opcode::Invokespecial(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
@@ -70,6 +70,11 @@ impl Interpreter {
                     let instance = instance.as_object().unwrap();
 
                     jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                }
+                Opcode::Invokestatic(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                 }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {

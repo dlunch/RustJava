@@ -75,7 +75,7 @@ impl Jvm {
         instance.put_field(&*field, value)
     }
 
-    pub async fn invoke_static_method<T>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<JavaValue>
+    pub async fn invoke_static<T>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<JavaValue>
     where
         T: InvokeArg,
     {
@@ -86,7 +86,7 @@ impl Jvm {
         method.run(self, args.into_arg()).await
     }
 
-    pub async fn invoke_method<T>(
+    pub async fn invoke_virtual<T>(
         &mut self,
         instance: &ClassInstanceRef,
         _class_name: &str,
