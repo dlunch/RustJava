@@ -23,7 +23,8 @@ impl Interpreter {
                 Opcode::Getstatic(x) => stack_frame
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
-                Opcode::Invokevirtual(x) => {
+                Opcode::Invokespecial(x) | Opcode::Invokevirtual(x) => {
+                    // TODO there's difference between invokespecial/invokevirtual, but we ignore it for now..
                     let method_type = JavaType::parse(&x.descriptor);
                     let (param_type, _) = method_type.as_method();
 
