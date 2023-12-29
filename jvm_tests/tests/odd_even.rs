@@ -1,6 +1,6 @@
 use jvm_tests::run_class;
 
-// #[futures_test::test]
+#[futures_test::test]
 pub async fn test_odd_even() -> anyhow::Result<()> {
     let odd_even = include_bytes!("../../test_data/OddEven.class");
 
