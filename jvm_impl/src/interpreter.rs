@@ -37,7 +37,7 @@ impl Interpreter {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
-                Opcode::Astore(x) => {
+                Opcode::Istore(x) | Opcode::Astore(x) => {
                     let value = stack_frame.operand_stack.pop();
                     stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
