@@ -43,6 +43,9 @@ impl Interpreter {
                 Opcode::Goto(x) => {
                     iter = code_attribute.code.range(*x as u32..);
                 }
+                Opcode::Iconst(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
+                }
                 Opcode::Invokevirtual(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
