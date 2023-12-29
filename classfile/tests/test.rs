@@ -23,7 +23,7 @@ fn test_hello() -> anyhow::Result<()> {
     assert!(matches!(class.methods[0].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[0].attributes[0] {
         assert_eq!(x.code.len(), 3);
-        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload0));
+        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload(0)));
         assert!(
             matches!(x.code.get(&1).unwrap(), Opcode::Invokespecial(x) if x.class == "java/lang/Object".to_string().into() && x.name == "<init>".to_string().into() && x.descriptor == "()V".to_string().into())
         );

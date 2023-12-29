@@ -24,13 +24,13 @@ impl Interpreter {
         let mut iter = code_attribute.code.range(0..);
         while let Some((_, opcode)) = iter.next() {
             match opcode {
-                Opcode::Aload0 => {
-                    let value = stack_frame.local_variables[0].clone();
+                Opcode::Aload(x) => {
+                    let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
-                Opcode::Astore1 => {
+                Opcode::Astore(x) => {
                     let value = stack_frame.operand_stack.pop();
-                    stack_frame.local_variables[1] = value.unwrap();
+                    stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
