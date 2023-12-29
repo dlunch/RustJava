@@ -4,7 +4,7 @@ use classfile::{Opcode, ValueConstant};
 
 use jvm::{runtime::JavaLangString, JavaType, JavaValue, Jvm, JvmResult};
 
-use crate::thread::ThreadContextImpl;
+use crate::{stack_frame::StackFrame, thread::ThreadContextImpl};
 
 pub struct Interpreter {}
 
@@ -35,19 +35,21 @@ impl Interpreter {
                 Opcode::Goto(x) => {
                     iter = bytecode.range(*x as u32..);
                 }
-                Opcode::Invokespecial(x) | Opcode::Invokevirtual(x) => {
-                    // TODO there's difference between invokespecial/invokevirtual, but we ignore it for now..
-                    let method_type = JavaType::parse(&x.descriptor);
-                    let (param_type, _) = method_type.as_method();
-
-                    let params = (0..param_type.len())
-                        .map(|_| stack_frame.operand_stack.pop().unwrap())
-                        .collect::<Vec<_>>();
+                Opcode::Invokevirtual(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
                     let instance = instance.as_object().unwrap();
 
                     jvm.invoke_method(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                }
+                Opcode::Invokespecial(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+                    let instance = instance.as_object().unwrap();
+
+                    jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
                 }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
@@ -63,6 +65,15 @@ impl Interpreter {
         }
 
         panic!("Should not reach here")
+    }
+
+    fn extract_invoke_params(stack_frame: &mut StackFrame, descriptor: &str) -> Vec<JavaValue> {
+        let method_type = JavaType::parse(descriptor);
+        let (param_type, _) = method_type.as_method();
+
+        (0..param_type.len())
+            .map(|_| stack_frame.operand_stack.pop().unwrap())
+            .collect::<Vec<_>>()
     }
 
     async fn constant_to_value(jvm: &mut Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {

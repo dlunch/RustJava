@@ -109,6 +109,30 @@ impl Jvm {
         method.run(self, args.into_boxed_slice()).await
     }
 
+    // non-virtual
+    pub async fn invoke_special<T>(
+        &mut self,
+        instance: &ClassInstanceRef,
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: T,
+    ) -> JvmResult<JavaValue>
+    where
+        T: InvokeArg,
+    {
+        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = class.borrow();
+        let method = class.method(name, descriptor).unwrap();
+
+        let args = [JavaValue::Object(Some(instance.clone()))]
+            .into_iter()
+            .chain(args.into_iter())
+            .collect::<Vec<_>>();
+
+        method.run(self, args.into_boxed_slice()).await
+    }
+
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
         let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().unwrap();
