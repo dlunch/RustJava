@@ -43,7 +43,7 @@ impl Interpreter {
                     iter = bytecode.range(*x as u32..);
                 }
                 Opcode::Return => {
-                    return Ok(JavaValue::Boolean(true)); // TODO: return value
+                    return Ok(JavaValue::Void);
                 }
                 _ => panic!("Unimplemented opcode {:?}", opcode),
             }

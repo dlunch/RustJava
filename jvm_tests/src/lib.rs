@@ -15,7 +15,7 @@ async fn system_clinit(jvm: &mut Jvm, _args: &[JavaValue]) -> anyhow::Result<Jav
         .await
         .unwrap();
 
-    Ok(JavaValue::Boolean(true)) // TODO
+    Ok(JavaValue::Void)
 }
 
 async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaValue> {
@@ -23,7 +23,7 @@ async fn string_init(jvm: &mut Jvm, args: &[JavaValue]) -> anyhow::Result<JavaVa
     let chars = args[1].as_object_ref().unwrap();
 
     jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
-    Ok(JavaValue::Boolean(true)) // TODO
+    Ok(JavaValue::Void)
 }
 
 fn get_println<T>(println_handler: Rc<T>) -> Box<dyn Fn(&mut Jvm, &[JavaValue]) -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>>>
@@ -36,7 +36,7 @@ where
         let str = JavaLangString::from_instance(string.clone());
         println_handler(&str.to_string(jvm).unwrap());
 
-        Box::pin(async { Ok(JavaValue::Boolean(true)) }) // TODO
+        Box::pin(async { Ok(JavaValue::Void) })
     };
 
     Box::new(println_body)
@@ -71,7 +71,7 @@ where
                     MethodImpl::new(
                         "<init>",
                         "()V",
-                        MethodBody::from_rust(|_: &mut Jvm, _: &[JavaValue]| async { Ok(JavaValue::Boolean(true)) }), // TODO
+                        MethodBody::from_rust(|_: &mut Jvm, _: &[JavaValue]| async { Ok(JavaValue::Void) }),
                     ),
                     MethodImpl::new(
                         "println",
