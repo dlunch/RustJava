@@ -9,7 +9,7 @@ use jvm_impl::{ClassImpl, FieldImpl, JvmDetailImpl, MethodBody, MethodImpl};
 
 async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
     let out = jvm.instantiate_class("java/io/PrintStream").await.unwrap();
-    jvm.invoke_method(&out, "java/io/PrintStream", "<init>", "()V", []).await.unwrap();
+    jvm.invoke_virtual(&out, "java/io/PrintStream", "<init>", "()V", []).await.unwrap();
 
     jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
         .await
@@ -24,6 +24,16 @@ async fn string_init(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<Ja
 
     jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
     Ok(JavaValue::Void)
+}
+
+async fn integer_parse_int(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
+    let string = args[0].as_object_ref().unwrap();
+    let str = JavaLangString::from_instance(string.clone());
+    let str = str.to_string(jvm).unwrap();
+
+    let value = str.parse::<i32>().unwrap();
+
+    Ok(JavaValue::Int(value))
 }
 
 fn get_println<T>(println_handler: Rc<T>) -> Box<dyn Fn(&mut Jvm, Box<[JavaValue]>) -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>>>
@@ -95,6 +105,18 @@ where
             );
 
             Ok(Some(Box::new(class)))
+        } else if class_name == "java/lang/Integer" {
+            let class = ClassImpl::new(
+                "java/lang/Integer",
+                vec![MethodImpl::new(
+                    "parseInt",
+                    "(Ljava/lang/String;)I",
+                    MethodBody::from_rust(integer_parse_int),
+                )],
+                vec![],
+            );
+
+            Ok(Some(Box::new(class)))
         } else if class_files.contains_key(class_name) {
             Ok(Some(Box::new(ClassImpl::from_classfile(class_files.get(class_name).unwrap())?)))
         } else {
@@ -121,7 +143,7 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
     let array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
     jvm.store_array(&array, 0, &java_args).unwrap();
 
-    jvm.invoke_static_method(name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
+    jvm.invoke_static(name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
         .await?;
 
     let result = printed.borrow().to_string();
