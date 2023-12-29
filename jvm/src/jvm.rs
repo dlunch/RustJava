@@ -1,4 +1,5 @@
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
+use alloc::{boxed::Box, format, rc::Rc, vec::Vec};
+use anyhow::Context;
 use core::cell::RefCell;
 
 use crate::{
@@ -27,7 +28,10 @@ impl Jvm {
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
-        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = self
+            .resolve_class(class_name)
+            .await?
+            .with_context(|| format!("No such class {}", class_name))?;
         let class = class.borrow();
 
         let instance = Rc::new(RefCell::new(class.instantiate()));
@@ -44,33 +48,47 @@ impl Jvm {
     }
 
     pub async fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
-        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = self
+            .resolve_class(class_name)
+            .await?
+            .with_context(|| format!("No such class {}", class_name))?;
         let class = class.borrow();
 
-        let field = class.field(name, descriptor, true).unwrap();
+        let field = class
+            .field(name, descriptor, true)
+            .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
         class.get_static_field(&*field)
     }
 
     pub async fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
-        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = self
+            .resolve_class(class_name)
+            .await?
+            .with_context(|| format!("No such class {}", class_name))?;
         let mut class = class.borrow_mut();
 
-        let field = class.field(name, descriptor, true).unwrap();
+        let field = class
+            .field(name, descriptor, true)
+            .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
         class.put_static_field(&*field, value)
     }
 
     pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
         let instance = instance.borrow();
-        let field = self.find_field(&instance.class_name(), name, descriptor).unwrap();
+        let field = self
+            .find_field(&instance.class_name(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
 
         instance.get_field(&*field)
     }
 
     pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
         let mut instance = instance.borrow_mut();
-        let field = self.find_field(&instance.class_name(), name, descriptor).unwrap();
+        let field = self
+            .find_field(&instance.class_name(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
 
         instance.put_field(&*field, value)
     }
@@ -79,9 +97,14 @@ impl Jvm {
     where
         T: InvokeArg,
     {
-        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = self
+            .resolve_class(class_name)
+            .await?
+            .with_context(|| format!("No such class {}", class_name))?;
         let class = class.borrow();
-        let method = class.method(name, descriptor).unwrap();
+        let method = class
+            .method(name, descriptor)
+            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
         method.run(self, args.into_arg()).await
     }
@@ -89,7 +112,7 @@ impl Jvm {
     pub async fn invoke_virtual<T>(
         &mut self,
         instance: &ClassInstanceRef,
-        _class_name: &str,
+        class_name: &str,
         name: &str,
         descriptor: &str,
         args: T,
@@ -99,7 +122,9 @@ impl Jvm {
     {
         let class = self.resolve_class(&instance.borrow().class_name()).await?.unwrap();
         let class = class.borrow();
-        let method = class.method(name, descriptor).unwrap();
+        let method = class
+            .method(name, descriptor)
+            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
         let args = [JavaValue::Object(Some(instance.clone()))]
             .into_iter()
@@ -123,7 +148,9 @@ impl Jvm {
     {
         let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
-        let method = class.method(name, descriptor).unwrap();
+        let method = class
+            .method(name, descriptor)
+            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
         let args = [JavaValue::Object(Some(instance.clone()))]
             .into_iter()
@@ -135,21 +162,21 @@ impl Jvm {
 
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
         let mut array = array.borrow_mut();
-        let array = array.as_array_instance_mut().unwrap();
+        let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
         array.store(offset, values)
     }
 
     pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {
         let array = array.borrow();
-        let array = array.as_array_instance().unwrap();
+        let array = array.as_array_instance().context("Expected array class instance")?;
 
         array.load(offset, count)
     }
 
     pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {
         let array = array.borrow();
-        let array = array.as_array_instance().unwrap();
+        let array = array.as_array_instance().context("Expected array class instance")?;
 
         Ok(array.length())
     }
@@ -167,12 +194,12 @@ impl Jvm {
         Ok(())
     }
 
-    fn get_class(&self, class_name: &str) -> Option<ClassRef> {
-        self.detail.get_class(class_name).unwrap()
+    fn get_class(&self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+        self.detail.get_class(class_name)
     }
 
     async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
-        let class = self.get_class(class_name);
+        let class = self.get_class(class_name)?;
         if let Some(x) = class {
             return Ok(Some(x));
         }
@@ -186,24 +213,24 @@ impl Jvm {
                 x.run(self, Box::new([])).await?;
             }
 
-            let class = self.get_class(class_name).unwrap();
+            let class = self.get_class(class_name)?;
 
-            return Ok(Some(class));
+            return Ok(class);
         }
 
         Ok(None)
     }
 
-    fn find_field(&self, class_name: &str, name: &str, descriptor: &str) -> Option<Box<dyn Field>> {
-        let class = self.get_class(class_name).unwrap();
+    fn find_field(&self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
+        let class = self.get_class(class_name)?.with_context(|| format!("No such class {}", class_name))?;
         let field = class.borrow().field(name, descriptor, false);
 
         if let Some(x) = field {
-            Some(x)
+            Ok(Some(x))
         } else if let Some(x) = class.borrow().super_class_name() {
             self.find_field(&x, name, descriptor)
         } else {
-            None
+            Ok(None)
         }
     }
 
