@@ -22,7 +22,7 @@ impl Interpreter {
             .extend(iter::repeat(JavaValue::Void).take(code_attribute.max_locals as usize));
 
         let mut iter = code_attribute.code.range(0..);
-        while let Some((_, opcode)) = iter.next() {
+        while let Some((offset, opcode)) = iter.next() {
             match opcode {
                 Opcode::Aaload => {
                     let index = stack_frame.operand_stack.pop().unwrap();
@@ -78,6 +78,14 @@ impl Interpreter {
 
                     let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
+                }
+                Opcode::IfIcmpne(x) => {
+                    let value2 = stack_frame.operand_stack.pop().unwrap();
+                    let value1 = stack_frame.operand_stack.pop().unwrap();
+
+                    if value1.as_int() != value2.as_int() {
+                        iter = code_attribute.code.range(offset + *x as u32..);
+                    }
                 }
                 Opcode::Irem => {
                     let value2 = stack_frame.operand_stack.pop().unwrap();
