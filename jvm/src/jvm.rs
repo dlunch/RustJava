@@ -28,6 +28,8 @@ impl Jvm {
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
+        tracing::debug!("Instantiate {}", class_name);
+
         let class = self
             .resolve_class(class_name)
             .await?
@@ -40,6 +42,8 @@ impl Jvm {
     }
 
     pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
+        tracing::debug!("Instantiate array of {} with length {}", element_type_name, length);
+
         let array_class = self.detail.load_array_class(element_type_name).await?.unwrap();
 
         let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
@@ -48,6 +52,8 @@ impl Jvm {
     }
 
     pub async fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        tracing::debug!("Get static field {}.{}:{}", class_name, name, descriptor);
+
         let class = self
             .resolve_class(class_name)
             .await?
@@ -62,6 +68,8 @@ impl Jvm {
     }
 
     pub async fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+        tracing::debug!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
+
         let class = self
             .resolve_class(class_name)
             .await?
@@ -76,6 +84,8 @@ impl Jvm {
     }
 
     pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+        tracing::debug!("Get field {}.{}:{}", instance.borrow().class_name(), name, descriptor);
+
         let instance = instance.borrow();
         let field = self
             .find_field(&instance.class_name(), name, descriptor)?
@@ -85,6 +95,8 @@ impl Jvm {
     }
 
     pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+        tracing::debug!("Put field {}.{}:{} = {:?}", instance.borrow().class_name(), name, descriptor, value);
+
         let mut instance = instance.borrow_mut();
         let field = self
             .find_field(&instance.class_name(), name, descriptor)?
@@ -97,6 +109,8 @@ impl Jvm {
     where
         T: InvokeArg,
     {
+        tracing::debug!("Invoke static {}.{}:{}", class_name, name, descriptor);
+
         let class = self
             .resolve_class(class_name)
             .await?
@@ -120,6 +134,8 @@ impl Jvm {
     where
         T: InvokeArg,
     {
+        tracing::debug!("Invoke virtual {}.{}:{}", class_name, name, descriptor);
+
         let class = self.resolve_class(&instance.borrow().class_name()).await?.unwrap();
         let class = class.borrow();
         let method = class
@@ -146,6 +162,8 @@ impl Jvm {
     where
         T: InvokeArg,
     {
+        tracing::debug!("Invoke special {}.{}:{}", class_name, name, descriptor);
+
         let class = self.resolve_class(class_name).await?.unwrap();
         let class = class.borrow();
         let method = class
@@ -161,6 +179,8 @@ impl Jvm {
     }
 
     pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
+        tracing::debug!("Store array {} at offset {}", array.borrow().class_name(), offset);
+
         let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
@@ -168,6 +188,8 @@ impl Jvm {
     }
 
     pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {
+        tracing::debug!("Load array {} at offset {}", array.borrow().class_name(), offset);
+
         let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
@@ -175,6 +197,8 @@ impl Jvm {
     }
 
     pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {
+        tracing::debug!("Get array length {}", array.borrow().class_name());
+
         let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
@@ -187,6 +211,8 @@ impl Jvm {
 
     // temporary until we have working gc
     pub fn destroy(&mut self, instance: ClassInstanceRef) -> JvmResult<()> {
+        tracing::debug!("Destroy {}", instance.borrow().class_name());
+
         let instance = Rc::into_inner(instance).unwrap().into_inner();
 
         instance.destroy();
@@ -205,11 +231,15 @@ impl Jvm {
         }
 
         if let Some(x) = self.detail.load_class(class_name).await? {
+            tracing::debug!("Loaded class {}", class_name);
+
             let class = x.borrow();
             let clinit = class.method("<clinit>", "()V");
             drop(class);
 
             if let Some(x) = clinit {
+                tracing::debug!("Calling <clinit> for {}", class_name);
+
                 x.run(self, Box::new([])).await?;
             }
 

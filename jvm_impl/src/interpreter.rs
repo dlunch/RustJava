@@ -23,6 +23,7 @@ impl Interpreter {
 
         let mut iter = code_attribute.code.range(0..);
         while let Some((offset, opcode)) = iter.next() {
+            tracing::trace!("Opcode {:?}", opcode);
             match opcode {
                 Opcode::Aaload => {
                     let index = stack_frame.operand_stack.pop().unwrap();
