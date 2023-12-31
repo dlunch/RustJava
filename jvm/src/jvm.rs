@@ -4,7 +4,7 @@ use alloc::{
     rc::Rc,
     vec::{self, Vec},
 };
-use core::{array, cell::RefCell, iter};
+use core::{array, cell::RefCell, fmt::Debug, iter};
 
 use anyhow::Context;
 
@@ -73,7 +73,10 @@ impl Jvm {
         class.get_static_field(&*field)
     }
 
-    pub async fn put_static_field(&mut self, class_name: &str, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+    pub async fn put_static_field<T>(&mut self, class_name: &str, name: &str, descriptor: &str, value: T) -> JvmResult<()>
+    where
+        T: Into<JavaValue> + Debug,
+    {
         tracing::debug!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
         let class = self
@@ -86,7 +89,7 @@ impl Jvm {
             .field(name, descriptor, true)
             .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
-        class.put_static_field(&*field, value)
+        class.put_static_field(&*field, value.into())
     }
 
     pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
@@ -100,7 +103,10 @@ impl Jvm {
         instance.get_field(&*field)
     }
 
-    pub fn put_field(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: JavaValue) -> JvmResult<()> {
+    pub fn put_field<T>(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: T) -> JvmResult<()>
+    where
+        T: Into<JavaValue> + Debug,
+    {
         tracing::debug!("Put field {}.{}:{} = {:?}", instance.borrow().class_name(), name, descriptor, value);
 
         let mut instance = instance.borrow_mut();
@@ -108,7 +114,7 @@ impl Jvm {
             .find_field(&instance.class_name(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
 
-        instance.put_field(&*field, value)
+        instance.put_field(&*field, value.into())
     }
 
     pub async fn invoke_static<T>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<JavaValue>
