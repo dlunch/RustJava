@@ -308,6 +308,18 @@ impl<const N: usize> InvokeArg for [JavaValue; N] {
     }
 }
 
+impl InvokeArg for () {
+    type IntoIter = array::IntoIter<JavaValue, 0>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([])
+    }
+}
+
 impl<T1> InvokeArg for (T1,)
 where
     T1: Into<JavaValue>,
