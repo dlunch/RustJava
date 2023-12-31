@@ -47,6 +47,17 @@ impl Jvm {
         Ok(instance)
     }
 
+    pub async fn new_class<T>(&mut self, class_name: &str, init_descriptor: &str, init_args: T) -> JvmResult<ClassInstanceRef>
+    where
+        T: InvokeArg,
+    {
+        let instance = self.instantiate_class(class_name).await?;
+
+        self.invoke_special(&instance, class_name, "<init>", init_descriptor, init_args).await?;
+
+        Ok(instance)
+    }
+
     pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
         tracing::debug!("Instantiate array of {} with length {}", element_type_name, length);
 
