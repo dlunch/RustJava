@@ -12,7 +12,7 @@ impl JavaLangString {
         let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
 
         let array = jvm.instantiate_array("C", chars.len()).await?;
-        jvm.store_array(&array, 0, &chars)?;
+        jvm.store_array(&array, 0, chars)?;
 
         let instance = jvm.instantiate_class("java/lang/String").await?;
         jvm.invoke_virtual(&instance, "java/lang/String", "<init>", "([C)V", [JavaValue::Object(Some(array))])

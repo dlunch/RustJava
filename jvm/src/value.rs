@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, rc::Rc};
 use core::cell::RefCell;
 
-use crate::class_instance::ClassInstance;
+use crate::{class_instance::ClassInstance, ClassInstanceRef};
 
 pub type JavaChar = u16;
 
@@ -88,5 +88,59 @@ impl JavaValue {
             JavaValue::Object(x) => x,
             _ => panic!("invalid value"),
         }
+    }
+}
+
+impl From<bool> for JavaValue {
+    fn from(x: bool) -> Self {
+        JavaValue::Boolean(x)
+    }
+}
+
+impl From<i8> for JavaValue {
+    fn from(x: i8) -> Self {
+        JavaValue::Byte(x)
+    }
+}
+
+impl From<JavaChar> for JavaValue {
+    fn from(x: JavaChar) -> Self {
+        JavaValue::Char(x)
+    }
+}
+
+impl From<i16> for JavaValue {
+    fn from(x: i16) -> Self {
+        JavaValue::Short(x)
+    }
+}
+
+impl From<i32> for JavaValue {
+    fn from(x: i32) -> Self {
+        JavaValue::Int(x)
+    }
+}
+
+impl From<i64> for JavaValue {
+    fn from(x: i64) -> Self {
+        JavaValue::Long(x)
+    }
+}
+
+impl From<f32> for JavaValue {
+    fn from(x: f32) -> Self {
+        JavaValue::Float(x)
+    }
+}
+
+impl From<f64> for JavaValue {
+    fn from(x: f64) -> Self {
+        JavaValue::Double(x)
+    }
+}
+
+impl From<ClassInstanceRef> for JavaValue {
+    fn from(x: ClassInstanceRef) -> Self {
+        JavaValue::Object(Some(x))
     }
 }

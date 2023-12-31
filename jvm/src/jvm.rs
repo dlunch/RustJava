@@ -1,6 +1,12 @@
-use alloc::{boxed::Box, format, rc::Rc, vec::Vec};
+use alloc::{
+    boxed::Box,
+    format,
+    rc::Rc,
+    vec::{self, Vec},
+};
+use core::{array, cell::RefCell, iter};
+
 use anyhow::Context;
-use core::cell::RefCell;
 
 use crate::{
     class::Class,
@@ -142,8 +148,7 @@ impl Jvm {
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        let args = [JavaValue::Object(Some(instance.clone()))]
-            .into_iter()
+        let args = iter::once(JavaValue::Object(Some(instance.clone())))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
@@ -170,21 +175,25 @@ impl Jvm {
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        let args = [JavaValue::Object(Some(instance.clone()))]
-            .into_iter()
+        let args = iter::once(JavaValue::Object(Some(instance.clone())))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
         method.run(self, args.into_boxed_slice()).await
     }
 
-    pub fn store_array(&mut self, array: &ClassInstanceRef, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
+    pub fn store_array<T, U>(&mut self, array: &ClassInstanceRef, offset: usize, values: T) -> JvmResult<()>
+    where
+        T: IntoIterator<Item = U>,
+        U: Into<JavaValue>,
+    {
         tracing::debug!("Store array {} at offset {}", array.borrow().class_name(), offset);
 
         let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
+        let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
 
-        array.store(offset, values)
+        array.store(offset, &values)
     }
 
     pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {
@@ -269,18 +278,137 @@ impl Jvm {
     }
 }
 
-pub trait InvokeArg: IntoIterator<Item = JavaValue> {
+pub trait InvokeArg {
+    type IntoIter: Iterator<Item = JavaValue>;
+
     fn into_arg(self) -> Box<[JavaValue]>;
+    fn into_iter(self) -> Self::IntoIter;
 }
 
 impl InvokeArg for Vec<JavaValue> {
+    type IntoIter = vec::IntoIter<JavaValue>;
     fn into_arg(self) -> Box<[JavaValue]> {
         self.into_boxed_slice()
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter(self)
     }
 }
 
 impl<const N: usize> InvokeArg for [JavaValue; N] {
+    type IntoIter = array::IntoIter<JavaValue, N>;
+
     fn into_arg(self) -> Box<[JavaValue]> {
         self.into()
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter(self)
+    }
+}
+
+impl<T1> InvokeArg for (T1,)
+where
+    T1: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 1>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into()])
+    }
+}
+
+impl<T1, T2> InvokeArg for (T1, T2)
+where
+    T1: Into<JavaValue>,
+    T2: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 2>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into(), self.1.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into(), self.1.into()])
+    }
+}
+
+impl<T1, T2, T3> InvokeArg for (T1, T2, T3)
+where
+    T1: Into<JavaValue>,
+    T2: Into<JavaValue>,
+    T3: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 3>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into(), self.1.into(), self.2.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into(), self.1.into(), self.2.into()])
+    }
+}
+
+impl<T1, T2, T3, T4> InvokeArg for (T1, T2, T3, T4)
+where
+    T1: Into<JavaValue>,
+    T2: Into<JavaValue>,
+    T3: Into<JavaValue>,
+    T4: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 4>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into(), self.1.into(), self.2.into(), self.3.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into(), self.1.into(), self.2.into(), self.3.into()])
+    }
+}
+
+impl<T1, T2, T3, T4, T5> InvokeArg for (T1, T2, T3, T4, T5)
+where
+    T1: Into<JavaValue>,
+    T2: Into<JavaValue>,
+    T3: Into<JavaValue>,
+    T4: Into<JavaValue>,
+    T5: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 5>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into(), self.1.into(), self.2.into(), self.3.into(), self.4.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into(), self.1.into(), self.2.into(), self.3.into(), self.4.into()])
+    }
+}
+
+impl<T1, T2, T3, T4, T5, T6> InvokeArg for (T1, T2, T3, T4, T5, T6)
+where
+    T1: Into<JavaValue>,
+    T2: Into<JavaValue>,
+    T3: Into<JavaValue>,
+    T4: Into<JavaValue>,
+    T5: Into<JavaValue>,
+    T6: Into<JavaValue>,
+{
+    type IntoIter = array::IntoIter<JavaValue, 6>;
+
+    fn into_arg(self) -> Box<[JavaValue]> {
+        Box::new([self.0.into(), self.1.into(), self.2.into(), self.3.into(), self.4.into(), self.5.into()])
+    }
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::IntoIterator::into_iter([self.0.into(), self.1.into(), self.2.into(), self.3.into(), self.4.into(), self.5.into()])
     }
 }

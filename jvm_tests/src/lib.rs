@@ -141,7 +141,7 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
         java_args.push(JavaValue::Object(Some(JavaLangString::new(&mut jvm, arg).await?.instance)));
     }
     let array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
-    jvm.store_array(&array, 0, &java_args).unwrap();
+    jvm.store_array(&array, 0, java_args).unwrap();
 
     jvm.invoke_static(name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
         .await?;
