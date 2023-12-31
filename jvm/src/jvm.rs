@@ -57,7 +57,10 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub async fn get_static_field(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+    pub async fn get_static_field<T>(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<T>
+    where
+        T: From<JavaValue>,
+    {
         tracing::debug!("Get static field {}.{}:{}", class_name, name, descriptor);
 
         let class = self
@@ -70,7 +73,7 @@ impl Jvm {
             .field(name, descriptor, true)
             .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
-        class.get_static_field(&*field)
+        Ok(class.get_static_field(&*field)?.into())
     }
 
     pub async fn put_static_field<T>(&mut self, class_name: &str, name: &str, descriptor: &str, value: T) -> JvmResult<()>
@@ -92,7 +95,10 @@ impl Jvm {
         class.put_static_field(&*field, value.into())
     }
 
-    pub fn get_field(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<JavaValue> {
+    pub fn get_field<T>(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<T>
+    where
+        T: From<JavaValue>,
+    {
         tracing::debug!("Get field {}.{}:{}", instance.borrow().class_name(), name, descriptor);
 
         let instance = instance.borrow();
@@ -100,7 +106,7 @@ impl Jvm {
             .find_field(&instance.class_name(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
 
-        instance.get_field(&*field)
+        Ok(instance.get_field(&*field)?.into())
     }
 
     pub fn put_field<T>(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: T) -> JvmResult<()>
@@ -117,9 +123,10 @@ impl Jvm {
         instance.put_field(&*field, value.into())
     }
 
-    pub async fn invoke_static<T>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<JavaValue>
+    pub async fn invoke_static<T, U>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
     where
         T: InvokeArg,
+        U: From<JavaValue>,
     {
         tracing::debug!("Invoke static {}.{}:{}", class_name, name, descriptor);
 
@@ -132,19 +139,13 @@ impl Jvm {
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        method.run(self, args.into_arg()).await
+        Ok(method.run(self, args.into_arg()).await?.into())
     }
 
-    pub async fn invoke_virtual<T>(
-        &mut self,
-        instance: &ClassInstanceRef,
-        class_name: &str,
-        name: &str,
-        descriptor: &str,
-        args: T,
-    ) -> JvmResult<JavaValue>
+    pub async fn invoke_virtual<T, U>(&mut self, instance: &ClassInstanceRef, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
     where
         T: InvokeArg,
+        U: From<JavaValue>,
     {
         tracing::debug!("Invoke virtual {}.{}:{}", class_name, name, descriptor);
 
@@ -158,20 +159,14 @@ impl Jvm {
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        method.run(self, args.into_boxed_slice()).await
+        Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
 
     // non-virtual
-    pub async fn invoke_special<T>(
-        &mut self,
-        instance: &ClassInstanceRef,
-        class_name: &str,
-        name: &str,
-        descriptor: &str,
-        args: T,
-    ) -> JvmResult<JavaValue>
+    pub async fn invoke_special<T, U>(&mut self, instance: &ClassInstanceRef, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
     where
         T: InvokeArg,
+        U: From<JavaValue>,
     {
         tracing::debug!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
@@ -185,7 +180,7 @@ impl Jvm {
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        method.run(self, args.into_boxed_slice()).await
+        Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
 
     pub fn store_array<T, U>(&mut self, array: &ClassInstanceRef, offset: usize, values: T) -> JvmResult<()>
@@ -202,13 +197,18 @@ impl Jvm {
         array.store(offset, values.into_boxed_slice())
     }
 
-    pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {
+    pub fn load_array<T>(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<T>>
+    where
+        T: From<JavaValue>,
+    {
         tracing::debug!("Load array {} at offset {}", array.borrow().class_name(), offset);
 
         let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
-        array.load(offset, count)
+        let values = array.load(offset, count)?;
+
+        Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
     }
 
     pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {

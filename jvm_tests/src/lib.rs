@@ -8,8 +8,8 @@ use jvm::{runtime::JavaLangString, Class, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ClassImpl, FieldImpl, JvmDetailImpl, MethodBody, MethodImpl};
 
 async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
-    let out = jvm.instantiate_class("java/io/PrintStream").await.unwrap();
-    jvm.invoke_virtual(&out, "java/io/PrintStream", "<init>", "()V", []).await.unwrap();
+    let out = jvm.instantiate_class("java/io/PrintStream").await?;
+    jvm.invoke_virtual(&out, "java/io/PrintStream", "<init>", "()V", []).await?;
 
     jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", JavaValue::Object(Some(out)))
         .await

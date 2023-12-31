@@ -91,6 +91,105 @@ impl JavaValue {
     }
 }
 
+impl From<JavaValue> for bool {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Boolean(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for i8 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Byte(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for JavaChar {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Char(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for i16 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Short(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for i32 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Int(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for i64 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Long(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for f32 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Float(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for f64 {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Double(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for Option<ClassInstanceRef> {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Object(x) => x,
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for ClassInstanceRef {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Object(x) => x.unwrap(),
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
+impl From<JavaValue> for () {
+    fn from(x: JavaValue) -> Self {
+        match x {
+            JavaValue::Void => (),
+            _ => panic!("invalid value"),
+        }
+    }
+}
+
 impl From<bool> for JavaValue {
     fn from(x: bool) -> Self {
         JavaValue::Boolean(x)

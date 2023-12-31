@@ -29,5 +29,5 @@ pub use self::{
     method::Method,
     r#type::JavaType,
     thread::{ThreadContext, ThreadId},
-    value::JavaValue,
+    value::{JavaChar, JavaValue},
 };
