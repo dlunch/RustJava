@@ -193,7 +193,7 @@ impl Jvm {
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
         let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
 
-        array.store(offset, &values)
+        array.store(offset, values.into_boxed_slice())
     }
 
     pub fn load_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>> {

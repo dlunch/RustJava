@@ -53,10 +53,10 @@ impl ClassInstance for ArrayClassInstanceImpl {
 }
 
 impl ArrayClassInstance for ArrayClassInstanceImpl {
-    fn store(&mut self, offset: usize, values: &[JavaValue]) -> JvmResult<()> {
+    fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
         anyhow::ensure!(offset + values.len() <= self.length, "Array index out of bounds");
 
-        self.elements[offset..offset + values.len()].clone_from_slice(values);
+        self.elements.splice(offset..offset + values.len(), values.into_vec());
 
         Ok(())
     }
