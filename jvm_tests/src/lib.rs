@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 use core::{cell::RefCell, future::Future, pin::Pin};
 
-use jvm::{runtime::JavaLangString, Class, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, Class, ClassInstanceRef, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ClassImpl, FieldImpl, JvmDetailImpl, MethodBody, MethodImpl};
 
 async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
@@ -19,16 +19,19 @@ async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result
 }
 
 async fn string_init(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
-    let string = args[0].as_object_ref().unwrap();
-    let chars = args[1].as_object_ref().unwrap();
+    let mut args = args.to_vec();
+    let string: ClassInstanceRef = args.remove(0).into();
+    let chars: ClassInstanceRef = args.remove(0).into();
 
-    jvm.put_field(string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
+    jvm.put_field(&string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
     Ok(JavaValue::Void)
 }
 
 async fn integer_parse_int(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
-    let string = args[0].as_object_ref().unwrap();
-    let str = JavaLangString::from_instance(string.clone());
+    let mut args = args.to_vec();
+    let string: ClassInstanceRef = args.remove(0).into();
+
+    let str = JavaLangString::from_instance(string);
     let str = str.to_string(jvm).unwrap();
 
     let value = str.parse::<i32>().unwrap();
@@ -41,7 +44,8 @@ where
     T: Fn(&str) + 'static,
 {
     let println_body = move |jvm: &mut Jvm, args: Box<[JavaValue]>| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
-        let string = args[1].as_object_ref().unwrap();
+        let mut args = args.to_vec();
+        let string: ClassInstanceRef = args.remove(1).into();
 
         let str = JavaLangString::from_instance(string.clone());
         println_handler(&str.to_string(jvm).unwrap());

@@ -26,11 +26,11 @@ impl Interpreter {
             tracing::trace!("Opcode {:?}", opcode);
             match opcode {
                 Opcode::Aaload => {
-                    let index = stack_frame.operand_stack.pop().unwrap();
+                    let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let array = stack_frame.operand_stack.pop().unwrap();
 
-                    let array = array.as_object().unwrap();
-                    let value = jvm.load_array(&array, index.as_int() as usize, 1).unwrap().pop().unwrap();
+                    let array = array.into();
+                    let value = jvm.load_array(&array, index as usize, 1).unwrap().pop().unwrap();
 
                     stack_frame.operand_stack.push(value);
                 }
@@ -64,7 +64,7 @@ impl Interpreter {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
-                    let instance = instance.as_object().unwrap();
+                    let instance = instance.into();
 
                     let result = jvm.invoke_virtual(&instance, &x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
@@ -73,7 +73,7 @@ impl Interpreter {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
-                    let instance = instance.as_object().unwrap();
+                    let instance = instance.into();
 
                     let result = jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
@@ -85,18 +85,18 @@ impl Interpreter {
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::IfIcmpne(x) => {
-                    let value2 = stack_frame.operand_stack.pop().unwrap();
-                    let value1 = stack_frame.operand_stack.pop().unwrap();
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                    if value1.as_int() != value2.as_int() {
+                    if value1 != value2 {
                         iter = code_attribute.code.range(offset + *x as u32..);
                     }
                 }
                 Opcode::Irem => {
-                    let value2 = stack_frame.operand_stack.pop().unwrap();
-                    let value1 = stack_frame.operand_stack.pop().unwrap();
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                    stack_frame.operand_stack.push(JavaValue::Int(value1.as_int() % value2.as_int()));
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
                 }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
