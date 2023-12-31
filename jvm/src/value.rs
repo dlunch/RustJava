@@ -144,3 +144,9 @@ impl From<ClassInstanceRef> for JavaValue {
         JavaValue::Object(Some(x))
     }
 }
+
+impl From<Option<ClassInstanceRef>> for JavaValue {
+    fn from(x: Option<ClassInstanceRef>) -> Self {
+        JavaValue::Object(x)
+    }
+}
