@@ -104,7 +104,7 @@ pub enum AttributeInfo {
     StackMap(Vec<u8>),      // TODO Older variant of stackmaptable
     StackMapTable(Vec<u8>), // TODO
     Exceptions(Vec<u8>),    // TODO
-    InnerClasses,
+    InnerClasses(Vec<u8>),  // TODO
     Synthetic,
     SourceFile(Rc<String>),
     SourceDebugExtension,
@@ -126,6 +126,7 @@ impl AttributeInfo {
                     "StackMap" => AttributeInfo::StackMap(info.to_vec()),
                     "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
                     "Exceptions" => AttributeInfo::Exceptions(info.to_vec()),
+                    "InnerClasses" => AttributeInfo::InnerClasses(info.to_vec()),
                     _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
                 })
             },
