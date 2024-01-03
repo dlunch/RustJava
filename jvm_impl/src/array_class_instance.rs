@@ -67,6 +67,18 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(self.elements[offset..offset + length].to_vec())
     }
 
+    fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> JvmResult<()> {
+        let values = values.into_vec().into_iter().map(JavaValue::Byte).collect::<Vec<_>>();
+
+        self.store(offset, values.into_boxed_slice())
+    }
+
+    fn load_bytes(&self, offset: usize, length: usize) -> JvmResult<Vec<i8>> {
+        let values = self.load(offset, length)?;
+
+        Ok(values.into_iter().map(|x| x.into()).collect::<Vec<_>>())
+    }
+
     fn length(&self) -> usize {
         self.length
     }

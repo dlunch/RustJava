@@ -203,8 +203,8 @@ impl Jvm {
 
         let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
-        let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
 
+        let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
         array.store(offset, values.into_boxed_slice())
     }
 
@@ -220,6 +220,26 @@ impl Jvm {
         let values = array.load(offset, count)?;
 
         Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
+    }
+
+    pub fn store_byte_array(&mut self, array: &ClassInstanceRef, offset: usize, values: Vec<i8>) -> JvmResult<()> {
+        tracing::debug!("Store array {} at offset {}", array.borrow().class_name(), offset);
+
+        let mut array = array.borrow_mut();
+        let array = array.as_array_instance_mut().context("Expected array class instance")?;
+
+        array.store_bytes(offset, values.into_boxed_slice())
+    }
+
+    pub fn load_byte_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<i8>> {
+        tracing::debug!("Load array {} at offset {}", array.borrow().class_name(), offset);
+
+        let array = array.borrow();
+        let array = array.as_array_instance().context("Expected array class instance")?;
+
+        let values = array.load_bytes(offset, count)?;
+
+        Ok(values)
     }
 
     pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {
