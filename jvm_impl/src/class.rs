@@ -13,13 +13,18 @@ use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
-#[derive(Debug, Clone)]
-pub struct ClassImpl {
+#[derive(Debug)]
+struct ClassDetail {
     name: String,
     super_class: Option<Box<dyn Class>>,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
-    storage: Rc<RefCell<Vec<JavaValue>>>,
+    storage: RefCell<Vec<JavaValue>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ClassImpl {
+    detail: Rc<ClassDetail>,
 }
 
 impl ClassImpl {
@@ -27,11 +32,13 @@ impl ClassImpl {
         let storage = fields.iter().filter(|x| x.is_static()).map(|x| x.r#type().default()).collect();
 
         Self {
-            name: name.to_string(),
-            super_class,
-            methods,
-            fields,
-            storage: Rc::new(RefCell::new(storage)),
+            detail: Rc::new(ClassDetail {
+                name: name.to_string(),
+                super_class,
+                methods,
+                fields,
+                storage: RefCell::new(storage),
+            }),
         }
     }
 
@@ -57,17 +64,17 @@ impl ClassImpl {
     }
 
     pub fn fields(&self) -> &[FieldImpl] {
-        &self.fields
+        &self.detail.fields
     }
 }
 
 impl Class for ClassImpl {
     fn name(&self) -> String {
-        self.name.clone()
+        self.detail.name.clone()
     }
 
     fn super_class(&self) -> Option<Box<dyn Class>> {
-        self.super_class.as_ref().map(|x| clone_box(&**x))
+        self.detail.super_class.as_ref().map(|x| clone_box(&**x))
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {
@@ -75,14 +82,16 @@ impl Class for ClassImpl {
     }
 
     fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>> {
-        self.methods
+        self.detail
+            .methods
             .iter()
             .find(|&method| method.name() == name && method.descriptor() == descriptor)
             .map(|x| Box::new(x.clone()) as Box<dyn Method>)
     }
 
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>> {
-        self.fields
+        self.detail
+            .fields
             .iter()
             .find(|&field| field.name() == name && field.descriptor() == descriptor && field.is_static() == is_static)
             .map(|x| Box::new(x.clone()) as Box<dyn Field>)
@@ -91,13 +100,13 @@ impl Class for ClassImpl {
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.storage.borrow()[field.index()].clone())
+        Ok(self.detail.storage.borrow()[field.index()].clone())
     }
 
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.storage.borrow_mut()[field.index()] = value;
+        self.detail.storage.borrow_mut()[field.index()] = value;
 
         Ok(())
     }

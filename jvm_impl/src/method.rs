@@ -74,27 +74,36 @@ impl Debug for MethodBody {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct MethodImpl {
+#[derive(Debug)]
+struct MethodDetail {
     name: String,
     descriptor: String,
-    body: Rc<MethodBody>,
+    body: MethodBody,
+}
+
+#[derive(Clone, Debug)]
+pub struct MethodImpl {
+    detail: Rc<MethodDetail>,
 }
 
 impl MethodImpl {
     pub fn new(name: &str, descriptor: &str, body: MethodBody) -> Self {
         Self {
-            name: name.to_string(),
-            descriptor: descriptor.to_string(),
-            body: Rc::new(body),
+            detail: Rc::new(MethodDetail {
+                name: name.to_string(),
+                descriptor: descriptor.to_string(),
+                body,
+            }),
         }
     }
 
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
         Self {
-            name: method_info.name.to_string(),
-            descriptor: method_info.descriptor.to_string(),
-            body: Rc::new(MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap())),
+            detail: Rc::new(MethodDetail {
+                name: method_info.name.to_string(),
+                descriptor: method_info.descriptor.to_string(),
+                body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
+            }),
         }
     }
 
@@ -112,15 +121,15 @@ impl MethodImpl {
 #[async_trait::async_trait(?Send)]
 impl Method for MethodImpl {
     fn name(&self) -> String {
-        self.name.clone()
+        self.detail.name.clone()
     }
 
     fn descriptor(&self) -> String {
-        self.descriptor.clone()
+        self.detail.descriptor.clone()
     }
 
     async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
-        Ok(match self.body.as_ref() {
+        Ok(match &self.detail.body {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args).await?,
             MethodBody::Rust(x) => x.call(jvm, args).await?,
         })
