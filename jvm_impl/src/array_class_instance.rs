@@ -7,11 +7,16 @@ use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaVa
 
 use crate::array_class::ArrayClassImpl;
 
-#[derive(Debug, Clone)]
-pub struct ArrayClassInstanceImpl {
+#[derive(Debug)]
+struct ArrayClassInstanceDetail {
     class: Box<dyn Class>,
     length: usize,
-    elements: Rc<RefCell<Vec<JavaValue>>>,
+    elements: RefCell<Vec<JavaValue>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArrayClassInstanceImpl {
+    detail: Rc<ArrayClassInstanceDetail>,
 }
 
 impl ArrayClassInstanceImpl {
@@ -20,9 +25,11 @@ impl ArrayClassInstanceImpl {
         let default_value = JavaType::parse(&element_type).default();
 
         Self {
-            class: clone_box(class),
-            length,
-            elements: Rc::new(RefCell::new(vec![default_value; length])),
+            detail: Rc::new(ArrayClassInstanceDetail {
+                class: clone_box(class),
+                length,
+                elements: RefCell::new(vec![default_value; length]),
+            }),
         }
     }
 }
@@ -31,7 +38,7 @@ impl ClassInstance for ArrayClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
     fn class(&self) -> Box<dyn Class> {
-        self.class.clone()
+        self.detail.class.clone()
     }
 
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
@@ -53,17 +60,17 @@ impl ClassInstance for ArrayClassInstanceImpl {
 
 impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
-        anyhow::ensure!(offset + values.len() <= self.length, "Array index out of bounds");
+        anyhow::ensure!(offset + values.len() <= self.detail.length, "Array index out of bounds");
 
-        self.elements.borrow_mut().splice(offset..offset + values.len(), values.into_vec());
+        self.detail.elements.borrow_mut().splice(offset..offset + values.len(), values.into_vec());
 
         Ok(())
     }
 
     fn load(&self, offset: usize, length: usize) -> JvmResult<Vec<JavaValue>> {
-        anyhow::ensure!(offset + length <= self.length, "Array index out of bounds");
+        anyhow::ensure!(offset + length <= self.detail.length, "Array index out of bounds");
 
-        Ok(self.elements.borrow()[offset..offset + length].to_vec())
+        Ok(self.detail.elements.borrow()[offset..offset + length].to_vec())
     }
 
     fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> JvmResult<()> {
@@ -79,6 +86,6 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     fn length(&self) -> usize {
-        self.length
+        self.detail.length
     }
 }

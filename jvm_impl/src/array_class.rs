@@ -1,6 +1,7 @@
 use alloc::{
     boxed::Box,
     format,
+    rc::Rc,
     string::{String, ToString},
 };
 
@@ -8,10 +9,15 @@ use jvm::{ArrayClass, Class, ClassInstance, Field, JavaValue, JvmResult, Method}
 
 use crate::array_class_instance::ArrayClassInstanceImpl;
 
-#[derive(Debug, Clone)]
-pub struct ArrayClassImpl {
+#[derive(Debug)]
+struct ArrayClassDetail {
     name: String,
     element_type_name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArrayClassImpl {
+    detail: Rc<ArrayClassDetail>,
 }
 
 impl ArrayClassImpl {
@@ -19,15 +25,17 @@ impl ArrayClassImpl {
         let name = format!("[{}", element_type_name);
 
         Self {
-            name,
-            element_type_name: element_type_name.to_string(),
+            detail: Rc::new(ArrayClassDetail {
+                name,
+                element_type_name: element_type_name.to_string(),
+            }),
         }
     }
 }
 
 impl ArrayClass for ArrayClassImpl {
     fn element_type_name(&self) -> String {
-        self.element_type_name.clone()
+        self.detail.element_type_name.clone()
     }
 
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance> {
@@ -37,7 +45,7 @@ impl ArrayClass for ArrayClassImpl {
 
 impl Class for ArrayClassImpl {
     fn name(&self) -> String {
-        self.name.clone()
+        self.detail.name.clone()
     }
 
     fn super_class(&self) -> Option<Box<dyn Class>> {
