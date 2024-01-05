@@ -7,7 +7,7 @@ use jvm::{runtime::JavaLangString, JavaType, JavaValue, Jvm, JvmResult};
 
 use crate::{stack_frame::StackFrame, thread::ThreadContextImpl};
 
-pub struct Interpreter {}
+pub struct Interpreter;
 
 impl Interpreter {
     #[allow(clippy::await_holding_refcell_ref)]
