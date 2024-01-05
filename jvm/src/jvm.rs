@@ -108,7 +108,7 @@ impl Jvm {
     {
         tracing::trace!("Get field {}.{}:{}", instance.class().name(), name, descriptor);
 
-        let field = Self::find_field(&instance.class(), name, descriptor)?
+        let field = Self::find_field(&*instance.class(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         Ok(instance.get_field(&*field)?.into())
@@ -120,7 +120,7 @@ impl Jvm {
     {
         tracing::trace!("Put field {}.{}:{} = {:?}", instance.class().name(), name, descriptor, value);
 
-        let field = Self::find_field(&instance.class(), name, descriptor)?
+        let field = Self::find_field(&*instance.class(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         instance.put_field(&*field, value.into())
@@ -293,13 +293,13 @@ impl Jvm {
         Ok(None)
     }
 
-    fn find_field(class: &Box<dyn Class>, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
+    fn find_field(class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
         let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class() {
-            Self::find_field(&x, name, descriptor)
+            Self::find_field(&*x, name, descriptor)
         } else {
             Ok(None)
         }
