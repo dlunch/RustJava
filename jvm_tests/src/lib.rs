@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, rc::Rc, string::String, vec};
 use core::{cell::RefCell, future::Future, pin::Pin};
 
-use jvm::{runtime::JavaLangString, Class, ClassInstanceRef, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, Class, ClassInstance, JavaValue, Jvm, JvmResult};
 use jvm_impl::{ClassImpl, FieldImpl, JvmDetailImpl, MethodBody, MethodImpl};
 
 async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
@@ -20,16 +20,16 @@ async fn system_clinit(jvm: &mut Jvm, _args: Box<[JavaValue]>) -> anyhow::Result
 
 async fn string_init(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
     let mut args = args.to_vec();
-    let string: ClassInstanceRef = args.remove(0).into();
-    let chars: ClassInstanceRef = args.remove(0).into();
+    let mut string: Box<dyn ClassInstance> = args.remove(0).into();
+    let chars: Box<dyn ClassInstance> = args.remove(0).into();
 
-    jvm.put_field(&string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
+    jvm.put_field(&mut string, "value", "[C", JavaValue::Object(Some(chars.clone()))).unwrap();
     Ok(JavaValue::Void)
 }
 
 async fn integer_parse_int(jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue> {
     let mut args = args.to_vec();
-    let string: ClassInstanceRef = args.remove(0).into();
+    let string: Box<dyn ClassInstance> = args.remove(0).into();
 
     let str = JavaLangString::from_instance(string);
     let str = str.to_string(jvm).unwrap();
@@ -45,7 +45,7 @@ where
 {
     let println_body = move |jvm: &mut Jvm, args: Box<[JavaValue]>| -> Pin<Box<dyn Future<Output = anyhow::Result<JavaValue>>>> {
         let mut args = args.to_vec();
-        let string: ClassInstanceRef = args.remove(1).into();
+        let string: Box<dyn ClassInstance> = args.remove(1).into();
 
         let str = JavaLangString::from_instance(string.clone());
         println_handler(&str.to_string(jvm).unwrap());
@@ -65,6 +65,7 @@ where
         if class_name == "java/lang/Object" {
             let class = ClassImpl::new(
                 "java/lang/Object",
+                None,
                 vec![MethodImpl::new(
                     "<init>",
                     "()V",
@@ -77,6 +78,7 @@ where
         } else if class_name == "java/lang/String" {
             let class = ClassImpl::new(
                 "java/lang/String",
+                None, // TODO
                 vec![MethodImpl::new("<init>", "([C)V", MethodBody::from_rust(string_init))],
                 vec![FieldImpl::new("value", "[C", false, 0)],
             );
@@ -85,6 +87,7 @@ where
         } else if class_name == "java/lang/System" {
             let class = ClassImpl::new(
                 "java/lang/System",
+                None, // TODO
                 vec![MethodImpl::new("<clinit>", "()V", MethodBody::from_rust(system_clinit))],
                 vec![FieldImpl::new("out", "Ljava/io/PrintStream;", true, 0)],
             );
@@ -93,6 +96,7 @@ where
         } else if class_name == "java/io/PrintStream" {
             let class = ClassImpl::new(
                 "java/io/PrintStream",
+                None, // TODO
                 vec![
                     MethodImpl::new(
                         "<init>",
@@ -112,6 +116,7 @@ where
         } else if class_name == "java/lang/Integer" {
             let class = ClassImpl::new(
                 "java/lang/Integer",
+                None, // TODO
                 vec![MethodImpl::new(
                     "parseInt",
                     "(Ljava/lang/String;)I",
@@ -144,8 +149,8 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
     for arg in args {
         java_args.push(JavaValue::Object(Some(JavaLangString::new(&mut jvm, arg).await?.instance)));
     }
-    let array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
-    jvm.store_array(&array, 0, java_args).unwrap();
+    let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
+    jvm.store_array(&mut array, 0, java_args).unwrap();
 
     jvm.invoke_static(name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
         .await?;

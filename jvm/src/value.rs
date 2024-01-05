@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, rc::Rc};
-use core::cell::RefCell;
+use alloc::boxed::Box;
 
-use crate::{class_instance::ClassInstance, ClassInstanceRef};
+use crate::class_instance::ClassInstance;
 
 pub type JavaChar = u16;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub enum JavaValue {
     Void,
     Boolean(bool),
@@ -16,7 +15,7 @@ pub enum JavaValue {
     Long(i64),
     Float(f32),
     Double(f64),
-    Object(Option<Rc<RefCell<Box<dyn ClassInstance>>>>),
+    Object(Option<Box<dyn ClassInstance>>),
 }
 
 impl From<JavaValue> for bool {
@@ -91,7 +90,7 @@ impl From<JavaValue> for f64 {
     }
 }
 
-impl From<JavaValue> for Option<ClassInstanceRef> {
+impl From<JavaValue> for Option<Box<dyn ClassInstance>> {
     fn from(x: JavaValue) -> Self {
         match x {
             JavaValue::Object(x) => x,
@@ -100,7 +99,7 @@ impl From<JavaValue> for Option<ClassInstanceRef> {
     }
 }
 
-impl From<JavaValue> for ClassInstanceRef {
+impl From<JavaValue> for Box<dyn ClassInstance> {
     fn from(x: JavaValue) -> Self {
         match x {
             JavaValue::Object(x) => x.unwrap(),
@@ -166,14 +165,14 @@ impl From<f64> for JavaValue {
     }
 }
 
-impl From<ClassInstanceRef> for JavaValue {
-    fn from(x: ClassInstanceRef) -> Self {
+impl From<Box<dyn ClassInstance>> for JavaValue {
+    fn from(x: Box<dyn ClassInstance>) -> Self {
         JavaValue::Object(Some(x))
     }
 }
 
-impl From<Option<ClassInstanceRef>> for JavaValue {
-    fn from(x: Option<ClassInstanceRef>) -> Self {
+impl From<Option<Box<dyn ClassInstance>>> for JavaValue {
+    fn from(x: Option<Box<dyn ClassInstance>>) -> Self {
         JavaValue::Object(x)
     }
 }

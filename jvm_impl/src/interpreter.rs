@@ -29,8 +29,7 @@ impl Interpreter {
                     let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let array = stack_frame.operand_stack.pop().unwrap();
 
-                    let array = array.into();
-                    let value = jvm.load_array(&array, index as usize, 1).unwrap().pop().unwrap();
+                    let value = jvm.load_array(&array.into(), index as usize, 1).unwrap().pop().unwrap();
 
                     stack_frame.operand_stack.push(value);
                 }
@@ -64,18 +63,16 @@ impl Interpreter {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
-                    let instance = instance.into();
 
-                    let result = jvm.invoke_virtual(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_virtual(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Invokespecial(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
-                    let instance = instance.into();
 
-                    let result = jvm.invoke_special(&instance, &x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_special(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Invokestatic(x) => {

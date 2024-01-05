@@ -8,7 +8,7 @@ use jvm::{ArrayClass, Class, ClassInstance, Field, JavaValue, JvmResult, Method}
 
 use crate::array_class_instance::ArrayClassInstanceImpl;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayClassImpl {
     name: String,
     element_type_name: String,
@@ -40,8 +40,8 @@ impl Class for ArrayClassImpl {
         self.name.clone()
     }
 
-    fn super_class_name(&self) -> Option<String> {
-        Some("java/lang/Object".to_string())
+    fn super_class(&self) -> Option<Box<dyn Class>> {
+        None // TODO should be java/lang/Object
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {

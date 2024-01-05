@@ -1,13 +1,12 @@
-use core::cell::RefCell;
-
 use alloc::{
     boxed::Box,
     collections::BTreeMap,
-    rc::Rc,
     string::{String, ToString},
 };
 
-use jvm::{ArrayClass, Class, ClassRef, JvmDetail, JvmResult, ThreadContext, ThreadId};
+use dyn_clone::clone_box;
+
+use jvm::{ArrayClass, Class, JvmDetail, JvmResult, ThreadContext, ThreadId};
 
 use crate::{array_class::ArrayClassImpl, thread::ThreadContextImpl};
 
@@ -15,7 +14,7 @@ type ClassLoader = dyn Fn(&str) -> JvmResult<Option<Box<dyn Class>>>;
 
 pub struct JvmDetailImpl {
     class_loader: Box<ClassLoader>,
-    classes: BTreeMap<String, ClassRef>,
+    classes: BTreeMap<String, Box<dyn Class>>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
 }
 
@@ -34,15 +33,13 @@ impl JvmDetailImpl {
 
 #[async_trait::async_trait(?Send)]
 impl JvmDetail for JvmDetailImpl {
-    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = (self.class_loader)(class_name)?;
 
         if let Some(x) = class {
-            let class = Rc::new(RefCell::new(x));
+            self.classes.insert(class_name.to_string(), clone_box(&*x));
 
-            self.classes.insert(class_name.to_string(), class.clone());
-
-            Ok(Some(class))
+            Ok(Some(x))
         } else {
             Ok(None)
         }
@@ -52,7 +49,7 @@ impl JvmDetail for JvmDetailImpl {
         Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
     }
 
-    fn get_class(&self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         Ok(self.classes.get(class_name).cloned())
     }
 

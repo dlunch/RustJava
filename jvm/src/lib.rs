@@ -25,7 +25,7 @@ pub use self::{
     class_instance::ClassInstance,
     detail::JvmDetail,
     field::Field,
-    jvm::{ClassInstanceRef, ClassRef, Jvm},
+    jvm::Jvm,
     method::Method,
     r#type::JavaType,
     thread::{ThreadContext, ThreadId},

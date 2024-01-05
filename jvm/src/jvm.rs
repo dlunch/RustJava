@@ -1,12 +1,14 @@
+#![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
+
 use alloc::{
     boxed::Box,
     format,
-    rc::Rc,
     vec::{self, Vec},
 };
-use core::{array, cell::RefCell, fmt::Debug, iter};
+use core::{array, fmt::Debug, iter};
 
 use anyhow::Context;
+use dyn_clone::clone_box;
 
 use crate::{
     class::Class,
@@ -17,9 +19,6 @@ use crate::{
     value::JavaValue,
     JvmResult,
 };
-
-pub type ClassInstanceRef = Rc<RefCell<Box<dyn ClassInstance>>>;
-pub type ClassRef = Rc<RefCell<Box<dyn Class>>>;
 
 pub struct Jvm {
     detail: Box<dyn JvmDetail>,
@@ -33,21 +32,20 @@ impl Jvm {
         Self { detail: Box::new(detail) }
     }
 
-    pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<ClassInstanceRef> {
+    pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
         let class = self
             .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
-        let class = class.borrow();
 
-        let instance = Rc::new(RefCell::new(class.instantiate()));
+        let instance = class.instantiate();
 
         Ok(instance)
     }
 
-    pub async fn new_class<T>(&mut self, class_name: &str, init_descriptor: &str, init_args: T) -> JvmResult<ClassInstanceRef>
+    pub async fn new_class<T>(&mut self, class_name: &str, init_descriptor: &str, init_args: T) -> JvmResult<Box<dyn ClassInstance>>
     where
         T: InvokeArg,
     {
@@ -58,12 +56,12 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<ClassInstanceRef> {
+    pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
         let array_class = self.detail.load_array_class(element_type_name).await?.unwrap();
 
-        let instance = Rc::new(RefCell::new(array_class.instantiate_array(length)));
+        let instance = array_class.instantiate_array(length);
 
         Ok(instance)
     }
@@ -78,7 +76,6 @@ impl Jvm {
             .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
-        let class = class.borrow();
 
         let field = class
             .field(name, descriptor, true)
@@ -93,11 +90,10 @@ impl Jvm {
     {
         tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
-        let class = self
+        let mut class = self
             .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
-        let mut class = class.borrow_mut();
 
         let field = class
             .field(name, descriptor, true)
@@ -106,30 +102,26 @@ impl Jvm {
         class.put_static_field(&*field, value.into())
     }
 
-    pub fn get_field<T>(&self, instance: &ClassInstanceRef, name: &str, descriptor: &str) -> JvmResult<T>
+    pub fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str) -> JvmResult<T>
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Get field {}.{}:{}", instance.borrow().class_name(), name, descriptor);
+        tracing::trace!("Get field {}.{}:{}", instance.class().name(), name, descriptor);
 
-        let instance = instance.borrow();
-        let field = self
-            .find_field(&instance.class_name(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
+        let field = Self::find_field(&instance.class(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         Ok(instance.get_field(&*field)?.into())
     }
 
-    pub fn put_field<T>(&mut self, instance: &ClassInstanceRef, name: &str, descriptor: &str, value: T) -> JvmResult<()>
+    pub fn put_field<T>(&mut self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> JvmResult<()>
     where
         T: Into<JavaValue> + Debug,
     {
-        tracing::trace!("Put field {}.{}:{} = {:?}", instance.borrow().class_name(), name, descriptor, value);
+        tracing::trace!("Put field {}.{}:{} = {:?}", instance.class().name(), name, descriptor, value);
 
-        let mut instance = instance.borrow_mut();
-        let field = self
-            .find_field(&instance.class_name(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class_name(), name, descriptor))?;
+        let field = Self::find_field(&instance.class(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         instance.put_field(&*field, value.into())
     }
@@ -145,7 +137,7 @@ impl Jvm {
             .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
-        let class = class.borrow();
+
         let method = class
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
@@ -153,20 +145,26 @@ impl Jvm {
         Ok(method.run(self, args.into_arg()).await?.into())
     }
 
-    pub async fn invoke_virtual<T, U>(&mut self, instance: &ClassInstanceRef, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
+    pub async fn invoke_virtual<T, U>(
+        &mut self,
+        instance: &Box<dyn ClassInstance>,
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: T,
+    ) -> JvmResult<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
     {
         tracing::trace!("Invoke virtual {}.{}:{}", class_name, name, descriptor);
 
-        let class = self.resolve_class(&instance.borrow().class_name()).await?.unwrap();
-        let class: core::cell::Ref<'_, Box<dyn Class>> = class.borrow();
+        let class = self.resolve_class(&instance.class().name()).await?.unwrap();
         let method = class
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        let args = iter::once(JavaValue::Object(Some(instance.clone())))
+        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
@@ -174,7 +172,14 @@ impl Jvm {
     }
 
     // non-virtual
-    pub async fn invoke_special<T, U>(&mut self, instance: &ClassInstanceRef, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
+    pub async fn invoke_special<T, U>(
+        &mut self,
+        instance: &Box<dyn ClassInstance>,
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: T,
+    ) -> JvmResult<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
@@ -182,39 +187,36 @@ impl Jvm {
         tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
         let class = self.resolve_class(class_name).await?.unwrap();
-        let class = class.borrow();
         let method = class
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        let args = iter::once(JavaValue::Object(Some(instance.clone())))
+        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
 
-    pub fn store_array<T, U>(&mut self, array: &ClassInstanceRef, offset: usize, values: T) -> JvmResult<()>
+    pub fn store_array<T, U>(&mut self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> JvmResult<()>
     where
         T: IntoIterator<Item = U>,
         U: Into<JavaValue>,
     {
-        tracing::trace!("Store array {} at offset {}", array.borrow().class_name(), offset);
+        tracing::trace!("Store array {} at offset {}", array.class().name(), offset);
 
-        let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
         let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
         array.store(offset, values.into_boxed_slice())
     }
 
-    pub fn load_array<T>(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<T>>
+    pub fn load_array<T>(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> JvmResult<Vec<T>>
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Load array {} at offset {}", array.borrow().class_name(), offset);
+        tracing::trace!("Load array {} at offset {}", array.class().name(), offset);
 
-        let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
         let values = array.load(offset, count)?;
@@ -222,19 +224,17 @@ impl Jvm {
         Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
     }
 
-    pub fn store_byte_array(&mut self, array: &ClassInstanceRef, offset: usize, values: Vec<i8>) -> JvmResult<()> {
-        tracing::trace!("Store array {} at offset {}", array.borrow().class_name(), offset);
+    pub fn store_byte_array(&mut self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> JvmResult<()> {
+        tracing::trace!("Store array {} at offset {}", array.class().name(), offset);
 
-        let mut array = array.borrow_mut();
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
         array.store_bytes(offset, values.into_boxed_slice())
     }
 
-    pub fn load_byte_array(&self, array: &ClassInstanceRef, offset: usize, count: usize) -> JvmResult<Vec<i8>> {
-        tracing::trace!("Load array {} at offset {}", array.borrow().class_name(), offset);
+    pub fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> JvmResult<Vec<i8>> {
+        tracing::trace!("Load array {} at offset {}", array.class().name(), offset);
 
-        let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
         let values = array.load_bytes(offset, count)?;
@@ -242,10 +242,9 @@ impl Jvm {
         Ok(values)
     }
 
-    pub fn array_length(&self, array: &ClassInstanceRef) -> JvmResult<usize> {
-        tracing::trace!("Get array length {}", array.borrow().class_name());
+    pub fn array_length(&self, array: &Box<dyn ClassInstance>) -> JvmResult<usize> {
+        tracing::trace!("Get array length {}", array.class().name());
 
-        let array = array.borrow();
         let array = array.as_array_instance().context("Expected array class instance")?;
 
         Ok(array.length())
@@ -256,21 +255,19 @@ impl Jvm {
     }
 
     // temporary until we have working gc
-    pub fn destroy(&mut self, instance: ClassInstanceRef) -> JvmResult<()> {
-        tracing::debug!("Destroy {}", instance.borrow().class_name());
-
-        let instance = Rc::into_inner(instance).unwrap().into_inner();
+    pub fn destroy(&mut self, instance: Box<dyn ClassInstance>) -> JvmResult<()> {
+        tracing::debug!("Destroy {}", instance.class().name());
 
         instance.destroy();
 
         Ok(())
     }
 
-    fn get_class(&self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         self.detail.get_class(class_name)
     }
 
-    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<ClassRef>> {
+    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name)?;
         if let Some(x) = class {
             return Ok(Some(x));
@@ -279,8 +276,7 @@ impl Jvm {
         if let Some(x) = self.detail.load_class(class_name).await? {
             tracing::debug!("Loaded class {}", class_name);
 
-            let class = x.borrow();
-            let clinit = class.method("<clinit>", "()V");
+            let clinit = x.method("<clinit>", "()V");
             drop(class);
 
             if let Some(x) = clinit {
@@ -297,14 +293,13 @@ impl Jvm {
         Ok(None)
     }
 
-    fn find_field(&self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
-        let class = self.get_class(class_name)?.with_context(|| format!("No such class {}", class_name))?;
-        let field = class.borrow().field(name, descriptor, false);
+    fn find_field(class: &Box<dyn Class>, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
+        let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
-        } else if let Some(x) = class.borrow().super_class_name() {
-            self.find_field(&x, name, descriptor)
+        } else if let Some(x) = class.super_class() {
+            Self::find_field(&x, name, descriptor)
         } else {
             Ok(None)
         }

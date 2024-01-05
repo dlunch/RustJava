@@ -1,18 +1,17 @@
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec,
-    vec::Vec,
-};
+use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
+use core::cell::RefCell;
+
+use dyn_clone::clone_box;
+
 use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayClassInstanceImpl {
-    class_name: String,
+    class: Box<dyn Class>,
     length: usize,
-    elements: Vec<JavaValue>,
+    elements: Rc<RefCell<Vec<JavaValue>>>,
 }
 
 impl ArrayClassInstanceImpl {
@@ -21,9 +20,9 @@ impl ArrayClassInstanceImpl {
         let default_value = JavaType::parse(&element_type).default();
 
         Self {
-            class_name: class.name().to_string(),
+            class: clone_box(class),
             length,
-            elements: vec![default_value; length],
+            elements: Rc::new(RefCell::new(vec![default_value; length])),
         }
     }
 }
@@ -31,8 +30,8 @@ impl ArrayClassInstanceImpl {
 impl ClassInstance for ArrayClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
-    fn class_name(&self) -> String {
-        self.class_name.clone()
+    fn class(&self) -> Box<dyn Class> {
+        self.class.clone()
     }
 
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
@@ -56,7 +55,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
         anyhow::ensure!(offset + values.len() <= self.length, "Array index out of bounds");
 
-        self.elements.splice(offset..offset + values.len(), values.into_vec());
+        self.elements.borrow_mut().splice(offset..offset + values.len(), values.into_vec());
 
         Ok(())
     }
@@ -64,7 +63,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn load(&self, offset: usize, length: usize) -> JvmResult<Vec<JavaValue>> {
         anyhow::ensure!(offset + length <= self.length, "Array index out of bounds");
 
-        Ok(self.elements[offset..offset + length].to_vec())
+        Ok(self.elements.borrow()[offset..offset + length].to_vec())
     }
 
     fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> JvmResult<()> {

@@ -1,31 +1,37 @@
 use alloc::{
     boxed::Box,
+    rc::Rc,
     string::{String, ToString},
     vec::Vec,
 };
+use core::cell::RefCell;
+
+use dyn_clone::clone_box;
 
 use classfile::ClassInfo;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ClassImpl {
     name: String,
+    super_class: Option<Box<dyn Class>>,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
-    storage: Vec<JavaValue>,
+    storage: Rc<RefCell<Vec<JavaValue>>>,
 }
 
 impl ClassImpl {
-    pub fn new(name: &str, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
+    pub fn new(name: &str, super_class: Option<Box<dyn Class>>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
         let storage = fields.iter().filter(|x| x.is_static()).map(|x| x.r#type().default()).collect();
 
         Self {
             name: name.to_string(),
+            super_class,
             methods,
             fields,
-            storage,
+            storage: Rc::new(RefCell::new(storage)),
         }
     }
 
@@ -45,7 +51,9 @@ impl ClassImpl {
 
         let methods = class.methods.into_iter().map(MethodImpl::from_methodinfo).collect::<Vec<_>>();
 
-        Ok(Self::new(&class.this_class, methods, fields))
+        let super_class = None; // TODO
+
+        Ok(Self::new(&class.this_class, super_class, methods, fields))
     }
 
     pub fn fields(&self) -> &[FieldImpl] {
@@ -58,8 +66,8 @@ impl Class for ClassImpl {
         self.name.clone()
     }
 
-    fn super_class_name(&self) -> Option<String> {
-        Some("java/lang/Object".to_string()) // TODO
+    fn super_class(&self) -> Option<Box<dyn Class>> {
+        self.super_class.as_ref().map(|x| clone_box(&**x))
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {
@@ -83,13 +91,13 @@ impl Class for ClassImpl {
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.storage[field.index()].clone())
+        Ok(self.storage.borrow()[field.index()].clone())
     }
 
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.storage[field.index()] = value;
+        self.storage.borrow_mut()[field.index()] = value;
 
         Ok(())
     }
