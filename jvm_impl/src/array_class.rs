@@ -10,14 +10,14 @@ use jvm::{ArrayClass, Class, ClassInstance, Field, JavaValue, JvmResult, Method}
 use crate::array_class_instance::ArrayClassInstanceImpl;
 
 #[derive(Debug)]
-struct ArrayClassDetail {
+struct ArrayClassInner {
     name: String,
     element_type_name: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct ArrayClassImpl {
-    detail: Rc<ArrayClassDetail>,
+    inner: Rc<ArrayClassInner>,
 }
 
 impl ArrayClassImpl {
@@ -25,7 +25,7 @@ impl ArrayClassImpl {
         let name = format!("[{}", element_type_name);
 
         Self {
-            detail: Rc::new(ArrayClassDetail {
+            inner: Rc::new(ArrayClassInner {
                 name,
                 element_type_name: element_type_name.to_string(),
             }),
@@ -35,7 +35,7 @@ impl ArrayClassImpl {
 
 impl ArrayClass for ArrayClassImpl {
     fn element_type_name(&self) -> String {
-        self.detail.element_type_name.clone()
+        self.inner.element_type_name.clone()
     }
 
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance> {
@@ -45,7 +45,7 @@ impl ArrayClass for ArrayClassImpl {
 
 impl Class for ArrayClassImpl {
     fn name(&self) -> String {
-        self.detail.name.clone()
+        self.inner.name.clone()
     }
 
     fn super_class(&self) -> Option<Box<dyn Class>> {

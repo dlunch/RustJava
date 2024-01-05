@@ -14,7 +14,7 @@ use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
 #[derive(Debug)]
-struct ClassDetail {
+struct ClassInner {
     name: String,
     super_class: Option<Box<dyn Class>>,
     methods: Vec<MethodImpl>,
@@ -24,7 +24,7 @@ struct ClassDetail {
 
 #[derive(Debug, Clone)]
 pub struct ClassImpl {
-    detail: Rc<ClassDetail>,
+    inner: Rc<ClassInner>,
 }
 
 impl ClassImpl {
@@ -32,7 +32,7 @@ impl ClassImpl {
         let storage = fields.iter().filter(|x| x.is_static()).map(|x| x.r#type().default()).collect();
 
         Self {
-            detail: Rc::new(ClassDetail {
+            inner: Rc::new(ClassInner {
                 name: name.to_string(),
                 super_class,
                 methods,
@@ -64,17 +64,17 @@ impl ClassImpl {
     }
 
     pub fn fields(&self) -> &[FieldImpl] {
-        &self.detail.fields
+        &self.inner.fields
     }
 }
 
 impl Class for ClassImpl {
     fn name(&self) -> String {
-        self.detail.name.clone()
+        self.inner.name.clone()
     }
 
     fn super_class(&self) -> Option<Box<dyn Class>> {
-        self.detail.super_class.as_ref().map(|x| clone_box(&**x))
+        self.inner.super_class.as_ref().map(|x| clone_box(&**x))
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {
@@ -82,7 +82,7 @@ impl Class for ClassImpl {
     }
 
     fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>> {
-        self.detail
+        self.inner
             .methods
             .iter()
             .find(|&method| method.name() == name && method.descriptor() == descriptor)
@@ -90,7 +90,7 @@ impl Class for ClassImpl {
     }
 
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>> {
-        self.detail
+        self.inner
             .fields
             .iter()
             .find(|&field| field.name() == name && field.descriptor() == descriptor && field.is_static() == is_static)
@@ -100,13 +100,13 @@ impl Class for ClassImpl {
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.detail.storage.borrow()[field.index()].clone())
+        Ok(self.inner.storage.borrow()[field.index()].clone())
     }
 
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.detail.storage.borrow_mut()[field.index()] = value;
+        self.inner.storage.borrow_mut()[field.index()] = value;
 
         Ok(())
     }

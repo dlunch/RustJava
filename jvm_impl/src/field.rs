@@ -8,7 +8,7 @@ use classfile::{FieldAccessFlags, FieldInfo};
 use jvm::{Field, JavaType};
 
 #[derive(Debug)]
-struct FieldDetail {
+struct FieldInner {
     name: String,
     descriptor: String,
     is_static: bool,
@@ -17,13 +17,13 @@ struct FieldDetail {
 
 #[derive(Clone, Debug)]
 pub struct FieldImpl {
-    detail: Rc<FieldDetail>,
+    inner: Rc<FieldInner>,
 }
 
 impl FieldImpl {
     pub fn new(name: &str, descriptor: &str, is_static: bool, index: usize) -> Self {
         Self {
-            detail: Rc::new(FieldDetail {
+            inner: Rc::new(FieldInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 is_static,
@@ -34,7 +34,7 @@ impl FieldImpl {
 
     pub fn from_fieldinfo(field_info: FieldInfo, index: usize) -> Self {
         Self {
-            detail: Rc::new(FieldDetail {
+            inner: Rc::new(FieldInner {
                 name: field_info.name.to_string(),
                 descriptor: field_info.descriptor.to_string(),
                 is_static: field_info.access_flags.contains(FieldAccessFlags::STATIC),
@@ -44,24 +44,24 @@ impl FieldImpl {
     }
 
     pub fn index(&self) -> usize {
-        self.detail.index
+        self.inner.index
     }
 }
 
 impl Field for FieldImpl {
     fn name(&self) -> String {
-        self.detail.name.clone()
+        self.inner.name.clone()
     }
 
     fn descriptor(&self) -> String {
-        self.detail.descriptor.clone()
+        self.inner.descriptor.clone()
     }
 
     fn is_static(&self) -> bool {
-        self.detail.is_static
+        self.inner.is_static
     }
 
     fn r#type(&self) -> JavaType {
-        JavaType::parse(&self.detail.descriptor)
+        JavaType::parse(&self.inner.descriptor)
     }
 }

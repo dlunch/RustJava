@@ -75,7 +75,7 @@ impl Debug for MethodBody {
 }
 
 #[derive(Debug)]
-struct MethodDetail {
+struct MethodInner {
     name: String,
     descriptor: String,
     body: MethodBody,
@@ -83,13 +83,13 @@ struct MethodDetail {
 
 #[derive(Clone, Debug)]
 pub struct MethodImpl {
-    detail: Rc<MethodDetail>,
+    inner: Rc<MethodInner>,
 }
 
 impl MethodImpl {
     pub fn new(name: &str, descriptor: &str, body: MethodBody) -> Self {
         Self {
-            detail: Rc::new(MethodDetail {
+            inner: Rc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 body,
@@ -99,7 +99,7 @@ impl MethodImpl {
 
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {
         Self {
-            detail: Rc::new(MethodDetail {
+            inner: Rc::new(MethodInner {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
                 body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
@@ -121,15 +121,15 @@ impl MethodImpl {
 #[async_trait::async_trait(?Send)]
 impl Method for MethodImpl {
     fn name(&self) -> String {
-        self.detail.name.clone()
+        self.inner.name.clone()
     }
 
     fn descriptor(&self) -> String {
-        self.detail.descriptor.clone()
+        self.inner.descriptor.clone()
     }
 
     async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
-        Ok(match &self.detail.body {
+        Ok(match &self.inner.body {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args).await?,
             MethodBody::Rust(x) => x.call(jvm, args).await?,
         })

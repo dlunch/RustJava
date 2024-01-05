@@ -8,14 +8,14 @@ use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 use crate::{class::ClassImpl, FieldImpl};
 
 #[derive(Debug)]
-struct ClassInstanceDetail {
+struct ClassInstanceInner {
     class: Box<dyn Class>,
     storage: RefCell<Vec<JavaValue>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ClassInstanceImpl {
-    detail: Rc<ClassInstanceDetail>,
+    inner: Rc<ClassInstanceInner>,
 }
 
 impl ClassInstanceImpl {
@@ -23,7 +23,7 @@ impl ClassInstanceImpl {
         let storage = class.fields().iter().filter(|x| !x.is_static()).map(|x| x.r#type().default()).collect();
 
         Self {
-            detail: Rc::new(ClassInstanceDetail {
+            inner: Rc::new(ClassInstanceInner {
                 class: clone_box(class),
                 storage: RefCell::new(storage),
             }),
@@ -35,19 +35,19 @@ impl ClassInstance for ClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
     fn class(&self) -> Box<dyn Class> {
-        self.detail.class.clone()
+        self.inner.class.clone()
     }
 
     fn get_field(&self, field: &dyn Field) -> jvm::JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.detail.storage.borrow()[field.index()].clone())
+        Ok(self.inner.storage.borrow()[field.index()].clone())
     }
 
     fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> jvm::JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.detail.storage.borrow_mut()[field.index()] = value;
+        self.inner.storage.borrow_mut()[field.index()] = value;
 
         Ok(())
     }
