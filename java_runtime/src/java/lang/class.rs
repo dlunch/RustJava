@@ -2,10 +2,13 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::java::{io::InputStream, lang::String};
+use crate::{
+    java::{io::InputStream, lang::String},
+    JavaClassProto, JavaContext,
+};
 
 // class java.lang.Class
 pub struct Class {}
@@ -28,7 +31,7 @@ impl Class {
         }
     }
 
-    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Class::<init>({:?})", &this);
 
         Ok(())
@@ -37,6 +40,7 @@ impl Class {
     #[allow(clippy::await_holding_refcell_ref)] // We manually drop Ref https://github.com/rust-lang/rust-clippy/issues/6353
     async fn get_resource_as_stream(
         jvm: &mut Jvm,
+        context: &JavaContext,
         this: JvmClassInstanceHandle<Self>,
         name: JvmClassInstanceHandle<String>,
     ) -> JavaResult<JvmClassInstanceHandle<InputStream>> {
@@ -45,7 +49,7 @@ impl Class {
 
         let normalized_name = if let Some(x) = name.strip_prefix('/') { x } else { &name };
 
-        let resource = jvm.platform().load_resource(normalized_name);
+        let resource = context.load_resource(normalized_name);
         if let Some(resource) = resource {
             let mut array = jvm.instantiate_array("B", resource.len() as _).await?;
 

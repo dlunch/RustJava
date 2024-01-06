@@ -1,10 +1,12 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::time::Duration;
 
-use crate::JvmCallback;
+use dyn_clone::{clone_trait_object, DynClone};
+
+use jvm::JvmCallback;
 
 #[async_trait::async_trait(?Send)]
-pub trait Platform {
+pub trait Platform: DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
     fn spawn(&self, callback: Box<dyn JvmCallback>);
@@ -17,3 +19,5 @@ pub trait Platform {
     fn load_resource(&self, name: &str) -> Option<Vec<u8>>; // TODO implement resource in classloader
     fn println(&self, s: &str); // TODO Properly implement printstream handler
 }
+
+clone_trait_object!(Platform);

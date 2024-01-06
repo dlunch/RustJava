@@ -10,7 +10,6 @@ mod detail;
 mod field;
 mod jvm;
 mod method;
-mod platform;
 mod thread;
 mod r#type;
 mod value;
@@ -34,7 +33,6 @@ pub use self::{
     field::Field,
     jvm::Jvm,
     method::Method,
-    platform::Platform,
     r#type::JavaType,
     thread::{ThreadContext, ThreadId},
     value::{JavaChar, JavaValue},

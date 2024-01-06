@@ -1,15 +1,16 @@
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::time::Duration;
 
 use java_runtime::get_class_proto;
-use jvm::{Class, Jvm, JvmCallback, JvmResult, Platform};
+use java_runtime_base::Platform;
+use jvm::{Class, Jvm, JvmCallback, JvmResult};
 use jvm_impl::{ClassImpl, JvmDetailImpl};
 
-fn get_class_loader(class_files: BTreeMap<String, Vec<u8>>) -> impl Fn(&str) -> JvmResult<Option<Box<dyn Class>>> {
+fn get_class_loader(class_files: BTreeMap<String, Vec<u8>>, platform: Box<dyn Platform>) -> impl Fn(&str) -> JvmResult<Option<Box<dyn Class>>> {
     move |class_name| {
         let runtime_proto = get_class_proto(class_name);
         if let Some(x) = runtime_proto {
-            Ok(Some(Box::new(ClassImpl::from_class_proto(class_name, x))))
+            Ok(Some(Box::new(ClassImpl::from_class_proto(class_name, x, platform.clone()))))
         } else if class_files.contains_key(class_name) {
             Ok(Some(Box::new(ClassImpl::from_classfile(class_files.get(class_name).unwrap())?)))
         } else {
@@ -18,8 +19,10 @@ fn get_class_loader(class_files: BTreeMap<String, Vec<u8>>) -> impl Fn(&str) -> 
     }
 }
 
+#[derive(Clone)]
+#[allow(clippy::type_complexity)]
 struct TestPlatform {
-    println_handler: Box<dyn Fn(&str)>,
+    println_handler: Rc<Box<dyn Fn(&str)>>,
 }
 
 #[async_trait::async_trait(?Send)]
@@ -62,8 +65,8 @@ where
     T: Fn(&str) + 'static,
 {
     let platform = TestPlatform {
-        println_handler: Box::new(println_handler),
+        println_handler: Rc::new(Box::new(println_handler)),
     };
 
-    Jvm::new(JvmDetailImpl::new(get_class_loader(classes)), platform)
+    Jvm::new(JvmDetailImpl::new(get_class_loader(classes, Box::new(platform))))
 }

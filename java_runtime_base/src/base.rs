@@ -1,13 +1,16 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use jvm::{JavaChar, JavaValue, Jvm, JvmCallback};
+use jvm::{JavaChar, JavaValue, Jvm};
 
-use crate::method::{MethodImpl, TypeConverter};
+use crate::method::{MethodBody, MethodImpl, TypeConverter};
 
-pub struct JavaClassProto {
+pub struct JavaClassProto<C>
+where
+    C: ?Sized,
+{
     pub parent_class: Option<&'static str>,
     pub interfaces: Vec<&'static str>,
-    pub methods: Vec<JavaMethodProto>,
+    pub methods: Vec<JavaMethodProto<C>>,
     pub fields: Vec<JavaFieldProto>,
 }
 
@@ -31,10 +34,13 @@ pub enum JavaFieldAccessFlag {
     STATIC = 0x8,
 }
 
-pub struct JavaMethodProto {
+pub struct JavaMethodProto<C>
+where
+    C: ?Sized,
+{
     pub name: String,
     pub descriptor: String,
-    pub body: Box<dyn JvmCallback>,
+    pub body: Box<dyn MethodBody<anyhow::Error, C>>,
     pub flag: JavaMethodFlag,
 }
 
@@ -54,10 +60,10 @@ impl JavaFieldProto {
     }
 }
 
-impl JavaMethodProto {
+impl<C> JavaMethodProto<C> {
     pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: JavaMethodFlag) -> Self
     where
-        M: MethodImpl<F, R, P>,
+        M: MethodImpl<F, C, R, anyhow::Error, P>,
     {
         Self {
             name: name.into(),
@@ -74,8 +80,8 @@ impl JavaMethodProto {
         }
 
         #[async_trait::async_trait(?Send)]
-        impl JvmCallback for AbstractCall {
-            async fn call(&self, _: &mut Jvm, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
+        impl<C> MethodBody<anyhow::Error, C> for AbstractCall {
+            async fn call(&self, _: &mut Jvm, _: &C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO throw java.lang.AbstractMethodError
                 anyhow::bail!("Call to abstract function {}{}", self.name, self.descriptor)
             }

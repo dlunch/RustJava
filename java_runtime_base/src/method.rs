@@ -1,24 +1,25 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use core::{future::Future, marker::PhantomData};
 
-use jvm::{JavaValue, Jvm, JvmCallback};
+use jvm::{JavaValue, Jvm};
 
 macro_rules! __impl_fn_helper {
     ($($arg: ident),*) => {
-        impl<'a, E, R, F, Fut, $($arg),*> FnHelper<'a, E, R, ($($arg,)*)> for F
+        impl<'a, C, E, R, F, Fut, $($arg),*> FnHelper<'a, C, E, R, ($($arg,)*)> for F
         where
-            F: Fn(&'a mut Jvm, $($arg),*) -> Fut,
+            F: Fn(&'a mut Jvm, &'a C, $($arg),*) -> Fut,
+            C: 'static,
             Fut: Future<Output = Result<R, E>> + 'a,
             $($arg: TypeConverter<$arg> + 'a),*
         {
             type Output = Fut;
             #[allow(unused_assignments, non_snake_case, unused_mut, unused_variables)]
-            fn do_call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Fut {
-                let mut args = Vec::from(args).into_iter();
+            fn do_call(&self, mut jvm: &'a mut Jvm, context: &'a C, args: Box<[JavaValue]>) -> Fut {
+                let mut args = alloc::vec::Vec::from(args).into_iter();
                 $(
-                    let $arg = $arg::to_rust(jvm, args.next().unwrap());
+                    let $arg = $arg::to_rust(&mut jvm, args.next().unwrap());
                 )*
-                self(jvm, $($arg),*)
+                self(jvm, context, $($arg),*)
             }
         }
     };
@@ -28,15 +29,15 @@ macro_rules! __impl_fn_helper {
 macro_rules! __impl_method_body {
     ($($arg: ident),*) => {
         #[async_trait::async_trait(?Send)]
-        impl<F, R, $($arg),*> JvmCallback for MethodHolder<F, R, ($($arg,)*)>
+        impl<F, C, R, E, $($arg),*> MethodBody<E, C> for MethodHolder<F, R, ($($arg,)*)>
         where
-            F: for<'a> FnHelper<'a, anyhow::Error, R, ($($arg,)*)>,
+            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)>,
             R: TypeConverter<R>,
         {
-            async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> Result<JavaValue, anyhow::Error> {
-                let result = self.0.do_call(jvm, args).await?;
+            async fn call(&self, mut jvm: &mut Jvm, context: &C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
+                let result = self.0.do_call(jvm, context, args).await?;
 
-                Ok(R::from_rust(jvm, result))
+                Ok(R::from_rust(&mut jvm, result))
             }
         }
     };
@@ -44,13 +45,13 @@ macro_rules! __impl_method_body {
 
 macro_rules! __impl_method_impl {
     ($($arg: ident),*) => {
-        impl<F, R,  $($arg),*> MethodImpl<F, R, ($($arg,)*)> for F
+        impl<F, C, R, E, $($arg),*> MethodImpl<F, C, R, E, ($($arg,)*)> for F
         where
-            F: for<'a> FnHelper<'a, anyhow::Error, R, ($($arg,)*)> + 'static,
+            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + 'static,
             R: TypeConverter<R> + 'static,
             $($arg: 'static),*
         {
-            fn into_body(self) -> Box<dyn JvmCallback> {
+            fn into_body(self) -> Box<dyn MethodBody<E, C>> {
                 Box::new(MethodHolder(self, PhantomData))
             }
         }
@@ -65,9 +66,14 @@ macro_rules! __generate {
     };
 }
 
-trait FnHelper<'a, E, R, P> {
+#[async_trait::async_trait(?Send)]
+pub trait MethodBody<E, C> {
+    async fn call(&self, jvm: &mut Jvm, context: &C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
+}
+
+trait FnHelper<'a, C, E, R, P> {
     type Output: Future<Output = Result<R, E>> + 'a;
-    fn do_call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Self::Output;
+    fn do_call(&self, jvm: &'a mut Jvm, context: &'a C, args: Box<[JavaValue]>) -> Self::Output;
 }
 
 struct MethodHolder<F, R, P>(pub F, PhantomData<(R, P)>);
@@ -77,8 +83,11 @@ pub trait TypeConverter<T> {
     fn from_rust(jvm: &mut Jvm, rust: T) -> JavaValue;
 }
 
-pub trait MethodImpl<F, R, P> {
-    fn into_body(self) -> Box<dyn JvmCallback>;
+pub trait MethodImpl<F, C, R, E, P>
+where
+    C: ?Sized,
+{
+    fn into_body(self) -> Box<dyn MethodBody<E, C>>;
 }
 
 __generate!();

@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_runtime_base::JavaClassProto;
+use crate::JavaClassProto;
 
 // interface java.lang.Runnable
 pub struct Runnable {}

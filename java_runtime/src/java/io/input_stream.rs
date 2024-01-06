@@ -1,7 +1,9 @@
 use alloc::vec;
 
-use java_runtime_base::{Array, JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{Array, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
+
+use crate::{JavaClassProto, JavaContext};
 
 // class java.io.InputStream
 pub struct InputStream {}
@@ -23,13 +25,13 @@ impl InputStream {
         }
     }
 
-    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.InputStream::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn read(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
+    async fn read(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
         tracing::debug!("java.lang.InputStream::read({:?}, {:?})", &this, &b);
 
         let array_length = jvm.array_length(&b)? as i32;

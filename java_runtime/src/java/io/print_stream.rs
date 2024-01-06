@@ -1,9 +1,9 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::java::lang::String;
+use crate::{java::lang::String, JavaClassProto, JavaContext};
 
 // class java.io.PrintStream
 pub struct PrintStream {}
@@ -21,17 +21,22 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn println(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, str: JvmClassInstanceHandle<String>) -> JavaResult<()> {
+    async fn println(
+        jvm: &mut Jvm,
+        context: &JavaContext,
+        this: JvmClassInstanceHandle<Self>,
+        str: JvmClassInstanceHandle<String>,
+    ) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &str);
 
         let rust_str = String::to_rust_string(jvm, &str)?;
-        jvm.platform().println(&rust_str);
+        context.println(&rust_str);
 
         Ok(())
     }

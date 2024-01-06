@@ -1,9 +1,9 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::java::lang::String;
+use crate::{java::lang::String, JavaClassProto, JavaContext};
 
 // class java.lang.Integer
 pub struct Integer {}
@@ -23,7 +23,7 @@ impl Integer {
         }
     }
 
-    async fn parse_int(jvm: &mut Jvm, s: JvmClassInstanceHandle<String>) -> JavaResult<i32> {
+    async fn parse_int(jvm: &mut Jvm, _: &JavaContext, s: JvmClassInstanceHandle<String>) -> JavaResult<i32> {
         tracing::debug!("java.lang.Integer::parseInt({:?})", &s);
 
         let s = String::to_rust_string(jvm, &s)?;

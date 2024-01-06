@@ -1,9 +1,12 @@
 #![no_std]
 extern crate alloc;
 
-use java_runtime_base::JavaClassProto;
+use alloc::boxed::Box;
 
 mod java;
+
+pub(crate) type JavaContext = Box<dyn java_runtime_base::Platform>;
+pub(crate) type JavaClassProto = java_runtime_base::JavaClassProto<Box<dyn java_runtime_base::Platform>>;
 
 pub fn get_class_proto(name: &str) -> Option<JavaClassProto> {
     Some(match name {

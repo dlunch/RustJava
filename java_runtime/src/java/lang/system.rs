@@ -2,10 +2,10 @@ use alloc::{vec, vec::Vec};
 
 use jvm::JavaValue;
 
-use java_runtime_base::{
-    Array, JavaClassProto, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
-};
+use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
+
+use crate::{JavaClassProto, JavaContext};
 
 // class java.lang.System
 pub struct System {}
@@ -30,7 +30,7 @@ impl System {
         }
     }
 
-    async fn cl_init(jvm: &mut Jvm) -> JavaResult<()> {
+    async fn cl_init(jvm: &mut Jvm, _: &JavaContext) -> JavaResult<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
         let out = jvm.new_class("java/io/PrintStream", "()V", []).await?;
@@ -41,13 +41,13 @@ impl System {
         Ok(())
     }
 
-    async fn current_time_millis(jvm: &mut Jvm) -> JavaResult<i64> {
+    async fn current_time_millis(_: &mut Jvm, context: &JavaContext) -> JavaResult<i64> {
         tracing::debug!("java.lang.System::currentTimeMillis()");
 
-        Ok(jvm.platform().now() as _)
+        Ok(context.now() as _)
     }
 
-    async fn gc(_: &mut Jvm) -> JavaResult<i32> {
+    async fn gc(_: &mut Jvm, _: &JavaContext) -> JavaResult<i32> {
         tracing::warn!("stub java.lang.System::gc()");
 
         Ok(0)
@@ -55,6 +55,7 @@ impl System {
 
     async fn arraycopy(
         jvm: &mut Jvm,
+        _: &JavaContext,
         src: JvmClassInstanceHandle<Array<()>>, // Any Array
         src_pos: i32,
         mut dest: JvmClassInstanceHandle<Array<()>>,

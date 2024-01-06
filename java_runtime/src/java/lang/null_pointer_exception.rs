@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_runtime_base::JavaClassProto;
+use crate::JavaClassProto;
 
 // class java.lang.NullPointerException
 pub struct NullPointerException {}

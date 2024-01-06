@@ -11,3 +11,4 @@ async-trait = { version = "^0.1", default-features = false }
 jvm = { path = "../jvm" }
 jvm_impl = { path = "../jvm_impl" }
 java_runtime = { path = "../java_runtime" }
+java_runtime_base = { path = "../java_runtime_base" }

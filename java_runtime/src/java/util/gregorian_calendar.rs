@@ -1,7 +1,9 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
+
+use crate::{JavaClassProto, JavaContext};
 
 // class java.util.GregorianCalendar
 pub struct GregorianCalendar {}
@@ -16,7 +18,7 @@ impl GregorianCalendar {
         }
     }
 
-    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.GregorianCalendar::<init>({:?})", &this);
 
         Ok(())

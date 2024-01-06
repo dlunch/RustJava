@@ -55,8 +55,27 @@ impl MethodImpl {
         }
     }
 
-    pub fn from_method_proto(proto: JavaMethodProto) -> Self {
-        Self::new(&proto.name, &proto.descriptor, MethodBody::Rust(proto.body))
+    pub fn from_method_proto<C>(proto: JavaMethodProto<C>, context: C) -> Self
+    where
+        C: 'static,
+    {
+        struct MethodProxy<C> {
+            body: Box<dyn java_runtime_base::MethodBody<anyhow::Error, C>>,
+            context: C,
+        }
+
+        #[async_trait::async_trait(?Send)]
+        impl<C> JvmCallback for MethodProxy<C> {
+            async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+                self.body.call(jvm, &self.context, args).await
+            }
+        }
+
+        Self::new(
+            &proto.name,
+            &proto.descriptor,
+            MethodBody::Rust(Box::new(MethodProxy { body: proto.body, context })),
+        )
     }
 
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {

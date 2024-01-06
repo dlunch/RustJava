@@ -15,27 +15,21 @@ use crate::{
     class_instance::ClassInstance,
     detail::JvmDetail,
     field::Field,
-    platform::Platform,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,
 };
 
 pub struct Jvm {
-    platform: Box<dyn Platform>, // normally in java, we access system services via JNI. but we don't have JNI(yet), so we use platform trait
     detail: Box<dyn JvmDetail>,
 }
 
 impl Jvm {
-    pub fn new<T, U>(detail: T, platform: U) -> Self
+    pub fn new<T>(detail: T) -> Self
     where
         T: JvmDetail + 'static,
-        U: Platform + 'static,
     {
-        Self {
-            detail: Box::new(detail),
-            platform: Box::new(platform),
-        }
+        Self { detail: Box::new(detail) }
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -267,10 +261,6 @@ impl Jvm {
         instance.destroy();
 
         Ok(())
-    }
-
-    pub fn platform(&self) -> &dyn Platform {
-        &*self.platform
     }
 
     fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {

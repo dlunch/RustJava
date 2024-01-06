@@ -7,12 +7,10 @@ use alloc::{
 
 use bytemuck::{cast_slice, cast_vec};
 
-use java_runtime_base::{
-    Array, JavaClassProto, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
-};
+use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaChar, Jvm};
 
-use crate::java::lang::Object;
+use crate::{java::lang::Object, JavaClassProto, JavaContext};
 
 // class java.lang.String
 pub struct String {}
@@ -48,7 +46,12 @@ impl String {
         }
     }
 
-    async fn init_with_byte_array(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, value: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<()> {
+    async fn init_with_byte_array(
+        jvm: &mut Jvm,
+        _: &JavaContext,
+        this: JvmClassInstanceHandle<Self>,
+        value: JvmClassInstanceHandle<Array<i8>>,
+    ) -> JavaResult<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
 
         let count = jvm.array_length(&value)? as i32;
@@ -59,7 +62,12 @@ impl String {
         Ok(())
     }
 
-    async fn init_with_char_array(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, value: JvmClassInstanceHandle<Array<u16>>) -> JavaResult<()> {
+    async fn init_with_char_array(
+        jvm: &mut Jvm,
+        _: &JavaContext,
+        this: JvmClassInstanceHandle<Self>,
+        value: JvmClassInstanceHandle<Array<u16>>,
+    ) -> JavaResult<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
 
         let count = jvm.array_length(&value)? as i32;
@@ -72,6 +80,7 @@ impl String {
 
     async fn init_with_partial_char_array(
         jvm: &mut Jvm,
+        _: &JavaContext,
         mut this: JvmClassInstanceHandle<Self>,
         value: JvmClassInstanceHandle<Array<u16>>,
         offset: i32,
@@ -90,6 +99,7 @@ impl String {
 
     async fn init_with_partial_byte_array(
         jvm: &mut Jvm,
+        context: &JavaContext,
         this: JvmClassInstanceHandle<Self>,
         value: JvmClassInstanceHandle<Array<i8>>,
         offset: i32,
@@ -98,7 +108,7 @@ impl String {
         tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
 
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _)?;
-        let string = jvm.platform().decode_str(cast_slice(&bytes));
+        let string = context.decode_str(cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -110,7 +120,7 @@ impl String {
         Ok(())
     }
 
-    async fn equals(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, other: JvmClassInstanceHandle<Self>) -> JavaResult<bool> {
+    async fn equals(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>, other: JvmClassInstanceHandle<Self>) -> JavaResult<bool> {
         tracing::debug!("java.lang.String::equals({:?}, {:?})", &this, &other);
 
         // TODO Object.equals()
@@ -125,7 +135,7 @@ impl String {
         }
     }
 
-    async fn char_at(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, index: i32) -> JavaResult<u16> {
+    async fn char_at(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>, index: i32) -> JavaResult<u16> {
         tracing::debug!("java.lang.String::charAt({:?}, {})", &this, index);
 
         let value = jvm.get_field(&this, "value", "[C")?;
@@ -135,6 +145,7 @@ impl String {
 
     async fn concat(
         jvm: &mut Jvm,
+        _: &JavaContext,
         this: JvmClassInstanceHandle<Self>,
         other: JvmClassInstanceHandle<Self>,
     ) -> JavaResult<JvmClassInstanceHandle<Self>> {
@@ -148,12 +159,12 @@ impl String {
         Self::from_rust_string(jvm, &concat).await
     }
 
-    async fn get_bytes(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Array<i8>>> {
+    async fn get_bytes(jvm: &mut Jvm, context: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Array<i8>>> {
         tracing::debug!("java.lang.String::getBytes({:?})", &this);
 
         let string = Self::to_rust_string(jvm, &this)?;
 
-        let bytes = jvm.platform().encode_str(&string);
+        let bytes = context.encode_str(&string);
         let bytes: Vec<i8> = cast_vec(bytes);
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
@@ -162,7 +173,7 @@ impl String {
         Ok(byte_array.into())
     }
 
-    async fn length(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn length(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.String::length({:?})", &this);
 
         let value = jvm.get_field(&this, "value", "[C")?;
@@ -170,7 +181,12 @@ impl String {
         Ok(jvm.array_length(&value)? as _)
     }
 
-    async fn substring(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, begin_index: i32) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn substring(
+        jvm: &mut Jvm,
+        _: &JavaContext,
+        this: JvmClassInstanceHandle<Self>,
+        begin_index: i32,
+    ) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::debug!("java.lang.String::substring({:?}, {})", &this, begin_index);
 
         let string = Self::to_rust_string(jvm, &this)?;
@@ -182,6 +198,7 @@ impl String {
 
     async fn substring_with_end(
         jvm: &mut Jvm,
+        _: &JavaContext,
         this: JvmClassInstanceHandle<Self>,
         begin_index: i32,
         end_index: i32,
@@ -199,7 +216,7 @@ impl String {
         Self::from_rust_string(jvm, &substr).await
     }
 
-    async fn value_of_integer(jvm: &mut Jvm, value: i32) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn value_of_integer(jvm: &mut Jvm, _: &JavaContext, value: i32) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::debug!("java.lang.String::valueOf({})", value);
 
         let string = value.to_string();
@@ -207,7 +224,7 @@ impl String {
         Self::from_rust_string(jvm, &string).await
     }
 
-    async fn value_of_object(jvm: &mut Jvm, value: JvmClassInstanceHandle<Object>) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn value_of_object(jvm: &mut Jvm, _: &JavaContext, value: JvmClassInstanceHandle<Object>) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::warn!("stub java.lang.String::valueOf({:?})", &value);
 
         // TODO Object.toString()
@@ -217,6 +234,7 @@ impl String {
 
     async fn index_of_with_from(
         jvm: &mut Jvm,
+        _: &JavaContext,
         this: JvmClassInstanceHandle<Self>,
         str: JvmClassInstanceHandle<Self>,
         from_index: i32,
@@ -231,7 +249,7 @@ impl String {
         Ok(index.unwrap_or(-1))
     }
 
-    async fn trim(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn trim(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::debug!("java.lang.String::trim({:?})", &this);
 
         let string = Self::to_rust_string(jvm, &this)?;

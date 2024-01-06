@@ -43,8 +43,15 @@ impl ClassImpl {
         }
     }
 
-    pub fn from_class_proto(name: &str, proto: JavaClassProto) -> Self {
-        let methods = proto.methods.into_iter().map(MethodImpl::from_method_proto).collect::<Vec<_>>();
+    pub fn from_class_proto<C>(name: &str, proto: JavaClassProto<C>, context: C) -> Self
+    where
+        C: Clone + 'static,
+    {
+        let methods = proto
+            .methods
+            .into_iter()
+            .map(|x| MethodImpl::from_method_proto(x, context.clone()))
+            .collect::<Vec<_>>();
         let fields = proto
             .fields
             .into_iter()

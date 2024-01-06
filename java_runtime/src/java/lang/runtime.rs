@@ -1,7 +1,9 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
+
+use crate::{JavaClassProto, JavaContext};
 
 // class java.lang.Runtime
 pub struct Runtime {}
@@ -22,13 +24,13 @@ impl Runtime {
         }
     }
 
-    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Runtime::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn get_runtime(jvm: &mut Jvm) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn get_runtime(jvm: &mut Jvm, _: &JavaContext) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::debug!("java.lang.Runtime::getRuntime");
 
         let instance = jvm.new_class("java/lang/Runtime", "()V", []).await?;
@@ -36,19 +38,19 @@ impl Runtime {
         Ok(instance.into())
     }
 
-    async fn total_memory(_: &mut Jvm, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<i64> {
+    async fn total_memory(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<i64> {
         tracing::warn!("stub java.lang.Runtime::totalMemory({:?})", &this);
 
         Ok(0x100000) // TODO: hardcoded
     }
 
-    async fn free_memory(_: &mut Jvm, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<i64> {
+    async fn free_memory(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<i64> {
         tracing::warn!("stub java.lang.Runtime::freeMemory({:?})", &this);
 
         Ok(0x100000) // TODO: hardcoded
     }
 
-    async fn gc(_: &mut Jvm, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<()> {
+    async fn gc(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Runtime>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Runtime::gc({:?})", &this);
 
         Ok(())
