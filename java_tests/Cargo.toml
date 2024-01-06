@@ -1,5 +1,5 @@
 [package]
-name = "jvm_tests"
+name = "java_tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
