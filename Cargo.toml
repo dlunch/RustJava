@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["classfile", "jvm", "jvm_impl", "java_tests"]
+members = ["classfile", "java_runtime", "java_tests", "jvm", "jvm_impl"]
 
 [workspace.package]
 version = "0.0.1"
