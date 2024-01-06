@@ -21,7 +21,7 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::<init>({:?})", &this);
 
         Ok(())
@@ -29,7 +29,7 @@ impl PrintStream {
 
     async fn println(
         jvm: &mut Jvm,
-        context: &JavaContext,
+        context: &mut JavaContext,
         this: JvmClassInstanceHandle<Self>,
         str: JvmClassInstanceHandle<String>,
     ) -> JavaResult<()> {

@@ -27,7 +27,12 @@ impl ByteArrayInputStream {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &JavaContext, mut this: JvmClassInstanceHandle<Self>, data: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<()> {
+    async fn init(
+        jvm: &mut Jvm,
+        _: &mut JavaContext,
+        mut this: JvmClassInstanceHandle<Self>,
+        data: JvmClassInstanceHandle<Array<i8>>,
+    ) -> JavaResult<()> {
         tracing::debug!("java.lang.ByteArrayInputStream::<init>({:?}, {:?})", &this, &data);
 
         jvm.put_field(&mut this, "buf", "[B", data)?;
@@ -36,7 +41,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.ByteArrayInputStream::available({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -48,7 +53,7 @@ impl ByteArrayInputStream {
 
     async fn read(
         jvm: &mut Jvm,
-        _: &JavaContext,
+        _: &mut JavaContext,
         mut this: JvmClassInstanceHandle<Self>,
         b: JvmClassInstanceHandle<Array<i8>>,
         off: i32,
@@ -79,7 +84,7 @@ impl ByteArrayInputStream {
         Ok(len)
     }
 
-    async fn read_byte(jvm: &mut Jvm, _: &JavaContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &mut Jvm, _: &mut JavaContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -97,7 +102,7 @@ impl ByteArrayInputStream {
         Ok(result)
     }
 
-    async fn close(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<ByteArrayInputStream>) -> JavaResult<()> {
+    async fn close(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<ByteArrayInputStream>) -> JavaResult<()> {
         tracing::debug!("java.lang.ByteArrayInputStream::close({:?})", &this);
 
         Ok(())

@@ -31,7 +31,7 @@ impl Class {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Class::<init>({:?})", &this);
 
         Ok(())
@@ -40,7 +40,7 @@ impl Class {
     #[allow(clippy::await_holding_refcell_ref)] // We manually drop Ref https://github.com/rust-lang/rust-clippy/issues/6353
     async fn get_resource_as_stream(
         jvm: &mut Jvm,
-        context: &JavaContext,
+        context: &mut JavaContext,
         this: JvmClassInstanceHandle<Self>,
         name: JvmClassInstanceHandle<String>,
     ) -> JavaResult<JvmClassInstanceHandle<InputStream>> {

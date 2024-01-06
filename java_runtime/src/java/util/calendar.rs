@@ -23,7 +23,7 @@ impl Calendar {
         }
     }
 
-    async fn get_instance(jvm: &mut Jvm, _: &JavaContext) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
+    async fn get_instance(jvm: &mut Jvm, _: &mut JavaContext) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
         tracing::warn!("stub java.util.Calendar::getInstance()");
 
         let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;

@@ -7,14 +7,14 @@ macro_rules! __impl_fn_helper {
     ($($arg: ident),*) => {
         impl<'a, C, E, R, F, Fut, $($arg),*> FnHelper<'a, C, E, R, ($($arg,)*)> for F
         where
-            F: Fn(&'a mut Jvm, &'a C, $($arg),*) -> Fut,
+            F: Fn(&'a mut Jvm, &'a mut C, $($arg),*) -> Fut,
             C: 'static,
             Fut: Future<Output = Result<R, E>> + 'a,
             $($arg: TypeConverter<$arg> + 'a),*
         {
             type Output = Fut;
             #[allow(unused_assignments, non_snake_case, unused_mut, unused_variables)]
-            fn do_call(&self, mut jvm: &'a mut Jvm, context: &'a C, args: Box<[JavaValue]>) -> Fut {
+            fn do_call(&self, mut jvm: &'a mut Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Fut {
                 let mut args = alloc::vec::Vec::from(args).into_iter();
                 $(
                     let $arg = $arg::to_rust(&mut jvm, args.next().unwrap());
@@ -34,7 +34,7 @@ macro_rules! __impl_method_body {
             F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)>,
             R: TypeConverter<R>,
         {
-            async fn call(&self, mut jvm: &mut Jvm, context: &C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
+            async fn call(&self, mut jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
                 let result = self.0.do_call(jvm, context, args).await?;
 
                 Ok(R::from_rust(&mut jvm, result))
@@ -68,12 +68,12 @@ macro_rules! __generate {
 
 #[async_trait::async_trait(?Send)]
 pub trait MethodBody<E, C> {
-    async fn call(&self, jvm: &mut Jvm, context: &C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
+    async fn call(&self, jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
 }
 
 trait FnHelper<'a, C, E, R, P> {
     type Output: Future<Output = Result<R, E>> + 'a;
-    fn do_call(&self, jvm: &'a mut Jvm, context: &'a C, args: Box<[JavaValue]>) -> Self::Output;
+    fn do_call(&self, jvm: &'a mut Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Self::Output;
 }
 
 struct MethodHolder<F, R, P>(pub F, PhantomData<(R, P)>);

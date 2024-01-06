@@ -25,13 +25,13 @@ impl InputStream {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.InputStream::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn read(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
+    async fn read(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
         tracing::debug!("java.lang.InputStream::read({:?}, {:?})", &this, &b);
 
         let array_length = jvm.array_length(&b)? as i32;

@@ -57,17 +57,25 @@ impl MethodImpl {
 
     pub fn from_method_proto<C>(proto: JavaMethodProto<C>, context: C) -> Self
     where
-        C: 'static,
+        C: 'static + Clone,
     {
-        struct MethodProxy<C> {
+        struct MethodProxy<C>
+        where
+            C: Clone,
+        {
             body: Box<dyn java_runtime_base::MethodBody<anyhow::Error, C>>,
             context: C,
         }
 
         #[async_trait::async_trait(?Send)]
-        impl<C> JvmCallback for MethodProxy<C> {
+        impl<C> JvmCallback for MethodProxy<C>
+        where
+            C: Clone,
+        {
             async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
-                self.body.call(jvm, &self.context, args).await
+                let mut context = self.context.clone();
+
+                self.body.call(jvm, &mut context, args).await
             }
         }
 

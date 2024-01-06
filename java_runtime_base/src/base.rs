@@ -81,7 +81,7 @@ impl<C> JavaMethodProto<C> {
 
         #[async_trait::async_trait(?Send)]
         impl<C> MethodBody<anyhow::Error, C> for AbstractCall {
-            async fn call(&self, _: &mut Jvm, _: &C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
+            async fn call(&self, _: &mut Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO throw java.lang.AbstractMethodError
                 anyhow::bail!("Call to abstract function {}{}", self.name, self.descriptor)
             }

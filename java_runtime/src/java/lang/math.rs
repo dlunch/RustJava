@@ -18,7 +18,7 @@ impl Math {
         }
     }
 
-    async fn abs(_: &mut Jvm, _: &JavaContext, x: i32) -> JavaResult<i32> {
+    async fn abs(_: &mut Jvm, _: &mut JavaContext, x: i32) -> JavaResult<i32> {
         tracing::debug!("java.lang.Math::abs({:?})", x);
 
         Ok(x.abs())

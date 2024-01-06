@@ -18,7 +18,7 @@ impl Hashtable {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Hashtable::<init>({:?})", &this);
 
         Ok(())

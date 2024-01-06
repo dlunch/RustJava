@@ -21,13 +21,13 @@ impl Object {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.Object::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn get_class(jvm: &mut Jvm, _: &JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn get_class(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::warn!("stub java.lang.Object::get_class({:?})", &this);
 
         let result = jvm.new_class("java/lang/Class", "()V", []).await?;
