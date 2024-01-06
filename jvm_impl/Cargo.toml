@@ -13,3 +13,7 @@ tracing = { version = "^0.1", default-features = false }
 classfile = { path = "../classfile" }
 java_runtime_base = { path = "../java_runtime_base" }
 jvm = { path = "../jvm" }
+
+[dev-dependencies]
+futures-test = { version = "^0.3" }
+test_utils = { path = "../test_utils" }

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use jvm::{runtime::JavaLangString, ClassInstance};
 
-use java_tests::test_jvm;
+use test_utils::test_jvm;
 
 #[futures_test::test]
 async fn test_string() -> anyhow::Result<()> {

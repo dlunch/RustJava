@@ -1,10 +1,3 @@
-#![no_std]
-extern crate alloc;
-
-mod test_jvm;
-
-pub use test_jvm::test_jvm;
-
 use alloc::{
     format,
     rc::Rc,
@@ -22,7 +15,7 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
     let printed1 = printed.clone();
     let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
 
-    let mut jvm = test_jvm(vec![(name.to_string(), class.to_vec())].into_iter().collect(), println_handler);
+    let mut jvm = crate::test_jvm(vec![(name.to_string(), class.to_vec())].into_iter().collect(), println_handler);
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {

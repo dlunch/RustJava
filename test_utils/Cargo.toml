@@ -1,5 +1,5 @@
 [package]
-name = "java_tests"
+name = "test_utils"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,6 +11,3 @@ async-trait = { version = "^0.1" }
 jvm = { path = "../jvm" }
 jvm_impl = { path = "../jvm_impl" }
 java_runtime = { path = "../java_runtime" }
-
-[dev-dependencies]
-futures-test = { version = "^0.3" }
