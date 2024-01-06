@@ -5,14 +5,15 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = { version = "^1.0", default-features = false }
-async-trait = { version = "^0.1", default-features = false }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+
 bytemuck = { version = "^1.14", default-features = false, features = ["extern_crate_alloc"] }
-tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
 java_runtime_base = { path = "../java_runtime_base" }
 jvm = { path = "../jvm" }
 
 [dev-dependencies]
-futures-test = { version = "^0.3" }
+futures-test = { workspace = true }
 test_utils = { path = "../test_utils" }

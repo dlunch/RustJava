@@ -28,6 +28,6 @@ impl Integer {
 
         let s = String::to_rust_string(jvm, &s)?;
 
-        Ok(s.parse()?)
+        Ok(s.parse().unwrap())
     }
 }

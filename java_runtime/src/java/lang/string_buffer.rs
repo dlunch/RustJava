@@ -99,7 +99,7 @@ impl StringBuffer {
     async fn append_character(jvm: &mut Jvm, mut this: JvmClassInstanceHandle<Self>, value: u16) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
 
-        let value = RustString::from_utf16(&[value])?;
+        let value = RustString::from_utf16(&[value]).unwrap();
 
         Self::append(jvm, &mut this, &value).await?;
 

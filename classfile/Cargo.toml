@@ -5,7 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = { version = "^1.0", default-features = false }
+anyhow = { workspace = true }
+nom = { workspace = true }
+
 bitflags = { version = "^2.4", default-features = false }
-nom = { version = "^7.1", default-features = false }
 nom-derive = { version = "^0.10", default-features = false }

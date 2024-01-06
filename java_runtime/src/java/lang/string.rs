@@ -247,7 +247,7 @@ impl String {
         let length = jvm.array_length(&value)?;
         let string: Vec<JavaChar> = jvm.load_array(&value, 0, length)?;
 
-        Ok(RustString::from_utf16(&string)?)
+        Ok(RustString::from_utf16(&string).unwrap())
     }
 
     pub async fn from_rust_string(jvm: &mut Jvm, string: &str) -> JavaResult<JvmClassInstanceHandle<Self>> {
