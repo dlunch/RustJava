@@ -3,7 +3,7 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 
-mod java;
+pub mod java;
 
 pub(crate) type JavaContext = Box<dyn java_runtime_base::Platform>;
 pub(crate) type JavaClassProto = java_runtime_base::JavaClassProto<Box<dyn java_runtime_base::Platform>>;
