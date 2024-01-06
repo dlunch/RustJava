@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use jvm::Jvm;
 
 // class java.io.OutputStream
 pub struct OutputStream {}
@@ -15,7 +16,7 @@ impl OutputStream {
         }
     }
 
-    async fn init(_: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.OutputStream::<init>({:?})", &this);
 
         Ok(())

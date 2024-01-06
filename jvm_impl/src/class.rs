@@ -9,6 +9,7 @@ use core::cell::RefCell;
 use dyn_clone::clone_box;
 
 use classfile::ClassInfo;
+use java_runtime_base::JavaClassProto;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
@@ -42,18 +43,26 @@ impl ClassImpl {
         }
     }
 
+    pub fn from_class_proto(name: &str, proto: JavaClassProto) -> Self {
+        let methods = proto.methods.into_iter().map(MethodImpl::from_method_proto).collect::<Vec<_>>();
+        let fields = proto
+            .fields
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| FieldImpl::from_field_proto(x, i))
+            .collect::<Vec<_>>();
+
+        Self::new(name, None, methods, fields)
+    }
+
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 
         let fields = class
             .fields
             .into_iter()
-            .scan(0, |index, field| {
-                let field = FieldImpl::from_fieldinfo(field, *index);
-                *index += 1;
-
-                Some(field)
-            })
+            .enumerate()
+            .map(|(i, x)| FieldImpl::from_fieldinfo(x, i))
             .collect::<Vec<_>>();
 
         let methods = class.methods.into_iter().map(MethodImpl::from_methodinfo).collect::<Vec<_>>();

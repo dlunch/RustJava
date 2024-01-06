@@ -4,64 +4,22 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::{
-    fmt::{self, Debug, Formatter},
-    future::Future,
-    marker::PhantomData,
-};
+use core::fmt::{self, Debug, Formatter};
 
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
-use jvm::{JavaValue, Jvm, JvmResult, Method};
+use java_runtime_base::JavaMethodProto;
+use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
 
-#[async_trait::async_trait(?Send)]
-pub trait RustMethodBody<E, R> {
-    async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> Result<R, E>;
-}
-
-pub trait FnHelper<'a, E, R> {
-    type Output: Future<Output = Result<R, E>> + 'a;
-    fn call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Self::Output;
-}
-
-impl<'a, E, R, F, Fut> FnHelper<'a, E, R> for F
-where
-    F: Fn(&'a mut Jvm, Box<[JavaValue]>) -> Fut,
-    Fut: Future<Output = Result<R, E>> + 'a,
-{
-    type Output = Fut;
-
-    fn call(&self, jvm: &'a mut Jvm, args: Box<[JavaValue]>) -> Fut {
-        self(jvm, args)
-    }
-}
-
-struct MethodHolder<F, R>(pub F, PhantomData<R>);
-
-#[async_trait::async_trait(?Send)]
-impl<F, R, E> RustMethodBody<E, R> for MethodHolder<F, R>
-where
-    F: for<'a> FnHelper<'a, E, R>,
-{
-    async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> Result<R, E> {
-        let result = self.0.call(jvm, args).await?;
-
-        Ok(result)
-    }
-}
-
 pub enum MethodBody {
     ByteCode(AttributeInfoCode),
-    Rust(Box<dyn RustMethodBody<anyhow::Error, JavaValue>>),
+    Rust(Box<dyn JvmCallback>),
 }
 
 impl MethodBody {
-    pub fn from_rust<F>(f: F) -> Self
-    where
-        F: for<'a> FnHelper<'a, anyhow::Error, JavaValue> + 'static,
-    {
-        Self::Rust(Box::new(MethodHolder(f, PhantomData)))
+    pub fn from_rust(callback: Box<dyn JvmCallback>) -> Self {
+        Self::Rust(callback)
     }
 }
 
@@ -95,6 +53,10 @@ impl MethodImpl {
                 body,
             }),
         }
+    }
+
+    pub fn from_method_proto(proto: JavaMethodProto) -> Self {
+        Self::new(&proto.name, &proto.descriptor, MethodBody::Rust(proto.body))
     }
 
     pub fn from_methodinfo(method_info: MethodInfo) -> Self {

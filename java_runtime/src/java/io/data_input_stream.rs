@@ -1,8 +1,9 @@
 use alloc::vec;
 
 use java_runtime_base::{
-    Array, JavaClassProto, JavaContext, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
+    Array, JavaClassProto, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
 };
+use jvm::Jvm;
 
 use crate::java::io::InputStream;
 
@@ -25,59 +26,46 @@ impl DataInputStream {
         }
     }
 
-    async fn init(
-        context: &mut dyn JavaContext,
-        mut this: JvmClassInstanceHandle<Self>,
-        r#in: JvmClassInstanceHandle<InputStream>,
-    ) -> JavaResult<()> {
+    async fn init(jvm: &mut Jvm, mut this: JvmClassInstanceHandle<Self>, r#in: JvmClassInstanceHandle<InputStream>) -> JavaResult<()> {
         tracing::debug!("java.lang.DataInputStream::<init>({:?}, {:?})", &this, &r#in);
 
-        context.jvm().put_field(&mut this, "in", "Ljava/io/InputStream;", r#in)?;
+        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in)?;
 
         Ok(())
     }
 
-    async fn available(context: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.DataInputStream::available({:?})", &this);
 
-        let r#in = context.jvm().get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let available: i32 = context.jvm().invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", []).await?;
 
         Ok(available)
     }
 
-    async fn read(
-        context: &mut dyn JavaContext,
-        this: JvmClassInstanceHandle<Self>,
-        b: JvmClassInstanceHandle<Array<i8>>,
-        off: i32,
-        len: i32,
-    ) -> JavaResult<i32> {
+    async fn read(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>, off: i32, len: i32) -> JavaResult<i32> {
         tracing::debug!("java.lang.DataInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
 
-        let r#in = context.jvm().get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let result: i32 = context
-            .jvm()
-            .invoke_virtual(&r#in, "java/io/InputStream", "read", "([BII)I", (b, off, len))
-            .await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "([BII)I", (b, off, len)).await?;
 
         Ok(result)
     }
 
-    async fn read_byte(context: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.DataInputStream::readByte({:?})", &this);
 
-        let r#in = context.jvm().get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let result: i32 = context.jvm().invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", []).await?;
 
         Ok(result as _)
     }
 
-    async fn close(context: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn close(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.DataInputStream::close({:?})", &this);
 
-        let r#in = context.jvm().get_field(&this, "in", "Ljava/io/InputStream;")?;
-        context.jvm().invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", []).await?;
 
         Ok(())
     }

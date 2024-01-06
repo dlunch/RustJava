@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use jvm::Jvm;
 
 use crate::java::lang::String;
 
@@ -22,10 +23,10 @@ impl Integer {
         }
     }
 
-    async fn parse_int(context: &mut dyn JavaContext, s: JvmClassInstanceHandle<String>) -> JavaResult<i32> {
+    async fn parse_int(jvm: &mut Jvm, s: JvmClassInstanceHandle<String>) -> JavaResult<i32> {
         tracing::debug!("java.lang.Integer::parseInt({:?})", &s);
 
-        let s = String::to_rust_string(context, &s)?;
+        let s = String::to_rust_string(jvm, &s)?;
 
         Ok(s.parse()?)
     }

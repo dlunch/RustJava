@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::Jvm;
 
 // class java.lang.Math
 pub struct Math {}
@@ -15,7 +16,7 @@ impl Math {
         }
     }
 
-    async fn abs(_: &mut dyn JavaContext, x: i32) -> JavaResult<i32> {
+    async fn abs(_: &mut Jvm, x: i32) -> JavaResult<i32> {
         tracing::debug!("java.lang.Math::abs({:?})", x);
 
         Ok(x.abs())

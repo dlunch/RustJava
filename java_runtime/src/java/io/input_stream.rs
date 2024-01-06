@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{Array, JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{Array, JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use jvm::Jvm;
 
 // class java.io.InputStream
 pub struct InputStream {}
@@ -22,20 +23,18 @@ impl InputStream {
         }
     }
 
-    async fn init(_: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.InputStream::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn read(context: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
+    async fn read(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>, b: JvmClassInstanceHandle<Array<i8>>) -> JavaResult<i32> {
         tracing::debug!("java.lang.InputStream::read({:?}, {:?})", &this, &b);
 
-        let array_length = context.jvm().array_length(&b)? as i32;
+        let array_length = jvm.array_length(&b)? as i32;
 
-        context
-            .jvm()
-            .invoke_virtual(&this, "java/io/InputStream", "read", "([BII)I", (b, 0, array_length))
+        jvm.invoke_virtual(&this, "java/io/InputStream", "read", "([BII)I", (b, 0, array_length))
             .await
     }
 }

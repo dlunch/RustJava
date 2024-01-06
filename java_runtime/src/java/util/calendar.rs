@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use jvm::Jvm;
 
 // class java.util.Calendar
 pub struct Calendar {}
@@ -20,10 +21,10 @@ impl Calendar {
         }
     }
 
-    async fn get_instance(context: &mut dyn JavaContext) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
+    async fn get_instance(jvm: &mut Jvm) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
         tracing::warn!("stub java.util.Calendar::getInstance()");
 
-        let instance = context.jvm().new_class("java/util/GregorianCalendar", "()V", []).await?;
+        let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;
 
         Ok(instance.into())
     }

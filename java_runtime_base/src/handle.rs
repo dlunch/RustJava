@@ -5,9 +5,9 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use jvm::{ClassInstance, JavaValue};
+use jvm::{ClassInstance, JavaValue, Jvm};
 
-use crate::{base::JavaContext, method::TypeConverter};
+use crate::method::TypeConverter;
 
 pub struct Array<T>(PhantomData<T>);
 
@@ -23,14 +23,14 @@ impl<T> JvmClassInstanceHandle<T> {
 }
 
 impl<T> TypeConverter<JvmClassInstanceHandle<T>> for JvmClassInstanceHandle<T> {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> JvmClassInstanceHandle<T> {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> JvmClassInstanceHandle<T> {
         Self {
             instance: raw.into(),
             _phantom: PhantomData,
         }
     }
 
-    fn from_rust(_: &mut dyn JavaContext, value: JvmClassInstanceHandle<T>) -> JavaValue {
+    fn from_rust(_: &mut Jvm, value: JvmClassInstanceHandle<T>) -> JavaValue {
         value.instance.into()
     }
 }

@@ -1,13 +1,13 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::time::Duration;
 
-use crate::base::JavaMethodBody;
+use crate::JvmCallback;
 
 #[async_trait::async_trait(?Send)]
 pub trait Platform {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
-    fn spawn(&mut self, callback: JavaMethodBody);
+    fn spawn(&self, callback: Box<dyn JvmCallback>);
 
     fn now(&self) -> u64; // unix time in millis
 

@@ -1,11 +1,8 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use jvm::{JavaChar, JavaValue, Jvm};
+use jvm::{JavaChar, JavaValue, Jvm, JvmCallback};
 
-use crate::{
-    method::{MethodBody, MethodImpl, TypeConverter},
-    platform::Platform,
-};
+use crate::method::{MethodImpl, TypeConverter};
 
 pub struct JavaClassProto {
     pub parent_class: Option<&'static str>,
@@ -37,7 +34,7 @@ pub enum JavaFieldAccessFlag {
 pub struct JavaMethodProto {
     pub name: String,
     pub descriptor: String,
-    pub body: JavaMethodBody,
+    pub body: Box<dyn JvmCallback>,
     pub flag: JavaMethodFlag,
 }
 
@@ -57,12 +54,10 @@ impl JavaFieldProto {
     }
 }
 
-pub type JavaMethodBody = Box<dyn MethodBody<JavaError>>;
-
 impl JavaMethodProto {
     pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: JavaMethodFlag) -> Self
     where
-        M: MethodImpl<F, R, JavaError, P>,
+        M: MethodImpl<F, R, P>,
     {
         Self {
             name: name.into(),
@@ -79,8 +74,8 @@ impl JavaMethodProto {
         }
 
         #[async_trait::async_trait(?Send)]
-        impl MethodBody<JavaError> for AbstractCall {
-            async fn call(&self, _: &mut dyn JavaContext, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
+        impl JvmCallback for AbstractCall {
+            async fn call(&self, _: &mut Jvm, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO throw java.lang.AbstractMethodError
                 anyhow::bail!("Call to abstract function {}{}", self.name, self.descriptor)
             }
@@ -98,65 +93,60 @@ impl JavaMethodProto {
     }
 }
 
-pub trait JavaContext {
-    fn jvm(&mut self) -> &mut Jvm;
-    fn platform(&mut self) -> &mut dyn Platform;
-}
-
 impl TypeConverter<i8> for i8 {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> i8 {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i8 {
         raw.into()
     }
 
-    fn from_rust(_: &mut dyn JavaContext, rust: i8) -> JavaValue {
+    fn from_rust(_: &mut Jvm, rust: i8) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<i32> for i32 {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> i32 {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i32 {
         raw.into()
     }
 
-    fn from_rust(_: &mut dyn JavaContext, rust: i32) -> JavaValue {
+    fn from_rust(_: &mut Jvm, rust: i32) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<JavaChar> for JavaChar {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> JavaChar {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> JavaChar {
         raw.into()
     }
 
-    fn from_rust(_: &mut dyn JavaContext, rust: JavaChar) -> JavaValue {
+    fn from_rust(_: &mut Jvm, rust: JavaChar) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<i64> for i64 {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> i64 {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i64 {
         raw.into()
     }
 
-    fn from_rust(_: &mut dyn JavaContext, rust: i64) -> JavaValue {
+    fn from_rust(_: &mut Jvm, rust: i64) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<bool> for bool {
-    fn to_rust(_: &mut dyn JavaContext, raw: JavaValue) -> bool {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> bool {
         raw.into()
     }
 
-    fn from_rust(_: &mut dyn JavaContext, rust: bool) -> JavaValue {
+    fn from_rust(_: &mut Jvm, rust: bool) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<()> for () {
-    fn to_rust(_: &mut dyn JavaContext, _: JavaValue) {}
+    fn to_rust(_: &mut Jvm, _: JavaValue) {}
 
-    fn from_rust(_: &mut dyn JavaContext, _: ()) -> JavaValue {
+    fn from_rust(_: &mut Jvm, _: ()) -> JavaValue {
         JavaValue::Void
     }
 }

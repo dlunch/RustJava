@@ -3,8 +3,9 @@ use alloc::{vec, vec::Vec};
 use jvm::JavaValue;
 
 use java_runtime_base::{
-    Array, JavaClassProto, JavaContext, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
+    Array, JavaClassProto, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle,
 };
+use jvm::Jvm;
 
 // class java.lang.System
 pub struct System {}
@@ -29,34 +30,31 @@ impl System {
         }
     }
 
-    async fn cl_init(context: &mut dyn JavaContext) -> JavaResult<()> {
+    async fn cl_init(jvm: &mut Jvm) -> JavaResult<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
-        let out = context.jvm().new_class("java/io/PrintStream", "()V", []).await?;
+        let out = jvm.new_class("java/io/PrintStream", "()V", []).await?;
         // TODO call constructor with dummy output stream?
 
-        context
-            .jvm()
-            .put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out)
-            .await?;
+        jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out).await?;
 
         Ok(())
     }
 
-    async fn current_time_millis(context: &mut dyn JavaContext) -> JavaResult<i64> {
+    async fn current_time_millis(jvm: &mut Jvm) -> JavaResult<i64> {
         tracing::debug!("java.lang.System::currentTimeMillis()");
 
-        Ok(context.platform().now() as _)
+        Ok(jvm.platform().now() as _)
     }
 
-    async fn gc(_: &mut dyn JavaContext) -> JavaResult<i32> {
+    async fn gc(_: &mut Jvm) -> JavaResult<i32> {
         tracing::warn!("stub java.lang.System::gc()");
 
         Ok(0)
     }
 
     async fn arraycopy(
-        context: &mut dyn JavaContext,
+        jvm: &mut Jvm,
         src: JvmClassInstanceHandle<Array<()>>, // Any Array
         src_pos: i32,
         mut dest: JvmClassInstanceHandle<Array<()>>,
@@ -73,8 +71,8 @@ impl System {
         );
 
         // TODO i think we can make it faster
-        let src: Vec<JavaValue> = context.jvm().load_array(&src, src_pos as _, length as _)?;
-        context.jvm().store_array(&mut dest, dest_pos as _, src)?;
+        let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _)?;
+        jvm.store_array(&mut dest, dest_pos as _, src)?;
 
         Ok(())
     }

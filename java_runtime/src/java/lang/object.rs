@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_runtime_base::{JavaClassProto, JavaContext, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_runtime_base::{JavaClassProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use jvm::Jvm;
 
 // class java.lang.Object
 pub struct Object {}
@@ -18,16 +19,16 @@ impl Object {
         }
     }
 
-    async fn init(_: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.Object::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn get_class(context: &mut dyn JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
+    async fn get_class(jvm: &mut Jvm, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<Self>> {
         tracing::warn!("stub java.lang.Object::get_class({:?})", &this);
 
-        let result = context.jvm().new_class("java/lang/Class", "()V", []).await?;
+        let result = jvm.new_class("java/lang/Class", "()V", []).await?;
 
         Ok(result.into())
     }

@@ -4,7 +4,7 @@ use alloc::{
 };
 
 use classfile::{FieldAccessFlags, FieldInfo};
-
+use java_runtime_base::{JavaFieldAccessFlag, JavaFieldProto};
 use jvm::{Field, JavaType};
 
 #[derive(Debug)]
@@ -30,6 +30,10 @@ impl FieldImpl {
                 index,
             }),
         }
+    }
+
+    pub fn from_field_proto(proto: JavaFieldProto, index: usize) -> Self {
+        Self::new(&proto.name, &proto.descriptor, proto.access_flag == JavaFieldAccessFlag::STATIC, index)
     }
 
     pub fn from_fieldinfo(field_info: FieldInfo, index: usize) -> Self {
