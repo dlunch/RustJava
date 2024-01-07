@@ -21,3 +21,52 @@ pub trait Runtime: DynClone {
 }
 
 clone_trait_object!(Runtime);
+
+// for testing
+#[cfg(test)]
+pub(crate) mod test {
+    use alloc::{boxed::Box, string::String, vec::Vec};
+    use core::time::Duration;
+
+    use jvm::JvmCallback;
+
+    use crate::Runtime;
+
+    #[derive(Clone)]
+    pub(crate) struct DummyRuntime;
+
+    #[async_trait::async_trait(?Send)]
+    impl Runtime for DummyRuntime {
+        async fn sleep(&self, _duration: Duration) {
+            todo!()
+        }
+
+        async fn r#yield(&self) {
+            todo!()
+        }
+
+        fn spawn(&self, _callback: Box<dyn JvmCallback>) {
+            todo!()
+        }
+
+        fn now(&self) -> u64 {
+            todo!()
+        }
+
+        fn encode_str(&self, _s: &str) -> Vec<u8> {
+            todo!()
+        }
+
+        fn decode_str(&self, _bytes: &[u8]) -> String {
+            todo!()
+        }
+
+        fn load_resource(&self, _name: &str) -> Option<Vec<u8>> {
+            todo!()
+        }
+
+        fn println(&self, _s: &str) {
+            todo!()
+        }
+    }
+}
