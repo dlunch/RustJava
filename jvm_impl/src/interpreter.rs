@@ -50,6 +50,13 @@ impl Interpreter {
                     stack_frame.operand_stack.push(value.clone());
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::Getfield(x) => {
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+
+                    let value = jvm.get_field(&instance.into(), &x.name, &x.descriptor)?;
+
+                    stack_frame.operand_stack.push(value);
+                }
                 Opcode::Getstatic(x) => stack_frame
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
@@ -101,8 +108,24 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(class)));
                 }
+                Opcode::Pop => {
+                    stack_frame.operand_stack.pop().unwrap();
+                }
+                Opcode::Putfield(x) => {
+                    let value = stack_frame.operand_stack.pop().unwrap();
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+
+                    jvm.put_field(&mut instance.into(), &x.name, &x.descriptor, value)?;
+                }
+                Opcode::Putstatic(x) => {
+                    jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
+                        .await?;
+                }
                 Opcode::Return => {
                     return Ok(JavaValue::Void);
+                }
+                Opcode::Sipush(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
                 }
                 _ => panic!("Unimplemented opcode {:?}", opcode),
             }

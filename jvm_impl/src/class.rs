@@ -11,7 +11,7 @@ use core::{
 
 use dyn_clone::clone_box;
 
-use classfile::ClassInfo;
+use classfile::{ClassInfo, FieldAccessFlags};
 use java_runtime_base::JavaClassProto;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
@@ -72,8 +72,18 @@ impl ClassImpl {
         let fields = class
             .fields
             .into_iter()
-            .enumerate()
-            .map(|(i, x)| FieldImpl::from_fieldinfo(x, i))
+            .scan((0, 0), |(index, static_index), field| {
+                let index = if field.access_flags.contains(FieldAccessFlags::STATIC) {
+                    *static_index += 1;
+                    static_index
+                } else {
+                    *index += 1;
+                    index
+                };
+
+                let field = FieldImpl::from_fieldinfo(field, *index - 1);
+                Some(field)
+            })
             .collect::<Vec<_>>();
 
         let methods = class.methods.into_iter().map(MethodImpl::from_methodinfo).collect::<Vec<_>>();

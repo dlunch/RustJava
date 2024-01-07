@@ -86,7 +86,7 @@ pub enum Opcode {
     Fstore2,
     Fstore3,
     Fsub,
-    Getfield(u16),
+    Getfield(ReferenceConstant),
     Getstatic(ReferenceConstant),
     Goto(i16),
     GotoW(i32),
@@ -182,8 +182,8 @@ pub enum Opcode {
     Nop,
     Pop,
     Pop2,
-    Putfield(u16),
-    Putstatic(u16),
+    Putfield(ReferenceConstant),
+    Putstatic(ReferenceConstant),
     Ret(u8),
     Return,
     Saload,
@@ -283,7 +283,7 @@ impl Opcode {
             0x45 => success(Opcode::Fstore2)(data),
             0x46 => success(Opcode::Fstore3)(data),
             0x66 => success(Opcode::Fsub)(data),
-            0xb4 => map(be_u16, Opcode::Getfield)(data),
+            0xb4 => map(be_u16, |x| Opcode::Getfield(ReferenceConstant::from_constant_pool(constant_pool, x as _)))(data),
             0xb2 => map(be_u16, |x| {
                 Opcode::Getstatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
             })(data),
@@ -407,8 +407,10 @@ impl Opcode {
             0x00 => success(Opcode::Nop)(data),
             0x57 => success(Opcode::Pop)(data),
             0x58 => success(Opcode::Pop2)(data),
-            0xb5 => map(be_u16, Opcode::Putfield)(data),
-            0xb3 => map(be_u16, Opcode::Putstatic)(data),
+            0xb5 => map(be_u16, |x| Opcode::Putfield(ReferenceConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xb3 => map(be_u16, |x| {
+                Opcode::Putstatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xa9 => map(u8, Opcode::Ret)(data),
             0xb1 => success(Opcode::Return)(data),
             0x35 => success(Opcode::Saload)(data),

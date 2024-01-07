@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{string::ToString, vec};
 
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
@@ -15,7 +15,8 @@ impl PrintStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println, JavaMethodFlag::NONE),
+                JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, JavaMethodFlag::NONE),
+                JavaMethodProto::new("println", "(I)V", Self::println_int, JavaMethodFlag::NONE),
             ],
             fields: vec![],
         }
@@ -27,7 +28,7 @@ impl PrintStream {
         Ok(())
     }
 
-    async fn println(
+    async fn println_string(
         jvm: &mut Jvm,
         context: &mut RuntimeContext,
         this: JvmClassInstanceHandle<Self>,
@@ -37,6 +38,14 @@ impl PrintStream {
 
         let rust_str = String::to_rust_string(jvm, &str)?;
         context.println(&rust_str);
+
+        Ok(())
+    }
+
+    async fn println_int(_: &mut Jvm, context: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>, int: i32) -> JavaResult<()> {
+        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &int);
+
+        context.println(&int.to_string());
 
         Ok(())
     }
