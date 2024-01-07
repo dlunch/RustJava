@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use crate::{ClassInstance, JavaChar, JavaValue, Jvm, JvmResult};
+use jvm::{ClassInstance, JavaChar, JavaValue, Jvm, JvmResult};
 
 pub struct JavaLangString {
     pub instance: Box<dyn ClassInstance>,

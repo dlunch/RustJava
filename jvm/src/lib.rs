@@ -14,8 +14,6 @@ mod thread;
 mod r#type;
 mod value;
 
-pub mod runtime;
-
 pub type JvmResult<T> = anyhow::Result<T>;
 
 use alloc::boxed::Box;

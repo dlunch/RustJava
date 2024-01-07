@@ -7,7 +7,9 @@ use alloc::{
 };
 use core::cell::RefCell;
 
-use jvm::{runtime::JavaLangString, JavaValue, JvmResult};
+use jvm::{JavaValue, JvmResult};
+
+use crate::JavaLangString;
 
 pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
     let printed = Rc::new(RefCell::new(String::new()));

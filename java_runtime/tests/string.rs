@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use jvm::{runtime::JavaLangString, ClassInstance};
+use jvm::ClassInstance;
 
-use test_utils::test_jvm;
+use test_utils::{test_jvm, JavaLangString};
 
 #[futures_test::test]
 async fn test_string() -> anyhow::Result<()> {
