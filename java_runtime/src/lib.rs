@@ -1,14 +1,17 @@
 #![no_std]
 extern crate alloc;
 
-use java_runtime_base::Platform;
-
 pub mod java;
+mod runtime;
 
-pub(crate) type JavaContext = dyn Platform;
-pub(crate) type JavaClassProto = java_runtime_base::JavaClassProto<dyn Platform>;
+use java_runtime_base::JavaClassProto;
 
-pub fn get_class_proto(name: &str) -> Option<JavaClassProto> {
+pub use runtime::Runtime;
+
+pub(crate) type RuntimeContext = dyn Runtime;
+pub(crate) type RuntimeClassProto = JavaClassProto<dyn Runtime>;
+
+pub fn get_class_proto(name: &str) -> Option<RuntimeClassProto> {
     Some(match name {
         "java/io/ByteArrayInputStream" => crate::java::io::ByteArrayInputStream::as_proto(),
         "java/io/DataInputStream" => crate::java::io::DataInputStream::as_proto(),

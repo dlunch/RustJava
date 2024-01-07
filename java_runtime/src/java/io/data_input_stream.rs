@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{java::io::InputStream, JavaClassProto, JavaContext};
+use crate::{java::io::InputStream, RuntimeClassProto, RuntimeContext};
 
 // class java.io.DataInputStream
 pub struct DataInputStream {}
 
 impl DataInputStream {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
@@ -26,7 +26,7 @@ impl DataInputStream {
 
     async fn init(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         r#in: JvmClassInstanceHandle<InputStream>,
     ) -> JavaResult<()> {
@@ -37,7 +37,7 @@ impl DataInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.DataInputStream::available({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
@@ -48,7 +48,7 @@ impl DataInputStream {
 
     async fn read(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         this: JvmClassInstanceHandle<Self>,
         b: JvmClassInstanceHandle<Array<i8>>,
         off: i32,
@@ -62,7 +62,7 @@ impl DataInputStream {
         Ok(result)
     }
 
-    async fn read_byte(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.DataInputStream::readByte({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
@@ -71,7 +71,7 @@ impl DataInputStream {
         Ok(result as _)
     }
 
-    async fn close(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn close(jvm: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.DataInputStream::close({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;

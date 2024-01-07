@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{JavaClassProto, JavaContext};
+use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.Hashtable
 pub struct Hashtable {}
 
 impl Hashtable {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE)],
@@ -18,7 +18,7 @@ impl Hashtable {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Hashtable::<init>({:?})", &this);
 
         Ok(())

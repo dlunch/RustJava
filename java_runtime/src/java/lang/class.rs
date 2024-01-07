@@ -7,15 +7,15 @@ use jvm::Jvm;
 
 use crate::{
     java::{io::InputStream, lang::String},
-    JavaClassProto, JavaContext,
+    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.lang.Class
 pub struct Class {}
 
 impl Class {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
@@ -31,7 +31,7 @@ impl Class {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Class::<init>({:?})", &this);
 
         Ok(())
@@ -40,7 +40,7 @@ impl Class {
     #[allow(clippy::await_holding_refcell_ref)] // We manually drop Ref https://github.com/rust-lang/rust-clippy/issues/6353
     async fn get_resource_as_stream(
         jvm: &mut Jvm,
-        context: &mut JavaContext,
+        context: &mut RuntimeContext,
         this: JvmClassInstanceHandle<Self>,
         name: JvmClassInstanceHandle<String>,
     ) -> JavaResult<JvmClassInstanceHandle<InputStream>> {

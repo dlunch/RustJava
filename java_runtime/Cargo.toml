@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+dyn-clone = { workspace = true }
 tracing = { workspace = true }
 
 bytemuck = { version = "^1.14", default-features = false, features = ["extern_crate_alloc"] }

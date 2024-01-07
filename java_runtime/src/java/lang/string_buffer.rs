@@ -7,14 +7,14 @@ use alloc::{
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaChar, Jvm};
 
-use crate::{java::lang::String, JavaClassProto, JavaContext};
+use crate::{java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.StringBuffer
 pub struct StringBuffer {}
 
 impl StringBuffer {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
@@ -38,7 +38,7 @@ impl StringBuffer {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut JavaContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.StringBuffer::<init>({:?})", &this);
 
         let array = jvm.instantiate_array("C", 16).await?;
@@ -50,7 +50,7 @@ impl StringBuffer {
 
     async fn init_with_string(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         string: JvmClassInstanceHandle<String>,
     ) -> JavaResult<()> {
@@ -67,7 +67,7 @@ impl StringBuffer {
 
     async fn append_string(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         string: JvmClassInstanceHandle<String>,
     ) -> JavaResult<JvmClassInstanceHandle<Self>> {
@@ -82,7 +82,7 @@ impl StringBuffer {
 
     async fn append_integer(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         value: i32,
     ) -> JavaResult<JvmClassInstanceHandle<Self>> {
@@ -97,7 +97,7 @@ impl StringBuffer {
 
     async fn append_long(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         value: i64,
     ) -> JavaResult<JvmClassInstanceHandle<Self>> {
@@ -112,7 +112,7 @@ impl StringBuffer {
 
     async fn append_character(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         value: u16,
     ) -> JavaResult<JvmClassInstanceHandle<Self>> {
@@ -125,7 +125,7 @@ impl StringBuffer {
         Ok(this)
     }
 
-    async fn to_string(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<String>> {
+    async fn to_string(jvm: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<JvmClassInstanceHandle<String>> {
         tracing::debug!("java.lang.StringBuffer::toString({:?})", &this);
 
         let java_value: JvmClassInstanceHandle<Array<JavaChar>> = jvm.get_field(&this, "value", "[C")?;

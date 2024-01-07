@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{JavaClassProto, JavaContext};
+use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.Random
 pub struct Random {}
 
 impl Random {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
@@ -21,13 +21,13 @@ impl Random {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Random::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn next_int(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn next_int(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::warn!("stub java.util.Random::nextInt({:?})", &this);
 
         let random = 12351352; // TODO

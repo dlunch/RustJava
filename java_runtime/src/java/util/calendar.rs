@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{JavaClassProto, JavaContext};
+use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.Calendar
 pub struct Calendar {}
 
 impl Calendar {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new(
@@ -23,7 +23,7 @@ impl Calendar {
         }
     }
 
-    async fn get_instance(jvm: &mut Jvm, _: &mut JavaContext) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
+    async fn get_instance(jvm: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<JvmClassInstanceHandle<Calendar>> {
         tracing::warn!("stub java.util.Calendar::getInstance()");
 
         let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;

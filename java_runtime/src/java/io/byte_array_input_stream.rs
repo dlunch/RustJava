@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{JavaClassProto, JavaContext};
+use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.io.ByteArrayInputStream
 pub struct ByteArrayInputStream {}
 
 impl ByteArrayInputStream {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
@@ -29,7 +29,7 @@ impl ByteArrayInputStream {
 
     async fn init(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         data: JvmClassInstanceHandle<Array<i8>>,
     ) -> JavaResult<()> {
@@ -41,7 +41,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.ByteArrayInputStream::available({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -53,7 +53,7 @@ impl ByteArrayInputStream {
 
     async fn read(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         b: JvmClassInstanceHandle<Array<i8>>,
         off: i32,
@@ -84,7 +84,7 @@ impl ByteArrayInputStream {
         Ok(len)
     }
 
-    async fn read_byte(jvm: &mut Jvm, _: &mut JavaContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: JvmClassInstanceHandle<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -102,7 +102,7 @@ impl ByteArrayInputStream {
         Ok(result)
     }
 
-    async fn close(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<ByteArrayInputStream>) -> JavaResult<()> {
+    async fn close(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<ByteArrayInputStream>) -> JavaResult<()> {
         tracing::debug!("java.lang.ByteArrayInputStream::close({:?})", &this);
 
         Ok(())

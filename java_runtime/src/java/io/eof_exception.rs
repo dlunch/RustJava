@@ -1,13 +1,13 @@
 use alloc::vec;
 
-use crate::JavaClassProto;
+use crate::RuntimeClassProto;
 
 // class java.io.EOFException
 pub struct EOFException {}
 
 impl EOFException {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/io/IOException"),
             interfaces: vec![],
             methods: vec![],

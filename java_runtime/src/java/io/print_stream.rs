@@ -3,14 +3,14 @@ use alloc::vec;
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{java::lang::String, JavaClassProto, JavaContext};
+use crate::{java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.io.PrintStream
 pub struct PrintStream {}
 
 impl PrintStream {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/io/OutputStream"),
             interfaces: vec![],
             methods: vec![
@@ -21,7 +21,7 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::<init>({:?})", &this);
 
         Ok(())
@@ -29,7 +29,7 @@ impl PrintStream {
 
     async fn println(
         jvm: &mut Jvm,
-        context: &mut JavaContext,
+        context: &mut RuntimeContext,
         this: JvmClassInstanceHandle<Self>,
         str: JvmClassInstanceHandle<String>,
     ) -> JavaResult<()> {

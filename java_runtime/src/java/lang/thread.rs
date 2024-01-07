@@ -4,14 +4,14 @@ use core::time::Duration;
 use java_runtime_base::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaValue, Jvm, JvmCallback};
 
-use crate::{java::lang::Runnable, JavaClassProto, JavaContext};
+use crate::{java::lang::Runnable, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Thread
 pub struct Thread {}
 
 impl Thread {
-    pub fn as_proto() -> JavaClassProto {
-        JavaClassProto {
+    pub fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
@@ -27,7 +27,7 @@ impl Thread {
 
     async fn init(
         jvm: &mut Jvm,
-        _: &mut JavaContext,
+        _: &mut RuntimeContext,
         mut this: JvmClassInstanceHandle<Self>,
         target: JvmClassInstanceHandle<Runnable>,
     ) -> JavaResult<()> {
@@ -38,7 +38,7 @@ impl Thread {
         Ok(())
     }
 
-    async fn start(jvm: &mut Jvm, context: &mut JavaContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn start(jvm: &mut Jvm, context: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
         tracing::debug!("Thread::start({:?})", &this);
 
         struct ThreadStartProxy {
@@ -68,7 +68,7 @@ impl Thread {
         Ok(())
     }
 
-    async fn sleep(_: &mut Jvm, context: &mut JavaContext, duration: i64) -> JavaResult<i32> {
+    async fn sleep(_: &mut Jvm, context: &mut RuntimeContext, duration: i64) -> JavaResult<i32> {
         tracing::debug!("Thread::sleep({:?})", duration);
 
         context.sleep(Duration::from_millis(duration as _)).await;
@@ -76,14 +76,14 @@ impl Thread {
         Ok(0)
     }
 
-    async fn r#yield(_: &mut Jvm, context: &mut JavaContext) -> JavaResult<i32> {
+    async fn r#yield(_: &mut Jvm, context: &mut RuntimeContext) -> JavaResult<i32> {
         tracing::debug!("Thread::yield()");
         context.r#yield().await;
 
         Ok(0)
     }
 
-    async fn set_priority(_: &mut Jvm, _: &mut JavaContext, this: JvmClassInstanceHandle<Thread>, new_priority: i32) -> JavaResult<()> {
+    async fn set_priority(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Thread>, new_priority: i32) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Thread::setPriority({:?}, {:?})", &this, new_priority);
 
         Ok(())
