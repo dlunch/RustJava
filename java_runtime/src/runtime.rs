@@ -24,7 +24,7 @@ clone_trait_object!(Runtime);
 
 // for testing
 #[cfg(test)]
-pub(crate) mod test {
+pub mod test {
     use alloc::{boxed::Box, string::String, vec::Vec};
     use core::time::Duration;
 
@@ -33,7 +33,7 @@ pub(crate) mod test {
     use crate::Runtime;
 
     #[derive(Clone)]
-    pub(crate) struct DummyRuntime;
+    pub struct DummyRuntime;
 
     #[async_trait::async_trait(?Send)]
     impl Runtime for DummyRuntime {
