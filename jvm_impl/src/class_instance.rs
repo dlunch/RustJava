@@ -1,8 +1,6 @@
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
-use dyn_clone::clone_box;
-
 use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 
 use crate::{class::ClassImpl, FieldImpl};
@@ -24,7 +22,7 @@ impl ClassInstanceImpl {
 
         Self {
             inner: Rc::new(ClassInstanceInner {
-                class: clone_box(class),
+                class: Box::new(class.clone()),
                 storage: RefCell::new(storage),
             }),
         }

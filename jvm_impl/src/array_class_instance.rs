@@ -1,8 +1,6 @@
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 use core::cell::RefCell;
 
-use dyn_clone::clone_box;
-
 use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
@@ -26,7 +24,7 @@ impl ArrayClassInstanceImpl {
 
         Self {
             inner: Rc::new(ArrayClassInstanceInner {
-                class: clone_box(class),
+                class: Box::new(class.clone()),
                 length,
                 elements: RefCell::new(vec![default_value; length]),
             }),
