@@ -297,3 +297,47 @@ impl String {
         Ok(instance.into())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use test_utils::runtime_test_jvm;
+
+    use super::String;
+
+    #[futures_test::test]
+    async fn test_string() -> anyhow::Result<()> {
+        let mut jvm = runtime_test_jvm();
+
+        let string = String::from_rust_string(&mut jvm, "test").await?;
+
+        let string = String::to_rust_string(&mut jvm, &string)?;
+
+        assert_eq!(string, "test");
+
+        Ok(())
+    }
+
+    #[futures_test::test]
+    async fn test_string_concat() -> anyhow::Result<()> {
+        let mut jvm = runtime_test_jvm();
+
+        let string1 = String::from_rust_string(&mut jvm, "test1").await?;
+        let string2 = String::from_rust_string(&mut jvm, "test2").await?;
+
+        let result = jvm
+            .invoke_virtual(
+                &string1,
+                "java/lang/String",
+                "concat",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (string2,),
+            )
+            .await?;
+
+        let string = String::to_rust_string(&mut jvm, &result)?;
+
+        assert_eq!(string, "test1test2");
+
+        Ok(())
+    }
+}

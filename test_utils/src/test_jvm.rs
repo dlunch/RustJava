@@ -69,3 +69,7 @@ where
 
     Jvm::new(JvmDetailImpl::new(get_class_loader(classes, Box::new(platform))))
 }
+
+pub fn runtime_test_jvm() -> Jvm {
+    test_jvm(BTreeMap::new(), |_| {})
+}
