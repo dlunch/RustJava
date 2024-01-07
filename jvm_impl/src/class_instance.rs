@@ -1,8 +1,8 @@
+use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
-
 use dyn_clone::clone_box;
+
 use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
 
 use crate::{class::ClassImpl, FieldImpl};
