@@ -1,12 +1,11 @@
 #![no_std]
 extern crate alloc;
 
-mod classes;
+pub mod classes;
 mod runtime;
 
 use java_runtime_base::JavaClassProto;
 
-pub use classes::java;
 pub use runtime::Runtime;
 
 pub(crate) type RuntimeContext = dyn Runtime;
