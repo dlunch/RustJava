@@ -144,6 +144,8 @@ impl Jvm {
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
+        anyhow::ensure!(method.is_static(), "Method is not static");
+
         Ok(method.run(self, args.into_arg()).await?.into())
     }
 
@@ -169,6 +171,8 @@ impl Jvm {
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
+
+        anyhow::ensure!(!method.is_static(), "Method is static");
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
@@ -196,6 +200,8 @@ impl Jvm {
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
+
+        anyhow::ensure!(!method.is_static(), "Method is static");
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }

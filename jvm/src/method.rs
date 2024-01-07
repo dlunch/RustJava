@@ -7,6 +7,7 @@ use crate::{as_any::AsAny, JavaValue, Jvm, JvmResult};
 pub trait Method: AsAny + Debug {
     fn name(&self) -> String;
     fn descriptor(&self) -> String;
+    fn is_static(&self) -> bool;
 
     async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
 }

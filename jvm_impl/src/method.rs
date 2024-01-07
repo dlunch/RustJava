@@ -9,8 +9,8 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
-use java_runtime_base::JavaMethodProto;
+use classfile::{AttributeInfo, AttributeInfoCode, MethodAccessFlags, MethodInfo};
+use java_runtime_base::{JavaMethodFlag, JavaMethodProto};
 use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
@@ -40,6 +40,7 @@ struct MethodInner {
     name: String,
     descriptor: String,
     body: MethodBody,
+    is_static: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -48,12 +49,13 @@ pub struct MethodImpl {
 }
 
 impl MethodImpl {
-    pub fn new(name: &str, descriptor: &str, body: MethodBody) -> Self {
+    pub fn new(name: &str, descriptor: &str, body: MethodBody, is_static: bool) -> Self {
         Self {
             inner: Rc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 body,
+                is_static,
             }),
         }
     }
@@ -89,6 +91,7 @@ impl MethodImpl {
             &proto.name,
             &proto.descriptor,
             MethodBody::Rust(Box::new(MethodProxy { body: proto.body, context })),
+            proto.flag == JavaMethodFlag::STATIC,
         )
     }
 
@@ -98,6 +101,7 @@ impl MethodImpl {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
                 body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
+                is_static: method_info.access_flags.contains(MethodAccessFlags::STATIC),
             }),
         }
     }
@@ -121,6 +125,10 @@ impl Method for MethodImpl {
 
     fn descriptor(&self) -> String {
         self.inner.descriptor.clone()
+    }
+
+    fn is_static(&self) -> bool {
+        self.inner.is_static
     }
 
     async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
