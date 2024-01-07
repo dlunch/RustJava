@@ -10,7 +10,7 @@ use core::cell::RefCell;
 
 use jvm::{ClassInstance, JavaValue, Jvm, JvmResult};
 
-use crate::test_jvm;
+use crate::test_jvm::test_jvm;
 
 async fn create_string(jvm: &mut Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
     let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();

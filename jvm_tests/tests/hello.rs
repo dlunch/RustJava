@@ -1,4 +1,4 @@
-use test_utils::run_class;
+use jvm_tests::run_class;
 
 #[futures_test::test]
 async fn test_hello() -> anyhow::Result<()> {

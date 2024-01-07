@@ -17,4 +17,4 @@ jvm = { path = "../jvm" }
 
 [dev-dependencies]
 futures-test = { workspace = true }
-test_utils = { path = "../test_utils" }
+jvm_impl = { path = "../jvm_impl" }

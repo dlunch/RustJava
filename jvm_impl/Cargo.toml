@@ -13,7 +13,3 @@ tracing = { workspace = true }
 classfile = { path = "../classfile" }
 java_runtime_base = { path = "../java_runtime_base" }
 jvm = { path = "../jvm" }
-
-[dev-dependencies]
-futures-test = { workspace = true }
-test_utils = { path = "../test_utils" }

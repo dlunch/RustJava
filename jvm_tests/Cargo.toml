@@ -1,14 +1,16 @@
 [package]
-name = "test_utils"
+name = "jvm_tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = { version = "^1.0", default-features = false }
-async-trait = { version = "^0.1", default-features = false }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
 
 jvm = { path = "../jvm" }
 jvm_impl = { path = "../jvm_impl" }
 java_runtime = { path = "../java_runtime" }
-java_runtime_base = { path = "../java_runtime_base" }
+
+[dev-dependencies]
+futures-test = { workspace = true }

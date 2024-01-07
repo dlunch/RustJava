@@ -300,13 +300,63 @@ impl String {
 
 #[cfg(test)]
 mod test {
-    use test_utils::runtime_test_jvm;
+    use alloc::{boxed::Box, vec::Vec};
+    use core::time::Duration;
+
+    use jvm::{Jvm, JvmCallback};
+    use jvm_impl::{ClassImpl, JvmDetailImpl};
+
+    use crate::{get_class_proto, Runtime};
 
     use super::String;
 
+    #[derive(Clone)]
+    struct TestRuntime;
+
+    #[async_trait::async_trait(?Send)]
+    impl Runtime for TestRuntime {
+        async fn sleep(&self, _duration: Duration) {
+            todo!()
+        }
+
+        async fn r#yield(&self) {
+            todo!()
+        }
+
+        fn spawn(&self, _callback: Box<dyn JvmCallback>) {
+            todo!()
+        }
+
+        fn now(&self) -> u64 {
+            todo!()
+        }
+
+        fn encode_str(&self, _s: &str) -> Vec<u8> {
+            todo!()
+        }
+
+        fn decode_str(&self, _bytes: &[u8]) -> alloc::string::String {
+            todo!()
+        }
+
+        fn load_resource(&self, _name: &str) -> Option<Vec<u8>> {
+            todo!()
+        }
+
+        fn println(&self, _s: &str) {
+            todo!()
+        }
+    }
+
+    pub fn test_jvm() -> Jvm {
+        Jvm::new(JvmDetailImpl::new(move |class_name| {
+            Ok(get_class_proto(class_name).map(|x| Box::new(ClassImpl::from_class_proto(class_name, x, Box::new(TestRuntime) as Box<_>)) as Box<_>))
+        }))
+    }
+
     #[futures_test::test]
     async fn test_string() -> anyhow::Result<()> {
-        let mut jvm = runtime_test_jvm();
+        let mut jvm = test_jvm();
 
         let string = String::from_rust_string(&mut jvm, "test").await?;
 
@@ -319,7 +369,7 @@ mod test {
 
     #[futures_test::test]
     async fn test_string_concat() -> anyhow::Result<()> {
-        let mut jvm = runtime_test_jvm();
+        let mut jvm = test_jvm();
 
         let string1 = String::from_rust_string(&mut jvm, "test1").await?;
         let string2 = String::from_rust_string(&mut jvm, "test2").await?;
