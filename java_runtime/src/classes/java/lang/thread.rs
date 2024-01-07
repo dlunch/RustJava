@@ -4,7 +4,7 @@ use core::time::Duration;
 use java_runtime_base::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaValue, Jvm, JvmCallback};
 
-use crate::{java::lang::Runnable, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Thread
 pub struct Thread {}

@@ -3,7 +3,7 @@ use alloc::vec;
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{java::io::InputStream, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::io::InputStream, RuntimeClassProto, RuntimeContext};
 
 // class java.io.DataInputStream
 pub struct DataInputStream {}

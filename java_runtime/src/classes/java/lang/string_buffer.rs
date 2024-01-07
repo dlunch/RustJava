@@ -7,7 +7,7 @@ use alloc::{
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaChar, Jvm};
 
-use crate::{java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.StringBuffer
 pub struct StringBuffer {}

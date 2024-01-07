@@ -10,7 +10,7 @@ use bytemuck::{cast_slice, cast_vec};
 use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaChar, Jvm};
 
-use crate::{java::lang::Object, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.String
 pub struct String {}

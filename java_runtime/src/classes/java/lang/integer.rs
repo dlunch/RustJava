@@ -3,7 +3,7 @@ use alloc::vec;
 use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
-use crate::{java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Integer
 pub struct Integer {}

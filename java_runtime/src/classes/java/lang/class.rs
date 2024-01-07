@@ -6,7 +6,7 @@ use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassIns
 use jvm::Jvm;
 
 use crate::{
-    java::{io::InputStream, lang::String},
+    classes::java::{io::InputStream, lang::String},
     RuntimeClassProto, RuntimeContext,
 };
 
