@@ -60,7 +60,10 @@ impl JavaFieldProto {
     }
 }
 
-impl<C> JavaMethodProto<C> {
+impl<C> JavaMethodProto<C>
+where
+    C: ?Sized,
+{
     pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: JavaMethodFlag) -> Self
     where
         M: MethodImpl<F, C, R, anyhow::Error, P>,
@@ -80,7 +83,10 @@ impl<C> JavaMethodProto<C> {
         }
 
         #[async_trait::async_trait(?Send)]
-        impl<C> MethodBody<anyhow::Error, C> for AbstractCall {
+        impl<C> MethodBody<anyhow::Error, C> for AbstractCall
+        where
+            C: ?Sized,
+        {
             async fn call(&self, _: &mut Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO throw java.lang.AbstractMethodError
                 anyhow::bail!("Call to abstract function {}{}", self.name, self.descriptor)

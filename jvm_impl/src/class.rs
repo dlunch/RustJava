@@ -4,7 +4,10 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::cell::RefCell;
+use core::{
+    cell::RefCell,
+    ops::{Deref, DerefMut},
+};
 
 use dyn_clone::clone_box;
 
@@ -43,9 +46,10 @@ impl ClassImpl {
         }
     }
 
-    pub fn from_class_proto<C>(name: &str, proto: JavaClassProto<C>, context: C) -> Self
+    pub fn from_class_proto<C, Context>(name: &str, proto: JavaClassProto<C>, context: Context) -> Self
     where
-        C: Clone + 'static,
+        C: ?Sized + 'static,
+        Context: DerefMut + Deref<Target = C> + Clone + 'static,
     {
         let methods = proto
             .methods

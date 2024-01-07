@@ -4,7 +4,10 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::fmt::{self, Debug, Formatter};
+use core::{
+    fmt::{self, Debug, Formatter},
+    ops::{Deref, DerefMut},
+};
 
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
 use java_runtime_base::JavaMethodProto;
@@ -55,22 +58,25 @@ impl MethodImpl {
         }
     }
 
-    pub fn from_method_proto<C>(proto: JavaMethodProto<C>, context: C) -> Self
+    pub fn from_method_proto<C, Context>(proto: JavaMethodProto<C>, context: Context) -> Self
     where
-        C: 'static + Clone,
+        C: ?Sized + 'static,
+        Context: DerefMut + Deref<Target = C> + Clone + 'static,
     {
-        struct MethodProxy<C>
+        struct MethodProxy<C, Context>
         where
-            C: Clone,
+            C: ?Sized,
+            Context: DerefMut + Deref<Target = C> + Clone,
         {
             body: Box<dyn java_runtime_base::MethodBody<anyhow::Error, C>>,
-            context: C,
+            context: Context,
         }
 
         #[async_trait::async_trait(?Send)]
-        impl<C> JvmCallback for MethodProxy<C>
+        impl<C, Context> JvmCallback for MethodProxy<C, Context>
         where
-            C: Clone,
+            C: ?Sized,
+            Context: DerefMut + Deref<Target = C> + Clone,
         {
             async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
                 let mut context = self.context.clone();

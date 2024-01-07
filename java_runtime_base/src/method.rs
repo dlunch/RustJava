@@ -8,7 +8,7 @@ macro_rules! __impl_fn_helper {
         impl<'a, C, E, R, F, Fut, $($arg),*> FnHelper<'a, C, E, R, ($($arg,)*)> for F
         where
             F: Fn(&'a mut Jvm, &'a mut C, $($arg),*) -> Fut,
-            C: 'static,
+            C: ?Sized + 'a,
             Fut: Future<Output = Result<R, E>> + 'a,
             $($arg: TypeConverter<$arg> + 'a),*
         {
@@ -32,6 +32,7 @@ macro_rules! __impl_method_body {
         impl<F, C, R, E, $($arg),*> MethodBody<E, C> for MethodHolder<F, R, ($($arg,)*)>
         where
             F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)>,
+            C: ?Sized,
             R: TypeConverter<R>,
         {
             async fn call(&self, mut jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
@@ -48,6 +49,7 @@ macro_rules! __impl_method_impl {
         impl<F, C, R, E, $($arg),*> MethodImpl<F, C, R, E, ($($arg,)*)> for F
         where
             F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + 'static,
+            C: ?Sized,
             R: TypeConverter<R> + 'static,
             $($arg: 'static),*
         {
@@ -67,11 +69,17 @@ macro_rules! __generate {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait MethodBody<E, C> {
+pub trait MethodBody<E, C>
+where
+    C: ?Sized,
+{
     async fn call(&self, jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
 }
 
-trait FnHelper<'a, C, E, R, P> {
+trait FnHelper<'a, C, E, R, P>
+where
+    C: ?Sized + 'a,
+{
     type Output: Future<Output = Result<R, E>> + 'a;
     fn do_call(&self, jvm: &'a mut Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Self::Output;
 }
