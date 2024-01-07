@@ -265,11 +265,12 @@ impl Jvm {
         Ok(())
     }
 
-    fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    pub fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         self.detail.get_class(class_name)
     }
 
-    pub async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    #[async_recursion::async_recursion(?Send)]
+    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name)?;
         if let Some(x) = class {
             return Ok(Some(x));
@@ -277,6 +278,10 @@ impl Jvm {
 
         if let Some(x) = self.detail.load_class(class_name).await? {
             tracing::debug!("Loaded class {}", class_name);
+
+            if let Some(super_class) = x.super_class_name() {
+                self.resolve_class(&super_class).await?;
+            }
 
             let clinit = x.method("<clinit>", "()V");
             drop(class);

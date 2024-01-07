@@ -13,3 +13,5 @@ async-trait = { workspace = true }
 dyn-clone = { workspace = true }
 nom = { workspace = true }
 tracing = { workspace = true }
+
+async-recursion = { version = "^1.0" }
