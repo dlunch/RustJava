@@ -48,8 +48,8 @@ impl Class for ArrayClassImpl {
         self.inner.name.clone()
     }
 
-    fn super_class(&self) -> Option<Box<dyn Class>> {
-        None // TODO should be java/lang/Object
+    fn super_class_name(&self) -> Option<String> {
+        Some("java/lang/Object".to_string())
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {

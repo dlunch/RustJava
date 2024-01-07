@@ -9,8 +9,6 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use dyn_clone::clone_box;
-
 use classfile::{ClassInfo, FieldAccessFlags};
 use java_runtime_base::JavaClassProto;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
@@ -20,7 +18,7 @@ use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodI
 #[derive(Debug)]
 struct ClassInner {
     name: String,
-    super_class: Option<Box<dyn Class>>,
+    super_class_name: Option<String>,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
     storage: RefCell<Vec<JavaValue>>,
@@ -32,13 +30,13 @@ pub struct ClassImpl {
 }
 
 impl ClassImpl {
-    pub fn new(name: &str, super_class: Option<Box<dyn Class>>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
+    pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
         let storage = fields.iter().filter(|x| x.is_static()).map(|x| x.r#type().default()).collect();
 
         Self {
             inner: Rc::new(ClassInner {
                 name: name.to_string(),
-                super_class,
+                super_class_name,
                 methods,
                 fields,
                 storage: RefCell::new(storage),
@@ -63,7 +61,7 @@ impl ClassImpl {
             .map(|(i, x)| FieldImpl::from_field_proto(x, i))
             .collect::<Vec<_>>();
 
-        Self::new(name, None, methods, fields)
+        Self::new(name, proto.parent_class.map(|x| x.to_string()), methods, fields)
     }
 
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
@@ -88,9 +86,7 @@ impl ClassImpl {
 
         let methods = class.methods.into_iter().map(MethodImpl::from_methodinfo).collect::<Vec<_>>();
 
-        let super_class = None; // TODO
-
-        Ok(Self::new(&class.this_class, super_class, methods, fields))
+        Ok(Self::new(&class.this_class, class.super_class.map(|x| x.to_string()), methods, fields))
     }
 
     pub fn fields(&self) -> &[FieldImpl] {
@@ -103,8 +99,8 @@ impl Class for ClassImpl {
         self.inner.name.clone()
     }
 
-    fn super_class(&self) -> Option<Box<dyn Class>> {
-        self.inner.super_class.as_ref().map(|x| clone_box(&**x))
+    fn super_class_name(&self) -> Option<String> {
+        self.inner.super_class_name.as_ref().map(|x| x.to_string())
     }
 
     fn instantiate(&self) -> Box<dyn ClassInstance> {

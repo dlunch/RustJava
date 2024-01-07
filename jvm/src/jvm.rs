@@ -108,7 +108,8 @@ impl Jvm {
     {
         tracing::trace!("Get field {}.{}:{}", instance.class().name(), name, descriptor);
 
-        let field = Self::find_field(&*instance.class(), name, descriptor)?
+        let field = self
+            .find_field(&*instance.class(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         Ok(instance.get_field(&*field)?.into())
@@ -120,7 +121,8 @@ impl Jvm {
     {
         tracing::trace!("Put field {}.{}:{} = {:?}", instance.class().name(), name, descriptor, value);
 
-        let field = Self::find_field(&*instance.class(), name, descriptor)?
+        let field = self
+            .find_field(&*instance.class(), name, descriptor)?
             .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         instance.put_field(&*field, value.into())
@@ -267,7 +269,7 @@ impl Jvm {
         self.detail.get_class(class_name)
     }
 
-    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    pub async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name)?;
         if let Some(x) = class {
             return Ok(Some(x));
@@ -293,13 +295,14 @@ impl Jvm {
         Ok(None)
     }
 
-    fn find_field(class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
+    fn find_field(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
         let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
-        } else if let Some(x) = class.super_class() {
-            Self::find_field(&*x, name, descriptor)
+        } else if let Some(x) = class.super_class_name() {
+            let super_class = self.get_class(&x)?.unwrap();
+            self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
         }
