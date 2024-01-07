@@ -1,4 +1,5 @@
 use alloc::{
+    boxed::Box,
     format,
     rc::Rc,
     string::{String, ToString},
@@ -7,9 +8,20 @@ use alloc::{
 };
 use core::cell::RefCell;
 
-use jvm::{JavaValue, JvmResult};
+use jvm::{ClassInstance, JavaValue, Jvm, JvmResult};
 
-use crate::JavaLangString;
+async fn create_string(jvm: &mut Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
+    let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
+
+    let mut array = jvm.instantiate_array("C", chars.len()).await?;
+    jvm.store_array(&mut array, 0, chars)?;
+
+    let instance = jvm.instantiate_class("java/lang/String").await?;
+    jvm.invoke_virtual(&instance, "java/lang/String", "<init>", "([C)V", [array.into()])
+        .await?;
+
+    Ok(instance)
+}
 
 pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<String> {
     let printed = Rc::new(RefCell::new(String::new()));
@@ -21,7 +33,7 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
-        java_args.push(JavaValue::Object(Some(JavaLangString::new(&mut jvm, arg).await?.instance)));
+        java_args.push(JavaValue::Object(Some(create_string(&mut jvm, arg).await?)));
     }
     let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
     jvm.store_array(&mut array, 0, java_args).unwrap();
