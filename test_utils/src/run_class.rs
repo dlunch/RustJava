@@ -10,6 +10,8 @@ use core::cell::RefCell;
 
 use jvm::{ClassInstance, JavaValue, Jvm, JvmResult};
 
+use crate::test_jvm;
+
 async fn create_string(jvm: &mut Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
     let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
 
@@ -29,7 +31,7 @@ pub async fn run_class(name: &str, class: &[u8], args: &[&str]) -> JvmResult<Str
     let printed1 = printed.clone();
     let println_handler = move |x: &str| printed1.borrow_mut().push_str(&format!("{}\n", x));
 
-    let mut jvm = crate::test_jvm(vec![(name.to_string(), class.to_vec())].into_iter().collect(), println_handler);
+    let mut jvm = test_jvm(vec![(name.to_string(), class.to_vec())].into_iter().collect(), println_handler);
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
