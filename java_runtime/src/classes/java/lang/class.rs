@@ -2,8 +2,8 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
-use jvm::Jvm;
+use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{io::InputStream, lang::String},
@@ -31,7 +31,7 @@ impl Class {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Class::<init>({:?})", &this);
 
         Ok(())
@@ -41,9 +41,9 @@ impl Class {
     async fn get_resource_as_stream(
         jvm: &mut Jvm,
         context: &mut RuntimeContext,
-        this: JvmClassInstanceHandle<Self>,
-        name: JvmClassInstanceHandle<String>,
-    ) -> JavaResult<JvmClassInstanceHandle<InputStream>> {
+        this: ClassInstanceRef<Self>,
+        name: ClassInstanceRef<String>,
+    ) -> JavaResult<ClassInstanceRef<InputStream>> {
         let name = String::to_rust_string(jvm, &name)?;
         tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {})", &this, name);
 

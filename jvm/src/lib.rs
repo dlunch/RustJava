@@ -26,7 +26,7 @@ pub use self::{
     array_class::ArrayClass,
     array_class_instance::ArrayClassInstance,
     class::Class,
-    class_instance::ClassInstance,
+    class_instance::{Array, ClassInstance, ClassInstanceRef},
     detail::JvmDetail,
     field::Field,
     jvm::Jvm,

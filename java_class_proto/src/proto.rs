@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use jvm::{JavaChar, JavaValue, Jvm};
+use jvm::{ClassInstanceRef, JavaChar, JavaValue, Jvm};
 
 use crate::method::{MethodBody, MethodImpl, TypeConverter};
 
@@ -160,5 +160,15 @@ impl TypeConverter<()> for () {
 
     fn from_rust(_: &mut Jvm, _: ()) -> JavaValue {
         JavaValue::Void
+    }
+}
+
+impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T> {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> Self {
+        Self::new(raw.into())
+    }
+
+    fn from_rust(_: &mut Jvm, value: Self) -> JavaValue {
+        value.instance.into()
     }
 }

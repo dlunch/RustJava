@@ -1,7 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
-use jvm::Jvm;
+use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -18,7 +18,7 @@ impl Hashtable {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Hashtable::<init>({:?})", &this);
 
         Ok(())

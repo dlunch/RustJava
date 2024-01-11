@@ -1,8 +1,8 @@
 use alloc::{boxed::Box, format, string::String, vec};
 use core::time::Duration;
 
-use java_class_proto::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
-use jvm::{JavaValue, Jvm, JvmCallback};
+use java_class_proto::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::{ClassInstanceRef, JavaValue, Jvm, JvmCallback};
 
 use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext};
 
@@ -25,12 +25,7 @@ impl Thread {
         }
     }
 
-    async fn init(
-        jvm: &mut Jvm,
-        _: &mut RuntimeContext,
-        mut this: JvmClassInstanceHandle<Self>,
-        target: JvmClassInstanceHandle<Runnable>,
-    ) -> JavaResult<()> {
+    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, target: ClassInstanceRef<Runnable>) -> JavaResult<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, &target);
 
         jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target)?;
@@ -38,12 +33,12 @@ impl Thread {
         Ok(())
     }
 
-    async fn start(jvm: &mut Jvm, context: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn start(jvm: &mut Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::debug!("Thread::start({:?})", &this);
 
         struct ThreadStartProxy {
             thread_id: String,
-            runnable: JvmClassInstanceHandle<Runnable>,
+            runnable: ClassInstanceRef<Runnable>,
         }
 
         #[async_trait::async_trait(?Send)]
@@ -83,7 +78,7 @@ impl Thread {
         Ok(0)
     }
 
-    async fn set_priority(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Thread>, new_priority: i32) -> JavaResult<()> {
+    async fn set_priority(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Thread>, new_priority: i32) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Thread::setPriority({:?}, {:?})", &this, new_priority);
 
         Ok(())

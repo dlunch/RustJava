@@ -1,7 +1,7 @@
 use alloc::{string::ToString, vec};
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
-use jvm::Jvm;
+use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -22,7 +22,7 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>) -> JavaResult<()> {
+    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::<init>({:?})", &this);
 
         Ok(())
@@ -31,8 +31,8 @@ impl PrintStream {
     async fn println_string(
         jvm: &mut Jvm,
         context: &mut RuntimeContext,
-        this: JvmClassInstanceHandle<Self>,
-        str: JvmClassInstanceHandle<String>,
+        this: ClassInstanceRef<Self>,
+        str: ClassInstanceRef<String>,
     ) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &str);
 
@@ -42,7 +42,7 @@ impl PrintStream {
         Ok(())
     }
 
-    async fn println_int(_: &mut Jvm, context: &mut RuntimeContext, this: JvmClassInstanceHandle<Self>, int: i32) -> JavaResult<()> {
+    async fn println_int(_: &mut Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, int: i32) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &int);
 
         context.println(&int.to_string());

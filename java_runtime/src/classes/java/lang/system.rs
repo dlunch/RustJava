@@ -2,8 +2,8 @@ use alloc::{vec, vec::Vec};
 
 use jvm::JavaValue;
 
-use java_class_proto::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
-use jvm::Jvm;
+use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -56,9 +56,9 @@ impl System {
     async fn arraycopy(
         jvm: &mut Jvm,
         _: &mut RuntimeContext,
-        src: JvmClassInstanceHandle<Array<()>>, // Any Array
+        src: ClassInstanceRef<Array<()>>, // Any Array
         src_pos: i32,
-        mut dest: JvmClassInstanceHandle<Array<()>>,
+        mut dest: ClassInstanceRef<Array<()>>,
         dest_pos: i32,
         length: i32,
     ) -> JavaResult<()> {
