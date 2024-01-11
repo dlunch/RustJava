@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
-use jvm::{ ClassInstanceRef, Jvm};
+use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
