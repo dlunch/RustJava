@@ -3,7 +3,7 @@ use core::time::Duration;
 
 use java_runtime::{get_class_proto, Runtime};
 use jvm::{Class, Jvm, JvmCallback, JvmResult};
-use jvm_impl::{ClassImpl, JvmDetailImpl};
+use jvm_rust::{ClassImpl, JvmDetailImpl};
 
 fn get_class_loader(class_files: BTreeMap<String, Vec<u8>>, runtime: Box<dyn Runtime>) -> impl Fn(&str) -> JvmResult<Option<Box<dyn Class>>> {
     move |class_name| {

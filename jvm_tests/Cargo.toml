@@ -9,7 +9,7 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 
 jvm = { path = "../jvm" }
-jvm_impl = { path = "../jvm_impl" }
+jvm_rust = { path = "../jvm_rust" }
 java_runtime = { path = "../java_runtime" }
 
 [dev-dependencies]

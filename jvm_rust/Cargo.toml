@@ -1,5 +1,5 @@
 [package]
-name = "jvm_impl"
+name = "jvm_rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

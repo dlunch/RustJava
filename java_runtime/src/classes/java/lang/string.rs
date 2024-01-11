@@ -303,7 +303,7 @@ mod test {
     use alloc::boxed::Box;
 
     use jvm::Jvm;
-    use jvm_impl::{ClassImpl, JvmDetailImpl};
+    use jvm_rust::{ClassImpl, JvmDetailImpl};
 
     use crate::{get_class_proto, runtime::test::DummyRuntime};
 
