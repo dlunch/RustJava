@@ -10,7 +10,7 @@ use core::{
 };
 
 use classfile::{ClassInfo, FieldAccessFlags};
-use java_class_proto::JavaClassProto;
+use java_class_proto::{JavaClassProto, JavaFieldAccessFlag};
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
@@ -57,8 +57,18 @@ impl ClassImpl {
         let fields = proto
             .fields
             .into_iter()
-            .enumerate()
-            .map(|(i, x)| FieldImpl::from_field_proto(x, i))
+            .scan((0, 0), |(index, static_index), field| {
+                let index = if field.access_flag == JavaFieldAccessFlag::STATIC {
+                    *static_index += 1;
+                    static_index
+                } else {
+                    *index += 1;
+                    index
+                };
+
+                let field = FieldImpl::from_field_proto(field, *index - 1);
+                Some(field)
+            })
             .collect::<Vec<_>>();
 
         Self::new(name, proto.parent_class.map(|x| x.to_string()), methods, fields)
