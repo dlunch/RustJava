@@ -34,9 +34,9 @@ pub struct ClassInstanceRef<T> {
 }
 
 impl<T> ClassInstanceRef<T> {
-    pub fn new(instance: Box<dyn ClassInstance>) -> Self {
+    pub fn new(instance: Option<Box<dyn ClassInstance>>) -> Self {
         Self {
-            instance: Some(instance),
+            instance,
             _phantom: PhantomData,
         }
     }
