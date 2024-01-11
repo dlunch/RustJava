@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 use core::cell::RefCell;
 
-use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
+use jvm::{ArrayClass, ArrayClassInstance, Class, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
@@ -32,31 +32,13 @@ impl ArrayClassInstanceImpl {
     }
 }
 
-impl ClassInstance for ArrayClassInstanceImpl {
-    fn destroy(self: Box<Self>) {}
-
+impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn class(&self) -> Box<dyn Class> {
         self.inner.class.clone()
     }
 
-    fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
-        Some(self)
-    }
+    fn destroy(self: Box<Self>) {}
 
-    fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {
-        Some(self)
-    }
-
-    fn get_field(&self, _field: &dyn jvm::Field) -> JvmResult<JavaValue> {
-        panic!("Array classes do not have fields")
-    }
-
-    fn put_field(&mut self, _field: &dyn jvm::Field, _value: JavaValue) -> JvmResult<()> {
-        panic!("Array classes do not have fields")
-    }
-}
-
-impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
         anyhow::ensure!(offset + values.len() <= self.inner.length, "Array index out of bounds");
 
