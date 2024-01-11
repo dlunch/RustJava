@@ -4,7 +4,7 @@ use alloc::{
     vec::Vec,
 };
 
-use java_runtime_base::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_class_proto::{Array, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaChar, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};

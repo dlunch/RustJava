@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_runtime_base::{Array, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_class_proto::{Array, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
 use crate::{RuntimeClassProto, RuntimeContext};

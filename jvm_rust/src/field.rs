@@ -4,7 +4,7 @@ use alloc::{
 };
 
 use classfile::{FieldAccessFlags, FieldInfo};
-use java_runtime_base::{JavaFieldAccessFlag, JavaFieldProto};
+use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto};
 use jvm::{Field, JavaType};
 
 #[derive(Debug)]

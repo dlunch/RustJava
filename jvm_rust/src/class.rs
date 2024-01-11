@@ -10,7 +10,7 @@ use core::{
 };
 
 use classfile::{ClassInfo, FieldAccessFlags};
-use java_runtime_base::JavaClassProto;
+use java_class_proto::JavaClassProto;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};

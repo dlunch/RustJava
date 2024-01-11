@@ -10,7 +10,7 @@ use core::{
 };
 
 use classfile::{AttributeInfo, AttributeInfoCode, MethodAccessFlags, MethodInfo};
-use java_runtime_base::{JavaMethodFlag, JavaMethodProto};
+use java_class_proto::{JavaMethodFlag, JavaMethodProto};
 use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
@@ -70,7 +70,7 @@ impl MethodImpl {
             C: ?Sized,
             Context: DerefMut + Deref<Target = C> + Clone,
         {
-            body: Box<dyn java_runtime_base::MethodBody<anyhow::Error, C>>,
+            body: Box<dyn java_class_proto::MethodBody<anyhow::Error, C>>,
             context: Context,
         }
 

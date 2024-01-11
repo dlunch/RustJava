@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, string::String, vec};
 use core::time::Duration;
 
-use java_runtime_base::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_class_proto::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::{JavaValue, Jvm, JvmCallback};
 
 use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext};

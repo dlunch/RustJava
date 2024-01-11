@@ -2,7 +2,7 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
 use crate::{

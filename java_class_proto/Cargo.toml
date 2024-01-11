@@ -1,5 +1,5 @@
 [package]
-name = "java_runtime_base"
+name = "java_class_proto"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

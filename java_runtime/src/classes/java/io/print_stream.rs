@@ -1,6 +1,6 @@
 use alloc::{string::ToString, vec};
 
-use java_runtime_base::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
+use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult, JvmClassInstanceHandle};
 use jvm::Jvm;
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};

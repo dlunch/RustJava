@@ -12,7 +12,7 @@ tracing = { workspace = true }
 
 bytemuck = { version = "^1.14", default-features = false, features = ["extern_crate_alloc"] }
 
-java_runtime_base = { path = "../java_runtime_base" }
+java_class_proto = { path = "../java_class_proto" }
 jvm = { path = "../jvm" }
 
 [dev-dependencies]

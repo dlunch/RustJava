@@ -4,7 +4,7 @@ extern crate alloc;
 pub mod classes;
 mod runtime;
 
-use java_runtime_base::JavaClassProto;
+use java_class_proto::JavaClassProto;
 
 pub use runtime::Runtime;
 
