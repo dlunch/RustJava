@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
-use jvm::{ArrayClassInstance, Class, ClassInstance, Field, JavaValue};
+use jvm::{Class, ClassInstance, Field, JavaValue};
 
 use crate::{class::ClassImpl, FieldImpl};
 
@@ -48,13 +48,5 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.storage.borrow_mut()[field.index()] = value;
 
         Ok(())
-    }
-
-    fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
-        None
-    }
-
-    fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {
-        None
     }
 }
