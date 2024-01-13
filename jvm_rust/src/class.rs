@@ -1,5 +1,6 @@
 use alloc::{
     boxed::Box,
+    collections::BTreeMap,
     rc::Rc,
     string::{String, ToString},
     vec::Vec,
@@ -22,7 +23,7 @@ struct ClassInner {
     super_class_name: Option<String>,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
-    storage: RefCell<Vec<JavaValue>>,
+    storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +36,7 @@ impl ClassImpl {
         let storage = fields
             .iter()
             .filter(|x| x.access_flags().contains(FieldAccessFlags::STATIC))
-            .map(|x| x.r#type().default())
+            .map(|x| (x.clone(), x.r#type().default()))
             .collect();
 
         Self {
@@ -59,22 +60,8 @@ impl ClassImpl {
             .into_iter()
             .map(|x| MethodImpl::from_method_proto(x, context.clone()))
             .collect::<Vec<_>>();
-        let fields = proto
-            .fields
-            .into_iter()
-            .scan((0, 0), |(index, static_index), field| {
-                let index = if field.access_flags.contains(FieldAccessFlags::STATIC) {
-                    *static_index += 1;
-                    static_index
-                } else {
-                    *index += 1;
-                    index
-                };
 
-                let field = FieldImpl::from_field_proto(field, *index - 1);
-                Some(field)
-            })
-            .collect::<Vec<_>>();
+        let fields = proto.fields.into_iter().map(FieldImpl::from_field_proto).collect::<Vec<_>>();
 
         Self::new(name, proto.parent_class.map(|x| x.to_string()), methods, fields)
     }
@@ -82,22 +69,7 @@ impl ClassImpl {
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
         let class = ClassInfo::parse(data)?;
 
-        let fields = class
-            .fields
-            .into_iter()
-            .scan((0, 0), |(index, static_index), field| {
-                let index = if field.access_flags.contains(FieldAccessFlags::STATIC) {
-                    *static_index += 1;
-                    static_index
-                } else {
-                    *index += 1;
-                    index
-                };
-
-                let field = FieldImpl::from_fieldinfo(field, *index - 1);
-                Some(field)
-            })
-            .collect::<Vec<_>>();
+        let fields = class.fields.into_iter().map(FieldImpl::from_fieldinfo).collect::<Vec<_>>();
 
         let methods = class.methods.into_iter().map(MethodImpl::from_methodinfo).collect::<Vec<_>>();
 
@@ -143,13 +115,20 @@ impl Class for ClassImpl {
     fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.inner.storage.borrow()[field.index()].clone())
+        let storage = self.inner.storage.borrow();
+        let value = storage.get(field);
+
+        if let Some(x) = value {
+            Ok(x.clone())
+        } else {
+            Ok(field.r#type().default())
+        }
     }
 
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.borrow_mut()[field.index()] = value;
+        self.inner.storage.borrow_mut().insert(field.clone(), value);
 
         Ok(())
     }

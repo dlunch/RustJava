@@ -1,15 +1,14 @@
-use alloc::{boxed::Box, rc::Rc, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, rc::Rc};
 use core::cell::RefCell;
 
-use java_constants::FieldAccessFlags;
-use jvm::{Class, ClassInstance, Field, JavaValue};
+use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult};
 
 use crate::{class::ClassImpl, FieldImpl};
 
 #[derive(Debug)]
 struct ClassInstanceInner {
     class: Box<dyn Class>,
-    storage: RefCell<Vec<JavaValue>>,
+    storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
 #[derive(Debug, Clone)]
@@ -19,17 +18,10 @@ pub struct ClassInstanceImpl {
 
 impl ClassInstanceImpl {
     pub fn new(class: &ClassImpl) -> Self {
-        let storage = class
-            .fields()
-            .iter()
-            .filter(|x| !x.access_flags().contains(FieldAccessFlags::STATIC))
-            .map(|x| x.r#type().default())
-            .collect();
-
         Self {
             inner: Rc::new(ClassInstanceInner {
                 class: Box::new(class.clone()),
-                storage: RefCell::new(storage),
+                storage: RefCell::new(BTreeMap::new()),
             }),
         }
     }
@@ -42,16 +34,23 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.class.clone()
     }
 
-    fn get_field(&self, field: &dyn Field) -> jvm::JvmResult<JavaValue> {
+    fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        Ok(self.inner.storage.borrow()[field.index()].clone())
+        let storage = self.inner.storage.borrow();
+        let value = storage.get(field);
+
+        if let Some(x) = value {
+            Ok(x.clone())
+        } else {
+            Ok(field.r#type().default())
+        }
     }
 
-    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> jvm::JvmResult<()> {
+    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.borrow_mut()[field.index()] = value;
+        self.inner.storage.borrow_mut().insert(field.clone(), value);
 
         Ok(())
     }
