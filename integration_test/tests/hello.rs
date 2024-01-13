@@ -4,7 +4,7 @@ use integration_test::run_class;
 async fn test_hello() -> anyhow::Result<()> {
     let hello = include_bytes!("../../test_data/Hello.class");
 
-    let result = run_class("Hello", hello, &[]).await?;
+    let result = run_class("Hello", &[("Hello", hello)], &[]).await?;
     assert_eq!(result, "Hello, world!\n");
 
     Ok(())
