@@ -16,7 +16,7 @@ async fn test_superclass() -> anyhow::Result<()> {
         &[],
     )
     .await?;
-    assert_eq!(result, "2\n1234123412341234\n2\ntest\n");
+    assert_eq!(result, "2\n1234123412341234\n2\ntest\ntest\n");
 
     Ok(())
 }

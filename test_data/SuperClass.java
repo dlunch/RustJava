@@ -2,6 +2,10 @@ class SuperClass {
     class InnerClass {
         int field1;
         long field2;
+
+        void test() {
+            System.out.println("test");
+        }
     }
 
     class InnerDerivedClass extends InnerClass {
@@ -28,6 +32,8 @@ class SuperClass {
         System.out.println(derived.field2);
         System.out.println(derived.field3);
         System.out.println(derived.field4);
+
+        derived.test();
     }
 
     public static void main(String[] args) {

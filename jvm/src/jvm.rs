@@ -17,6 +17,7 @@ use crate::{
     class_instance::ClassInstance,
     detail::JvmDetail,
     field::Field,
+    method::Method,
     r#type::JavaType,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
@@ -167,8 +168,8 @@ impl Jvm {
         tracing::trace!("Invoke virtual {}.{}:{}", class_name, name, descriptor);
 
         let class = self.resolve_class(&instance.class().name()).await?.unwrap();
-        let method = class
-            .method(name, descriptor)
+        let method = self
+            .find_virtual_method(&*class, name, descriptor)?
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
@@ -328,6 +329,19 @@ impl Jvm {
         } else if let Some(x) = class.super_class_name() {
             let super_class = self.get_class(&x)?.unwrap();
             self.find_field(&*super_class, name, descriptor)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn find_virtual_method(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Method>>> {
+        let method = class.method(name, descriptor);
+
+        if let Some(x) = method {
+            Ok(Some(x))
+        } else if let Some(x) = class.super_class_name() {
+            let super_class = self.get_class(&x)?.unwrap();
+            self.find_virtual_method(&*super_class, name, descriptor)
         } else {
             Ok(None)
         }
