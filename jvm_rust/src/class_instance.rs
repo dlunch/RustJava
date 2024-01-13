@@ -1,17 +1,19 @@
 use alloc::{boxed::Box, collections::BTreeMap, rc::Rc};
-use core::cell::RefCell;
+use core::{
+    cell::RefCell,
+    fmt::{self, Debug, Formatter},
+};
 
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult};
 
 use crate::{class::ClassImpl, FieldImpl};
 
-#[derive(Debug)]
 struct ClassInstanceInner {
     class: Box<dyn Class>,
     storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClassInstanceImpl {
     inner: Rc<ClassInstanceInner>,
 }
@@ -59,5 +61,11 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.storage.borrow_mut().insert(field.clone(), value);
 
         Ok(())
+    }
+}
+
+impl Debug for ClassInstanceImpl {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "ClassInstance({})", self.inner.class.name())
     }
 }

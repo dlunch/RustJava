@@ -3,17 +3,17 @@ use alloc::{
     rc::Rc,
     string::{String, ToString},
 };
+use core::fmt::{self, Debug, Formatter};
 
 use jvm::{ArrayClass, ClassInstance};
 
 use crate::array_class_instance::ArrayClassInstanceImpl;
 
-#[derive(Debug)]
 struct ArrayClassInner {
     element_type_name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ArrayClassImpl {
     inner: Rc<ArrayClassInner>,
 }
@@ -35,5 +35,11 @@ impl ArrayClass for ArrayClassImpl {
 
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance> {
         Box::new(ArrayClassInstanceImpl::new(self, length))
+    }
+}
+
+impl Debug for ArrayClassImpl {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "ArrayClass({})", self.inner.element_type_name)
     }
 }

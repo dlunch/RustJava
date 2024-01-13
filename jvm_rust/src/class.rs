@@ -7,6 +7,7 @@ use alloc::{
 };
 use core::{
     cell::RefCell,
+    fmt::{self, Debug, Formatter},
     ops::{Deref, DerefMut},
 };
 
@@ -17,7 +18,6 @@ use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
-#[derive(Debug)]
 struct ClassInner {
     name: String,
     super_class_name: Option<String>,
@@ -26,7 +26,7 @@ struct ClassInner {
     storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClassImpl {
     inner: Rc<ClassInner>,
 }
@@ -125,5 +125,11 @@ impl Class for ClassImpl {
         self.inner.storage.borrow_mut().insert(field.clone(), value);
 
         Ok(())
+    }
+}
+
+impl Debug for ClassImpl {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Class({})", self.name())
     }
 }

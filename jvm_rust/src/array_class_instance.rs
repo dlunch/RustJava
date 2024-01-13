@@ -1,18 +1,20 @@
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
-use core::cell::RefCell;
+use core::{
+    cell::RefCell,
+    fmt::{self, Debug, Formatter},
+};
 
 use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
-#[derive(Debug)]
 struct ArrayClassInstanceInner {
     class: Box<dyn Class>,
     length: usize,
     elements: RefCell<Vec<JavaValue>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ArrayClassInstanceImpl {
     inner: Rc<ArrayClassInstanceInner>,
 }
@@ -73,5 +75,11 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
 
     fn length(&self) -> usize {
         self.inner.length
+    }
+}
+
+impl Debug for ArrayClassInstanceImpl {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "ArrayClassInstance({})", self.inner.class.name())
     }
 }
