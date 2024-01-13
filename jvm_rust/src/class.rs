@@ -33,19 +33,13 @@ pub struct ClassImpl {
 
 impl ClassImpl {
     pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
-        let storage = fields
-            .iter()
-            .filter(|x| x.access_flags().contains(FieldAccessFlags::STATIC))
-            .map(|x| (x.clone(), x.r#type().default()))
-            .collect();
-
         Self {
             inner: Rc::new(ClassInner {
                 name: name.to_string(),
                 super_class_name,
                 methods,
                 fields,
-                storage: RefCell::new(storage),
+                storage: RefCell::new(BTreeMap::new()),
             }),
         }
     }
