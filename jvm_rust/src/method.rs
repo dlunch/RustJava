@@ -41,7 +41,7 @@ struct MethodInner {
     name: String,
     descriptor: String,
     body: MethodBody,
-    is_static: bool,
+    access_flags: MethodAccessFlags,
 }
 
 #[derive(Clone, Debug)]
@@ -50,13 +50,13 @@ pub struct MethodImpl {
 }
 
 impl MethodImpl {
-    pub fn new(name: &str, descriptor: &str, body: MethodBody, is_static: bool) -> Self {
+    pub fn new(name: &str, descriptor: &str, body: MethodBody, access_flags: MethodAccessFlags) -> Self {
         Self {
             inner: Rc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 body,
-                is_static,
+                access_flags,
             }),
         }
     }
@@ -92,7 +92,7 @@ impl MethodImpl {
             &proto.name,
             &proto.descriptor,
             MethodBody::Rust(Box::new(MethodProxy { body: proto.body, context })),
-            proto.access_flags.contains(MethodAccessFlags::STATIC),
+            proto.access_flags,
         )
     }
 
@@ -102,7 +102,7 @@ impl MethodImpl {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
                 body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
-                is_static: method_info.access_flags.contains(MethodAccessFlags::STATIC),
+                access_flags: method_info.access_flags,
             }),
         }
     }
@@ -128,8 +128,8 @@ impl Method for MethodImpl {
         self.inner.descriptor.clone()
     }
 
-    fn is_static(&self) -> bool {
-        self.inner.is_static
+    fn access_flags(&self) -> MethodAccessFlags {
+        self.inner.access_flags
     }
 
     async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {

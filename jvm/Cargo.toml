@@ -15,3 +15,5 @@ nom = { workspace = true }
 tracing = { workspace = true }
 
 async-recursion = { version = "^1.0" }
+
+java_constants = { workspace = true }

@@ -12,7 +12,7 @@ use jvm::{Field, JavaType};
 struct FieldInner {
     name: String,
     descriptor: String,
-    is_static: bool,
+    access_flags: FieldAccessFlags,
     index: usize,
 }
 
@@ -22,24 +22,19 @@ pub struct FieldImpl {
 }
 
 impl FieldImpl {
-    pub fn new(name: &str, descriptor: &str, is_static: bool, index: usize) -> Self {
+    pub fn new(name: &str, descriptor: &str, access_flags: FieldAccessFlags, index: usize) -> Self {
         Self {
             inner: Rc::new(FieldInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
-                is_static,
+                access_flags,
                 index,
             }),
         }
     }
 
     pub fn from_field_proto(proto: JavaFieldProto, index: usize) -> Self {
-        Self::new(
-            &proto.name,
-            &proto.descriptor,
-            proto.access_flags.contains(FieldAccessFlags::STATIC),
-            index,
-        )
+        Self::new(&proto.name, &proto.descriptor, proto.access_flags, index)
     }
 
     pub fn from_fieldinfo(field_info: FieldInfo, index: usize) -> Self {
@@ -47,7 +42,7 @@ impl FieldImpl {
             inner: Rc::new(FieldInner {
                 name: field_info.name.to_string(),
                 descriptor: field_info.descriptor.to_string(),
-                is_static: field_info.access_flags.contains(FieldAccessFlags::STATIC),
+                access_flags: field_info.access_flags,
                 index,
             }),
         }
@@ -67,8 +62,8 @@ impl Field for FieldImpl {
         self.inner.descriptor.clone()
     }
 
-    fn is_static(&self) -> bool {
-        self.inner.is_static
+    fn access_flags(&self) -> FieldAccessFlags {
+        self.inner.access_flags
     }
 
     fn r#type(&self) -> JavaType {

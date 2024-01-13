@@ -6,6 +6,7 @@ use alloc::{
     vec::{self, Vec},
 };
 use core::{array, fmt::Debug, iter};
+use java_constants::MethodAccessFlags;
 
 use anyhow::Context;
 use dyn_clone::clone_box;
@@ -144,7 +145,7 @@ impl Jvm {
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
-        anyhow::ensure!(method.is_static(), "Method is not static");
+        anyhow::ensure!(method.access_flags().contains(MethodAccessFlags::STATIC), "Method is not static");
 
         Ok(method.run(self, args.into_arg()).await?.into())
     }
@@ -172,7 +173,7 @@ impl Jvm {
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        anyhow::ensure!(!method.is_static(), "Method is static");
+        anyhow::ensure!(!method.access_flags().contains(MethodAccessFlags::STATIC), "Method is static");
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
@@ -201,7 +202,7 @@ impl Jvm {
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        anyhow::ensure!(!method.is_static(), "Method is static");
+        anyhow::ensure!(!method.access_flags().contains(MethodAccessFlags::STATIC), "Method is static");
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }

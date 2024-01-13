@@ -1,5 +1,5 @@
 bitflags::bitflags! {
-    #[derive(Eq, PartialEq, Default)]
+    #[derive(Eq, PartialEq, Default, Clone, Copy, Debug)]
     pub struct FieldAccessFlags: u16 {
         const PUBLIC = 0x0001;
         const PRIVATE = 0x0002;
@@ -14,7 +14,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    #[derive(Eq, PartialEq, Default)]
+    #[derive(Eq, PartialEq, Default, Clone, Copy, Debug)]
     pub struct MethodAccessFlags: u16 {
         const PUBLIC = 0x0001;
         const PRIVATE = 0x0002;
@@ -32,7 +32,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    #[derive(Eq, PartialEq)]
+    #[derive(Eq, PartialEq, Default, Clone, Copy, Debug)]
     pub struct ClassAccessFlags: u16 {
         const PUBLIC = 0x0001;
         const FINAL = 0x0010;

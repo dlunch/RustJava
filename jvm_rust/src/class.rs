@@ -32,7 +32,11 @@ pub struct ClassImpl {
 
 impl ClassImpl {
     pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
-        let storage = fields.iter().filter(|x| x.is_static()).map(|x| x.r#type().default()).collect();
+        let storage = fields
+            .iter()
+            .filter(|x| x.access_flags().contains(FieldAccessFlags::STATIC))
+            .map(|x| x.r#type().default())
+            .collect();
 
         Self {
             inner: Rc::new(ClassInner {
@@ -130,7 +134,9 @@ impl Class for ClassImpl {
         self.inner
             .fields
             .iter()
-            .find(|&field| field.name() == name && field.descriptor() == descriptor && field.is_static() == is_static)
+            .find(|&field| {
+                field.name() == name && field.descriptor() == descriptor && field.access_flags().contains(FieldAccessFlags::STATIC) == is_static
+            })
             .map(|x| Box::new(x.clone()) as Box<dyn Field>)
     }
 

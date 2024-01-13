@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 
+use java_constants::FieldAccessFlags;
 use jvm::{Class, ClassInstance, Field, JavaValue};
 
 use crate::{class::ClassImpl, FieldImpl};
@@ -18,7 +19,12 @@ pub struct ClassInstanceImpl {
 
 impl ClassInstanceImpl {
     pub fn new(class: &ClassImpl) -> Self {
-        let storage = class.fields().iter().filter(|x| !x.is_static()).map(|x| x.r#type().default()).collect();
+        let storage = class
+            .fields()
+            .iter()
+            .filter(|x| !x.access_flags().contains(FieldAccessFlags::STATIC))
+            .map(|x| x.r#type().default())
+            .collect();
 
         Self {
             inner: Rc::new(ClassInstanceInner {
