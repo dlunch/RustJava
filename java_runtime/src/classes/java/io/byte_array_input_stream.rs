@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -14,15 +14,15 @@ impl ByteArrayInputStream {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([B)V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("available", "()I", Self::available, JavaMethodFlag::NONE),
-                JavaMethodProto::new("read", "([BII)I", Self::read, JavaMethodFlag::NONE),
-                JavaMethodProto::new("read", "()I", Self::read_byte, JavaMethodFlag::NONE),
-                JavaMethodProto::new("close", "()V", Self::close, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "([B)V", Self::init, Default::default()),
+                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![
-                JavaFieldProto::new("buf", "[B", JavaFieldAccessFlag::NONE),
-                JavaFieldProto::new("pos", "I", JavaFieldAccessFlag::NONE),
+                JavaFieldProto::new("buf", "[B", Default::default()),
+                JavaFieldProto::new("pos", "I", Default::default()),
             ],
         }
     }

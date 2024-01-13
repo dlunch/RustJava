@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -13,7 +13,7 @@ impl Hashtable {
         RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE)],
+            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
             fields: vec![],
         }
     }

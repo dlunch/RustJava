@@ -10,7 +10,7 @@ use core::{
 };
 
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
-use java_class_proto::{JavaMethodFlag, JavaMethodProto};
+use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
 use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
@@ -92,7 +92,7 @@ impl MethodImpl {
             &proto.name,
             &proto.descriptor,
             MethodBody::Rust(Box::new(MethodProxy { body: proto.body, context })),
-            proto.flag == JavaMethodFlag::STATIC,
+            proto.access_flags.contains(MethodAccessFlags::STATIC),
         )
     }
 

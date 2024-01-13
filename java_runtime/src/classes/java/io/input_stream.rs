@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -14,12 +14,12 @@ impl InputStream {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new_abstract("available", "()I", JavaMethodFlag::NONE),
-                JavaMethodProto::new_abstract("read", "([BII)I", JavaMethodFlag::NONE),
-                JavaMethodProto::new("read", "([B)I", Self::read, JavaMethodFlag::NONE),
-                JavaMethodProto::new_abstract("read", "()I", JavaMethodFlag::NONE),
-                JavaMethodProto::new_abstract("close", "()V", JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new_abstract("available", "()I", Default::default()),
+                JavaMethodProto::new_abstract("read", "([BII)I", Default::default()),
+                JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
+                JavaMethodProto::new_abstract("read", "()I", Default::default()),
+                JavaMethodProto::new_abstract("close", "()V", Default::default()),
             ],
             fields: vec![],
         }

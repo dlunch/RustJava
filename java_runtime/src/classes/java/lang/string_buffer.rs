@@ -4,7 +4,7 @@ use alloc::{
     vec::Vec,
 };
 
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
@@ -18,22 +18,22 @@ impl StringBuffer {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, Default::default()),
                 JavaMethodProto::new(
                     "append",
                     "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
                     Self::append_string,
-                    JavaMethodFlag::NONE,
+                    Default::default(),
                 ),
-                JavaMethodProto::new("append", "(I)Ljava/lang/StringBuffer;", Self::append_integer, JavaMethodFlag::NONE),
-                JavaMethodProto::new("append", "(J)Ljava/lang/StringBuffer;", Self::append_long, JavaMethodFlag::NONE),
-                JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, JavaMethodFlag::NONE),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, JavaMethodFlag::NONE),
+                JavaMethodProto::new("append", "(I)Ljava/lang/StringBuffer;", Self::append_integer, Default::default()),
+                JavaMethodProto::new("append", "(J)Ljava/lang/StringBuffer;", Self::append_long, Default::default()),
+                JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, Default::default()),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
             ],
             fields: vec![
-                JavaFieldProto::new("value", "[C", JavaFieldAccessFlag::NONE),
-                JavaFieldProto::new("count", "I", JavaFieldAccessFlag::NONE),
+                JavaFieldProto::new("value", "[C", Default::default()),
+                JavaFieldProto::new("count", "I", Default::default()),
             ],
         }
     }

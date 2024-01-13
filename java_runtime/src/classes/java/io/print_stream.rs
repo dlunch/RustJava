@@ -1,6 +1,6 @@
 use alloc::{string::ToString, vec};
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
@@ -14,9 +14,9 @@ impl PrintStream {
             parent_class: Some("java/io/OutputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, JavaMethodFlag::NONE),
-                JavaMethodProto::new("println", "(I)V", Self::println_int, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, Default::default()),
+                JavaMethodProto::new("println", "(I)V", Self::println_int, Default::default()),
             ],
             fields: vec![],
         }

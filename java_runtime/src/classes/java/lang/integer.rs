@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
@@ -17,7 +18,7 @@ impl Integer {
                 "parseInt",
                 "(Ljava/lang/String;)I",
                 Self::parse_int,
-                JavaMethodFlag::STATIC,
+                MethodAccessFlags::STATIC,
             )],
             fields: vec![],
         }

@@ -2,7 +2,7 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
@@ -19,12 +19,12 @@ impl Class {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
                     Self::get_resource_as_stream,
-                    JavaMethodFlag::NONE,
+                    Default::default(),
                 ),
             ],
             fields: vec![],

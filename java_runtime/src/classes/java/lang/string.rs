@@ -7,7 +7,8 @@ use alloc::{
 
 use bytemuck::{cast_slice, cast_vec};
 
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use java_constants::MethodAccessFlags;
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm};
 
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
@@ -21,28 +22,28 @@ impl String {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, JavaMethodFlag::NONE),
-                JavaMethodProto::new("<init>", "([C)V", Self::init_with_char_array, JavaMethodFlag::NONE),
-                JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, JavaMethodFlag::NONE),
-                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, JavaMethodFlag::NONE),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, JavaMethodFlag::NONE),
-                JavaMethodProto::new("charAt", "(I)C", Self::char_at, JavaMethodFlag::NONE),
-                JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, JavaMethodFlag::NONE),
-                JavaMethodProto::new("length", "()I", Self::length, JavaMethodFlag::NONE),
-                JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, JavaMethodFlag::NONE),
-                JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, JavaMethodFlag::NONE),
-                JavaMethodProto::new("substring", "(II)Ljava/lang/String;", Self::substring_with_end, JavaMethodFlag::NONE),
-                JavaMethodProto::new("valueOf", "(I)Ljava/lang/String;", Self::value_of_integer, JavaMethodFlag::STATIC),
+                JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, Default::default()),
+                JavaMethodProto::new("<init>", "([C)V", Self::init_with_char_array, Default::default()),
+                JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
+                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
+                JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
+                JavaMethodProto::new("length", "()I", Self::length, Default::default()),
+                JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
+                JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
+                JavaMethodProto::new("substring", "(II)Ljava/lang/String;", Self::substring_with_end, Default::default()),
+                JavaMethodProto::new("valueOf", "(I)Ljava/lang/String;", Self::value_of_integer, MethodAccessFlags::STATIC),
                 JavaMethodProto::new(
                     "valueOf",
                     "(Ljava/lang/Object;)Ljava/lang/String;",
                     Self::value_of_object,
-                    JavaMethodFlag::STATIC,
+                    MethodAccessFlags::STATIC,
                 ),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_with_from, JavaMethodFlag::NONE),
-                JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, JavaMethodFlag::NONE),
+                JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_with_from, Default::default()),
+                JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("value", "[C", JavaFieldAccessFlag::NONE)],
+            fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
         }
     }
 

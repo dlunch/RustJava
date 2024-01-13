@@ -1,5 +1,6 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, JavaChar, JavaValue, Jvm};
 
 use crate::method::{MethodBody, MethodImpl, TypeConverter};
@@ -17,21 +18,20 @@ where
 pub type JavaError = anyhow::Error;
 pub type JavaResult<T> = anyhow::Result<T>;
 
-#[derive(Eq, PartialEq)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum JavaMethodFlag {
-    // TODO move to jvm
-    NONE,
-    STATIC = 0x8,
-    NATIVE = 0x100,
+pub struct JavaFieldProto {
+    pub name: String,
+    pub descriptor: String,
+    pub access_flags: FieldAccessFlags,
 }
 
-#[derive(Eq, PartialEq)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum JavaFieldAccessFlag {
-    // TODO move to jvm
-    NONE,
-    STATIC = 0x8,
+impl JavaFieldProto {
+    pub fn new(name: &str, descriptor: &str, access_flag: FieldAccessFlags) -> Self {
+        Self {
+            name: name.into(),
+            descriptor: descriptor.into(),
+            access_flags: access_flag,
+        }
+    }
 }
 
 pub struct JavaMethodProto<C>
@@ -41,30 +41,14 @@ where
     pub name: String,
     pub descriptor: String,
     pub body: Box<dyn MethodBody<anyhow::Error, C>>,
-    pub flag: JavaMethodFlag,
-}
-
-pub struct JavaFieldProto {
-    pub name: String,
-    pub descriptor: String,
-    pub access_flag: JavaFieldAccessFlag,
-}
-
-impl JavaFieldProto {
-    pub fn new(name: &str, descriptor: &str, access_flag: JavaFieldAccessFlag) -> Self {
-        Self {
-            name: name.into(),
-            descriptor: descriptor.into(),
-            access_flag,
-        }
-    }
+    pub access_flags: MethodAccessFlags,
 }
 
 impl<C> JavaMethodProto<C>
 where
     C: ?Sized,
 {
-    pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: JavaMethodFlag) -> Self
+    pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: MethodAccessFlags) -> Self
     where
         M: MethodImpl<F, C, R, anyhow::Error, P>,
     {
@@ -72,11 +56,11 @@ where
             name: name.into(),
             descriptor: descriptor.into(),
             body: method.into_body(),
-            flag,
+            access_flags: flag,
         }
     }
 
-    pub fn new_abstract(name: &str, descriptor: &str, flag: JavaMethodFlag) -> Self {
+    pub fn new_abstract(name: &str, descriptor: &str, flag: MethodAccessFlags) -> Self {
         struct AbstractCall {
             name: String,
             descriptor: String,
@@ -100,7 +84,7 @@ where
                 name: name.into(),
                 descriptor: descriptor.into(),
             }),
-            flag,
+            access_flags: flag,
         }
     }
 }

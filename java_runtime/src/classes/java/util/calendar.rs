@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -17,7 +18,7 @@ impl Calendar {
                 "getInstance",
                 "()Ljava/util/Calendar;",
                 Self::get_instance,
-                JavaMethodFlag::STATIC,
+                MethodAccessFlags::STATIC,
             )],
             fields: vec![],
         }

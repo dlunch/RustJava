@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{classes::java::io::InputStream, RuntimeClassProto, RuntimeContext};
@@ -14,13 +14,13 @@ impl DataInputStream {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("available", "()I", Self::available, JavaMethodFlag::NONE),
-                JavaMethodProto::new("read", "([BII)I", Self::read, JavaMethodFlag::NONE),
-                JavaMethodProto::new("readByte", "()B", Self::read_byte, JavaMethodFlag::NONE),
-                JavaMethodProto::new("close", "()V", Self::close, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
+                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
+                JavaMethodProto::new("readByte", "()B", Self::read_byte, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", JavaFieldAccessFlag::NONE)],
+            fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", Default::default())],
         }
     }
 

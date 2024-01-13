@@ -10,7 +10,7 @@ use core::{
 };
 
 use classfile::ClassInfo;
-use java_class_proto::{JavaClassProto, JavaFieldAccessFlag};
+use java_class_proto::JavaClassProto;
 use java_constants::FieldAccessFlags;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
@@ -59,7 +59,7 @@ impl ClassImpl {
             .fields
             .into_iter()
             .scan((0, 0), |(index, static_index), field| {
-                let index = if field.access_flag == JavaFieldAccessFlag::STATIC {
+                let index = if field.access_flags.contains(FieldAccessFlags::STATIC) {
                     *static_index += 1;
                     static_index
                 } else {

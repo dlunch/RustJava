@@ -1,7 +1,8 @@
 use alloc::{boxed::Box, format, string::String, vec};
 use core::time::Duration;
 
-use java_class_proto::{JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaError, JavaFieldProto, JavaMethodProto, JavaResult};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, JavaValue, Jvm, JvmCallback};
 
 use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext};
@@ -15,13 +16,13 @@ impl Thread {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("start", "()V", Self::start, JavaMethodFlag::NONE),
-                JavaMethodProto::new("sleep", "(J)V", Self::sleep, JavaMethodFlag::NATIVE),
-                JavaMethodProto::new("yield", "()V", Self::r#yield, JavaMethodFlag::NATIVE),
-                JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init, Default::default()),
+                JavaMethodProto::new("start", "()V", Self::start, Default::default()),
+                JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("target", "Ljava/lang/Runnable;", JavaFieldAccessFlag::NONE)],
+            fields: vec![JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default())],
         }
     }
 

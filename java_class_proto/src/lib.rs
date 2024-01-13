@@ -6,5 +6,5 @@ mod proto;
 
 pub use {
     method::{MethodBody, TypeConverter},
-    proto::{JavaClassProto, JavaError, JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult},
+    proto::{JavaClassProto, JavaError, JavaFieldProto, JavaMethodProto, JavaResult},
 };

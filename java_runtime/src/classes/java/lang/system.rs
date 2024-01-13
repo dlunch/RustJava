@@ -2,7 +2,8 @@ use alloc::{vec, vec::Vec};
 
 use jvm::JavaValue;
 
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto, JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -16,17 +17,17 @@ impl System {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, JavaMethodFlag::STATIC),
-                JavaMethodProto::new("currentTimeMillis", "()J", Self::current_time_millis, JavaMethodFlag::NATIVE),
-                JavaMethodProto::new("gc", "()V", Self::gc, JavaMethodFlag::STATIC),
+                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("currentTimeMillis", "()J", Self::current_time_millis, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("gc", "()V", Self::gc, MethodAccessFlags::STATIC),
                 JavaMethodProto::new(
                     "arraycopy",
                     "(Ljava/lang/Object;ILjava/lang/Object;II)V",
                     Self::arraycopy,
-                    JavaMethodFlag::NATIVE,
+                    MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
                 ),
             ],
-            fields: vec![JavaFieldProto::new("out", "Ljava/io/PrintStream;", JavaFieldAccessFlag::STATIC)],
+            fields: vec![JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC)],
         }
     }
 

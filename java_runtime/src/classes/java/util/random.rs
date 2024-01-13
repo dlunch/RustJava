@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -14,8 +14,8 @@ impl Random {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("nextInt", "()I", Self::next_int, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
             ],
             fields: vec![],
         }

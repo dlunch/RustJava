@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodFlag, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaMethodProto, JavaResult};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -14,11 +15,11 @@ impl Runtime {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, JavaMethodFlag::NONE),
-                JavaMethodProto::new("getRuntime", "()Ljava/lang/Runtime;", Self::get_runtime, JavaMethodFlag::STATIC),
-                JavaMethodProto::new("totalMemory", "()J", Self::total_memory, JavaMethodFlag::NONE),
-                JavaMethodProto::new("freeMemory", "()J", Self::free_memory, JavaMethodFlag::NONE),
-                JavaMethodProto::new("gc", "()V", Self::gc, JavaMethodFlag::NONE),
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("getRuntime", "()Ljava/lang/Runtime;", Self::get_runtime, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("totalMemory", "()J", Self::total_memory, Default::default()),
+                JavaMethodProto::new("freeMemory", "()J", Self::free_memory, Default::default()),
+                JavaMethodProto::new("gc", "()V", Self::gc, Default::default()),
             ],
             fields: vec![],
         }

@@ -9,4 +9,5 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 dyn-clone = { workspace = true }
 
+java_constants = { workspace = true }
 jvm = { workspace = true }

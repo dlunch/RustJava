@@ -4,7 +4,7 @@ use alloc::{
 };
 
 use classfile::FieldInfo;
-use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto};
+use java_class_proto::JavaFieldProto;
 use java_constants::FieldAccessFlags;
 use jvm::{Field, JavaType};
 
@@ -34,7 +34,12 @@ impl FieldImpl {
     }
 
     pub fn from_field_proto(proto: JavaFieldProto, index: usize) -> Self {
-        Self::new(&proto.name, &proto.descriptor, proto.access_flag == JavaFieldAccessFlag::STATIC, index)
+        Self::new(
+            &proto.name,
+            &proto.descriptor,
+            proto.access_flags.contains(FieldAccessFlags::STATIC),
+            index,
+        )
     }
 
     pub fn from_fieldinfo(field_info: FieldInfo, index: usize) -> Self {
