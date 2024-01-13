@@ -339,9 +339,13 @@ impl Interpreter {
         let method_type = JavaType::parse(descriptor);
         let (param_type, _) = method_type.as_method();
 
-        (0..param_type.len())
+        let mut values = (0..param_type.len())
             .map(|_| stack_frame.operand_stack.pop().unwrap())
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        values.reverse();
+
+        values
     }
 
     fn push_invoke_result(stack_frame: &mut StackFrame, value: JavaValue) {
