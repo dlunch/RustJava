@@ -64,9 +64,7 @@ impl Interpreter {
 
                     jvm.store_array(&mut array, index as usize, [value]).unwrap();
                 }
-                Opcode::AconstNull => {
-                    stack_frame.operand_stack.push(JavaValue::Object(None));
-                }
+                Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
                 Opcode::Aload(x) | Opcode::Iload(x) => {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
@@ -78,10 +76,7 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
                 }
-                Opcode::Areturn => {
-                    let value = stack_frame.operand_stack.pop().unwrap();
-                    return Ok(value);
-                }
+                Opcode::Areturn => return Ok(stack_frame.operand_stack.pop().unwrap()),
                 Opcode::Arraylength => {
                     let array = stack_frame.operand_stack.pop().unwrap();
 
@@ -92,9 +87,7 @@ impl Interpreter {
                     let value = stack_frame.operand_stack.pop();
                     stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
-                Opcode::Bipush(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
-                }
+                Opcode::Bipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
                     stack_frame.operand_stack.push(value.clone());
@@ -110,18 +103,14 @@ impl Interpreter {
                 Opcode::Getstatic(x) => stack_frame
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
-                Opcode::Goto(x) => {
-                    iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
-                }
+                Opcode::Goto(x) => iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..),
                 Opcode::Iadd => {
                     let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 + value2));
                 }
-                Opcode::Iconst(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
-                }
+                Opcode::Iconst(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
                 Opcode::Invokevirtual(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
@@ -264,9 +253,7 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 - value2));
                 }
-                Opcode::Lconst(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Long(*x as i64));
-                }
+                Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
                 Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
@@ -303,14 +290,10 @@ impl Interpreter {
                 }
                 Opcode::Putstatic(x) => {
                     jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
-                        .await?;
+                        .await?
                 }
-                Opcode::Return => {
-                    return Ok(JavaValue::Void);
-                }
-                Opcode::Sipush(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
-                }
+                Opcode::Return => return Ok(JavaValue::Void),
+                Opcode::Sipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
                 _ => panic!("Unimplemented opcode {:?}", opcode),
             }
         }
