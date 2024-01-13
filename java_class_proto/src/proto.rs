@@ -99,6 +99,16 @@ impl TypeConverter<i8> for i8 {
     }
 }
 
+impl TypeConverter<i16> for i16 {
+    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i16 {
+        raw.into()
+    }
+
+    fn from_rust(_: &mut Jvm, rust: i16) -> JavaValue {
+        rust.into()
+    }
+}
+
 impl TypeConverter<i32> for i32 {
     fn to_rust(_: &mut Jvm, raw: JavaValue) -> i32 {
         raw.into()

@@ -12,10 +12,12 @@ use anyhow::Context;
 use dyn_clone::clone_box;
 
 use crate::{
+    array_class_instance::ArrayClassInstance,
     class::Class,
     class_instance::ClassInstance,
     detail::JvmDetail,
     field::Field,
+    r#type::JavaType,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,
@@ -257,6 +259,17 @@ impl Jvm {
         let array = array.as_array_instance().context("Expected array class instance")?;
 
         Ok(array.length())
+    }
+
+    pub fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> JvmResult<JavaType> {
+        tracing::trace!("Get array element type {}", array.class().name());
+
+        let array = array.as_array_instance().context("Expected array class instance")?;
+        let class = ArrayClassInstance::class(array);
+
+        let type_name = &class.name()[1..]; // TODO can we store JavaType on class?
+
+        Ok(JavaType::parse(type_name))
     }
 
     pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {

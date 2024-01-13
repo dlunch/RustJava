@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
@@ -25,13 +25,48 @@ impl Interpreter {
         while let Some((offset, opcode)) = iter.next() {
             tracing::trace!("Opcode {:?}", opcode);
             match opcode {
-                Opcode::Aaload => {
+                Opcode::Aaload
+                | Opcode::Baload
+                | Opcode::Caload
+                | Opcode::Daload
+                | Opcode::Faload
+                | Opcode::Iaload
+                | Opcode::Laload
+                | Opcode::Saload => {
+                    // TODO type checking
                     let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let array = stack_frame.operand_stack.pop().unwrap();
 
                     let value = jvm.load_array(&array.into(), index as usize, 1).unwrap().pop().unwrap();
 
                     stack_frame.operand_stack.push(value);
+                }
+                Opcode::Aastore
+                | Opcode::Bastore
+                | Opcode::Castore
+                | Opcode::Dastore
+                | Opcode::Fastore
+                | Opcode::Iastore
+                | Opcode::Lastore
+                | Opcode::Sastore => {
+                    // TODO type checking
+                    let value = stack_frame.operand_stack.pop().unwrap();
+                    let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let mut array = stack_frame.operand_stack.pop().unwrap().into();
+
+                    let element_type = jvm.array_element_type(&array).unwrap();
+
+                    let value = if element_type == JavaType::Char {
+                        let value_int: i32 = value.into();
+                        JavaValue::Char(value_int as _)
+                    } else if element_type == JavaType::Boolean {
+                        let value_int: i32 = value.into();
+                        JavaValue::Boolean(value_int != 0)
+                    } else {
+                        value
+                    };
+
+                    jvm.store_array(&mut array, index as usize, [value]).unwrap();
                 }
                 Opcode::AconstNull => {
                     stack_frame.operand_stack.push(JavaValue::Object(None));
@@ -40,13 +75,29 @@ impl Interpreter {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::Anewarray(x) => {
+                    let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let element_type_name = format!("L{};", x.as_class());
+                    let array = jvm.instantiate_array(&element_type_name, length as _).await?;
+
+                    stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
+                }
                 Opcode::Areturn => {
                     let value = stack_frame.operand_stack.pop().unwrap();
                     return Ok(value);
                 }
+                Opcode::Arraylength => {
+                    let array = stack_frame.operand_stack.pop().unwrap();
+
+                    let length = jvm.array_length(&array.into())?;
+                    stack_frame.operand_stack.push(JavaValue::Int(length as _));
+                }
                 Opcode::Astore(x) | Opcode::Istore(x) => {
                     let value = stack_frame.operand_stack.pop();
                     stack_frame.local_variables[*x as usize] = value.unwrap();
+                }
+                Opcode::Bipush(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
                 }
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
@@ -114,6 +165,24 @@ impl Interpreter {
                     let class = jvm.instantiate_class(x.as_class()).await?;
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(class)));
+                }
+                Opcode::Newarray(x) => {
+                    let element_type_name = match x {
+                        4 => "Z",
+                        5 => "C",
+                        6 => "F",
+                        7 => "D",
+                        8 => "B",
+                        9 => "S",
+                        10 => "I",
+                        11 => "J",
+                        _ => panic!("Invalid array type {}", x),
+                    };
+
+                    let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let array = jvm.instantiate_array(element_type_name, length as _).await?;
+
+                    stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
                 }
                 Opcode::Pop => {
                     stack_frame.operand_stack.pop().unwrap();
