@@ -56,12 +56,8 @@ impl Interpreter {
 
                     let element_type = jvm.array_element_type(&array).unwrap();
 
-                    let value = if element_type == JavaType::Char {
-                        let value_int: i32 = value.into();
-                        JavaValue::Char(value_int as _)
-                    } else if element_type == JavaType::Boolean {
-                        let value_int: i32 = value.into();
-                        JavaValue::Boolean(value_int != 0)
+                    let value = if element_type == JavaType::Char || element_type == JavaType::Boolean {
+                        Self::integer_to_type(value, element_type)
                     } else {
                         value
                     };
@@ -320,8 +316,8 @@ impl Interpreter {
     where
         T: Fn(i32, i32) -> bool,
     {
-        let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-        let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+        let value2 = Self::pop_integer(stack_frame);
+        let value1 = Self::pop_integer(stack_frame);
 
         pred(value1, value2)
     }
@@ -330,9 +326,54 @@ impl Interpreter {
     where
         T: Fn(i32) -> bool,
     {
-        let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+        let value = Self::pop_integer(stack_frame);
 
         pred(value)
+    }
+
+    fn pop_integer(stack_frame: &mut StackFrame) -> i32 {
+        let value = stack_frame.operand_stack.pop().unwrap();
+
+        match value {
+            JavaValue::Boolean(x) => {
+                if x {
+                    1
+                } else {
+                    0
+                }
+            }
+            JavaValue::Byte(x) => x as _,
+            JavaValue::Char(x) => x as _,
+            JavaValue::Short(x) => x as _,
+            JavaValue::Int(x) => x,
+            _ => panic!("Expected integer, got {:?}", value),
+        }
+    }
+
+    fn integer_to_type(value: JavaValue, r#type: JavaType) -> JavaValue {
+        match r#type {
+            JavaType::Boolean => {
+                let value: i32 = value.into();
+                JavaValue::Boolean(value != 0)
+            }
+            JavaType::Byte => {
+                let value: i32 = value.into();
+                JavaValue::Byte(value as _)
+            }
+            JavaType::Char => {
+                let value: i32 = value.into();
+                JavaValue::Char(value as _)
+            }
+            JavaType::Short => {
+                let value: i32 = value.into();
+                JavaValue::Short(value as _)
+            }
+            JavaType::Int => {
+                let value: i32 = value.into();
+                JavaValue::Int(value)
+            }
+            _ => panic!("Expected integer type, got {:?}", r#type),
+        }
     }
 
     fn extract_invoke_params(stack_frame: &mut StackFrame, descriptor: &str) -> Vec<JavaValue> {

@@ -14,7 +14,7 @@ use nom::{
 
 use crate::JavaValue;
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum JavaType {
     Void,
     Boolean,
