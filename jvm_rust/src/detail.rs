@@ -49,10 +49,6 @@ impl JvmDetail for JvmDetailImpl {
         Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
     }
 
-    fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        Ok(self.classes.get(class_name).cloned())
-    }
-
     fn thread_context(&mut self, thread_id: ThreadId) -> &mut dyn ThreadContext {
         let thread_context = self
             .thread_contexts

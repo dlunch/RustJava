@@ -2,14 +2,17 @@
 
 use alloc::{
     boxed::Box,
+    collections::BTreeMap,
     format,
+    string::String,
     vec::{self, Vec},
 };
 use core::{array, fmt::Debug, iter};
-use java_constants::MethodAccessFlags;
 
 use anyhow::Context;
 use dyn_clone::clone_box;
+
+use java_constants::MethodAccessFlags;
 
 use crate::{
     array_class_instance::ArrayClassInstance,
@@ -26,6 +29,7 @@ use crate::{
 
 pub struct Jvm {
     detail: Box<dyn JvmDetail>,
+    classes: BTreeMap<String, Box<dyn Class>>,
 }
 
 impl Jvm {
@@ -33,7 +37,10 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        Self { detail: Box::new(detail) }
+        Self {
+            detail: Box::new(detail),
+            classes: BTreeMap::new(),
+        }
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -286,13 +293,13 @@ impl Jvm {
         Ok(())
     }
 
-    pub fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        self.detail.get_class(class_name)
+    pub fn get_class(&self, class_name: &str) -> Option<Box<dyn Class>> {
+        self.classes.get(class_name).cloned()
     }
 
     #[async_recursion::async_recursion(?Send)]
     async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        let class = self.get_class(class_name)?;
+        let class = self.get_class(class_name);
         if let Some(x) = class {
             return Ok(Some(x));
         }
@@ -313,7 +320,7 @@ impl Jvm {
                 x.run(self, Box::new([])).await?;
             }
 
-            let class = self.get_class(class_name)?;
+            let class = self.get_class(class_name);
 
             return Ok(class);
         }
@@ -327,7 +334,7 @@ impl Jvm {
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class(&x)?.unwrap();
+            let super_class = self.get_class(&x).unwrap();
             self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
@@ -340,7 +347,7 @@ impl Jvm {
         if let Some(x) = method {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class(&x)?.unwrap();
+            let super_class = self.get_class(&x).unwrap();
             self.find_virtual_method(&*super_class, name, descriptor)
         } else {
             Ok(None)
