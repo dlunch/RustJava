@@ -351,27 +351,13 @@ impl Interpreter {
     }
 
     fn integer_to_type(value: JavaValue, r#type: JavaType) -> JavaValue {
+        let value: i32 = value.into();
         match r#type {
-            JavaType::Boolean => {
-                let value: i32 = value.into();
-                JavaValue::Boolean(value != 0)
-            }
-            JavaType::Byte => {
-                let value: i32 = value.into();
-                JavaValue::Byte(value as _)
-            }
-            JavaType::Char => {
-                let value: i32 = value.into();
-                JavaValue::Char(value as _)
-            }
-            JavaType::Short => {
-                let value: i32 = value.into();
-                JavaValue::Short(value as _)
-            }
-            JavaType::Int => {
-                let value: i32 = value.into();
-                JavaValue::Int(value)
-            }
+            JavaType::Boolean => JavaValue::Boolean(value != 0),
+            JavaType::Byte => JavaValue::Byte(value as _),
+            JavaType::Char => JavaValue::Char(value as _),
+            JavaType::Short => JavaValue::Short(value as _),
+            JavaType::Int => JavaValue::Int(value),
             _ => panic!("Expected integer type, got {:?}", r#type),
         }
     }
