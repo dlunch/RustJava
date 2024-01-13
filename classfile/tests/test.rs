@@ -87,3 +87,18 @@ fn test_odd_even() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_superclass() -> anyhow::Result<()> {
+    let super_class = include_bytes!("../../test_data/SuperClass.class");
+
+    let class = ClassInfo::parse(super_class)?;
+
+    assert_eq!(class.methods[1].name, "run".to_string().into());
+    assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
+    if let AttributeInfo::Code(code_attribute) = &class.methods[2].attributes[0] {
+        assert!(matches!(code_attribute.attributes[0], AttributeInfo::LineNumberTable { .. }));
+    }
+
+    Ok(())
+}

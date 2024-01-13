@@ -105,11 +105,14 @@ pub enum AttributeInfo {
     StackMapTable(Vec<u8>), // TODO
     Exceptions(Vec<u8>),    // TODO
     InnerClasses(Vec<u8>),  // TODO
-    Synthetic,
+    Synthetic(Vec<u8>),     // TODO
     SourceFile(Rc<String>),
     SourceDebugExtension,
     LineNumberTable(Vec<AttributeInfoLineNumberTableEntry>),
     LocalVariableTable(Vec<LocalVariableTableEntry>),
+    MethodParameters(Vec<u8>), // TODO
+    NestMembers(Vec<u8>),      // TODO
+    NestHost(Vec<u8>),         // TODO
 }
 
 impl AttributeInfo {
@@ -127,6 +130,10 @@ impl AttributeInfo {
                     "StackMapTable" => AttributeInfo::StackMapTable(info.to_vec()),
                     "Exceptions" => AttributeInfo::Exceptions(info.to_vec()),
                     "InnerClasses" => AttributeInfo::InnerClasses(info.to_vec()),
+                    "Synthetic" => AttributeInfo::Synthetic(info.to_vec()),
+                    "MethodParameters" => AttributeInfo::MethodParameters(info.to_vec()),
+                    "NestMembers" => AttributeInfo::NestMembers(info.to_vec()),
+                    "NestHost" => AttributeInfo::NestHost(info.to_vec()),
                     _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
                 })
             },
