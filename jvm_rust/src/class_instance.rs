@@ -34,6 +34,12 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.class.clone()
     }
 
+    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool> {
+        let other = other.as_any().downcast_ref::<ClassInstanceImpl>().unwrap();
+
+        Ok(Rc::ptr_eq(&self.inner, &other.inner))
+    }
+
     fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 

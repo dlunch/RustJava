@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 use core::cell::RefCell;
 
-use jvm::{ArrayClass, ArrayClassInstance, Class, JavaType, JavaValue, JvmResult};
+use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
@@ -38,6 +38,12 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     fn destroy(self: Box<Self>) {}
+
+    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool> {
+        let other = other.as_any().downcast_ref::<ArrayClassInstanceImpl>().unwrap();
+
+        Ok(Rc::ptr_eq(&self.inner, &other.inner))
+    }
 
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
         anyhow::ensure!(offset + values.len() <= self.inner.length, "Array index out of bounds");

@@ -5,6 +5,7 @@ use crate::{class::Class, class_instance::ClassInstance, field::Field, value::Ja
 pub trait ArrayClassInstance: ClassInstance {
     fn class(&self) -> Box<dyn Class>;
     fn destroy(self: Box<Self>);
+    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool>;
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()>;
     fn load(&self, offset: usize, count: usize) -> JvmResult<Vec<JavaValue>>;
     fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> JvmResult<()>;
@@ -19,6 +20,10 @@ impl<T: ArrayClassInstance> ClassInstance for T {
 
     fn class(&self) -> Box<dyn Class> {
         ArrayClassInstance::class(self)
+    }
+
+    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool> {
+        ArrayClassInstance::equals(self, other)
     }
 
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {

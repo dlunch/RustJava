@@ -115,7 +115,13 @@ impl Interpreter {
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Goto(x) => {
-                    iter = code_attribute.code.range(*x as u32..);
+                    iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                }
+                Opcode::Iadd => {
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 + value2));
                 }
                 Opcode::Iconst(x) => {
                     stack_frame.operand_stack.push(JavaValue::Int(*x as i32));
@@ -142,13 +148,113 @@ impl Interpreter {
                     let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
-                Opcode::IfIcmpne(x) => {
+                Opcode::Idiv => {
                     let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                    if value1 != value2 {
-                        iter = code_attribute.code.range(offset + *x as u32..);
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
+                }
+                Opcode::IfAcmpeq(x) => {
+                    let value2: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value1.equals(&*value2)? {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
                     }
+                }
+                Opcode::IfAcmpne(x) => {
+                    let value2: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if !value1.equals(&*value2)? {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmpeq(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x == y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmpge(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x >= y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmpgt(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x > y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmple(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x <= y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmplt(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x < y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::IfIcmpne(x) => {
+                    if Self::integer_condition(&mut stack_frame, |x, y| x != y) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifeq(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x == 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifge(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x >= 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifgt(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x > 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifle(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x <= 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Iflt(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x < 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifne(x) => {
+                    if Self::integer_condition_single(&mut stack_frame, |x| x != 0) {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifnonnull(x) => {
+                    let value: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value.is_some() {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Ifnull(x) => {
+                    let value: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value.is_none() {
+                        iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..);
+                    }
+                }
+                Opcode::Iinc(x, y) => {
+                    let value = stack_frame.local_variables[*x as usize].clone();
+                    let value: i32 = value.into();
+
+                    stack_frame.local_variables[*x as usize] = JavaValue::Int(value + *y as i32);
+                }
+                Opcode::Imul => {
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 * value2));
                 }
                 Opcode::Irem => {
                     let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -208,6 +314,25 @@ impl Interpreter {
         }
 
         panic!("Should not reach here")
+    }
+
+    fn integer_condition<T>(stack_frame: &mut StackFrame, pred: T) -> bool
+    where
+        T: Fn(i32, i32) -> bool,
+    {
+        let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+        let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+        pred(value1, value2)
+    }
+
+    fn integer_condition_single<T>(stack_frame: &mut StackFrame, pred: T) -> bool
+    where
+        T: Fn(i32) -> bool,
+    {
+        let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+        pred(value)
     }
 
     fn extract_invoke_params(stack_frame: &mut StackFrame, descriptor: &str) -> Vec<JavaValue> {

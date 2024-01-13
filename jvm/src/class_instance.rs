@@ -12,6 +12,7 @@ use crate::{as_any::AsAny, value::JavaValue, ArrayClassInstance, Class, Field, J
 pub trait ClassInstance: AsAny + Debug + DynClone + 'static {
     fn destroy(self: Box<Self>);
     fn class(&self) -> Box<dyn Class>;
+    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool>;
     fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue>;
     fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()>;
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
