@@ -9,4 +9,4 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 dyn-clone = { workspace = true }
 
-jvm = { path = "../jvm" }
+jvm = { workspace = true }

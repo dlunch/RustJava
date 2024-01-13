@@ -15,3 +15,10 @@ nom = { version = "^7.1", default-features = false, features = ["alloc"] }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
 futures-test = { version = "^0.3" }
+
+classfile = { path = "classfile" }
+java_class_proto = { path = "java_class_proto" }
+java_constants = { path = "java_constants" }
+java_runtime = { path = "java_runtime" }
+jvm = { path = "jvm" }
+jvm_rust = { path = "jvm_rust" }

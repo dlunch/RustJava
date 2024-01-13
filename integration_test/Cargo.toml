@@ -8,9 +8,9 @@ license.workspace = true
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 
-jvm = { path = "../jvm" }
-jvm_rust = { path = "../jvm_rust" }
-java_runtime = { path = "../java_runtime" }
+jvm = { workspace = true }
+jvm_rust = { workspace = true }
+java_runtime = { workspace = true }
 
 [dev-dependencies]
 futures-test = { workspace = true }

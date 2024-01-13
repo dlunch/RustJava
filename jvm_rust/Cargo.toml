@@ -10,7 +10,7 @@ async-trait = { workspace = true }
 dyn-clone = { workspace = true }
 tracing = { workspace = true }
 
-classfile = { path = "../classfile" }
-java_class_proto = { path = "../java_class_proto" }
-java_constants = { path = "../java_constants" }
-jvm = { path = "../jvm" }
+classfile = { workspace = true }
+java_class_proto = { workspace = true }
+java_constants = { workspace = true }
+jvm = { workspace = true }
