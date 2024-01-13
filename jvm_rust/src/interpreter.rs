@@ -33,6 +33,9 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::AconstNull => {
+                    stack_frame.operand_stack.push(JavaValue::Object(None));
+                }
                 Opcode::Aload(x) | Opcode::Iload(x) => {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
@@ -102,7 +105,11 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
                 }
+                Opcode::Lconst(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Long(*x as i64));
+                }
                 Opcode::Ldc(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::New(x) => {
                     let class = jvm.instantiate_class(x.as_class()).await?;
 

@@ -17,6 +17,7 @@ impl PrintStream {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, Default::default()),
                 JavaMethodProto::new("println", "(I)V", Self::println_int, Default::default()),
+                JavaMethodProto::new("println", "(J)V", Self::println_long, Default::default()),
             ],
             fields: vec![],
         }
@@ -46,6 +47,14 @@ impl PrintStream {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &int);
 
         context.println(&int.to_string());
+
+        Ok(())
+    }
+
+    async fn println_long(_: &mut Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, long: i64) -> JavaResult<()> {
+        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &long);
+
+        context.println(&long.to_string());
 
         Ok(())
     }
