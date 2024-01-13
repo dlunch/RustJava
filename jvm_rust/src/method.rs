@@ -9,8 +9,9 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use classfile::{AttributeInfo, AttributeInfoCode, MethodAccessFlags, MethodInfo};
+use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
 use java_class_proto::{JavaMethodFlag, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
 use crate::interpreter::Interpreter;

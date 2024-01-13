@@ -3,8 +3,9 @@ use alloc::{
     string::{String, ToString},
 };
 
-use classfile::{FieldAccessFlags, FieldInfo};
+use classfile::FieldInfo;
 use java_class_proto::{JavaFieldAccessFlag, JavaFieldProto};
+use java_constants::FieldAccessFlags;
 use jvm::{Field, JavaType};
 
 #[derive(Debug)]

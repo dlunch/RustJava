@@ -9,8 +9,9 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use classfile::{ClassInfo, FieldAccessFlags};
+use classfile::ClassInfo;
 use java_class_proto::{JavaClassProto, JavaFieldAccessFlag};
+use java_constants::FieldAccessFlags;
 use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};

@@ -1,4 +1,6 @@
-use classfile::{AttributeInfo, ClassAccessFlags, ClassInfo, Opcode, ValueConstant};
+use java_constants::ClassAccessFlags;
+
+use classfile::{AttributeInfo, ClassInfo, Opcode, ValueConstant};
 
 #[test]
 fn test_hello() -> anyhow::Result<()> {

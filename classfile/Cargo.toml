@@ -8,5 +8,6 @@ license.workspace = true
 anyhow = { workspace = true }
 nom = { workspace = true }
 
-bitflags = { version = "^2.4", default-features = false }
+java_constants = { path = "../java_constants" }
+
 nom-derive = { version = "^0.10", default-features = false }

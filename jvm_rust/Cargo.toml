@@ -12,4 +12,5 @@ tracing = { workspace = true }
 
 classfile = { path = "../classfile" }
 java_class_proto = { path = "../java_class_proto" }
+java_constants = { path = "../java_constants" }
 jvm = { path = "../jvm" }
