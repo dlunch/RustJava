@@ -2,7 +2,6 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-
 use jvm::{ClassInstance, JavaType, JavaValue, Jvm, JvmResult};
 
 use crate::{stack_frame::StackFrame, thread::ThreadContextImpl};
