@@ -21,6 +21,7 @@ pub fn get_class_proto(name: &str) -> Option<RuntimeClassProto> {
         "java/io/OutputStream" => self::classes::java::io::OutputStream::as_proto(),
         "java/io/PrintStream" => self::classes::java::io::PrintStream::as_proto(),
         "java/lang/Class" => self::classes::java::lang::Class::as_proto(),
+        "java/lang/ClassLoader" => self::classes::java::lang::ClassLoader::as_proto(),
         "java/lang/Exception" => self::classes::java::lang::Exception::as_proto(),
         "java/lang/IllegalArgumentException" => self::classes::java::lang::IllegalArgumentException::as_proto(),
         "java/lang/IndexOutOfBoundsException" => self::classes::java::lang::IndexOutOfBoundsException::as_proto(),

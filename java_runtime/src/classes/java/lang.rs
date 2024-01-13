@@ -1,4 +1,5 @@
 mod class;
+mod class_loader;
 mod exception;
 mod illegal_argument_exception;
 mod index_out_of_bounds_exception;
@@ -18,7 +19,7 @@ mod thread;
 mod throwable;
 
 pub use self::{
-    class::Class, exception::Exception, illegal_argument_exception::IllegalArgumentException,
+    class::Class, class_loader::ClassLoader, exception::Exception, illegal_argument_exception::IllegalArgumentException,
     index_out_of_bounds_exception::IndexOutOfBoundsException, integer::Integer, interrupted_exception::InterruptedException, math::Math,
     null_pointer_exception::NullPointerException, object::Object, runnable::Runnable, runtime::Runtime, runtime_exception::RuntimeException,
     security_exception::SecurityException, string::String, string_buffer::StringBuffer, system::System, thread::Thread, throwable::Throwable,
