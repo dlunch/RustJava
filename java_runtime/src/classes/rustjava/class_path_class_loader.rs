@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 
 use bytemuck::cast_slice;
 
@@ -25,9 +25,9 @@ impl ClassPathClassLoader {
                 JavaMethodProto::new("addJarFile", "([B)V", Self::add_jar_file, Default::default()),
             ],
             fields: vec![
-                JavaFieldProto::new("class_file_name", "Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("class_file", "[B", Default::default()),
-                JavaFieldProto::new("jar_file", "[B", Default::default()),
+                JavaFieldProto::new("class_file_names", "[Ljava/lang/String;", Default::default()),
+                JavaFieldProto::new("class_files", "[[B", Default::default()),
+                JavaFieldProto::new("jar_files", "[[B", Default::default()),
             ],
         }
     }
@@ -51,28 +51,29 @@ impl ClassPathClassLoader {
 
         let name = String::to_rust_string(jvm, &name)?;
 
-        let class_file_name: ClassInstanceRef<String> = jvm.get_field(&this, "class_file_name", "Ljava/lang/String;")?;
-        if !class_file_name.is_null() {
-            let class_file_name = String::to_rust_string(jvm, &class_file_name)?;
+        let class_file_names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "class_file_names", "[Ljava/lang/String;")?;
+        if !class_file_names.is_null() {
+            let class_file_names = jvm.load_array(&class_file_names, 0, jvm.array_length(&class_file_names)?)?;
+            for (i, class_file_name) in class_file_names.iter().enumerate() {
+                let class_file_name = String::to_rust_string(jvm, class_file_name)?;
 
-            if name == class_file_name {
-                let class_file = jvm.get_field(&this, "class_file", "[B")?;
-                let length = jvm.array_length(&class_file)?;
+                if name == class_file_name {
+                    let class_files = jvm.get_field(&this, "class_files", "[[B")?;
+                    let class_file = &jvm.load_array(&class_files, i, 1)?[0];
+                    let length = jvm.array_length(class_file)?;
 
-                let class_file_data = jvm.load_byte_array(&class_file, 0, length)?;
+                    let class_file_data = jvm.load_byte_array(class_file, 0, length)?;
 
-                let rust_class = jvm.define_class(&name, cast_slice(&class_file_data))?;
+                    let rust_class = jvm.define_class(&name, cast_slice(&class_file_data))?;
 
-                let java_class = Class::from_rust_class(jvm, rust_class).await?;
+                    let java_class = Class::from_rust_class(jvm, rust_class).await?;
 
-                return Ok(java_class);
+                    return Ok(java_class);
+                }
             }
         }
 
-        let jar_file: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "jar_file", "[B")?;
-        if !jar_file.is_null() {
-            // TODO
-        }
+        // TODO jar
 
         Ok(None.into())
     }
@@ -87,8 +88,39 @@ impl ClassPathClassLoader {
     ) -> JavaResult<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::addClassFile({:?})", &this);
 
-        jvm.put_field(&mut this, "class_file_name", "Ljava/lang/String;", file_name)?;
-        jvm.put_field(&mut this, "class_file", "[B", data)?; // TODO multiple classes
+        let class_file_names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "class_file_names", "[Ljava/lang/String;")?;
+        let class_file_names = if class_file_names.is_null() {
+            // TODO temp size
+            let class_file_names = jvm.instantiate_array("Ljava/lang/String;", 0).await?;
+            let class_files = jvm.instantiate_array("[B", 0).await?;
+            let jar_files = jvm.instantiate_array("[B", 0).await?;
+
+            jvm.put_field(&mut this, "class_file_names", "[Ljava/lang/String;", class_file_names.clone())?;
+            jvm.put_field(&mut this, "class_files", "[[B", class_files)?;
+            jvm.put_field(&mut this, "jar_files", "[[B", jar_files)?;
+
+            class_file_names.into()
+        } else {
+            class_file_names
+        };
+
+        let length = jvm.array_length(&class_file_names)?;
+        let mut class_file_names: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_file_names, 0, length)?;
+
+        class_file_names.push(file_name);
+
+        let mut new_class_file_names = jvm.instantiate_array("Ljava/lang/String;", length + 1).await?;
+        jvm.store_array(&mut new_class_file_names, 0, class_file_names)?;
+        jvm.put_field(&mut this, "class_file_names", "[Ljava/lang/String;", new_class_file_names)?;
+
+        let class_files = jvm.get_field(&this, "class_files", "[[B")?;
+        let mut class_files: Vec<ClassInstanceRef<Array<i8>>> = jvm.load_array(&class_files, 0, length)?;
+
+        class_files.push(data);
+
+        let mut new_class_files = jvm.instantiate_array("[B", length + 1).await?;
+        jvm.store_array(&mut new_class_files, 0, class_files)?;
+        jvm.put_field(&mut this, "class_files", "[[B", new_class_files)?;
 
         Ok(())
     }

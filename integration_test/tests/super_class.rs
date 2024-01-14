@@ -1,6 +1,6 @@
 use integration_test::run_class;
 
-// #[futures_test::test]
+#[futures_test::test]
 async fn test_superclass() -> anyhow::Result<()> {
     let super_class = include_bytes!("../../test_data/SuperClass.class");
     let inner = include_bytes!("../../test_data/SuperClass$InnerClass.class");
