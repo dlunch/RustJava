@@ -18,6 +18,7 @@ pub use runtime::Runtime;
 pub(crate) type RuntimeContext = dyn Runtime;
 pub(crate) type RuntimeClassProto = JavaClassProto<dyn Runtime>;
 
+// TODO we don't have to load all classes at once
 pub fn get_runtime_classes<T>(class_creator: T) -> Vec<(String, Box<dyn Class>)>
 where
     T: Fn(&str, RuntimeClassProto) -> Box<dyn Class>,
