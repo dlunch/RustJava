@@ -90,7 +90,6 @@ impl ClassPathClassLoader {
 
         let class_file_names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "class_file_names", "[Ljava/lang/String;")?;
         let class_file_names = if class_file_names.is_null() {
-            // TODO temp size
             let class_file_names = jvm.instantiate_array("Ljava/lang/String;", 0).await?;
             let class_files = jvm.instantiate_array("[B", 0).await?;
             let jar_files = jvm.instantiate_array("[B", 0).await?;
