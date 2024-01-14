@@ -10,6 +10,7 @@ async-trait = { workspace = true }
 
 jvm = { workspace = true }
 jvm_rust = { workspace = true }
+java_class_proto = { workspace = true }
 java_runtime = { workspace = true }
 
 [dev-dependencies]

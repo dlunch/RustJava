@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::time::Duration;
 
+use java_class_proto::JavaClassProto;
 use java_runtime::{get_class_proto, Runtime};
 use jvm::{Class, Jvm, JvmCallback, JvmResult};
 use jvm_rust::{ClassImpl, JvmDetailImpl};
@@ -31,6 +32,14 @@ impl Runtime for TestRuntime {
     }
 
     async fn r#yield(&self) {
+        todo!()
+    }
+
+    fn define_class(&self, _name: &str, _data: &[u8]) -> Box<dyn Class> {
+        todo!()
+    }
+
+    fn define_class_proto(&self, _name: &str, _proto: JavaClassProto<dyn Runtime>) -> Box<dyn Class> {
         todo!()
     }
 
