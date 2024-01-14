@@ -4,7 +4,10 @@ extern crate alloc;
 pub mod classes;
 mod runtime;
 
+use alloc::{boxed::Box, vec::Vec};
 use java_class_proto::JavaClassProto;
+
+use jvm::Class;
 
 pub use runtime::Runtime;
 
@@ -51,4 +54,19 @@ pub fn get_class_proto(name: &str) -> Option<RuntimeClassProto> {
         "rustjava/ClassPathClassLoader" => self::classes::rustjava::ClassPathClassLoader::as_proto(),
         _ => return None,
     })
+}
+
+pub fn get_bootstrap_classes(runtime: &dyn Runtime) -> Vec<Box<dyn Class>> {
+    let bootstrap_classes = [
+        "java/lang/Object",
+        "java/lang/Class",
+        "java/lang/ClassLoader",
+        "rustjava/RuntimeClassLoader",
+        "rustjava/ClassPathClassLoader",
+    ];
+
+    bootstrap_classes
+        .iter()
+        .map(|x| runtime.define_class_proto(x, get_class_proto(x).unwrap()))
+        .collect()
 }
