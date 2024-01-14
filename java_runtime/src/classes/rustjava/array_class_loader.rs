@@ -5,13 +5,13 @@ use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
-    get_class_proto, RuntimeClassProto, RuntimeContext,
+    RuntimeClassProto, RuntimeContext,
 };
 
-// class rustjava.RuntimeClassLoader
-pub struct RuntimeClassLoader {}
+// class rustjava.ArrayClassLoader
+pub struct ArrayClassLoader {}
 
-impl RuntimeClassLoader {
+impl ArrayClassLoader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
             parent_class: Some("java/lang/ClassLoader"),
@@ -25,7 +25,7 @@ impl RuntimeClassLoader {
     }
 
     async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
-        tracing::debug!("rustjava.RuntimeClassLoader::<init>({:?}, {:?})", &this, &parent);
+        tracing::debug!("rustjava.ArrayClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
@@ -35,25 +35,21 @@ impl RuntimeClassLoader {
 
     async fn find_class(
         jvm: &mut Jvm,
-        runtime: &mut RuntimeContext,
+        _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> JavaResult<ClassInstanceRef<Class>> {
-        tracing::debug!("rustjava.RuntimeClassLoader::findClass({:?}, {:?})", &this, name);
+        tracing::debug!("rustjava.ArrayClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let rust_name = String::to_rust_string(jvm, &name)?;
-        let proto = get_class_proto(&rust_name);
-        if proto.is_none() {
-            return Ok(None.into());
+        let name = String::to_rust_string(jvm, &name)?;
+
+        if let Some(element_type_name) = name.strip_prefix('[') {
+            let class = jvm.define_array_class(element_type_name)?;
+            let java_class = Class::from_rust_class(jvm, class).await?;
+
+            return Ok(java_class);
         }
 
-        let proto = proto.unwrap();
-        let _rust_class = runtime.define_class_proto(&rust_name, proto);
-
-        // TODO proper java/lang/class creation
-
-        let java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
-
-        Ok(java_class.into())
+        Ok(None.into())
     }
 }

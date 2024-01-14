@@ -1,52 +1,29 @@
-use alloc::{
-    boxed::Box,
-    collections::BTreeMap,
-    string::{String, ToString},
-};
+use alloc::{boxed::Box, collections::BTreeMap};
 
-use dyn_clone::clone_box;
+use jvm::{Class, JvmDetail, JvmResult, ThreadContext, ThreadId};
 
-use jvm::{ArrayClass, Class, JvmDetail, JvmResult, ThreadContext, ThreadId};
+use crate::{array_class::ArrayClassImpl, thread::ThreadContextImpl, ClassImpl};
 
-use crate::{array_class::ArrayClassImpl, thread::ThreadContextImpl};
-
-type ClassLoader = dyn Fn(&str) -> JvmResult<Option<Box<dyn Class>>>;
-
+#[derive(Default)]
 pub struct JvmDetailImpl {
-    class_loader: Box<ClassLoader>,
-    classes: BTreeMap<String, Box<dyn Class>>,
     thread_contexts: BTreeMap<ThreadId, Box<dyn ThreadContext>>,
 }
 
 impl JvmDetailImpl {
-    pub fn new<T>(class_loader: T) -> Self
-    where
-        T: Fn(&str) -> JvmResult<Option<Box<dyn Class>>> + 'static,
-    {
+    pub fn new() -> Self {
         Self {
-            class_loader: Box::new(class_loader),
-            classes: BTreeMap::new(),
             thread_contexts: BTreeMap::new(),
         }
     }
 }
 
-#[async_trait::async_trait(?Send)]
 impl JvmDetail for JvmDetailImpl {
-    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        let class = (self.class_loader)(class_name)?;
-
-        if let Some(x) = class {
-            self.classes.insert(class_name.to_string(), clone_box(&*x));
-
-            Ok(Some(x))
-        } else {
-            Ok(None)
-        }
+    fn define_class(&self, _name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
+        ClassImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
     }
 
-    async fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>> {
-        Ok(Some(Box::new(ArrayClassImpl::new(element_type_name))))
+    fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
+        Ok(Box::new(ArrayClassImpl::new(element_type_name)))
     }
 
     fn thread_context(&mut self, thread_id: ThreadId) -> &mut dyn ThreadContext {

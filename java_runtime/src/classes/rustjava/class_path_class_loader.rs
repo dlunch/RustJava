@@ -43,7 +43,7 @@ impl ClassPathClassLoader {
 
     async fn find_class(
         jvm: &mut Jvm,
-        runtime: &mut RuntimeContext,
+        _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> JavaResult<ClassInstanceRef<Class>> {
@@ -61,11 +61,11 @@ impl ClassPathClassLoader {
 
                 let class_file_data = jvm.load_byte_array(&class_file, 0, length)?;
 
-                let _class = runtime.define_class(&name, cast_slice(&class_file_data));
-                // TODO proper java/lang/class
+                let rust_class = jvm.define_class(&name, cast_slice(&class_file_data))?;
 
-                let java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
-                return Ok(java_class.into());
+                let java_class = Class::from_rust_class(jvm, rust_class).await?;
+
+                return Ok(java_class);
             }
         }
 

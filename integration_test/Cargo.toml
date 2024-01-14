@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+bytemuck = { workspace = true }
 
 jvm = { workspace = true }
 jvm_rust = { workspace = true }

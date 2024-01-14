@@ -1,11 +1,10 @@
 use alloc::boxed::Box;
 
-use crate::{ArrayClass, Class, JvmResult, ThreadContext, ThreadId};
+use crate::{Class, JvmResult, ThreadContext, ThreadId};
 
-#[async_trait::async_trait(?Send)]
 pub trait JvmDetail {
-    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>>;
-    async fn load_array_class(&mut self, element_type_name: &str) -> JvmResult<Option<Box<dyn ArrayClass>>>;
+    fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>>;
+    fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>>;
 
     fn thread_context(&mut self, thread_id: ThreadId) -> &mut dyn ThreadContext;
 }

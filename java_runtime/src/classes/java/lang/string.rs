@@ -289,7 +289,7 @@ mod test {
 
     #[futures_test::test]
     async fn test_string() -> anyhow::Result<()> {
-        let mut jvm = test_jvm();
+        let mut jvm = test_jvm().await?;
 
         let string = String::from_rust_string(&mut jvm, "test").await?;
 
@@ -302,7 +302,7 @@ mod test {
 
     #[futures_test::test]
     async fn test_string_concat() -> anyhow::Result<()> {
-        let mut jvm = test_jvm();
+        let mut jvm = test_jvm().await?;
 
         let string1 = String::from_rust_string(&mut jvm, "test1").await?;
         let string2 = String::from_rust_string(&mut jvm, "test2").await?;

@@ -8,9 +8,10 @@ use alloc::{
     string::String,
     vec::{self, Vec},
 };
-use core::{array, fmt::Debug, iter};
+use core::{array, fmt::Debug, iter, mem::forget};
 
 use anyhow::Context;
+use bytemuck::cast_slice;
 use dyn_clone::clone_box;
 
 use java_constants::MethodAccessFlags;
@@ -25,23 +26,42 @@ use crate::{
     r#type::JavaType,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
-    JvmResult,
+    JavaChar, JvmResult,
 };
 
 pub struct Jvm {
-    detail: Box<dyn JvmDetail>,
     classes: BTreeMap<String, Box<dyn Class>>,
+    system_class_loader: Option<Box<dyn ClassInstance>>,
+    detail: Box<dyn JvmDetail>,
 }
 
 impl Jvm {
-    pub fn new<T>(detail: T) -> Self
+    pub async fn new<T>(runtime_classes: &[(String, Box<dyn Class>)], detail: T) -> JvmResult<Self>
     where
         T: JvmDetail + 'static,
     {
-        Self {
+        let array_classes = ["Z", "B", "C", "S", "I", "J", "F", "D"]
+            .into_iter()
+            .map(|element_type_name| (format!("[{}", element_type_name), detail.define_array_class(element_type_name).unwrap()));
+
+        let classes = runtime_classes.iter().cloned().chain(array_classes).collect();
+
+        let mut jvm = Self {
+            classes,
+            system_class_loader: None,
             detail: Box::new(detail),
-            classes: BTreeMap::new(),
+        };
+
+        let classes = jvm.classes.values().cloned().collect::<Vec<_>>();
+        for class in classes {
+            jvm.init_class(&*class).await?;
         }
+
+        jvm.system_class_loader = jvm
+            .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
+            .await?;
+
+        Ok(jvm)
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -71,7 +91,9 @@ impl Jvm {
     pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let array_class = self.detail.load_array_class(element_type_name).await?.unwrap();
+        let array_class_name = format!("[{}", element_type_name);
+        let class = self.resolve_class(&array_class_name).await?.unwrap();
+        let array_class = class.as_array_class().unwrap();
 
         let instance = array_class.instantiate_array(length);
 
@@ -305,7 +327,7 @@ impl Jvm {
             return Ok(Some(x));
         }
 
-        if let Some(x) = self.detail.load_class(class_name).await? {
+        if let Some(x) = self.load_class(class_name).await? {
             tracing::debug!("Loaded class {}", class_name);
 
             if let Some(super_class) = x.super_class_name() {
@@ -314,13 +336,7 @@ impl Jvm {
 
             self.classes.insert(class_name.to_owned(), x.clone());
 
-            let clinit = x.method("<clinit>", "()V");
-
-            if let Some(x) = clinit {
-                tracing::debug!("Calling <clinit> for {}", class_name);
-
-                x.run(self, Box::new([])).await?;
-            }
+            self.init_class(&*x).await?;
 
             let class = self.get_class(class_name);
 
@@ -328,6 +344,67 @@ impl Jvm {
         }
 
         Ok(None)
+    }
+
+    async fn init_class(&mut self, class: &dyn Class) -> JvmResult<()> {
+        let clinit = class.method("<clinit>", "()V");
+
+        if let Some(x) = clinit {
+            tracing::debug!("Calling <clinit> for {}", class.name());
+
+            x.run(self, Box::new([])).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+        let mut class_name_array = self.instantiate_array("C", class_name.len()).await?;
+        self.store_array(&mut class_name_array, 0, class_name.chars().map(|x| x as JavaChar))?;
+
+        let class_name_string = self.new_class("java/lang/String", "([C)V", (class_name_array,)).await?;
+
+        let class_loader = self.system_class_loader.clone().unwrap();
+        let java_class = self
+            .invoke_virtual(
+                &class_loader,
+                "java/lang/ClassLoader",
+                "loadClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;",
+                (class_name_string,),
+            )
+            .await?;
+
+        let rust_class = self.to_rust_class(java_class)?;
+
+        Ok(Some(rust_class))
+    }
+
+    pub fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
+        self.detail.define_class(name, data)
+    }
+
+    pub fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
+        self.detail.define_array_class(element_type_name)
+    }
+
+    pub fn get_system_class_loader(&self) -> &Box<dyn ClassInstance> {
+        self.system_class_loader.as_ref().unwrap()
+    }
+
+    // TODO we have same logic on java/lang/Class
+    fn to_rust_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<Box<dyn Class>> {
+        let raw_storage = self.get_field(&java_class, "raw", "[B")?;
+        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
+
+        let rust_class_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+
+        let rust_class = unsafe { Box::from_raw(rust_class_raw as *mut Box<dyn Class>) };
+        let result = (*rust_class).clone();
+
+        forget(rust_class); // do not drop box as we still have it in java memory
+
+        Ok(result)
     }
 
     fn find_field(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {

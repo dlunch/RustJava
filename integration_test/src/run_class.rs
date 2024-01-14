@@ -32,7 +32,7 @@ pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &
 
     let classes = classes.iter().map(|(name, class)| (name.to_string(), class.to_vec()));
 
-    let mut jvm = test_jvm(classes.collect(), println_handler);
+    let mut jvm = test_jvm(classes.collect(), println_handler).await?;
 
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {

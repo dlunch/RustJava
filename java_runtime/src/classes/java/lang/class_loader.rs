@@ -57,12 +57,10 @@ impl ClassLoader {
             .await?;
 
         if system_class_loader.is_null() {
-            let runtime_class_loader = jvm
-                .new_class("rustjava/RuntimeClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
-                .await?;
+            let array_class_loader = jvm.new_class("rustjava/ArrayClassLoader", "(Ljava/lang/ClassLoader;)V", (None,)).await?;
 
             let classpath_class_loader = jvm
-                .new_class("rustjava/ClassPathClassLoader", "(Ljava/lang/ClassLoader;)V", (runtime_class_loader,))
+                .new_class("rustjava/ClassPathClassLoader", "(Ljava/lang/ClassLoader;)V", (array_class_loader,))
                 .await?;
 
             jvm.put_static_field(

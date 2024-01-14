@@ -102,7 +102,7 @@ mod test {
 
     #[futures_test::test]
     async fn test_class() -> anyhow::Result<()> {
-        let mut jvm = test_jvm();
+        let mut jvm = test_jvm().await?;
 
         let class = jvm.resolve_class("java/lang/String").await?.unwrap();
 

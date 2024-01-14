@@ -1,23 +1,11 @@
 use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, string::String, vec::Vec};
 use core::time::Duration;
 
-use java_class_proto::JavaClassProto;
-use java_runtime::{get_class_proto, Runtime};
-use jvm::{Class, Jvm, JvmCallback, JvmResult};
-use jvm_rust::{ClassImpl, JvmDetailImpl};
+use bytemuck::cast_vec;
 
-fn get_class_loader(class_files: BTreeMap<String, Vec<u8>>, runtime: Box<dyn Runtime>) -> impl Fn(&str) -> JvmResult<Option<Box<dyn Class>>> {
-    move |class_name| {
-        let runtime_proto = get_class_proto(class_name);
-        if let Some(x) = runtime_proto {
-            Ok(Some(Box::new(ClassImpl::from_class_proto(class_name, x, runtime.clone()))))
-        } else if class_files.contains_key(class_name) {
-            Ok(Some(Box::new(ClassImpl::from_classfile(class_files.get(class_name).unwrap())?)))
-        } else {
-            Ok(None)
-        }
-    }
-}
+use java_runtime::{classes::java::lang::String as JavaString, get_runtime_classes, Runtime};
+use jvm::{Jvm, JvmCallback, JvmResult};
+use jvm_rust::{ClassImpl, JvmDetailImpl};
 
 #[derive(Clone)]
 #[allow(clippy::type_complexity)]
@@ -32,14 +20,6 @@ impl Runtime for TestRuntime {
     }
 
     async fn r#yield(&self) {
-        todo!()
-    }
-
-    fn define_class(&self, _name: &str, _data: &[u8]) -> Box<dyn Class> {
-        todo!()
-    }
-
-    fn define_class_proto(&self, _name: &str, _proto: JavaClassProto<dyn Runtime>) -> Box<dyn Class> {
         todo!()
     }
 
@@ -68,13 +48,35 @@ impl Runtime for TestRuntime {
     }
 }
 
-pub fn test_jvm<T>(classes: BTreeMap<String, Vec<u8>>, println_handler: T) -> Jvm
+pub async fn test_jvm<T>(classes: BTreeMap<String, Vec<u8>>, println_handler: T) -> JvmResult<Jvm>
 where
     T: Fn(&str) + 'static,
 {
-    let platform = TestRuntime {
+    let runtime = Box::new(TestRuntime {
         println_handler: Rc::new(Box::new(println_handler)),
-    };
+    });
 
-    Jvm::new(JvmDetailImpl::new(get_class_loader(classes, Box::new(platform))))
+    let runtime_classes = get_runtime_classes(|name, proto| Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone() as Box<_>)));
+
+    let mut jvm = Jvm::new(&runtime_classes, JvmDetailImpl::new()).await?;
+
+    let class_loader = jvm.get_system_class_loader().clone();
+
+    for (name, data) in classes {
+        let class_name = JavaString::from_rust_string(&mut jvm, &name).await?;
+
+        let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
+        jvm.store_byte_array(&mut data_storage, 0, cast_vec(data))?;
+
+        jvm.invoke_virtual(
+            &class_loader,
+            "rustjava/ClassPathClassLoader",
+            "addClassFile",
+            "(Ljava/lang/String;[B)V",
+            (class_name, data_storage),
+        )
+        .await?;
+    }
+
+    Ok(jvm)
 }

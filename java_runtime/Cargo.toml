@@ -7,10 +7,9 @@ license.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 tracing = { workspace = true }
-
-bytemuck = { version = "^1.14", default-features = false, features = ["extern_crate_alloc"] }
 
 java_class_proto = { workspace = true }
 java_constants = { workspace = true }

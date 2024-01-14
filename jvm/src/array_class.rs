@@ -42,4 +42,8 @@ impl<T: ArrayClass> Class for T {
     fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> JvmResult<()> {
         panic!("Array classes do not have static fields")
     }
+
+    fn as_array_class(&self) -> Option<&dyn ArrayClass> {
+        Some(self)
+    }
 }
