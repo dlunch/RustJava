@@ -1,6 +1,7 @@
 #![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
 
 use alloc::{
+    borrow::ToOwned,
     boxed::Box,
     collections::BTreeMap,
     format,
@@ -311,8 +312,9 @@ impl Jvm {
                 self.resolve_class(&super_class).await?;
             }
 
+            self.classes.insert(class_name.to_owned(), x.clone());
+
             let clinit = x.method("<clinit>", "()V");
-            drop(class);
 
             if let Some(x) = clinit {
                 tracing::debug!("Calling <clinit> for {}", class_name);
