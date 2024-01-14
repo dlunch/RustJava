@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
@@ -26,17 +27,56 @@ impl ClassLoader {
                     Self::find_loaded_class,
                     Default::default(),
                 ),
+                JavaMethodProto::new(
+                    "getSystemClassLoader",
+                    "()Ljava/lang/ClassLoader;",
+                    Self::get_system_class_loader,
+                    MethodAccessFlags::STATIC,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", Default::default())],
+            fields: vec![
+                JavaFieldProto::new("systemClassLoader", "Ljava/lang/ClassLoader;", FieldAccessFlags::STATIC),
+                JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", Default::default()),
+            ],
         }
     }
 
     async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> JavaResult<()> {
-        tracing::warn!("stub java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
+        tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
 
         jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent)?;
 
         Ok(())
+    }
+
+    async fn get_system_class_loader(jvm: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.ClassLoader::getSystemClassLoader()");
+
+        let system_class_loader: ClassInstanceRef<Self> = jvm
+            .get_static_field("java/lang/ClassLoader", "systemClassLoader", "Ljava/lang/ClassLoader;")
+            .await?;
+
+        if system_class_loader.is_null() {
+            let runtime_class_loader = jvm
+                .new_class("rustjava/RuntimeClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
+                .await?;
+
+            let classpath_class_loader = jvm
+                .new_class("rustjava/ClassPathClassLoader", "(Ljava/lang/ClassLoader;)V", (runtime_class_loader,))
+                .await?;
+
+            jvm.put_static_field(
+                "java/lang/ClassLoader",
+                "systemClassLoader",
+                "Ljava/lang/ClassLoader;",
+                classpath_class_loader.clone(),
+            )
+            .await?;
+
+            return Ok(classpath_class_loader.into());
+        }
+
+        Ok(system_class_loader)
     }
 
     async fn load_class(
