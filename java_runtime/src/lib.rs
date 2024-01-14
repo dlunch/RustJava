@@ -47,6 +47,8 @@ pub fn get_class_proto(name: &str) -> Option<RuntimeClassProto> {
         "java/util/Timer" => self::classes::java::util::Timer::as_proto(),
         "java/util/TimerTask" => self::classes::java::util::TimerTask::as_proto(),
         "java/util/Vector" => self::classes::java::util::Vector::as_proto(),
+        "rustjava/RuntimeClassLoader" => self::classes::rustjava::RuntimeClassLoader::as_proto(),
+        "rustjava/ClassPathClassLoader" => self::classes::rustjava::ClassPathClassLoader::as_proto(),
         _ => return None,
     })
 }
