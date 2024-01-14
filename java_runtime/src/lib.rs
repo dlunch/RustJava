@@ -70,3 +70,19 @@ pub fn get_bootstrap_classes(runtime: &dyn Runtime) -> Vec<Box<dyn Class>> {
         .map(|x| runtime.define_class_proto(x, get_class_proto(x).unwrap()))
         .collect()
 }
+
+#[cfg(test)]
+pub mod test {
+    use alloc::boxed::Box;
+
+    use jvm::Jvm;
+    use jvm_rust::{ClassImpl, JvmDetailImpl};
+
+    use crate::{get_class_proto, runtime::test::DummyRuntime};
+
+    pub fn test_jvm() -> Jvm {
+        Jvm::new(JvmDetailImpl::new(move |class_name| {
+            Ok(get_class_proto(class_name).map(|x| Box::new(ClassImpl::from_class_proto(class_name, x, Box::new(DummyRuntime) as Box<_>)) as Box<_>))
+        }))
+    }
+}

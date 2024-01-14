@@ -1,9 +1,10 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
+use core::mem::{forget, size_of_val};
 
-use bytemuck::cast_vec;
+use bytemuck::{cast_slice, cast_vec};
 
-use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use jvm::{Class as JvmClass, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{io::InputStream, lang::String},
@@ -27,12 +28,14 @@ impl Class {
                     Default::default(),
                 ),
             ],
-            fields: vec![],
+            fields: vec![
+                JavaFieldProto::new("raw", "[B", Default::default()), // raw rust pointer of Box<dyn Class>
+            ],
         }
     }
 
     async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
-        tracing::warn!("stub java.lang.Class::<init>({:?})", &this);
+        tracing::debug!("java.lang.Class::<init>({:?})", &this);
 
         Ok(())
     }
@@ -61,5 +64,57 @@ impl Class {
         } else {
             Ok(None.into())
         }
+    }
+
+    pub async fn from_rust_class(jvm: &mut Jvm, rust_class: Box<dyn JvmClass>) -> JavaResult<ClassInstanceRef<Self>> {
+        let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
+
+        let rust_class_raw = Box::into_raw(Box::new(rust_class)) as *const u8 as usize;
+
+        let mut raw_storage = jvm.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
+        jvm.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())?;
+
+        jvm.put_field(&mut java_class, "raw", "[B", raw_storage)?;
+
+        Ok(java_class.into())
+    }
+
+    pub fn to_rust_class(jvm: &Jvm, java_class: ClassInstanceRef<Self>) -> JavaResult<Box<dyn JvmClass>> {
+        let raw_storage = jvm.get_field(&java_class, "raw", "[B")?;
+        let raw = jvm.load_byte_array(&raw_storage, 0, jvm.array_length(&raw_storage)?)?;
+
+        let rust_class_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+
+        let rust_class = unsafe { Box::from_raw(rust_class_raw as *mut Box<dyn JvmClass>) };
+        let result = (*rust_class).clone();
+
+        forget(rust_class); // do not drop box as we still have it in java memory
+
+        Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::test::test_jvm;
+
+    use super::Class;
+
+    #[futures_test::test]
+    async fn test_class() -> anyhow::Result<()> {
+        let mut jvm = test_jvm();
+
+        let class = jvm.resolve_class("java/lang/String").await?.unwrap();
+
+        let java_class = Class::from_rust_class(&mut jvm, class).await?;
+
+        let rust_class = Class::to_rust_class(&jvm, java_class.clone().into())?;
+        assert_eq!(rust_class.name(), "java/lang/String");
+
+        // try call to_rust_class twice to test if box is not dropped
+        let rust_class = Class::to_rust_class(&jvm, java_class)?;
+        assert_eq!(rust_class.name(), "java/lang/String");
+
+        Ok(())
     }
 }

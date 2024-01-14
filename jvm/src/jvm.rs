@@ -299,7 +299,7 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion(?Send)]
-    async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    pub async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name);
         if let Some(x) = class {
             return Ok(Some(x));

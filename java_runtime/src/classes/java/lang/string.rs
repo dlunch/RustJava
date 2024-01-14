@@ -283,20 +283,9 @@ impl String {
 
 #[cfg(test)]
 mod test {
-    use alloc::boxed::Box;
-
-    use jvm::Jvm;
-    use jvm_rust::{ClassImpl, JvmDetailImpl};
-
-    use crate::{get_class_proto, runtime::test::DummyRuntime};
+    use crate::test::test_jvm;
 
     use super::String;
-
-    pub fn test_jvm() -> Jvm {
-        Jvm::new(JvmDetailImpl::new(move |class_name| {
-            Ok(get_class_proto(class_name).map(|x| Box::new(ClassImpl::from_class_proto(class_name, x, Box::new(DummyRuntime) as Box<_>)) as Box<_>))
-        }))
-    }
 
     #[futures_test::test]
     async fn test_string() -> anyhow::Result<()> {
