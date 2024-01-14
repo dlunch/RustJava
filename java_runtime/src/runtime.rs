@@ -3,13 +3,18 @@ use core::time::Duration;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
-use jvm::JvmCallback;
+use jvm::{Class, JvmCallback};
+
+use crate::RuntimeClassProto;
 
 #[async_trait::async_trait(?Send)]
 pub trait Runtime: DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
     fn spawn(&self, callback: Box<dyn JvmCallback>);
+
+    fn define_class(&self, name: &str, data: &[u8]) -> Box<dyn Class>;
+    fn define_class_proto(&self, name: &str, proto: RuntimeClassProto) -> Box<dyn Class>;
 
     fn now(&self) -> u64; // unix time in millis
 
@@ -28,9 +33,9 @@ pub mod test {
     use alloc::{boxed::Box, string::String, vec::Vec};
     use core::time::Duration;
 
-    use jvm::JvmCallback;
+    use jvm::{Class, JvmCallback};
 
-    use crate::Runtime;
+    use crate::{Runtime, RuntimeClassProto};
 
     #[derive(Clone)]
     pub struct DummyRuntime;
@@ -46,6 +51,14 @@ pub mod test {
         }
 
         fn spawn(&self, _callback: Box<dyn JvmCallback>) {
+            todo!()
+        }
+
+        fn define_class(&self, _name: &str, _data: &[u8]) -> Box<dyn Class> {
+            todo!()
+        }
+
+        fn define_class_proto(&self, _name: &str, _proto: RuntimeClassProto) -> Box<dyn Class> {
             todo!()
         }
 
