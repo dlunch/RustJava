@@ -1,8 +1,10 @@
-use integration_test::run_class;
+mod test_helper;
+
+use test_helper::run_class;
 
 #[futures_test::test]
 async fn test_array() -> anyhow::Result<()> {
-    let array = include_bytes!("../../test_data/Array.class");
+    let array = include_bytes!("../test_data/Array.class");
 
     let result = run_class("Array", &[("Array", array)], &[]).await?;
     assert_eq!(

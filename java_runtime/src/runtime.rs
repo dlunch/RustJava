@@ -17,7 +17,7 @@ pub trait Runtime: DynClone {
     fn decode_str(&self, bytes: &[u8]) -> String;
 
     fn load_resource(&self, name: &str) -> Option<Vec<u8>>; // TODO implement resource in classloader
-    fn println(&self, s: &str); // TODO Properly implement printstream handler
+    fn println(&mut self, s: &str); // TODO Properly implement printstream handler
 }
 
 clone_trait_object!(Runtime);
@@ -65,7 +65,7 @@ pub mod test {
             todo!()
         }
 
-        fn println(&self, _s: &str) {
+        fn println(&mut self, _s: &str) {
             todo!()
         }
     }

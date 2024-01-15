@@ -1,6 +1,5 @@
 [workspace]
-resolver = "2"
-members = ["classfile", "integration_test", "java_runtime", "jvm", "jvm_rust"]
+members = ["classfile", "java_runtime", "jvm", "jvm_rust"]
 
 [workspace.package]
 version = "0.0.1"
@@ -23,3 +22,29 @@ java_constants = { path = "java_constants" }
 java_runtime = { path = "java_runtime" }
 jvm = { path = "jvm" }
 jvm_rust = { path = "jvm_rust" }
+
+[package]
+name = "rust_java"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+
+[[bin]]
+name = "rust_java"
+
+[dependencies]
+anyhow = { workspace = true, features = ["std"] }
+async-trait = { workspace = true }
+bytemuck = { workspace = true }
+
+futures-executor = { version = "^0.3" }
+
+jvm = { workspace = true }
+jvm_rust = { workspace = true }
+java_class_proto = { workspace = true }
+java_runtime = { workspace = true }
+
+[dev-dependencies]
+futures-test = { workspace = true }
