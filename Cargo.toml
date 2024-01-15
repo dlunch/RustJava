@@ -29,8 +29,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[lib]
-
 [[bin]]
 name = "rust_java"
 

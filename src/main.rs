@@ -8,6 +8,7 @@ use futures_executor::block_on;
 
 use rust_java::{create_jvm, load_class_file, run_java_main};
 
+// TODO move logics into lib
 pub fn main() -> anyhow::Result<()> {
     let args = env::args().collect::<Vec<_>>();
     let filename = &args[1];
