@@ -10,8 +10,9 @@ pub struct Interpreter;
 
 impl Interpreter {
     #[allow(clippy::await_holding_refcell_ref)]
-    pub async fn run(jvm: &mut Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
-        let thread_context = jvm.current_thread_context().as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
+    pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+        let mut thread_context = jvm.current_thread_context();
+        let thread_context = thread_context.as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
 
         let stack_frame = thread_context.push_stack_frame();
         let mut stack_frame = stack_frame.borrow_mut();
@@ -370,7 +371,7 @@ impl Interpreter {
         }
     }
 
-    async fn constant_to_value(jvm: &mut Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
+    async fn constant_to_value(jvm: &Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
         Ok(match constant {
             ValueConstant::Integer(x) => JavaValue::Int(*x),
             ValueConstant::Float(x) => JavaValue::Float(*x),
@@ -381,7 +382,7 @@ impl Interpreter {
         })
     }
 
-    async fn create_java_string(jvm: &mut Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
+    async fn create_java_string(jvm: &Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
         let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
 
         let mut array = jvm.instantiate_array("C", chars.len()).await?;

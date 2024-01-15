@@ -71,7 +71,7 @@ where
         where
             C: ?Sized,
         {
-            async fn call(&self, _: &mut Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
+            async fn call(&self, _: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO throw java.lang.AbstractMethodError
                 anyhow::bail!("Call to abstract function {}{}", self.name, self.descriptor)
             }
@@ -90,79 +90,79 @@ where
 }
 
 impl TypeConverter<i8> for i8 {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i8 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i8 {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: i8) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: i8) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<i16> for i16 {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i16 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i16 {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: i16) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: i16) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<i32> for i32 {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i32 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i32 {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: i32) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: i32) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<JavaChar> for JavaChar {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> JavaChar {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> JavaChar {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: JavaChar) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: JavaChar) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<i64> for i64 {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> i64 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i64 {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: i64) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: i64) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<bool> for bool {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> bool {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> bool {
         raw.into()
     }
 
-    fn from_rust(_: &mut Jvm, rust: bool) -> JavaValue {
+    fn from_rust(_: &Jvm, rust: bool) -> JavaValue {
         rust.into()
     }
 }
 
 impl TypeConverter<()> for () {
-    fn to_rust(_: &mut Jvm, _: JavaValue) {}
+    fn to_rust(_: &Jvm, _: JavaValue) {}
 
-    fn from_rust(_: &mut Jvm, _: ()) -> JavaValue {
+    fn from_rust(_: &Jvm, _: ()) -> JavaValue {
         JavaValue::Void
     }
 }
 
 impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T> {
-    fn to_rust(_: &mut Jvm, raw: JavaValue) -> Self {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> Self {
         Self::new(raw.into())
     }
 
-    fn from_rust(_: &mut Jvm, value: Self) -> JavaValue {
+    fn from_rust(_: &Jvm, value: Self) -> JavaValue {
         value.instance.into()
     }
 }

@@ -21,13 +21,13 @@ impl Random {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Random::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn next_int(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
+    async fn next_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
         tracing::warn!("stub java.util.Random::nextInt({:?})", &this);
 
         let random = 12351352; // TODO

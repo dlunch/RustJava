@@ -67,7 +67,7 @@ where
     .collect()
 }
 
-pub async fn initialize<T>(jvm: &mut Jvm, class_creator: T) -> JvmResult<()>
+pub async fn initialize<T>(jvm: &Jvm, class_creator: T) -> JvmResult<()>
 where
     T: Fn(&str, RuntimeClassProto) -> Box<dyn Class>,
 {
@@ -90,8 +90,6 @@ where
     jvm.register_class(rustjava_runtime_class_loader).await?;
     jvm.register_class(rustjava_array_class_loader).await?;
     jvm.register_class(rustjava_class_path_class_loader).await?;
-
-    jvm.init_system_class_loader().await?;
 
     let all_classes = get_runtime_classes(&class_creator);
     crate::classes::rustjava::RuntimeClassLoader::initialize(jvm, all_classes).await?;

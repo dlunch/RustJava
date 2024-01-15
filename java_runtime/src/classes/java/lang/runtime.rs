@@ -25,13 +25,13 @@ impl Runtime {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Runtime::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn get_runtime(jvm: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
+    async fn get_runtime(jvm: &Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Runtime::getRuntime");
 
         let instance = jvm.new_class("java/lang/Runtime", "()V", []).await?;
@@ -39,19 +39,19 @@ impl Runtime {
         Ok(instance.into())
     }
 
-    async fn total_memory(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<i64> {
+    async fn total_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<i64> {
         tracing::warn!("stub java.lang.Runtime::totalMemory({:?})", &this);
 
         Ok(0x100000) // TODO: hardcoded
     }
 
-    async fn free_memory(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<i64> {
+    async fn free_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<i64> {
         tracing::warn!("stub java.lang.Runtime::freeMemory({:?})", &this);
 
         Ok(0x100000) // TODO: hardcoded
     }
 
-    async fn gc(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<()> {
+    async fn gc(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.Runtime::gc({:?})", &this);
 
         Ok(())

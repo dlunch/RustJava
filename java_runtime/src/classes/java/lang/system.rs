@@ -31,7 +31,7 @@ impl System {
         }
     }
 
-    async fn cl_init(jvm: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<()> {
+    async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> JavaResult<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
         let out = jvm.new_class("java/io/PrintStream", "()V", []).await?;
@@ -42,20 +42,20 @@ impl System {
         Ok(())
     }
 
-    async fn current_time_millis(_: &mut Jvm, context: &mut RuntimeContext) -> JavaResult<i64> {
+    async fn current_time_millis(_: &Jvm, context: &mut RuntimeContext) -> JavaResult<i64> {
         tracing::debug!("java.lang.System::currentTimeMillis()");
 
         Ok(context.now() as _)
     }
 
-    async fn gc(_: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<i32> {
+    async fn gc(_: &Jvm, _: &mut RuntimeContext) -> JavaResult<i32> {
         tracing::warn!("stub java.lang.System::gc()");
 
         Ok(0)
     }
 
     async fn arraycopy(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         src: ClassInstanceRef<Array<()>>, // Any Array
         src_pos: i32,

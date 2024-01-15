@@ -16,7 +16,7 @@ pub fn main() -> anyhow::Result<()> {
     let args = &args[3..];
 
     block_on(async {
-        let mut jvm = create_jvm(io::stdout()).await?;
+        let jvm = create_jvm(io::stdout()).await?;
 
         let data = fs::read(filename)?;
 
@@ -24,9 +24,9 @@ pub fn main() -> anyhow::Result<()> {
         let filename = Path::new(filename).file_name().unwrap().to_string_lossy();
         let class_name = filename.strip_suffix(".class").unwrap();
 
-        load_class_file(&mut jvm, class_name, &data).await?;
+        load_class_file(&jvm, class_name, &data).await?;
 
-        run_java_main(&mut jvm, main_class_name, args).await?;
+        run_java_main(&jvm, main_class_name, args).await?;
 
         Ok(())
     })

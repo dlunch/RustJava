@@ -34,7 +34,7 @@ impl Class {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.Class::<init>({:?})", &this);
 
         Ok(())
@@ -42,7 +42,7 @@ impl Class {
 
     #[allow(clippy::await_holding_refcell_ref)] // We manually drop Ref https://github.com/rust-lang/rust-clippy/issues/6353
     async fn get_resource_as_stream(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         context: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
@@ -66,7 +66,7 @@ impl Class {
         }
     }
 
-    pub async fn from_rust_class(jvm: &mut Jvm, rust_class: Box<dyn JvmClass>) -> JavaResult<ClassInstanceRef<Self>> {
+    pub async fn from_rust_class(jvm: &Jvm, rust_class: Box<dyn JvmClass>) -> JavaResult<ClassInstanceRef<Self>> {
         let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
 
         let rust_class_raw = Box::into_raw(Box::new(rust_class)) as *const u8 as usize;
@@ -102,11 +102,11 @@ mod test {
 
     #[futures_test::test]
     async fn test_class() -> anyhow::Result<()> {
-        let mut jvm = test_jvm().await?;
+        let jvm = test_jvm().await?;
 
         let class = jvm.resolve_class("java/lang/String").await?.unwrap();
 
-        let java_class = Class::from_rust_class(&mut jvm, class).await?;
+        let java_class = Class::from_rust_class(&jvm, class).await?;
 
         let rust_class = Class::to_rust_class(&jvm, java_class.clone().into())?;
         assert_eq!(rust_class.name(), "java/lang/String");

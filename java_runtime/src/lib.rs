@@ -20,9 +20,9 @@ pub mod test {
     use crate::{initialize, runtime::test::DummyRuntime};
 
     pub async fn test_jvm() -> anyhow::Result<Jvm> {
-        let mut jvm = Jvm::new(JvmDetailImpl::new()).await?;
+        let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
-        initialize(&mut jvm, |name, proto| {
+        initialize(&jvm, |name, proto| {
             Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>))
         })
         .await?;

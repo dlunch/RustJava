@@ -22,13 +22,13 @@ impl io::Write for Output {
 pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &[String]) -> anyhow::Result<String> {
     OUTPUT.with_borrow_mut(|x| x.clear());
 
-    let mut jvm = create_jvm(Output).await?;
+    let jvm = create_jvm(Output).await?;
 
     for (name, data) in classes {
-        load_class_file(&mut jvm, name, data).await?;
+        load_class_file(&jvm, name, data).await?;
     }
 
-    run_java_main(&mut jvm, main_class_name, args).await?;
+    run_java_main(&jvm, main_class_name, args).await?;
 
     let result = OUTPUT.with_borrow(|output| str::from_utf8(output).unwrap().to_string());
 

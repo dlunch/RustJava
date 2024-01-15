@@ -5,19 +5,21 @@ use jvm::ThreadContext;
 
 use crate::stack_frame::StackFrame;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ThreadContextImpl {
-    stack: Vec<Rc<RefCell<StackFrame>>>,
+    stack: Rc<RefCell<Vec<Rc<RefCell<StackFrame>>>>>,
 }
 
 impl ThreadContextImpl {
     pub fn new() -> Self {
-        Self { stack: Vec::new() }
+        Self {
+            stack: Rc::new(RefCell::new(Vec::new())),
+        }
     }
 
     pub fn push_stack_frame(&mut self) -> Rc<RefCell<StackFrame>> {
         let value = Rc::new(RefCell::new(StackFrame::new()));
-        self.stack.push(value.clone());
+        self.stack.borrow_mut().push(value.clone());
 
         value
     }

@@ -27,7 +27,7 @@ impl ByteArrayInputStream {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> JavaResult<()> {
         tracing::debug!("java.lang.ByteArrayInputStream::<init>({:?}, {:?})", &this, &data);
 
         jvm.put_field(&mut this, "buf", "[B", data)?;
@@ -36,7 +36,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.ByteArrayInputStream::available({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -47,7 +47,7 @@ impl ByteArrayInputStream {
     }
 
     async fn read(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
         b: ClassInstanceRef<Array<i8>>,
@@ -79,7 +79,7 @@ impl ByteArrayInputStream {
         Ok(len)
     }
 
-    async fn read_byte(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -97,7 +97,7 @@ impl ByteArrayInputStream {
         Ok(result)
     }
 
-    async fn close(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> JavaResult<()> {
+    async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> JavaResult<()> {
         tracing::debug!("java.lang.ByteArrayInputStream::close({:?})", &this);
 
         Ok(())

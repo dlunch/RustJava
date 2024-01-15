@@ -25,7 +25,7 @@ impl RuntimeClassLoader {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
         tracing::debug!("rustjava.RuntimeClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -35,7 +35,7 @@ impl RuntimeClassLoader {
     }
 
     async fn find_class(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
@@ -62,7 +62,7 @@ impl RuntimeClassLoader {
     }
 
     // TODO load class on demand
-    pub async fn initialize(jvm: &mut Jvm, classes: Vec<Box<dyn JvmClass>>) -> JavaResult<()> {
+    pub async fn initialize(jvm: &Jvm, classes: Vec<Box<dyn JvmClass>>) -> JavaResult<()> {
         let mut java_classes: Vec<JavaValue> = Vec::with_capacity(classes.len());
 
         for class in classes {

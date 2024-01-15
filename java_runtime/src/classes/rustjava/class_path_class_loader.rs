@@ -32,7 +32,7 @@ impl ClassPathClassLoader {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -42,7 +42,7 @@ impl ClassPathClassLoader {
     }
 
     async fn find_class(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
@@ -80,7 +80,7 @@ impl ClassPathClassLoader {
 
     // we don't have classpath (yet), so we need backdoor to add classes to loader
     async fn add_class_file(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _runtime: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
         file_name: ClassInstanceRef<String>,
@@ -125,7 +125,7 @@ impl ClassPathClassLoader {
     }
 
     async fn add_jar_file(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _runtime: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
         data: ClassInstanceRef<Array<i8>>,

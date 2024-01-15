@@ -18,7 +18,7 @@ impl Vector {
         }
     }
 
-    async fn init(_: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::warn!("stub java.util.Vector::<init>({:?})", &this);
 
         Ok(())

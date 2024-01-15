@@ -19,7 +19,7 @@ pub type JvmResult<T> = anyhow::Result<T>;
 use alloc::boxed::Box;
 #[async_trait::async_trait(?Send)]
 pub trait JvmCallback {
-    async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue>;
+    async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue>;
 }
 
 pub use self::{

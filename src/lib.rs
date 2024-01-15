@@ -19,18 +19,15 @@ where
 {
     let runtime = Box::new(RuntimeImpl::new(stdout)) as Box<dyn Runtime>;
 
-    let mut jvm = Jvm::new(JvmDetailImpl::new()).await?;
+    let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
-    java_runtime::initialize(&mut jvm, |name, proto| {
-        Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone()))
-    })
-    .await?;
+    java_runtime::initialize(&jvm, |name, proto| Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone()))).await?;
 
     Ok(jvm)
 }
 
-pub async fn load_class_file(jvm: &mut Jvm, class_name: &str, data: &[u8]) -> JvmResult<()> {
-    let class_loader = jvm.get_system_class_loader().clone();
+pub async fn load_class_file(jvm: &Jvm, class_name: &str, data: &[u8]) -> JvmResult<()> {
+    let class_loader = jvm.get_system_class_loader().await?;
 
     let class_name = JavaString::from_rust_string(jvm, class_name).await?;
 
@@ -49,7 +46,7 @@ pub async fn load_class_file(jvm: &mut Jvm, class_name: &str, data: &[u8]) -> Jv
     Ok(())
 }
 
-pub async fn run_java_main(jvm: &mut Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
+pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
         java_args.push(create_string(jvm, arg).await?);
@@ -63,7 +60,7 @@ pub async fn run_java_main(jvm: &mut Jvm, main_class_name: &str, args: &[String]
     Ok(())
 }
 
-async fn create_string(jvm: &mut Jvm, string: &str) -> JvmResult<ClassInstanceRef<JavaString>> {
+async fn create_string(jvm: &Jvm, string: &str) -> JvmResult<ClassInstanceRef<JavaString>> {
     let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
 
     let mut array = jvm.instantiate_array("C", chars.len()).await?;

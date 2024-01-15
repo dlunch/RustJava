@@ -24,7 +24,7 @@ impl DataInputStream {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> JavaResult<()> {
         tracing::debug!("java.lang.DataInputStream::<init>({:?}, {:?})", &this, &r#in);
 
         jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in)?;
@@ -32,7 +32,7 @@ impl DataInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
+    async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
         tracing::debug!("java.lang.DataInputStream::available({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
@@ -42,7 +42,7 @@ impl DataInputStream {
     }
 
     async fn read(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         b: ClassInstanceRef<Array<i8>>,
@@ -57,7 +57,7 @@ impl DataInputStream {
         Ok(result)
     }
 
-    async fn read_byte(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i8> {
+    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i8> {
         tracing::debug!("java.lang.DataInputStream::readByte({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
@@ -66,7 +66,7 @@ impl DataInputStream {
         Ok(result as _)
     }
 
-    async fn close(jvm: &mut Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.DataInputStream::close({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;

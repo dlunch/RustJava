@@ -8,7 +8,7 @@ use alloc::{
     string::String,
     vec::{self, Vec},
 };
-use core::{array, fmt::Debug, iter, mem::forget};
+use core::{array, cell::RefCell, fmt::Debug, iter, mem::forget};
 
 use anyhow::Context;
 use bytemuck::cast_slice;
@@ -30,9 +30,9 @@ use crate::{
 };
 
 pub struct Jvm {
-    classes: BTreeMap<String, Box<dyn Class>>,
-    system_class_loader: Option<Box<dyn ClassInstance>>,
-    detail: Box<dyn JvmDetail>,
+    classes: RefCell<BTreeMap<String, Box<dyn Class>>>,
+    system_class_loader: RefCell<Option<Box<dyn ClassInstance>>>,
+    detail: RefCell<Box<dyn JvmDetail>>,
 }
 
 impl Jvm {
@@ -45,13 +45,13 @@ impl Jvm {
             .map(|element_type_name| (format!("[{}", element_type_name), detail.define_array_class(element_type_name).unwrap()));
 
         Ok(Self {
-            classes: array_classes.collect(),
-            system_class_loader: None,
-            detail: Box::new(detail),
+            classes: RefCell::new(array_classes.collect()),
+            system_class_loader: RefCell::new(None),
+            detail: RefCell::new(Box::new(detail)),
         })
     }
 
-    pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
+    pub async fn instantiate_class(&self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
         let class = self
@@ -64,7 +64,7 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub async fn new_class<T>(&mut self, class_name: &str, init_descriptor: &str, init_args: T) -> JvmResult<Box<dyn ClassInstance>>
+    pub async fn new_class<T>(&self, class_name: &str, init_descriptor: &str, init_args: T) -> JvmResult<Box<dyn ClassInstance>>
     where
         T: InvokeArg,
     {
@@ -75,7 +75,7 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub async fn instantiate_array(&mut self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
+    pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
         let array_class_name = format!("[{}", element_type_name);
@@ -87,7 +87,7 @@ impl Jvm {
         Ok(instance)
     }
 
-    pub async fn get_static_field<T>(&mut self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<T>
+    pub async fn get_static_field<T>(&self, class_name: &str, name: &str, descriptor: &str) -> JvmResult<T>
     where
         T: From<JavaValue>,
     {
@@ -105,7 +105,7 @@ impl Jvm {
         Ok(class.get_static_field(&*field)?.into())
     }
 
-    pub async fn put_static_field<T>(&mut self, class_name: &str, name: &str, descriptor: &str, value: T) -> JvmResult<()>
+    pub async fn put_static_field<T>(&self, class_name: &str, name: &str, descriptor: &str, value: T) -> JvmResult<()>
     where
         T: Into<JavaValue> + Debug,
     {
@@ -136,7 +136,7 @@ impl Jvm {
         Ok(instance.get_field(&*field)?.into())
     }
 
-    pub fn put_field<T>(&mut self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> JvmResult<()>
+    pub fn put_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> JvmResult<()>
     where
         T: Into<JavaValue> + Debug,
     {
@@ -149,7 +149,7 @@ impl Jvm {
         instance.put_field(&*field, value.into())
     }
 
-    pub async fn invoke_static<T, U>(&mut self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
+    pub async fn invoke_static<T, U>(&self, class_name: &str, name: &str, descriptor: &str, args: T) -> JvmResult<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
@@ -171,7 +171,7 @@ impl Jvm {
     }
 
     pub async fn invoke_virtual<T, U>(
-        &mut self,
+        &self,
         instance: &Box<dyn ClassInstance>,
         class_name: &str,
         name: &str,
@@ -200,7 +200,7 @@ impl Jvm {
 
     // non-virtual
     pub async fn invoke_special<T, U>(
-        &mut self,
+        &self,
         instance: &Box<dyn ClassInstance>,
         class_name: &str,
         name: &str,
@@ -227,7 +227,7 @@ impl Jvm {
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
 
-    pub fn store_array<T, U>(&mut self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> JvmResult<()>
+    pub fn store_array<T, U>(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> JvmResult<()>
     where
         T: IntoIterator<Item = U>,
         U: Into<JavaValue>,
@@ -253,7 +253,7 @@ impl Jvm {
         Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
     }
 
-    pub fn store_byte_array(&mut self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> JvmResult<()> {
+    pub fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> JvmResult<()> {
         tracing::trace!("Store array {} at offset {}", array.class().name(), offset);
 
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
@@ -290,12 +290,12 @@ impl Jvm {
         Ok(JavaType::parse(type_name))
     }
 
-    pub fn current_thread_context(&mut self) -> &mut dyn ThreadContext {
-        self.detail.thread_context(Jvm::current_thread_id())
+    pub fn current_thread_context(&self) -> Box<dyn ThreadContext> {
+        self.detail.borrow_mut().thread_context(Jvm::current_thread_id())
     }
 
     // temporary until we have working gc
-    pub fn destroy(&mut self, instance: Box<dyn ClassInstance>) -> JvmResult<()> {
+    pub fn destroy(&self, instance: Box<dyn ClassInstance>) -> JvmResult<()> {
         tracing::debug!("Destroy {}", instance.class().name());
 
         instance.destroy();
@@ -304,11 +304,11 @@ impl Jvm {
     }
 
     pub fn get_class(&self, class_name: &str) -> Option<Box<dyn Class>> {
-        self.classes.get(class_name).cloned()
+        self.classes.borrow().get(class_name).cloned()
     }
 
     #[async_recursion::async_recursion(?Send)]
-    pub async fn resolve_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name);
         if let Some(x) = class {
             return Ok(Some(x));
@@ -321,10 +321,7 @@ impl Jvm {
                 self.resolve_class(&super_class).await?;
             }
 
-            self.classes.insert(class_name.to_owned(), x.clone());
-
-            self.init_class(&*x).await?;
-
+            self.register_class(x.clone()).await?;
             let class = self.get_class(class_name);
 
             return Ok(class);
@@ -333,16 +330,16 @@ impl Jvm {
         Ok(None)
     }
 
-    pub async fn register_class(&mut self, class: Box<dyn Class>) -> JvmResult<()> {
+    pub async fn register_class(&self, class: Box<dyn Class>) -> JvmResult<()> {
         tracing::debug!("Register class {}", class.name());
 
-        self.classes.insert(class.name().to_owned(), class.clone());
+        self.classes.borrow_mut().insert(class.name().to_owned(), class.clone());
         self.init_class(&*class).await?;
 
         Ok(())
     }
 
-    async fn init_class(&mut self, class: &dyn Class) -> JvmResult<()> {
+    async fn init_class(&self, class: &dyn Class) -> JvmResult<()> {
         let clinit = class.method("<clinit>", "()V");
 
         if let Some(x) = clinit {
@@ -354,13 +351,13 @@ impl Jvm {
         Ok(())
     }
 
-    async fn load_class(&mut self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let mut class_name_array = self.instantiate_array("C", class_name.len()).await?;
         self.store_array(&mut class_name_array, 0, class_name.chars().map(|x| x as JavaChar))?;
 
         let class_name_string = self.new_class("java/lang/String", "([C)V", (class_name_array,)).await?;
 
-        let class_loader = self.system_class_loader.clone().unwrap();
+        let class_loader = self.get_system_class_loader().await?;
         let java_class = self
             .invoke_virtual(
                 &class_loader,
@@ -377,25 +374,23 @@ impl Jvm {
     }
 
     pub fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
-        self.detail.define_class(name, data)
+        self.detail.borrow().define_class(name, data)
     }
 
     pub fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
-        self.detail.define_array_class(element_type_name)
+        self.detail.borrow().define_array_class(element_type_name)
     }
 
-    pub fn get_system_class_loader(&self) -> &Box<dyn ClassInstance> {
-        self.system_class_loader.as_ref().unwrap()
-    }
+    pub async fn get_system_class_loader(&self) -> JvmResult<Box<dyn ClassInstance>> {
+        if self.system_class_loader.borrow().is_none() {
+            let system_class_loader = self
+                .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
+                .await?;
 
-    pub async fn init_system_class_loader(&mut self) -> JvmResult<()> {
-        let system_class_loader = self
-            .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
-            .await?;
+            self.system_class_loader.replace(Some(system_class_loader));
+        }
 
-        self.system_class_loader = Some(system_class_loader);
-
-        Ok(())
+        Ok(self.system_class_loader.borrow().as_ref().unwrap().clone())
     }
 
     // TODO we have same logic on java/lang/Class

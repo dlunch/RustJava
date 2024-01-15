@@ -81,7 +81,7 @@ impl MethodImpl {
             C: ?Sized,
             Context: DerefMut + Deref<Target = C> + Clone,
         {
-            async fn call(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+            async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
                 let mut context = self.context.clone();
 
                 self.body.call(jvm, &mut context, args).await
@@ -132,7 +132,7 @@ impl Method for MethodImpl {
         self.inner.access_flags
     }
 
-    async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         Ok(match &self.inner.body {
             MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args).await?,
             MethodBody::Rust(x) => x.call(jvm, args).await?,

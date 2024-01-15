@@ -26,12 +26,12 @@ impl JvmDetail for JvmDetailImpl {
         Ok(Box::new(ArrayClassImpl::new(element_type_name)))
     }
 
-    fn thread_context(&mut self, thread_id: ThreadId) -> &mut dyn ThreadContext {
+    fn thread_context(&mut self, thread_id: ThreadId) -> Box<dyn ThreadContext> {
         let thread_context = self
             .thread_contexts
             .entry(thread_id)
             .or_insert_with(|| Box::new(ThreadContextImpl::new()));
 
-        thread_context.as_mut()
+        thread_context.clone()
     }
 }

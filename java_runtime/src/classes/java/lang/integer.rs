@@ -24,7 +24,7 @@ impl Integer {
         }
     }
 
-    async fn parse_int(jvm: &mut Jvm, _: &mut RuntimeContext, s: ClassInstanceRef<String>) -> JavaResult<i32> {
+    async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, s: ClassInstanceRef<String>) -> JavaResult<i32> {
         tracing::debug!("java.lang.Integer::parseInt({:?})", &s);
 
         let s = String::to_rust_string(jvm, &s)?;

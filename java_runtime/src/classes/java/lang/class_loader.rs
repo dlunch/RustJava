@@ -41,7 +41,7 @@ impl ClassLoader {
         }
     }
 
-    async fn init(jvm: &mut Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> JavaResult<()> {
         tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
 
         jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent)?;
@@ -49,7 +49,7 @@ impl ClassLoader {
         Ok(())
     }
 
-    async fn get_system_class_loader(jvm: &mut Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
+    async fn get_system_class_loader(jvm: &Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.ClassLoader::getSystemClassLoader()");
 
         let system_class_loader: ClassInstanceRef<Self> = jvm
@@ -84,7 +84,7 @@ impl ClassLoader {
     }
 
     async fn load_class(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
@@ -137,7 +137,7 @@ impl ClassLoader {
     }
 
     async fn find_class(
-        _: &mut Jvm,
+        _: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
@@ -150,7 +150,7 @@ impl ClassLoader {
     }
 
     async fn find_loaded_class(
-        jvm: &mut Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,

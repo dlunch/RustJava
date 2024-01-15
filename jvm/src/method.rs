@@ -11,5 +11,5 @@ pub trait Method: AsAny + Debug {
     fn descriptor(&self) -> String;
     fn access_flags(&self) -> MethodAccessFlags;
 
-    async fn run(&self, jvm: &mut Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
+    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
 }

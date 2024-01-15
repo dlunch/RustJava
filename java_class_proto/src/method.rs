@@ -7,17 +7,17 @@ macro_rules! __impl_fn_helper {
     ($($arg: ident),*) => {
         impl<'a, C, E, R, F, Fut, $($arg),*> FnHelper<'a, C, E, R, ($($arg,)*)> for F
         where
-            F: Fn(&'a mut Jvm, &'a mut C, $($arg),*) -> Fut,
+            F: Fn(&'a Jvm, &'a mut C, $($arg),*) -> Fut,
             C: ?Sized + 'a,
             Fut: Future<Output = Result<R, E>> + 'a,
             $($arg: TypeConverter<$arg> + 'a),*
         {
             type Output = Fut;
             #[allow(unused_assignments, non_snake_case, unused_mut, unused_variables)]
-            fn do_call(&self, mut jvm: &'a mut Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Fut {
+            fn do_call(&self, jvm: &'a Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Fut {
                 let mut args = alloc::vec::Vec::from(args).into_iter();
                 $(
-                    let $arg = $arg::to_rust(&mut jvm, args.next().unwrap());
+                    let $arg = $arg::to_rust(&jvm, args.next().unwrap());
                 )*
                 self(jvm, context, $($arg),*)
             }
@@ -35,10 +35,10 @@ macro_rules! __impl_method_body {
             C: ?Sized,
             R: TypeConverter<R>,
         {
-            async fn call(&self, mut jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
+            async fn call(&self, jvm: &Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
                 let result = self.0.do_call(jvm, context, args).await?;
 
-                Ok(R::from_rust(&mut jvm, result))
+                Ok(R::from_rust(&jvm, result))
             }
         }
     };
@@ -73,7 +73,7 @@ pub trait MethodBody<E, C>
 where
     C: ?Sized,
 {
-    async fn call(&self, jvm: &mut Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
+    async fn call(&self, jvm: &Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
 }
 
 trait FnHelper<'a, C, E, R, P>
@@ -81,14 +81,14 @@ where
     C: ?Sized + 'a,
 {
     type Output: Future<Output = Result<R, E>> + 'a;
-    fn do_call(&self, jvm: &'a mut Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Self::Output;
+    fn do_call(&self, jvm: &'a Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Self::Output;
 }
 
 struct MethodHolder<F, R, P>(pub F, PhantomData<(R, P)>);
 
 pub trait TypeConverter<T> {
-    fn to_rust(jvm: &mut Jvm, raw: JavaValue) -> T;
-    fn from_rust(jvm: &mut Jvm, rust: T) -> JavaValue;
+    fn to_rust(jvm: &Jvm, raw: JavaValue) -> T;
+    fn from_rust(jvm: &Jvm, rust: T) -> JavaValue;
 }
 
 pub trait MethodImpl<F, C, R, E, P>
