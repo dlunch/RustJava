@@ -20,7 +20,7 @@ pub fn main() -> anyhow::Result<()> {
 
         let data = fs::read(filename)?;
 
-        // TODO remove filename parsing and class name in ClassPathClassLoader
+        // TODO remove filename parsing and parse class name in ClassPathClassLoader
         let filename = Path::new(filename).file_name().unwrap().to_string_lossy();
         let class_name = filename.strip_suffix(".class").unwrap();
 
