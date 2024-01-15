@@ -30,7 +30,7 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::Runtime;
+    use crate::runtime::Runtime;
 
     #[derive(Clone)]
     pub struct DummyRuntime;
