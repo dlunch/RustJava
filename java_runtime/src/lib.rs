@@ -4,22 +4,17 @@ extern crate alloc;
 pub mod classes;
 mod runtime;
 
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{boxed::Box, vec::Vec};
 
 use java_class_proto::JavaClassProto;
-use jvm::Class;
+use jvm::{Class, Jvm, JvmResult};
 
 pub use runtime::Runtime;
 
 pub(crate) type RuntimeContext = dyn Runtime;
 pub(crate) type RuntimeClassProto = JavaClassProto<dyn Runtime>;
 
-// TODO we don't have to load all classes at once
-pub fn get_runtime_classes<T>(class_creator: T) -> Vec<(String, Box<dyn Class>)>
+fn get_runtime_classes<T>(class_creator: &T) -> Vec<Box<dyn Class>>
 where
     T: Fn(&str, RuntimeClassProto) -> Box<dyn Class>,
 {
@@ -74,8 +69,37 @@ where
         ("rustjava/ClassPathClassLoader", self::classes::rustjava::ClassPathClassLoader::as_proto()),
     ]
     .into_iter()
-    .map(|(name, proto)| (name.to_string(), class_creator(name, proto)))
+    .map(|(name, proto)| class_creator(name, proto))
     .collect()
+}
+
+pub async fn initialize<T>(jvm: &mut Jvm, class_creator: T) -> JvmResult<()>
+where
+    T: Fn(&str, RuntimeClassProto) -> Box<dyn Class>,
+{
+    // minimum set of classes to instantiate and use classloader
+    let java_lang_object = class_creator("java/lang/Object", self::classes::java::lang::Object::as_proto());
+    let java_lang_string = class_creator("java/lang/String", self::classes::java::lang::String::as_proto());
+    let java_lang_class = class_creator("java/lang/Class", self::classes::java::lang::Class::as_proto());
+    let java_lang_class_loader = class_creator("java/lang/ClassLoader", self::classes::java::lang::ClassLoader::as_proto());
+    let rustjava_runtime_class_loader = class_creator("rustjava/RuntimeClassLoader", self::classes::rustjava::RuntimeClassLoader::as_proto());
+    let rustjava_array_class_loader = class_creator("rustjava/ArrayClassLoader", self::classes::rustjava::ArrayClassLoader::as_proto());
+    let rustjava_class_path_class_loader = class_creator("rustjava/ClassPathClassLoader", self::classes::rustjava::ClassPathClassLoader::as_proto());
+
+    jvm.register_class(java_lang_object).await?;
+    jvm.register_class(java_lang_string).await?;
+    jvm.register_class(java_lang_class).await?;
+    jvm.register_class(java_lang_class_loader).await?;
+    jvm.register_class(rustjava_runtime_class_loader).await?;
+    jvm.register_class(rustjava_array_class_loader).await?;
+    jvm.register_class(rustjava_class_path_class_loader).await?;
+
+    jvm.init_system_class_loader().await?;
+
+    let all_classes = get_runtime_classes(&class_creator);
+    self::classes::rustjava::RuntimeClassLoader::initialize(jvm, all_classes).await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -85,11 +109,16 @@ pub mod test {
     use jvm::Jvm;
     use jvm_rust::{ClassImpl, JvmDetailImpl};
 
-    use crate::{get_runtime_classes, runtime::test::DummyRuntime};
+    use crate::{initialize, runtime::test::DummyRuntime};
 
     pub async fn test_jvm() -> anyhow::Result<Jvm> {
-        let runtime_classes = get_runtime_classes(|name, proto| Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>)));
+        let mut jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
-        Jvm::new(&runtime_classes, JvmDetailImpl::new()).await
+        initialize(&mut jvm, |name, proto| {
+            Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>))
+        })
+        .await?;
+
+        Ok(jvm)
     }
 }

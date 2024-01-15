@@ -3,7 +3,7 @@ use core::time::Duration;
 
 use bytemuck::cast_vec;
 
-use java_runtime::{classes::java::lang::String as JavaString, get_runtime_classes, Runtime};
+use java_runtime::{classes::java::lang::String as JavaString, Runtime};
 use jvm::{Jvm, JvmCallback, JvmResult};
 use jvm_rust::{ClassImpl, JvmDetailImpl};
 
@@ -56,9 +56,12 @@ where
         println_handler: Rc::new(Box::new(println_handler)),
     });
 
-    let runtime_classes = get_runtime_classes(|name, proto| Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone() as Box<_>)));
+    let mut jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
-    let mut jvm = Jvm::new(&runtime_classes, JvmDetailImpl::new()).await?;
+    java_runtime::initialize(&mut jvm, |name, proto| {
+        Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone() as Box<_>))
+    })
+    .await?;
 
     let class_loader = jvm.get_system_class_loader().clone();
 

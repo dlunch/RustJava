@@ -36,7 +36,7 @@ pub struct Jvm {
 }
 
 impl Jvm {
-    pub async fn new<T>(runtime_classes: &[(String, Box<dyn Class>)], detail: T) -> JvmResult<Self>
+    pub async fn new<T>(detail: T) -> JvmResult<Self>
     where
         T: JvmDetail + 'static,
     {
@@ -44,24 +44,11 @@ impl Jvm {
             .into_iter()
             .map(|element_type_name| (format!("[{}", element_type_name), detail.define_array_class(element_type_name).unwrap()));
 
-        let classes = runtime_classes.iter().cloned().chain(array_classes).collect();
-
-        let mut jvm = Self {
-            classes,
+        Ok(Self {
+            classes: array_classes.collect(),
             system_class_loader: None,
             detail: Box::new(detail),
-        };
-
-        let classes = jvm.classes.values().cloned().collect::<Vec<_>>();
-        for class in classes {
-            jvm.init_class(&*class).await?;
-        }
-
-        jvm.system_class_loader = jvm
-            .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
-            .await?;
-
-        Ok(jvm)
+        })
     }
 
     pub async fn instantiate_class(&mut self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -346,6 +333,15 @@ impl Jvm {
         Ok(None)
     }
 
+    pub async fn register_class(&mut self, class: Box<dyn Class>) -> JvmResult<()> {
+        tracing::debug!("Register class {}", class.name());
+
+        self.classes.insert(class.name().to_owned(), class.clone());
+        self.init_class(&*class).await?;
+
+        Ok(())
+    }
+
     async fn init_class(&mut self, class: &dyn Class) -> JvmResult<()> {
         let clinit = class.method("<clinit>", "()V");
 
@@ -390,6 +386,16 @@ impl Jvm {
 
     pub fn get_system_class_loader(&self) -> &Box<dyn ClassInstance> {
         self.system_class_loader.as_ref().unwrap()
+    }
+
+    pub async fn init_system_class_loader(&mut self) -> JvmResult<()> {
+        let system_class_loader = self
+            .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
+            .await?;
+
+        self.system_class_loader = Some(system_class_loader);
+
+        Ok(())
     }
 
     // TODO we have same logic on java/lang/Class
