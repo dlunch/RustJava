@@ -40,17 +40,8 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        let primitive_types = ["Z", "B", "C", "S", "I", "J", "F", "D"];
-        let mut array_classes = BTreeMap::new();
-
-        for primitive_type in primitive_types {
-            let array_class = detail.define_array_class(primitive_type).await?;
-
-            array_classes.insert(array_class.name().to_owned(), array_class);
-        }
-
         Ok(Self {
-            classes: RefCell::new(array_classes),
+            classes: RefCell::new(BTreeMap::new()),
             system_class_loader: RefCell::new(None),
             detail: RefCell::new(Box::new(detail)),
         })
@@ -83,8 +74,7 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let array_class_name = format!("[{}", element_type_name);
-        let class = self.resolve_class(&array_class_name).await?.unwrap();
+        let class = self.detail.borrow().define_array_class(element_type_name).await?;
         let array_class = class.as_array_class().unwrap();
 
         let instance = array_class.instantiate_array(length);
