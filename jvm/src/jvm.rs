@@ -386,6 +386,10 @@ impl Jvm {
         self.detail.borrow().define_array_class(element_type_name).await
     }
 
+    pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
+        self.system_class_loader.replace(Some(class_loader)); // TODO we need Thread.setContextClassLoader
+    }
+
     pub async fn get_system_class_loader(&self) -> JvmResult<Box<dyn ClassInstance>> {
         if self.system_class_loader.borrow().is_none() {
             let system_class_loader = self
