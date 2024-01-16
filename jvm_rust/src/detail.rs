@@ -17,12 +17,13 @@ impl JvmDetailImpl {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl JvmDetail for JvmDetailImpl {
-    fn define_class(&self, _name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
+    async fn define_class(&self, _name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
         ClassImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
     }
 
-    fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
+    async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
         Ok(Box::new(ArrayClassImpl::new(element_type_name)))
     }
 

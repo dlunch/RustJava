@@ -64,7 +64,7 @@ impl ClassPathClassLoader {
 
                     let class_file_data = jvm.load_byte_array(class_file, 0, length)?;
 
-                    let rust_class = jvm.define_class(&name, cast_slice(&class_file_data))?;
+                    let rust_class = jvm.define_class(&name, cast_slice(&class_file_data)).await?;
 
                     let java_class = Class::from_rust_class(jvm, rust_class).await?;
 

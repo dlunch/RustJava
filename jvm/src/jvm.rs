@@ -40,12 +40,17 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        let array_classes = ["Z", "B", "C", "S", "I", "J", "F", "D"]
-            .into_iter()
-            .map(|element_type_name| (format!("[{}", element_type_name), detail.define_array_class(element_type_name).unwrap()));
+        let primitive_types = ["Z", "B", "C", "S", "I", "J", "F", "D"];
+        let mut array_classes = BTreeMap::new();
+
+        for primitive_type in primitive_types {
+            let array_class = detail.define_array_class(primitive_type).await?;
+
+            array_classes.insert(array_class.name().to_owned(), array_class);
+        }
 
         Ok(Self {
-            classes: RefCell::new(array_classes.collect()),
+            classes: RefCell::new(array_classes),
             system_class_loader: RefCell::new(None),
             detail: RefCell::new(Box::new(detail)),
         })
@@ -373,12 +378,12 @@ impl Jvm {
         Ok(Some(rust_class))
     }
 
-    pub fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_class(name, data)
+    pub async fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
+        self.detail.borrow().define_class(name, data).await
     }
 
-    pub fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_array_class(element_type_name)
+    pub async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
+        self.detail.borrow().define_array_class(element_type_name).await
     }
 
     pub async fn get_system_class_loader(&self) -> JvmResult<Box<dyn ClassInstance>> {
