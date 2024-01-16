@@ -74,7 +74,7 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let class = self.detail.borrow().define_array_class(element_type_name).await?;
+        let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
         let array_class = class.as_array_class().unwrap();
 
         let instance = array_class.instantiate_array(length);
@@ -371,11 +371,11 @@ impl Jvm {
     }
 
     pub async fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_class(name, data).await
+        self.detail.borrow().define_class(self, name, data).await
     }
 
     pub async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_array_class(element_type_name).await
+        self.detail.borrow().define_array_class(self, element_type_name).await
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {

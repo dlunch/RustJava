@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, collections::BTreeMap};
 
-use jvm::{Class, JvmDetail, JvmResult, ThreadContext, ThreadId};
+use jvm::{Class, Jvm, JvmDetail, JvmResult, ThreadContext, ThreadId};
 
 use crate::{array_class::ArrayClassImpl, thread::ThreadContextImpl, ClassImpl};
 
@@ -19,11 +19,11 @@ impl JvmDetailImpl {
 
 #[async_trait::async_trait(?Send)]
 impl JvmDetail for JvmDetailImpl {
-    async fn define_class(&self, _name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
+    async fn define_class(&self, _jvm: &Jvm, _name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
         ClassImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
     }
 
-    async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
+    async fn define_array_class(&self, _jvm: &Jvm, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
         Ok(Box::new(ArrayClassImpl::new(element_type_name)))
     }
 
