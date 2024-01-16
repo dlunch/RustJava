@@ -1,12 +1,12 @@
 use core::future::Future;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 
 use jvm::{Class, Jvm, JvmResult};
 
 use crate::RuntimeClassProto;
 
-async fn get_runtime_classes<T, F>(class_creator: &T) -> Vec<Box<dyn Class>>
+async fn load_runtime_classes<T, F>(jvm: &Jvm, class_creator: &T) -> JvmResult<()>
 where
     T: Fn(&str, RuntimeClassProto) -> F,
     F: Future<Output = Box<dyn Class>>,
@@ -16,12 +16,13 @@ where
         ("java/lang/Object", crate::classes::java::lang::Object::as_proto()),
         ("java/lang/Throwable", crate::classes::java::lang::Throwable::as_proto()),
         ("java/lang/Exception", crate::classes::java::lang::Exception::as_proto()),
+        ("java/lang/RuntimeException", crate::classes::java::lang::RuntimeException::as_proto()),
         ("java/io/InputStream", crate::classes::java::io::InputStream::as_proto()),
         ("java/io/OutputStream", crate::classes::java::io::OutputStream::as_proto()),
+        ("java/io/IOException", crate::classes::java::io::IOException::as_proto()),
         ("java/io/ByteArrayInputStream", crate::classes::java::io::ByteArrayInputStream::as_proto()),
         ("java/io/DataInputStream", crate::classes::java::io::DataInputStream::as_proto()),
         ("java/io/EOFException", crate::classes::java::io::EOFException::as_proto()),
-        ("java/io/IOException", crate::classes::java::io::IOException::as_proto()),
         ("java/io/PrintStream", crate::classes::java::io::PrintStream::as_proto()),
         ("java/lang/Class", crate::classes::java::lang::Class::as_proto()),
         ("java/lang/ClassLoader", crate::classes::java::lang::ClassLoader::as_proto()),
@@ -45,7 +46,6 @@ where
         ),
         ("java/lang/Runnable", crate::classes::java::lang::Runnable::as_proto()),
         ("java/lang/Runtime", crate::classes::java::lang::Runtime::as_proto()),
-        ("java/lang/RuntimeException", crate::classes::java::lang::RuntimeException::as_proto()),
         ("java/lang/SecurityException", crate::classes::java::lang::SecurityException::as_proto()),
         ("java/lang/String", crate::classes::java::lang::String::as_proto()),
         ("java/lang/StringBuffer", crate::classes::java::lang::StringBuffer::as_proto()),
@@ -67,15 +67,13 @@ where
         ),
     ];
 
-    let mut classes = Vec::with_capacity(class_protos.len());
-
     for class_proto in class_protos {
         let class = class_creator(class_proto.0, class_proto.1).await;
 
-        classes.push(class);
+        jvm.register_class(class).await?;
     }
 
-    classes
+    Ok(())
 }
 
 pub async fn initialize<T, F>(jvm: &Jvm, class_creator: T) -> JvmResult<()>
@@ -105,8 +103,10 @@ where
     )
     .await?;
 
-    let all_classes = get_runtime_classes(&class_creator).await;
-    crate::classes::rustjava::RuntimeClassLoader::initialize(jvm, all_classes).await?;
+    load_runtime_classes(jvm, &class_creator).await?;
+
+    // TODO load class on demand
+    // crate::classes::rustjava::RuntimeClassLoader::initialize(jvm, all_classes).await?;
 
     Ok(())
 }
