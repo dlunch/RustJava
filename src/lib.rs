@@ -3,6 +3,7 @@ extern crate alloc;
 mod runtime;
 
 use alloc::string::String;
+use core::future::ready;
 use std::io::Write;
 
 use bytemuck::cast_vec;
@@ -21,7 +22,10 @@ where
 
     let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
-    java_runtime::initialize(&jvm, |name, proto| Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone()))).await?;
+    java_runtime::initialize(&jvm, |name, proto| {
+        ready(Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
+    })
+    .await?;
 
     Ok(jvm)
 }

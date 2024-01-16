@@ -13,6 +13,7 @@ pub(crate) type RuntimeClassProto = java_class_proto::JavaClassProto<dyn runtime
 #[cfg(test)]
 pub mod test {
     use alloc::boxed::Box;
+    use core::future::ready;
 
     use jvm::Jvm;
     use jvm_rust::{ClassImpl, JvmDetailImpl};
@@ -23,7 +24,7 @@ pub mod test {
         let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
         initialize(&jvm, |name, proto| {
-            Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>))
+            ready(Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>)) as Box<_>)
         })
         .await?;
 
