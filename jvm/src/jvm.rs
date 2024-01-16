@@ -322,10 +322,6 @@ impl Jvm {
         if let Some(x) = self.load_class(class_name).await? {
             tracing::debug!("Loaded class {}", class_name);
 
-            if let Some(super_class) = x.super_class_name() {
-                self.resolve_class(&super_class).await?;
-            }
-
             self.register_class(x.clone()).await?;
             let class = self.get_class(class_name);
 
@@ -337,6 +333,10 @@ impl Jvm {
 
     pub async fn register_class(&self, class: Box<dyn Class>) -> JvmResult<()> {
         tracing::debug!("Register class {}", class.name());
+
+        if let Some(super_class) = class.super_class_name() {
+            self.resolve_class(&super_class).await?;
+        }
 
         self.classes.borrow_mut().insert(class.name().to_owned(), class.clone());
         self.init_class(&*class).await?;
