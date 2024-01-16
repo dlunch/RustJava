@@ -3,9 +3,9 @@ use core::fmt::Debug;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
-use crate::{ArrayClass, ClassInstance, Field, JavaValue, JvmResult, Method};
+use crate::{as_any::AsAny, ArrayClass, ClassInstance, Field, JavaValue, JvmResult, Method};
 
-pub trait Class: Debug + DynClone {
+pub trait Class: AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
     fn instantiate(&self) -> Box<dyn ClassInstance>;
