@@ -353,7 +353,7 @@ impl Jvm {
         let class_name_string = self.new_class("java/lang/String", "([C)V", (class_name_array,)).await?;
 
         let class_loader = self.get_system_class_loader().await?;
-        let java_class = self
+        let java_class: Option<Box<dyn ClassInstance>> = self
             .invoke_virtual(
                 &class_loader,
                 "java/lang/ClassLoader",
@@ -363,7 +363,9 @@ impl Jvm {
             )
             .await?;
 
-        let rust_class = self.to_rust_class(java_class)?;
+        anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
+
+        let rust_class = self.to_rust_class(java_class.unwrap())?;
 
         Ok(Some(rust_class))
     }
