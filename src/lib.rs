@@ -9,7 +9,7 @@ use std::io::Write;
 use bytemuck::cast_vec;
 
 use java_runtime::{classes::java::lang::String as JavaString, Runtime};
-use jvm::{ClassInstanceRef, JavaValue, Jvm, JvmResult};
+use jvm::{JavaValue, Jvm, JvmResult};
 use jvm_rust::{ClassImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
@@ -47,7 +47,7 @@ pub async fn load_class_file(jvm: &Jvm, class_name: &str, data: &[u8]) -> JvmRes
 pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
-        java_args.push(create_string(jvm, arg).await?);
+        java_args.push(JavaString::from_rust_string(jvm, arg).await?);
     }
     let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
     jvm.store_array(&mut array, 0, java_args).unwrap();
@@ -56,16 +56,4 @@ pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) ->
         .await?;
 
     Ok(())
-}
-
-async fn create_string(jvm: &Jvm, string: &str) -> JvmResult<ClassInstanceRef<JavaString>> {
-    let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
-
-    let mut array = jvm.instantiate_array("C", chars.len()).await?;
-    jvm.store_array(&mut array, 0, chars)?;
-
-    let instance = jvm.instantiate_class("java/lang/String").await?;
-    jvm.invoke_virtual(&instance, "<init>", "([C)V", [array.into()]).await?;
-
-    Ok(instance.into())
 }
