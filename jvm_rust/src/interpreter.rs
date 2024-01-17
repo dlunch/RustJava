@@ -116,7 +116,7 @@ impl Interpreter {
 
                     let instance = stack_frame.operand_stack.pop().unwrap();
 
-                    let result = jvm.invoke_virtual(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
+                    let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Invokespecial(x) => {
@@ -389,8 +389,7 @@ impl Interpreter {
         jvm.store_array(&mut array, 0, chars)?;
 
         let instance = jvm.instantiate_class("java/lang/String").await?;
-        jvm.invoke_virtual(&instance, "java/lang/String", "<init>", "([C)V", [array.into()])
-            .await?;
+        jvm.invoke_virtual(&instance, "<init>", "([C)V", [array.into()]).await?;
 
         Ok(instance)
     }

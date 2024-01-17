@@ -165,24 +165,17 @@ impl Jvm {
         Ok(method.run(self, args.into_arg()).await?.into())
     }
 
-    pub async fn invoke_virtual<T, U>(
-        &self,
-        instance: &Box<dyn ClassInstance>,
-        class_name: &str,
-        name: &str,
-        descriptor: &str,
-        args: T,
-    ) -> JvmResult<U>
+    pub async fn invoke_virtual<T, U>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str, args: T) -> JvmResult<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        tracing::trace!("Invoke virtual {}.{}:{}", class_name, name, descriptor);
+        tracing::trace!("Invoke virtual {}.{}:{}", instance.class().name(), name, descriptor);
 
         let class = self.resolve_class(&instance.class().name()).await?.unwrap();
         let method = self
             .find_virtual_method(&*class, name, descriptor)?
-            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
+            .with_context(|| format!("No such method {}.{}:{}", instance.class().name(), name, descriptor))?;
 
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
@@ -354,13 +347,7 @@ impl Jvm {
 
         let class_loader = self.get_system_class_loader().await?;
         let java_class: Option<Box<dyn ClassInstance>> = self
-            .invoke_virtual(
-                &class_loader,
-                "java/lang/ClassLoader",
-                "loadClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;",
-                (class_name_string,),
-            )
+            .invoke_virtual(&class_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (class_name_string,))
             .await?;
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);

@@ -308,13 +308,7 @@ mod test {
         let string2 = String::from_rust_string(&jvm, "test2").await?;
 
         let result = jvm
-            .invoke_virtual(
-                &string1,
-                "java/lang/String",
-                "concat",
-                "(Ljava/lang/String;)Ljava/lang/String;",
-                (string2,),
-            )
+            .invoke_virtual(&string1, "concat", "(Ljava/lang/String;)Ljava/lang/String;", (string2,))
             .await?;
 
         let string = String::to_rust_string(&jvm, &result)?;

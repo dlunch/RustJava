@@ -36,7 +36,6 @@ impl InputStream {
 
         let array_length = jvm.array_length(&b)? as i32;
 
-        jvm.invoke_virtual(&this, "java/io/InputStream", "read", "([BII)I", (b, 0, array_length))
-            .await
+        jvm.invoke_virtual(&this, "read", "([BII)I", (b, 0, array_length)).await
     }
 }

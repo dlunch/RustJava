@@ -38,14 +38,8 @@ pub async fn load_class_file(jvm: &Jvm, class_name: &str, data: &[u8]) -> JvmRes
     let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
     jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec()))?;
 
-    jvm.invoke_virtual(
-        &class_loader,
-        "rustjava/ClassPathClassLoader",
-        "addClassFile",
-        "(Ljava/lang/String;[B)V",
-        (class_name, data_storage),
-    )
-    .await?;
+    jvm.invoke_virtual(&class_loader, "addClassFile", "(Ljava/lang/String;[B)V", (class_name, data_storage))
+        .await?;
 
     Ok(())
 }
@@ -71,8 +65,7 @@ async fn create_string(jvm: &Jvm, string: &str) -> JvmResult<ClassInstanceRef<Ja
     jvm.store_array(&mut array, 0, chars)?;
 
     let instance = jvm.instantiate_class("java/lang/String").await?;
-    jvm.invoke_virtual(&instance, "java/lang/String", "<init>", "([C)V", [array.into()])
-        .await?;
+    jvm.invoke_virtual(&instance, "<init>", "([C)V", [array.into()]).await?;
 
     Ok(instance.into())
 }

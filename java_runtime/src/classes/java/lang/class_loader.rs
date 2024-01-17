@@ -92,13 +92,7 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::loadClass({:?}, {:?})", &this, name);
 
         let class: ClassInstanceRef<Class> = jvm
-            .invoke_virtual(
-                &this,
-                "java/lang/ClassLoader",
-                "findLoadedClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;",
-                (name.clone(),),
-            )
+            .invoke_virtual(&this, "findLoadedClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
             .await?;
 
         if !class.is_null() {
@@ -107,14 +101,8 @@ impl ClassLoader {
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
         let class: ClassInstanceRef<Class> = if !parent.is_null() {
-            jvm.invoke_virtual(
-                &parent,
-                "java/lang/ClassLoader",
-                "loadClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;",
-                (name.clone(),),
-            )
-            .await?
+            jvm.invoke_virtual(&parent, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
+                .await?
         } else {
             None.into()
         };
@@ -124,13 +112,7 @@ impl ClassLoader {
         }
 
         let class = jvm
-            .invoke_virtual(
-                &this,
-                "java/lang/ClassLoader",
-                "findClass",
-                "(Ljava/lang/String;)Ljava/lang/Class;",
-                (name,),
-            )
+            .invoke_virtual(&this, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
             .await?;
 
         Ok(class)

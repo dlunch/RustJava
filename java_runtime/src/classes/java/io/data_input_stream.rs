@@ -36,7 +36,7 @@ impl DataInputStream {
         tracing::debug!("java.lang.DataInputStream::available({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", []).await?;
+        let available: i32 = jvm.invoke_virtual(&r#in, "available", "()I", []).await?;
 
         Ok(available)
     }
@@ -52,7 +52,7 @@ impl DataInputStream {
         tracing::debug!("java.lang.DataInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "([BII)I", (b, off, len)).await?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (b, off, len)).await?;
 
         Ok(result)
     }
@@ -61,7 +61,7 @@ impl DataInputStream {
         tracing::debug!("java.lang.DataInputStream::readByte({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
-        let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", []).await?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(result as _)
     }
@@ -70,7 +70,7 @@ impl DataInputStream {
         tracing::debug!("java.lang.DataInputStream::close({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
-        jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", []).await?;
+        jvm.invoke_virtual(&r#in, "close", "()V", []).await?;
 
         Ok(())
     }

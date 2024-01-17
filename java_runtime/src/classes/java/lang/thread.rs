@@ -48,7 +48,7 @@ impl Thread {
             async fn call(&self, jvm: &Jvm, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 tracing::trace!("Thread start");
 
-                jvm.invoke_virtual(&self.runnable, "java/lang/Runnable", "run", "()V", []).await?;
+                jvm.invoke_virtual(&self.runnable, "run", "()V", []).await?;
 
                 Ok(JavaValue::Void)
             }
