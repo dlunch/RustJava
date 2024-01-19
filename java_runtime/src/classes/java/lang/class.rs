@@ -1,7 +1,6 @@
 use alloc::{boxed::Box, vec};
-use core::mem::{forget, size_of_val};
 
-use bytemuck::{cast_slice, cast_vec};
+use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Class as JvmClass, ClassInstanceRef, Jvm};
@@ -69,28 +68,13 @@ impl Class {
     pub async fn from_rust_class(jvm: &Jvm, rust_class: Box<dyn JvmClass>) -> JavaResult<ClassInstanceRef<Self>> {
         let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
 
-        let rust_class_raw = Box::into_raw(Box::new(rust_class)) as *const u8 as usize;
-
-        let mut raw_storage = jvm.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
-        jvm.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())?;
-
-        jvm.put_field(&mut java_class, "raw", "[B", raw_storage)?;
+        jvm.put_rust_object_field(&mut java_class, "raw", rust_class).await?;
 
         Ok(java_class.into())
     }
 
     pub fn to_rust_class(jvm: &Jvm, java_class: ClassInstanceRef<Self>) -> JavaResult<Box<dyn JvmClass>> {
-        let raw_storage = jvm.get_field(&java_class, "raw", "[B")?;
-        let raw = jvm.load_byte_array(&raw_storage, 0, jvm.array_length(&raw_storage)?)?;
-
-        let rust_class_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
-
-        let rust_class = unsafe { Box::from_raw(rust_class_raw as *mut Box<dyn JvmClass>) };
-        let result = (*rust_class).clone();
-
-        forget(rust_class); // do not drop box as we still have it in java memory
-
-        Ok(result)
+        jvm.get_rust_object_field(&java_class, "raw")
     }
 }
 

@@ -8,7 +8,13 @@ use alloc::{
     string::String,
     vec::{self, Vec},
 };
-use core::{array, cell::RefCell, fmt::Debug, iter, mem::forget};
+use core::{
+    array,
+    cell::RefCell,
+    fmt::Debug,
+    iter,
+    mem::{forget, size_of_val},
+};
 
 use anyhow::Context;
 use bytemuck::cast_slice;
@@ -352,7 +358,7 @@ impl Jvm {
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
-        let rust_class = self.to_rust_class(java_class.unwrap())?;
+        let rust_class = self.get_rust_object_field(&java_class.unwrap(), "raw")?;
 
         Ok(Some(rust_class))
     }
@@ -381,19 +387,46 @@ impl Jvm {
         Ok(self.system_class_loader.borrow().as_ref().unwrap().clone())
     }
 
-    // TODO we have same logic on java/lang/Class
-    fn to_rust_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<Box<dyn Class>> {
-        let raw_storage = self.get_field(&java_class, "raw", "[B")?;
+    pub fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> JvmResult<T>
+    where
+        T: Clone,
+    {
+        let raw_storage = self.get_field(instance, name, "[B")?;
         let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
 
-        let rust_class_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
 
-        let rust_class = unsafe { Box::from_raw(rust_class_raw as *mut Box<dyn Class>) };
-        let result = (*rust_class).clone();
+        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
+        let result = (*rust).clone();
 
-        forget(rust_class); // do not drop box as we still have it in java memory
+        forget(rust); // do not drop box as we still have it in java memory
 
         Ok(result)
+    }
+
+    pub async fn get_rust_object_field_move<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str) -> JvmResult<T> {
+        let raw_storage = self.get_field(instance, name, "[B")?;
+        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
+
+        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
+
+        // delete old java data
+        let new_raw = self.instantiate_array("B", 0).await?;
+        self.put_field(instance, name, "[B", new_raw).unwrap();
+
+        Ok(*rust)
+    }
+
+    pub async fn put_rust_object_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, value: T) -> JvmResult<()> {
+        let rust_class_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
+
+        let mut raw_storage = self.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
+        self.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())?;
+
+        self.put_field(instance, name, "[B", raw_storage)?;
+
+        Ok(())
     }
 
     fn find_field(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
