@@ -11,6 +11,8 @@ bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 tracing = { workspace = true }
 
+zip = { version = "^0.6", default-features = false }
+
 java_class_proto = { workspace = true }
 java_constants = { workspace = true }
 jvm = { workspace = true }

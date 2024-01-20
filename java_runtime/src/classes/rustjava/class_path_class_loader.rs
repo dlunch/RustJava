@@ -1,6 +1,7 @@
 use alloc::{vec, vec::Vec};
 
-use bytemuck::cast_slice;
+use bytemuck::{cast_slice, cast_vec};
+use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
@@ -107,8 +108,40 @@ impl ClassPathClassLoader {
         data: ClassInstanceRef<Array<i8>>,
     ) -> JavaResult<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::addJarFile({:?})", &this);
+        // TODO we need to implement java/util/jar/JarFile
 
-        jvm.put_field(&mut this, "jar_file", "[B", data)?; // TODO multiple jars
+        let data = jvm.load_byte_array(&data, 0, jvm.array_length(&data)?)?;
+
+        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
+        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
+
+        // XXX is there no_std zip library?..
+        extern crate std;
+        use std::io::{Cursor, Read};
+
+        let mut archive = ZipArchive::new(Cursor::new(cast_vec(data)))?;
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+
+            if file.is_file() {
+                let name = String::from_rust_string(jvm, file.name()).await?;
+                let mut data = Vec::new();
+                file.read_to_end(&mut data)?;
+
+                let mut data_array = jvm.instantiate_array("B", data.len()).await?;
+                jvm.store_byte_array(&mut data_array, 0, cast_vec(data))?;
+
+                let entry = jvm
+                    .new_class("rustjava/ClassPathEntry", "(Ljava/lang/String;[B)V", (name, data_array))
+                    .await?;
+
+                entries.push(entry.into())
+            }
+        }
+
+        let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", entries.len()).await?;
+        jvm.store_array(&mut new_entries, 0, entries)?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
 
         Ok(())
     }
