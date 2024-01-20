@@ -6,7 +6,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{
-    classes::java::lang::{Class, ClassLoader, String},
+    classes::{
+        java::lang::{Class, ClassLoader, String},
+        rustjava::ClassPathEntry,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -24,19 +27,18 @@ impl ClassPathClassLoader {
                 JavaMethodProto::new("addClassFile", "(Ljava/lang/String;[B)V", Self::add_class_file, Default::default()),
                 JavaMethodProto::new("addJarFile", "([B)V", Self::add_jar_file, Default::default()),
             ],
-            fields: vec![
-                JavaFieldProto::new("class_file_names", "[Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("class_files", "[[B", Default::default()),
-                JavaFieldProto::new("jar_files", "[[B", Default::default()),
-            ],
+            fields: vec![JavaFieldProto::new("entries", "[Lrustjava/ClassPathEntry;", Default::default())],
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
+
+        let entries = jvm.instantiate_array("Lrustjava/ClassPathEntry;", 0).await?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", entries)?;
 
         Ok(())
     }
@@ -51,29 +53,21 @@ impl ClassPathClassLoader {
 
         let name = String::to_rust_string(jvm, &name)?;
 
-        let class_file_names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "class_file_names", "[Ljava/lang/String;")?;
-        if !class_file_names.is_null() {
-            let class_file_names = jvm.load_array(&class_file_names, 0, jvm.array_length(&class_file_names)?)?;
-            for (i, class_file_name) in class_file_names.iter().enumerate() {
-                let class_file_name = String::to_rust_string(jvm, class_file_name)?;
+        let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
 
-                if name == class_file_name {
-                    let class_files = jvm.get_field(&this, "class_files", "[[B")?;
-                    let class_file = &jvm.load_array(&class_files, i, 1)?[0];
-                    let length = jvm.array_length(class_file)?;
+        let entries = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
+        for entry in entries {
+            let entry_name = ClassPathEntry::name(jvm, &entry)?;
 
-                    let class_file_data = jvm.load_byte_array(class_file, 0, length)?;
+            if name == entry_name {
+                let data = ClassPathEntry::data(jvm, &entry)?;
+                let rust_class = jvm.define_class(&name, cast_slice(&data)).await?;
 
-                    let rust_class = jvm.define_class(&name, cast_slice(&class_file_data)).await?;
+                let java_class = Class::from_rust_class(jvm, rust_class).await?;
 
-                    let java_class = Class::from_rust_class(jvm, rust_class).await?;
-
-                    return Ok(java_class);
-                }
+                return Ok(java_class);
             }
         }
-
-        // TODO jar
 
         Ok(None.into())
     }
@@ -88,38 +82,20 @@ impl ClassPathClassLoader {
     ) -> JavaResult<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::addClassFile({:?})", &this);
 
-        let class_file_names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "class_file_names", "[Ljava/lang/String;")?;
-        let class_file_names = if class_file_names.is_null() {
-            let class_file_names = jvm.instantiate_array("Ljava/lang/String;", 0).await?;
-            let class_files = jvm.instantiate_array("[B", 0).await?;
-            let jar_files = jvm.instantiate_array("[B", 0).await?;
+        let entry = jvm
+            .new_class("rustjava/ClassPathEntry", "(Ljava/lang/String;[B)V", (file_name, data))
+            .await?;
 
-            jvm.put_field(&mut this, "class_file_names", "[Ljava/lang/String;", class_file_names.clone())?;
-            jvm.put_field(&mut this, "class_files", "[[B", class_files)?;
-            jvm.put_field(&mut this, "jar_files", "[[B", jar_files)?;
+        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
 
-            class_file_names.into()
-        } else {
-            class_file_names
-        };
+        let length = jvm.array_length(&entries)?;
+        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, length)?;
 
-        let length = jvm.array_length(&class_file_names)?;
-        let mut class_file_names: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_file_names, 0, length)?;
+        entries.push(entry.into());
 
-        class_file_names.push(file_name);
-
-        let mut new_class_file_names = jvm.instantiate_array("Ljava/lang/String;", length + 1).await?;
-        jvm.store_array(&mut new_class_file_names, 0, class_file_names)?;
-        jvm.put_field(&mut this, "class_file_names", "[Ljava/lang/String;", new_class_file_names)?;
-
-        let class_files = jvm.get_field(&this, "class_files", "[[B")?;
-        let mut class_files: Vec<ClassInstanceRef<Array<i8>>> = jvm.load_array(&class_files, 0, length)?;
-
-        class_files.push(data);
-
-        let mut new_class_files = jvm.instantiate_array("[B", length + 1).await?;
-        jvm.store_array(&mut new_class_files, 0, class_files)?;
-        jvm.put_field(&mut this, "class_files", "[[B", new_class_files)?;
+        let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", length + 1).await?;
+        jvm.store_array(&mut new_entries, 0, entries)?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
 
         Ok(())
     }
