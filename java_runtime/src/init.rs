@@ -62,6 +62,11 @@ where
         ("java/util/Timer", crate::classes::java::util::Timer::as_proto()),
         ("java/util/TimerTask", crate::classes::java::util::TimerTask::as_proto()),
         ("java/util/Vector", crate::classes::java::util::Vector::as_proto()),
+        (
+            "rustjava/ByteArrayURLConnection",
+            crate::classes::rustjava::ByteArrayURLConnection::as_proto(),
+        ),
+        ("rustjava/ByteArrayURLHandler", crate::classes::rustjava::ByteArrayURLHandler::as_proto()),
         ("rustjava/ClassPathEntry", crate::classes::rustjava::ClassPathEntry::as_proto()),
         ("rustjava/RuntimeClassLoader", crate::classes::rustjava::RuntimeClassLoader::as_proto()),
         ("rustjava/ArrayClassLoader", crate::classes::rustjava::ArrayClassLoader::as_proto()),
