@@ -1,6 +1,4 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
-
-use bytemuck::cast_vec;
+use alloc::{string::String as RustString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Array, ClassInstanceRef, Jvm};
@@ -46,13 +44,7 @@ impl ClassPathEntry {
         String::to_rust_string(jvm, &name)
     }
 
-    pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<Vec<u8>> {
-        let data = jvm.get_field(this, "data", "[B")?;
-
-        Ok(cast_vec(jvm.load_byte_array(&data, 0, jvm.array_length(&data)?)?))
-    }
-
-    pub fn data_array(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Array<i8>>> {
+    pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Array<i8>>> {
         jvm.get_field(this, "data", "[B")
     }
 }

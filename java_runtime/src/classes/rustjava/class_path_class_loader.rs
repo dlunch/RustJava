@@ -61,25 +61,30 @@ impl ClassPathClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let name = String::to_rust_string(jvm, &name)?;
+        let resource: ClassInstanceRef<URL> = jvm
+            .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
+            .await?;
 
-        let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
-
-        let entries = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
-        for entry in entries {
-            let entry_name = ClassPathEntry::name(jvm, &entry)?;
-
-            if name == entry_name {
-                let data = ClassPathEntry::data(jvm, &entry)?;
-                let rust_class = jvm.define_class(&name, cast_slice(&data)).await?;
-
-                let java_class = Class::from_rust_class(jvm, rust_class).await?;
-
-                return Ok(java_class);
-            }
+        if resource.is_null() {
+            return Ok(None.into());
         }
 
-        Ok(None.into())
+        // TODO use ClassLoader.defineClass
+
+        let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+        let length: i32 = jvm.invoke_virtual(&stream, "available", "()I", ()).await?;
+        let array = jvm.instantiate_array("B", length as _).await?;
+
+        let _: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (array.clone(),)).await?;
+
+        let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
+
+        let name = String::to_rust_string(jvm, &name)?;
+        let rust_class = jvm.define_class(&name, cast_slice(&data)).await?;
+
+        let java_class = Class::from_rust_class(jvm, rust_class).await?;
+
+        Ok(java_class)
     }
 
     async fn find_resource(
@@ -99,13 +104,13 @@ impl ClassPathClassLoader {
             let entry_name = ClassPathEntry::name(jvm, &entry)?;
 
             if name == entry_name {
-                let data = ClassPathEntry::data_array(jvm, &entry)?;
+                let data = ClassPathEntry::data(jvm, &entry)?;
 
                 let protocol = String::from_rust_string(jvm, "bytes").await?;
                 let host = String::from_rust_string(jvm, "").await?;
                 let port = 0;
                 let file = String::from_rust_string(jvm, &name).await?;
-                let handler = jvm.new_class("rustjava/BytesURLStreamHandler", "([B)V", (data,)).await?;
+                let handler = jvm.new_class("rustjava/ByteArrayURLHandler", "([B)V", (data,)).await?;
 
                 let url = jvm
                     .new_class(

@@ -178,7 +178,7 @@ impl ClassLoader {
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
 
         let result: ClassInstanceRef<URL> = if !parent.is_null() {
-            jvm.invoke_virtual(&parent, "getResource", "(Ljava/lang/String;)Ljava/lang/String;", (name.clone(),))
+            jvm.invoke_virtual(&parent, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
                 .await?
         } else {
             None.into()
@@ -189,7 +189,7 @@ impl ClassLoader {
         }
 
         let result = jvm
-            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/lang/String;", (name,))
+            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (name,))
             .await?;
 
         Ok(result)
