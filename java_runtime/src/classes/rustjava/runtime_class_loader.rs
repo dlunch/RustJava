@@ -66,7 +66,7 @@ impl RuntimeClassLoader {
         let mut java_classes: Vec<JavaValue> = Vec::with_capacity(classes.len());
 
         for class in classes {
-            java_classes.push(Class::from_rust_class(jvm, class).await?.into());
+            java_classes.push(Class::from_rust_class(jvm, None.into(), class).await?.into());
         }
 
         let mut java_classes_array = jvm.instantiate_array("Ljava/lang/Class;", java_classes.len() as _).await?;

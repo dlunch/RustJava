@@ -6,7 +6,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Class as JvmClass, ClassInstanceRef, Jvm};
 
 use crate::{
-    classes::java::{io::InputStream, lang::String},
+    classes::java::{
+        io::InputStream,
+        lang::{ClassLoader, String},
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -29,6 +32,7 @@ impl Class {
             ],
             fields: vec![
                 JavaFieldProto::new("raw", "[B", Default::default()), // raw rust pointer of Box<dyn Class>
+                JavaFieldProto::new("classLoader", "Ljava/lang/ClassLoader;", Default::default()),
             ],
         }
     }
@@ -65,10 +69,15 @@ impl Class {
         }
     }
 
-    pub async fn from_rust_class(jvm: &Jvm, rust_class: Box<dyn JvmClass>) -> JavaResult<ClassInstanceRef<Self>> {
+    pub async fn from_rust_class(
+        jvm: &Jvm,
+        class_loader: ClassInstanceRef<ClassLoader>,
+        rust_class: Box<dyn JvmClass>,
+    ) -> JavaResult<ClassInstanceRef<Self>> {
         let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
 
         jvm.put_rust_object_field(&mut java_class, "raw", rust_class).await?;
+        jvm.put_field(&mut java_class, "classLoader", "Ljava/lang/ClassLoader;", class_loader)?;
 
         Ok(java_class.into())
     }
@@ -90,7 +99,7 @@ mod test {
 
         let class = jvm.resolve_class("java/lang/String").await?.unwrap();
 
-        let java_class = Class::from_rust_class(&jvm, class).await?;
+        let java_class = Class::from_rust_class(&jvm, jvm.get_system_class_loader().await?.into(), class).await?;
 
         let rust_class = Class::to_rust_class(&jvm, java_class.clone().into())?;
         assert_eq!(rust_class.name(), "java/lang/String");

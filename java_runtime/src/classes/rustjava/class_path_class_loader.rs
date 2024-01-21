@@ -82,7 +82,7 @@ impl ClassPathClassLoader {
         let name = String::to_rust_string(jvm, &name)?;
         let rust_class = jvm.define_class(&name, cast_slice(&data)).await?;
 
-        let java_class = Class::from_rust_class(jvm, rust_class).await?;
+        let java_class = Class::from_rust_class(jvm, this.clone().into(), rust_class).await?;
 
         Ok(java_class)
     }
