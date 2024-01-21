@@ -5,7 +5,10 @@ use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
-    classes::java::lang::{Class, String},
+    classes::java::{
+        lang::{Class, String},
+        net::URL,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -32,6 +35,18 @@ impl ClassLoader {
                     "()Ljava/lang/ClassLoader;",
                     Self::get_system_class_loader,
                     MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "getResource",
+                    "(Ljava/lang/String;)Ljava/net/URL;",
+                    Self::get_resource,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "findResource",
+                    "(Ljava/lang/String;)Ljava/net/URL;",
+                    Self::find_resource,
+                    Default::default(),
                 ),
             ],
             fields: vec![
@@ -150,5 +165,44 @@ impl ClassLoader {
         let java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
 
         Ok(java_class.into())
+    }
+
+    async fn get_resource(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        name: ClassInstanceRef<String>,
+    ) -> JavaResult<ClassInstanceRef<URL>> {
+        tracing::debug!("java.lang.ClassLoader::getResource({:?})", &this);
+
+        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
+
+        let result: ClassInstanceRef<URL> = if !parent.is_null() {
+            jvm.invoke_virtual(&parent, "getResource", "(Ljava/lang/String;)Ljava/lang/String;", (name.clone(),))
+                .await?
+        } else {
+            None.into()
+        };
+
+        if !result.is_null() {
+            return Ok(result);
+        }
+
+        let result = jvm
+            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/lang/String;", (name,))
+            .await?;
+
+        Ok(result)
+    }
+
+    async fn find_resource(
+        _: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        _: ClassInstanceRef<String>,
+    ) -> JavaResult<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.ClassLoader::findResource({:?})", &this);
+
+        Ok(None.into())
     }
 }
