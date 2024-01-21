@@ -51,4 +51,8 @@ impl ClassPathEntry {
 
         Ok(cast_vec(jvm.load_byte_array(&data, 0, jvm.array_length(&data)?)?))
     }
+
+    pub fn data_array(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Array<i8>>> {
+        jvm.get_field(this, "data", "[B")
+    }
 }
