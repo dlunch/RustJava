@@ -1,7 +1,5 @@
 use alloc::{boxed::Box, vec};
 
-use bytemuck::cast_vec;
-
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use jvm::{Class as JvmClass, ClassInstanceRef, Jvm};
 
@@ -43,30 +41,18 @@ impl Class {
         Ok(())
     }
 
-    #[allow(clippy::await_holding_refcell_ref)] // We manually drop Ref https://github.com/rust-lang/rust-clippy/issues/6353
     async fn get_resource_as_stream(
         jvm: &Jvm,
-        context: &mut RuntimeContext,
+        _context: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> JavaResult<ClassInstanceRef<InputStream>> {
-        let name = String::to_rust_string(jvm, &name)?;
-        tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {})", &this, name);
+        tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {:?})", &this, &name);
 
-        let normalized_name = if let Some(x) = name.strip_prefix('/') { x } else { &name };
+        let class_loader = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;")?;
 
-        let resource = context.load_resource(normalized_name);
-        if let Some(resource) = resource {
-            let mut array = jvm.instantiate_array("B", resource.len() as _).await?;
-
-            jvm.store_byte_array(&mut array, 0, cast_vec(resource))?;
-
-            let result = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (array,)).await?;
-
-            Ok(result.into())
-        } else {
-            Ok(None.into())
-        }
+        jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
+            .await
     }
 
     pub async fn from_rust_class(

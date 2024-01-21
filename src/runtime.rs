@@ -52,10 +52,6 @@ where
         todo!()
     }
 
-    fn load_resource(&self, _name: &str) -> Option<Vec<u8>> {
-        todo!()
-    }
-
     fn println(&mut self, s: &str) {
         writeln!(self.stdout.borrow_mut(), "{}", s).unwrap();
     }

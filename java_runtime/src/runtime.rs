@@ -16,7 +16,6 @@ pub trait Runtime: DynClone {
     fn encode_str(&self, s: &str) -> Vec<u8>; // TODO implement java charset conversion
     fn decode_str(&self, bytes: &[u8]) -> String;
 
-    fn load_resource(&self, name: &str) -> Option<Vec<u8>>; // TODO implement resource in classloader
     fn println(&mut self, s: &str); // TODO Properly implement printstream handler
 }
 
@@ -58,10 +57,6 @@ pub mod test {
         }
 
         fn decode_str(&self, _bytes: &[u8]) -> String {
-            todo!()
-        }
-
-        fn load_resource(&self, _name: &str) -> Option<Vec<u8>> {
             todo!()
         }
 

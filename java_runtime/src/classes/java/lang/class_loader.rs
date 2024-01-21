@@ -43,6 +43,12 @@ impl ClassLoader {
                     Default::default(),
                 ),
                 JavaMethodProto::new(
+                    "getResourceAsStream",
+                    "(Ljava/lang/String;)Ljava/io/InputStream;",
+                    Self::get_resource_as_stream,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
                     "findResource",
                     "(Ljava/lang/String;)Ljava/net/URL;",
                     Self::find_resource,
@@ -193,6 +199,23 @@ impl ClassLoader {
             .await?;
 
         Ok(result)
+    }
+
+    async fn get_resource_as_stream(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        name: ClassInstanceRef<String>,
+    ) -> JavaResult<ClassInstanceRef<URL>> {
+        tracing::debug!("java.lang.ClassLoader::getResourceAsStream({:?})", &this);
+
+        let resource_url = jvm
+            .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
+            .await?;
+
+        let stream = jvm.invoke_virtual(&resource_url, "openStream", "()Ljava/io/InputStream;", ()).await?;
+
+        Ok(stream)
     }
 
     async fn find_resource(
