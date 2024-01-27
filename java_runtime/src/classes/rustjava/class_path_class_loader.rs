@@ -1,4 +1,8 @@
-use alloc::{vec, vec::Vec};
+use alloc::{
+    string::{String as RustString, ToString},
+    vec,
+    vec::Vec,
+};
 
 use bytemuck::{cast_slice, cast_vec};
 use zip::ZipArchive;
@@ -173,14 +177,21 @@ impl ClassPathClassLoader {
         extern crate std;
         use std::io::{Cursor, Read};
 
+        let mut manifest = None;
+
         let mut archive = ZipArchive::new(Cursor::new(cast_vec(data)))?;
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
 
             if file.is_file() {
-                let name = String::from_rust_string(jvm, file.name()).await?;
                 let mut data = Vec::new();
                 file.read_to_end(&mut data)?;
+
+                if file.name() == "META-INF/MANIFEST.MF" {
+                    manifest = Some(data.clone())
+                }
+
+                let name = String::from_rust_string(jvm, file.name()).await?;
 
                 let mut data_array = jvm.instantiate_array("B", data.len()).await?;
                 jvm.store_byte_array(&mut data_array, 0, cast_vec(data))?;
@@ -197,8 +208,21 @@ impl ClassPathClassLoader {
         jvm.store_array(&mut new_entries, 0, entries)?;
         jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
 
-        let main_class_name = String::from_rust_string(jvm, "Main").await?; // TODO temp
+        // TODO we need java/util/jar/Manifest
+        let main_class_name = Self::get_main_class_name(&manifest.unwrap());
+        let main_class_name = String::from_rust_string(jvm, &main_class_name).await?;
 
         Ok(main_class_name)
+    }
+
+    fn get_main_class_name(manifest: &[u8]) -> RustString {
+        let manifest = RustString::from_utf8_lossy(manifest);
+        for line in manifest.lines() {
+            if let Some(x) = line.strip_prefix("Main-Class: ") {
+                return x.to_string();
+            }
+        }
+
+        panic!("Main-Class not found in manifest")
     }
 }
