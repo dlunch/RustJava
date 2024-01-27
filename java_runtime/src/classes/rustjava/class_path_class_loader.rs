@@ -35,7 +35,7 @@ impl ClassPathClassLoader {
                     Default::default(),
                 ),
                 JavaMethodProto::new("addClassFile", "(Ljava/lang/String;[B)V", Self::add_class_file, Default::default()),
-                JavaMethodProto::new("addJarFile", "([B)V", Self::add_jar_file, Default::default()),
+                JavaMethodProto::new("addJarFile", "([B)Ljava/lang/String;", Self::add_jar_file, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("entries", "[Lrustjava/ClassPathEntry;", Default::default())],
         }
@@ -160,7 +160,7 @@ impl ClassPathClassLoader {
         _runtime: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
         data: ClassInstanceRef<Array<i8>>,
-    ) -> JavaResult<()> {
+    ) -> JavaResult<ClassInstanceRef<String>> {
         tracing::debug!("rustjava.ClassPathClassLoader::addJarFile({:?})", &this);
         // TODO we need to implement java/util/jar/JarFile
 
@@ -197,6 +197,8 @@ impl ClassPathClassLoader {
         jvm.store_array(&mut new_entries, 0, entries)?;
         jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
 
-        Ok(())
+        let main_class_name = String::from_rust_string(jvm, "Main").await?; // TODO temp
+
+        Ok(main_class_name)
     }
 }

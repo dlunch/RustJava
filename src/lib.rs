@@ -44,6 +44,19 @@ pub async fn load_class_file(jvm: &Jvm, class_name: &str, data: &[u8]) -> JvmRes
     Ok(())
 }
 
+pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> JvmResult<String> {
+    let class_loader = jvm.get_system_class_loader().await?;
+
+    let mut data_storage = jvm.instantiate_array("B", jar.len()).await?;
+    jvm.store_byte_array(&mut data_storage, 0, cast_vec(jar.to_vec()))?;
+
+    let main_class_name = jvm
+        .invoke_virtual(&class_loader, "addJarFile", "([B)Ljava/lang/String;", (data_storage,))
+        .await?;
+
+    JavaString::to_rust_string(jvm, &main_class_name)
+}
+
 pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {

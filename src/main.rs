@@ -6,7 +6,7 @@ use std::{
 use clap::{ArgGroup, Parser};
 use futures_executor::block_on;
 
-use rust_java::{create_jvm, load_class_file, run_java_main};
+use rust_java::{create_jvm, load_class_file, load_jar_file, run_java_main};
 
 #[derive(Parser)]
 #[clap(group = ArgGroup::new("target").required(true).multiple(false))]
@@ -32,8 +32,12 @@ pub fn main() -> anyhow::Result<()> {
             load_class_file(&jvm, &x, &data).await?;
 
             x
+        } else if let Some(x) = opts.jar {
+            let data = fs::read(&x)?;
+
+            load_jar_file(&jvm, &data).await?
         } else {
-            todo!()
+            unreachable!() // should be caught by clap
         };
 
         run_java_main(&jvm, &main_class_name, &opts.args).await?;
