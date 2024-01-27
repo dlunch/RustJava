@@ -26,10 +26,10 @@ pub fn main() -> anyhow::Result<()> {
         let jvm = create_jvm(io::stdout()).await?;
 
         let main_class_name = if let Some(x) = opts.main_class {
-            let path = x.replace('.', "/") + ".class";
-            let data = fs::read(&path)?;
+            let file_name = x.replace('.', "/") + ".class";
+            let data = fs::read(&file_name)?;
 
-            load_class_file(&jvm, &x, &data).await?;
+            load_class_file(&jvm, &file_name, &data).await?;
 
             x
         } else if let Some(x) = opts.jar {

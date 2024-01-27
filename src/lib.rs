@@ -30,15 +30,15 @@ where
     Ok(jvm)
 }
 
-pub async fn load_class_file(jvm: &Jvm, class_name: &str, data: &[u8]) -> JvmResult<()> {
+pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> JvmResult<()> {
     let class_loader = jvm.get_system_class_loader().await?;
 
-    let class_name = JavaString::from_rust_string(jvm, class_name).await?;
+    let file_name = JavaString::from_rust_string(jvm, file_name).await?;
 
     let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
     jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec()))?;
 
-    jvm.invoke_virtual(&class_loader, "addClassFile", "(Ljava/lang/String;[B)V", (class_name, data_storage))
+    jvm.invoke_virtual(&class_loader, "addClassFile", "(Ljava/lang/String;[B)V", (file_name, data_storage))
         .await?;
 
     Ok(())

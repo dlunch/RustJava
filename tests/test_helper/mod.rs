@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use core::cell::RefCell;
 use std::{io, str};
 
@@ -25,7 +27,8 @@ pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &
     let jvm = create_jvm(Output).await?;
 
     for (name, data) in classes {
-        load_class_file(&jvm, name, data).await?;
+        let file_name = name.replace('.', "/") + ".class";
+        load_class_file(&jvm, &file_name, data).await?;
     }
 
     run_java_main(&jvm, main_class_name, args).await?;

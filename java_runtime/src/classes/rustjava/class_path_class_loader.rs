@@ -65,8 +65,11 @@ impl ClassPathClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
+        let class_file_name = String::to_rust_string(jvm, &name)?.replace('.', "/") + ".class";
+        let class_file_name = String::from_rust_string(jvm, &class_file_name).await?;
+
         let resource: ClassInstanceRef<URL> = jvm
-            .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
+            .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (class_file_name,))
             .await?;
 
         if resource.is_null() {
