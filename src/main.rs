@@ -1,32 +1,42 @@
 use std::{
-    env, fs,
+    fs,
     io::{self},
-    path::Path,
 };
 
+use clap::{ArgGroup, Parser};
 use futures_executor::block_on;
 
 use rust_java::{create_jvm, load_class_file, run_java_main};
 
-// TODO move logics into lib
+#[derive(Parser)]
+#[clap(group = ArgGroup::new("target").required(true).multiple(false))]
+struct Opts {
+    #[arg(group = "target", name = "mainclass")]
+    main_class: Option<String>,
+    #[arg(long, group = "target", name = "jarfile")]
+    jar: Option<String>,
+
+    args: Vec<String>,
+}
+
 pub fn main() -> anyhow::Result<()> {
-    let args = env::args().collect::<Vec<_>>();
-    let filename = &args[1];
-    let main_class_name = &args[2];
-    let args = &args[3..];
+    let opts = Opts::parse();
 
     block_on(async {
         let jvm = create_jvm(io::stdout()).await?;
 
-        let data = fs::read(filename)?;
+        let main_class_name = if let Some(x) = opts.main_class {
+            let path = x.replace('.', "/") + ".class";
+            let data = fs::read(&path)?;
 
-        // TODO remove filename parsing and parse class name in ClassPathClassLoader
-        let filename = Path::new(filename).file_name().unwrap().to_string_lossy();
-        let class_name = filename.strip_suffix(".class").unwrap();
+            load_class_file(&jvm, &x, &data).await?;
 
-        load_class_file(&jvm, class_name, &data).await?;
+            x
+        } else {
+            todo!()
+        };
 
-        run_java_main(&jvm, main_class_name, args).await?;
+        run_java_main(&jvm, &main_class_name, &opts.args).await?;
 
         Ok(())
     })
