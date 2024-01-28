@@ -211,19 +211,21 @@ impl ClassPathClassLoader {
 
         // TODO we need java/util/jar/Manifest
         let main_class_name = Self::get_main_class_name(&manifest.unwrap());
-        let main_class_name = JavaLangString::from_rust_string(jvm, &main_class_name).await?;
-
-        Ok(main_class_name.into())
+        if let Some(x) = main_class_name {
+            Ok(JavaLangString::from_rust_string(jvm, &x).await?.into())
+        } else {
+            Ok(None.into())
+        }
     }
 
-    fn get_main_class_name(manifest: &[u8]) -> RustString {
+    fn get_main_class_name(manifest: &[u8]) -> Option<RustString> {
         let manifest = RustString::from_utf8_lossy(manifest);
         for line in manifest.lines() {
             if let Some(x) = line.strip_prefix("Main-Class: ") {
-                return x.to_string();
+                return Some(x.to_string());
             }
         }
 
-        panic!("Main-Class not found in manifest")
+        None
     }
 }
