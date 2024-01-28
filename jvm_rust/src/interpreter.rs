@@ -102,8 +102,8 @@ impl Interpreter {
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Goto(x) => iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..),
                 Opcode::Iadd => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2 = Self::pop_integer(&mut stack_frame);
+                    let value1 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 + value2));
                 }
@@ -131,8 +131,8 @@ impl Interpreter {
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Idiv => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2 = Self::pop_integer(&mut stack_frame);
+                    let value1 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
                 }
