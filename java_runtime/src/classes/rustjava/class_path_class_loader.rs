@@ -210,12 +210,13 @@ impl ClassPathClassLoader {
         jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
 
         // TODO we need java/util/jar/Manifest
-        let main_class_name = Self::get_main_class_name(&manifest.unwrap());
-        if let Some(x) = main_class_name {
-            Ok(JavaLangString::from_rust_string(jvm, &x).await?.into())
-        } else {
-            Ok(None.into())
+        if let Some(x) = manifest {
+            let main_class_name = Self::get_main_class_name(&x);
+            if let Some(x) = main_class_name {
+                return Ok(JavaLangString::from_rust_string(jvm, &x).await?.into());
+            }
         }
+        Ok(None.into())
     }
 
     fn get_main_class_name(manifest: &[u8]) -> Option<RustString> {
