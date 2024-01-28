@@ -41,7 +41,8 @@ impl Class {
         } else {
             // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
 
-            let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), None).await?;
+            let class_loader = jvm.get_system_class_loader().await?;
+            let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), Some(class_loader)).await?;
 
             self.java_class = Some(java_class.clone());
 
