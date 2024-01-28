@@ -313,27 +313,8 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
-        let classes = self.classes.borrow();
-        let class = classes.get(class_name);
-
-        if class.is_none() {
-            return Ok(None);
-        }
-        let class = class.unwrap();
-
-        if let Some(x) = &class.java_class {
-            Ok(Some(x.clone()))
-        } else {
-            // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
-
-            let java_class = JavaLangClass::from_rust_class(self, class.definition.clone(), None).await?;
-
-            drop(classes);
-            self.classes.borrow_mut().get_mut(class_name).unwrap().java_class = Some(java_class.clone());
-
-            Ok(Some(java_class))
-        }
+    pub fn has_class(&self, class_name: &str) -> bool {
+        self.classes.borrow().contains_key(class_name)
     }
 
     #[async_recursion::async_recursion(?Send)]
@@ -410,7 +391,7 @@ impl Jvm {
 
         self.register_class(class, Some(class_loader)).await?;
 
-        Ok(self.get_class(name).await?.unwrap())
+        self.resolve_class(name).await?.unwrap().java_class(self).await
     }
 
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
@@ -418,7 +399,7 @@ impl Jvm {
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
-        Ok(self.get_class(&class.name()).await?.unwrap())
+        self.resolve_class(&class.name()).await?.unwrap().java_class(self).await
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {

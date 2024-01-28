@@ -34,7 +34,7 @@ impl Object {
         let this: Box<dyn ClassInstance> = this.into();
         let class_name = this.class_definition().name();
 
-        let class = jvm.get_class(&class_name).await?;
+        let class = jvm.resolve_class(&class_name).await?.unwrap().java_class(jvm).await?;
 
         Ok(class.into())
     }

@@ -161,13 +161,13 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
         let rust_name = JavaLangString::to_rust_string(jvm, name.into())?;
-        let class = jvm.get_class(&rust_name).await?;
-
-        if class.is_none() {
+        if !jvm.has_class(&rust_name) {
             return Ok(None.into());
         }
 
-        Ok(class.into())
+        let class = jvm.resolve_class(&rust_name).await?;
+
+        Ok(class.unwrap().java_class(jvm).await?.into())
     }
 
     async fn get_resource(

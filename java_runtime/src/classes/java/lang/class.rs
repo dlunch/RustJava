@@ -63,7 +63,7 @@ mod test {
     async fn test_class() -> anyhow::Result<()> {
         let jvm = test_jvm().await?;
 
-        let java_class = jvm.get_class("java/lang/String").await?.unwrap();
+        let java_class = jvm.resolve_class("java/lang/String").await?.unwrap().java_class(&jvm).await?;
 
         let rust_class = JavaLangClass::to_rust_class(&jvm, java_class.clone())?;
         assert_eq!(rust_class.name(), "java/lang/String");
