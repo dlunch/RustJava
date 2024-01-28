@@ -1,8 +1,8 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use java_constants::FieldAccessFlags;
-use jvm::{Array, Class as JvmClass, ClassInstanceRef, JavaValue, Jvm};
+use jvm::{Array, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -59,22 +59,5 @@ impl RuntimeClassLoader {
         }
 
         Ok(None.into())
-    }
-
-    // TODO load class on demand
-    pub async fn initialize(jvm: &Jvm, classes: Vec<Box<dyn JvmClass>>) -> JavaResult<()> {
-        let mut java_classes: Vec<JavaValue> = Vec::with_capacity(classes.len());
-
-        for class in classes {
-            java_classes.push(Class::from_rust_class(jvm, None.into(), class).await?.into());
-        }
-
-        let mut java_classes_array = jvm.instantiate_array("Ljava/lang/Class;", java_classes.len() as _).await?;
-        jvm.store_array(&mut java_classes_array, 0, java_classes)?;
-
-        jvm.put_static_field("rustjava/RuntimeClassLoader", "classes", "[Ljava/lang/Class;", java_classes_array)
-            .await?;
-
-        Ok(())
     }
 }

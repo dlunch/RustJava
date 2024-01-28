@@ -45,9 +45,8 @@ impl ArrayClassLoader {
 
         if let Some(element_type_name) = name.strip_prefix('[') {
             let class = jvm.define_array_class(element_type_name).await?;
-            let java_class = Class::from_rust_class(jvm, this.clone().into(), class).await?;
 
-            return Ok(java_class);
+            return Ok(class.into());
         }
 
         Ok(None.into())

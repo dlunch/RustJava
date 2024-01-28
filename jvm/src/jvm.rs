@@ -308,6 +308,27 @@ impl Jvm {
         self.classes.borrow().get(class_name).map(|x| x.class.clone())
     }
 
+    pub async fn get_java_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
+        let classes = self.classes.borrow();
+        let class = classes.get(class_name);
+
+        if class.is_none() {
+            return Ok(None);
+        }
+        let class = class.unwrap();
+
+        if let Some(x) = &class.java_class {
+            Ok(Some(x.clone()))
+        } else {
+            let java_class = JavaLangClass::from_rust_class(self, class.class.clone()).await?;
+
+            drop(classes);
+            self.classes.borrow_mut().get_mut(class_name).unwrap().java_class = Some(java_class.clone());
+
+            Ok(Some(java_class))
+        }
+    }
+
     #[async_recursion::async_recursion(?Send)]
     pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
         let class = self.get_class(class_name);
@@ -318,13 +339,32 @@ impl Jvm {
         if let Some(x) = self.load_class(class_name).await? {
             tracing::debug!("Loaded class {}", class_name);
 
-            self.register_class(x.clone()).await?;
+            self.register_java_class(x).await?;
             let class = self.get_class(class_name);
 
             return Ok(class);
         }
 
         Ok(None)
+    }
+
+    pub async fn register_java_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<()> {
+        let class = JavaLangClass::to_rust_class(self, java_class.clone())?;
+
+        if let Some(super_class) = class.super_class_name() {
+            self.resolve_class(&super_class).await?;
+        }
+
+        self.classes.borrow_mut().insert(
+            class.name().to_owned(),
+            LoadedClass {
+                class: class.clone(),
+                java_class: Some(java_class),
+            },
+        );
+        self.init_class(&*class).await?;
+
+        Ok(())
     }
 
     pub async fn register_class(&self, class: Box<dyn Class>) -> JvmResult<()> {
@@ -358,23 +398,29 @@ impl Jvm {
         Ok(())
     }
 
-    async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
+    async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
         let class_loader = self.get_system_class_loader().await?;
         let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
-        let rust_class = JavaLangClass::to_rust_class(self, java_class.unwrap())?;
-
-        Ok(Some(rust_class))
+        Ok(Some(java_class.unwrap()))
     }
 
-    pub async fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_class(self, name, data).await
+    pub async fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn ClassInstance>> {
+        let class = self.detail.borrow().define_class(self, name, data).await?;
+
+        self.register_class(class).await?;
+
+        Ok(self.get_java_class(name).await?.unwrap())
     }
 
-    pub async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn Class>> {
-        self.detail.borrow().define_array_class(self, element_type_name).await
+    pub async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
+        let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
+
+        self.register_class(class.clone()).await?;
+
+        Ok(self.get_java_class(&class.name()).await?.unwrap())
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {

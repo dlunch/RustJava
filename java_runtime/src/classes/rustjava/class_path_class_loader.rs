@@ -87,11 +87,9 @@ impl ClassPathClassLoader {
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
 
         let name = String::to_rust_string(jvm, &name)?;
-        let rust_class = jvm.define_class(&name, cast_slice(&data)).await?;
+        let class = jvm.define_class(&name, cast_slice(&data)).await?;
 
-        let java_class = Class::from_rust_class(jvm, this.clone().into(), rust_class).await?;
-
-        Ok(java_class)
+        Ok(class.into())
     }
 
     async fn find_resource(

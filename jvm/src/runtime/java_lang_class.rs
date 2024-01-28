@@ -10,4 +10,13 @@ impl JavaLangClass {
 
         Ok(rust_class)
     }
+
+    pub async fn from_rust_class(jvm: &Jvm, rust_class: Box<dyn Class>) -> JvmResult<Box<dyn ClassInstance>> {
+        let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
+
+        jvm.put_rust_object_field(&mut java_class, "raw", rust_class).await?;
+        jvm.put_field(&mut java_class, "classLoader", "Ljava/lang/ClassLoader;", None)?;
+
+        Ok(java_class)
+    }
 }
