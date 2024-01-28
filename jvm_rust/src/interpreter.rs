@@ -233,32 +233,32 @@ impl Interpreter {
                     stack_frame.local_variables[*x as usize] = JavaValue::Int(value + *y as i32);
                 }
                 Opcode::Imul => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2 = Self::pop_integer(&mut stack_frame);
+                    let value1: i32 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 * value2));
                 }
                 Opcode::Irem => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2: i32 = Self::pop_integer(&mut stack_frame);
+                    let value1: i32 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
                 }
                 Opcode::Ishl => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2: i32 = Self::pop_integer(&mut stack_frame);
+                    let value1: i32 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 << value2));
                 }
                 Opcode::Ishr => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2: i32 = Self::pop_integer(&mut stack_frame);
+                    let value1: i32 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 >> value2));
                 }
                 Opcode::Isub => {
-                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value2: i32 = Self::pop_integer(&mut stack_frame);
+                    let value1: i32 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 - value2));
                 }
