@@ -28,9 +28,26 @@ use crate::{
     JvmResult,
 };
 
-struct Class {
+#[derive(Clone)]
+pub struct Class {
     definition: Box<dyn ClassDefinition>,
     java_class: Option<Box<dyn ClassInstance>>,
+}
+
+impl Class {
+    pub async fn java_class(&mut self, jvm: &Jvm) -> JvmResult<Box<dyn ClassInstance>> {
+        if let Some(x) = &self.java_class {
+            Ok((*x).clone())
+        } else {
+            // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
+
+            let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), None).await?;
+
+            self.java_class = Some(java_class.clone());
+
+            Ok(java_class)
+        }
+    }
 }
 
 pub struct Jvm {
@@ -55,11 +72,11 @@ impl Jvm {
         tracing::trace!("Instantiate {}", class_name);
 
         let class = self
-            .resolve_class_definition(class_name)
+            .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
-        let instance = class.instantiate();
+        let instance = class.definition.instantiate();
 
         Ok(instance)
     }
@@ -94,15 +111,16 @@ impl Jvm {
         tracing::trace!("Get static field {}.{}:{}", class_name, name, descriptor);
 
         let class = self
-            .resolve_class_definition(class_name)
+            .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
         let field = class
+            .definition
             .field(name, descriptor, true)
             .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
-        Ok(class.get_static_field(&*field)?.into())
+        Ok(class.definition.get_static_field(&*field)?.into())
     }
 
     pub async fn put_static_field<T>(&self, class_name: &str, name: &str, descriptor: &str, value: T) -> JvmResult<()>
@@ -112,15 +130,16 @@ impl Jvm {
         tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
         let mut class = self
-            .resolve_class_definition(class_name)
+            .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
         let field = class
+            .definition
             .field(name, descriptor, true)
             .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
 
-        class.put_static_field(&*field, value.into())
+        class.definition.put_static_field(&*field, value.into())
     }
 
     pub fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str) -> JvmResult<T>
@@ -157,11 +176,12 @@ impl Jvm {
         tracing::trace!("Invoke static {}.{}:{}", class_name, name, descriptor);
 
         let class = self
-            .resolve_class_definition(class_name)
+            .resolve_class(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
         let method = class
+            .definition
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
@@ -206,8 +226,9 @@ impl Jvm {
     {
         tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
-        let class = self.resolve_class_definition(class_name).await?.unwrap();
+        let class = self.resolve_class(class_name).await?.unwrap();
         let method = class
+            .definition
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
 
@@ -316,8 +337,8 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion(?Send)]
-    async fn resolve_class_definition(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>> {
-        let class = self.classes.borrow().get(class_name).map(|x| x.definition.clone());
+    pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Option<Class>> {
+        let class = self.classes.borrow().get(class_name).cloned();
 
         if let Some(x) = class {
             return Ok(Some(x));
@@ -335,6 +356,8 @@ impl Jvm {
             let class = JavaLangClass::to_rust_class(self, x.clone())?;
 
             self.register_class_internal(class.clone(), java_class).await?;
+
+            let class = self.classes.borrow().get(class_name).unwrap().clone();
 
             return Ok(Some(class));
         }
@@ -360,7 +383,7 @@ impl Jvm {
     async fn register_class_internal(&self, class_definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
         if let Some(super_class) = class_definition.super_class_name() {
             // ensure superclass is loaded
-            self.resolve_class_definition(&super_class).await?;
+            self.resolve_class(&super_class).await?;
         }
 
         self.classes.borrow_mut().insert(
