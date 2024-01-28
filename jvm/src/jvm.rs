@@ -304,6 +304,8 @@ impl Jvm {
         if let Some(x) = &class.java_class {
             Ok(Some(x.clone()))
         } else {
+            // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
+
             let java_class = JavaLangClass::from_rust_class(self, class.definition.clone(), None).await?;
 
             drop(classes);
