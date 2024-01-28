@@ -244,6 +244,18 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
                 }
+                Opcode::Ishl => {
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 << value2));
+                }
+                Opcode::Ishr => {
+                    let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 >> value2));
+                }
                 Opcode::Isub => {
                     let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
