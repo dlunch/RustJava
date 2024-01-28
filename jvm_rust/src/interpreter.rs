@@ -277,6 +277,10 @@ impl Interpreter {
                 Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
                 Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Multianewarray(x, d) => {
+                    let dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
+                    let class_name = format!("{}L{};", "[".repeat(*d as _), x.as_class());
+                }
                 Opcode::New(x) => {
                     let class = jvm.instantiate_class(x.as_class()).await?;
 

@@ -65,7 +65,8 @@ pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) ->
     let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
     jvm.store_array(&mut array, 0, java_args).unwrap();
 
-    jvm.invoke_static(main_class_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
+    let normalized_name = main_class_name.replace('.', "/");
+    jvm.invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
         .await?;
 
     Ok(())
