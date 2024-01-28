@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-use jvm::{ClassInstance, JavaType, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, ClassInstance, JavaType, JavaValue, Jvm, JvmResult};
 
 use crate::{stack_frame::StackFrame, thread::ThreadContextImpl};
 
@@ -377,21 +377,9 @@ impl Interpreter {
             ValueConstant::Float(x) => JavaValue::Float(*x),
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
-            ValueConstant::String(x) => JavaValue::Object(Some(Self::create_java_string(jvm, x).await?)),
+            ValueConstant::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
             ValueConstant::Class(x) => JavaValue::Object(jvm.get_class(x).await?),
             _ => unimplemented!(),
         })
-    }
-
-    async fn create_java_string(jvm: &Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
-        let chars = string.chars().map(|x| JavaValue::Char(x as _)).collect::<Vec<_>>();
-
-        let mut array = jvm.instantiate_array("C", chars.len()).await?;
-        jvm.store_array(&mut array, 0, chars)?;
-
-        let instance = jvm.instantiate_class("java/lang/String").await?;
-        jvm.invoke_virtual(&instance, "<init>", "([C)V", [array.into()]).await?;
-
-        Ok(instance)
     }
 }

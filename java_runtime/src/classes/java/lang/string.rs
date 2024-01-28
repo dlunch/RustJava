@@ -9,7 +9,7 @@ use bytemuck::{cast_slice, cast_vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use java_constants::MethodAccessFlags;
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm};
 
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
@@ -256,28 +256,11 @@ impl String {
     }
 
     pub fn to_rust_string(jvm: &Jvm, instance: &ClassInstanceRef<String>) -> JavaResult<RustString> {
-        let value = jvm.get_field(instance, "value", "[C")?;
-
-        let length = jvm.array_length(&value)?;
-        let string: Vec<JavaChar> = jvm.load_array(&value, 0, length)?;
-
-        Ok(RustString::from_utf16(&string).unwrap())
+        JavaLangString::to_rust_string(jvm, (*instance).clone())
     }
 
     pub async fn from_rust_string(jvm: &Jvm, string: &str) -> JavaResult<ClassInstanceRef<Self>> {
-        let utf16 = string.encode_utf16().collect::<Vec<_>>();
-
-        Self::from_utf16(jvm, utf16).await
-    }
-
-    pub async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> JavaResult<ClassInstanceRef<Self>> {
-        let mut java_value = jvm.instantiate_array("C", data.len()).await?;
-
-        jvm.store_array(&mut java_value, 0, data.to_vec())?;
-
-        let instance = jvm.new_class("java/lang/String", "([C)V", (java_value,)).await?;
-
-        Ok(instance.into())
+        Ok(JavaLangString::from_rust_string(jvm, string).await?.into())
     }
 }
 

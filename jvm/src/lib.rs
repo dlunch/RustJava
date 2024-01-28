@@ -11,10 +11,11 @@ mod field;
 mod invoke_arg;
 mod jvm;
 mod method;
-mod runtime;
 mod thread;
 mod r#type;
 mod value;
+
+pub mod runtime;
 
 pub type JvmResult<T> = anyhow::Result<T>;
 

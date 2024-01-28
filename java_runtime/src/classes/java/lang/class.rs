@@ -1,7 +1,7 @@
-use alloc::{boxed::Box, vec};
+use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{ClassDefinition as JvmClass, ClassInstanceRef, Jvm};
+use jvm::{ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{io::InputStream, lang::String},
@@ -51,17 +51,13 @@ impl Class {
         jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
             .await
     }
-
-    pub fn to_rust_class(jvm: &Jvm, java_class: ClassInstanceRef<Self>) -> JavaResult<Box<dyn JvmClass>> {
-        jvm.get_rust_object_field(&java_class, "raw")
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::test::test_jvm;
+    use jvm::runtime::JavaLangClass;
 
-    use super::Class;
+    use crate::test::test_jvm;
 
     #[futures_test::test]
     async fn test_class() -> anyhow::Result<()> {
@@ -69,11 +65,11 @@ mod test {
 
         let java_class = jvm.get_class("java/lang/String").await?.unwrap();
 
-        let rust_class = Class::to_rust_class(&jvm, java_class.clone().into())?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class.clone())?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         // try call to_rust_class twice to test if box is not dropped
-        let rust_class = Class::to_rust_class(&jvm, java_class.into())?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class)?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         Ok(())

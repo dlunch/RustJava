@@ -2,7 +2,7 @@ use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use java_constants::FieldAccessFlags;
-use jvm::{Array, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangClass, Array, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -51,7 +51,7 @@ impl RuntimeClassLoader {
         if !java_classes_array.is_null() {
             let java_classes: Vec<ClassInstanceRef<Class>> = jvm.load_array(&java_classes_array, 0, jvm.array_length(&java_classes_array)?)?;
             for java_class in java_classes {
-                let rust_class = Class::to_rust_class(jvm, java_class.clone().into())?; // TODO we can use class.name()
+                let rust_class = JavaLangClass::to_rust_class(jvm, java_class.clone())?; // TODO we can use class.name()
                 if rust_class.name() == name {
                     return Ok(java_class);
                 }
