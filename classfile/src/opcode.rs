@@ -175,7 +175,7 @@ pub enum Opcode {
     Lxor,
     Monitorenter,
     Monitorexit,
-    Multianewarray(u16, u8),
+    Multianewarray(ValueConstant, u8),
     New(ValueConstant),
     Newarray(u8),
     Nop,
@@ -400,7 +400,9 @@ impl Opcode {
             0x83 => success(Opcode::Lxor)(data),
             0xc2 => success(Opcode::Monitorenter)(data),
             0xc3 => success(Opcode::Monitorexit)(data),
-            0xc5 => map(tuple((be_u16, u8)), |(index, dimensions)| Opcode::Multianewarray(index, dimensions))(data),
+            0xc5 => map(tuple((be_u16, u8)), |(index, dimensions)| {
+                Opcode::Multianewarray(ValueConstant::from_constant_pool(constant_pool, index as _), dimensions)
+            })(data),
             0xbb => map(be_u16, |x| Opcode::New(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
             0xbc => map(u8, Opcode::Newarray)(data),
             0x00 => success(Opcode::Nop)(data),
