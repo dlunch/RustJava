@@ -62,20 +62,11 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        let result = Self {
+        Ok(Self {
             classes: RefCell::new(BTreeMap::new()),
             system_class_loader: RefCell::new(None),
             detail: RefCell::new(Box::new(detail)),
-        };
-
-        let element_types = ["Z", "B", "C", "S", "I", "J", "F", "D"];
-        for element_type in element_types {
-            let array_class = result.detail.borrow().define_array_class(&result, element_type).await?;
-
-            result.register_class(array_class, None).await?;
-        }
-
-        Ok(result)
+        })
     }
 
     pub async fn instantiate_class(&self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -105,8 +96,8 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let class = if self.system_class_loader.borrow().is_none() {
-            // bootstrapping
+        let class = if self.system_class_loader.borrow().is_none() || element_type_name.len() == 1 {
+            // bootstrapping or primitive type
             let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
             self.register_class_internal(definition.clone(), None).await?;
 
