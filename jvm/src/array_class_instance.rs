@@ -18,7 +18,7 @@ impl<T: ArrayClassInstance> ClassInstance for T {
         ArrayClassInstance::destroy(self)
     }
 
-    fn class(&self) -> Box<dyn ClassDefinition> {
+    fn class_definition(&self) -> Box<dyn ClassDefinition> {
         ArrayClassInstance::class(self)
     }
 

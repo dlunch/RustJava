@@ -32,7 +32,7 @@ impl Object {
 
         // TODO can we get class directly?
         let this: Box<dyn ClassInstance> = this.into();
-        let class_name = this.class().name();
+        let class_name = this.class_definition().name();
 
         let class = jvm.get_class(&class_name).await?;
 

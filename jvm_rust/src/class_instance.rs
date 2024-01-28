@@ -32,7 +32,7 @@ impl ClassInstanceImpl {
 impl ClassInstance for ClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
-    fn class(&self) -> Box<dyn ClassDefinition> {
+    fn class_definition(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }
 

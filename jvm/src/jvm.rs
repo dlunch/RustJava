@@ -128,11 +128,11 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Get field {}.{}:{}", instance.class().name(), name, descriptor);
+        tracing::trace!("Get field {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
         let field = self
-            .find_field(&*instance.class(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
+            .find_field(&*instance.class_definition(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
 
         Ok(instance.get_field(&*field)?.into())
     }
@@ -141,11 +141,11 @@ impl Jvm {
     where
         T: Into<JavaValue> + Debug,
     {
-        tracing::trace!("Put field {}.{}:{} = {:?}", instance.class().name(), name, descriptor, value);
+        tracing::trace!("Put field {}.{}:{} = {:?}", instance.class_definition().name(), name, descriptor, value);
 
         let field = self
-            .find_field(&*instance.class(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class().name(), name, descriptor))?;
+            .find_field(&*instance.class_definition(), name, descriptor)?
+            .with_context(|| format!("No such field {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
 
         instance.put_field(&*field, value.into())
     }
@@ -176,12 +176,12 @@ impl Jvm {
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        tracing::trace!("Invoke virtual {}.{}:{}", instance.class().name(), name, descriptor);
+        tracing::trace!("Invoke virtual {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
-        let class = self.resolve_class_definition(&instance.class().name()).await?.unwrap();
+        let class = self.resolve_class_definition(&instance.class_definition().name()).await?.unwrap();
         let method = self
             .find_virtual_method(&*class, name, descriptor)?
-            .with_context(|| format!("No such method {}.{}:{}", instance.class().name(), name, descriptor))?;
+            .with_context(|| format!("No such method {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
 
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
@@ -226,7 +226,7 @@ impl Jvm {
         T: IntoIterator<Item = U>,
         U: Into<JavaValue>,
     {
-        tracing::trace!("Store array {} at offset {}", array.class().name(), offset);
+        tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
@@ -238,7 +238,7 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Load array {} at offset {}", array.class().name(), offset);
+        tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance().context("Expected array class instance")?;
 
@@ -248,7 +248,7 @@ impl Jvm {
     }
 
     pub fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> JvmResult<()> {
-        tracing::trace!("Store array {} at offset {}", array.class().name(), offset);
+        tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance_mut().context("Expected array class instance")?;
 
@@ -256,7 +256,7 @@ impl Jvm {
     }
 
     pub fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> JvmResult<Vec<i8>> {
-        tracing::trace!("Load array {} at offset {}", array.class().name(), offset);
+        tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance().context("Expected array class instance")?;
 
@@ -266,7 +266,7 @@ impl Jvm {
     }
 
     pub fn array_length(&self, array: &Box<dyn ClassInstance>) -> JvmResult<usize> {
-        tracing::trace!("Get array length {}", array.class().name());
+        tracing::trace!("Get array length {}", array.class_definition().name());
 
         let array = array.as_array_instance().context("Expected array class instance")?;
 
@@ -274,7 +274,7 @@ impl Jvm {
     }
 
     pub fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> JvmResult<JavaType> {
-        tracing::trace!("Get array element type {}", array.class().name());
+        tracing::trace!("Get array element type {}", array.class_definition().name());
 
         let array = array.as_array_instance().context("Expected array class instance")?;
         let class = ArrayClassInstance::class(array);
@@ -290,7 +290,7 @@ impl Jvm {
 
     // temporary until we have working gc
     pub fn destroy(&self, instance: Box<dyn ClassInstance>) -> JvmResult<()> {
-        tracing::debug!("Destroy {}", instance.class().name());
+        tracing::debug!("Destroy {}", instance.class_definition().name());
 
         instance.destroy();
 
