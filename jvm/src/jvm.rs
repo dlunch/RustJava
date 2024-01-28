@@ -30,7 +30,7 @@ use crate::{
     field::Field,
     method::Method,
     r#type::JavaType,
-    runtime::{JavaLangClass, JavaLangString},
+    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,
@@ -347,12 +347,8 @@ impl Jvm {
     }
 
     async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        let java_class_name = JavaLangString::from_rust_string(self, class_name).await?;
-
         let class_loader = self.get_system_class_loader().await?;
-        let java_class: Option<Box<dyn ClassInstance>> = self
-            .invoke_virtual(&class_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (java_class_name,))
-            .await?;
+        let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
@@ -375,9 +371,7 @@ impl Jvm {
 
     pub async fn get_system_class_loader(&self) -> JvmResult<Box<dyn ClassInstance>> {
         if self.system_class_loader.borrow().is_none() {
-            let system_class_loader = self
-                .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
-                .await?;
+            let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
 
             self.system_class_loader.replace(Some(system_class_loader));
         }
