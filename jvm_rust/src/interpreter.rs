@@ -4,18 +4,15 @@ use core::iter;
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
 use jvm::{runtime::JavaLangString, ClassInstance, JavaType, JavaValue, Jvm, JvmResult};
 
-use crate::{stack_frame::StackFrame, thread::ThreadContextImpl};
+use crate::stack_frame::StackFrame;
 
 pub struct Interpreter;
 
 impl Interpreter {
     #[allow(clippy::await_holding_refcell_ref)]
     pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
-        let mut thread_context = jvm.current_thread_context();
-        let thread_context = thread_context.as_any_mut().downcast_mut::<ThreadContextImpl>().unwrap();
+        let mut stack_frame = StackFrame::new();
 
-        let stack_frame = thread_context.push_stack_frame();
-        let mut stack_frame = stack_frame.borrow_mut();
         stack_frame.local_variables = args.into_vec();
         stack_frame
             .local_variables

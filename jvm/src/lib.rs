@@ -11,7 +11,6 @@ mod field;
 mod invoke_arg;
 mod jvm;
 mod method;
-mod thread;
 mod r#type;
 mod value;
 
@@ -35,6 +34,5 @@ pub use self::{
     jvm::Jvm,
     method::Method,
     r#type::JavaType,
-    thread::{ThreadContext, ThreadId},
     value::{JavaChar, JavaValue},
 };

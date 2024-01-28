@@ -10,7 +10,6 @@ mod field;
 mod interpreter;
 mod method;
 mod stack_frame;
-mod thread;
 
 pub use self::{
     class_definition::ClassDefinitionImpl,

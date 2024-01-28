@@ -24,7 +24,6 @@ use crate::{
     method::Method,
     r#type::JavaType,
     runtime::{JavaLangClass, JavaLangClassLoader},
-    thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,
 };
@@ -284,10 +283,6 @@ impl Jvm {
         Ok(JavaType::parse(type_name))
     }
 
-    pub fn current_thread_context(&self) -> Box<dyn ThreadContext> {
-        self.detail.borrow_mut().thread_context(Jvm::current_thread_id())
-    }
-
     // temporary until we have working gc
     pub fn destroy(&self, instance: Box<dyn ClassInstance>) -> JvmResult<()> {
         tracing::debug!("Destroy {}", instance.class_definition().name());
@@ -490,9 +485,5 @@ impl Jvm {
         } else {
             Ok(None)
         }
-    }
-
-    fn current_thread_id() -> ThreadId {
-        0 // TODO
     }
 }

@@ -20,7 +20,7 @@ where
 {
     let runtime = Box::new(RuntimeImpl::new(stdout)) as Box<dyn Runtime>;
 
-    let jvm = Jvm::new(JvmDetailImpl::new()).await?;
+    let jvm = Jvm::new(JvmDetailImpl).await?;
 
     java_runtime::initialize(&jvm, |name, proto| {
         ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
