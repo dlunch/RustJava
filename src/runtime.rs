@@ -48,8 +48,9 @@ where
         todo!()
     }
 
-    fn decode_str(&self, _bytes: &[u8]) -> String {
-        todo!()
+    fn decode_str(&self, bytes: &[u8]) -> String {
+        let end = bytes.iter().position(|x| *x == 0).unwrap_or(bytes.len());
+        String::from_utf8(bytes[..end].to_vec()).unwrap()
     }
 
     fn println(&mut self, s: &str) {
