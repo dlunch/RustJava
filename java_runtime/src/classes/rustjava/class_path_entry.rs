@@ -1,7 +1,7 @@
 use alloc::{string::String as RustString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{Array, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -41,7 +41,7 @@ impl ClassPathEntry {
     pub fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<RustString> {
         let name = jvm.get_field(this, "name", "Ljava/lang/String;")?;
 
-        String::to_rust_string(jvm, &name)
+        JavaLangString::to_rust_string(jvm, name)
     }
 
     pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Array<i8>>> {

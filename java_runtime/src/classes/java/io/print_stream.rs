@@ -1,7 +1,7 @@
 use alloc::{string::ToString, vec};
 
 use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, JavaChar, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -36,7 +36,7 @@ impl PrintStream {
     async fn println_string(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &str);
 
-        let rust_str = String::to_rust_string(jvm, &str)?;
+        let rust_str = JavaLangString::to_rust_string(jvm, str.into())?;
         context.println(&rust_str);
 
         Ok(())

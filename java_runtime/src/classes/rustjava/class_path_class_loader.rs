@@ -8,7 +8,7 @@ use bytemuck::{cast_slice, cast_vec};
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{Array, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::{
@@ -65,8 +65,8 @@ impl ClassPathClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let class_file_name = String::to_rust_string(jvm, &name)?.replace('.', "/") + ".class";
-        let class_file_name = String::from_rust_string(jvm, &class_file_name).await?;
+        let class_file_name = JavaLangString::to_rust_string(jvm, name.clone())?.replace('.', "/") + ".class";
+        let class_file_name = JavaLangString::from_rust_string(jvm, &class_file_name).await?;
 
         let resource: ClassInstanceRef<URL> = jvm
             .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (class_file_name,))
@@ -86,7 +86,7 @@ impl ClassPathClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
 
-        let name = String::to_rust_string(jvm, &name)?;
+        let name = JavaLangString::to_rust_string(jvm, name.into())?;
         let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
 
         Ok(class.into())
@@ -100,7 +100,7 @@ impl ClassPathClassLoader {
     ) -> JavaResult<ClassInstanceRef<URL>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findResource({:?}, {:?})", &this, name);
 
-        let name = String::to_rust_string(jvm, &name)?;
+        let name = JavaLangString::to_rust_string(jvm, name.clone())?;
 
         let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
 
@@ -111,10 +111,10 @@ impl ClassPathClassLoader {
             if name == entry_name {
                 let data = ClassPathEntry::data(jvm, &entry)?;
 
-                let protocol = String::from_rust_string(jvm, "bytes").await?;
-                let host = String::from_rust_string(jvm, "").await?;
+                let protocol = JavaLangString::from_rust_string(jvm, "bytes").await?;
+                let host = JavaLangString::from_rust_string(jvm, "").await?;
                 let port = 0;
-                let file = String::from_rust_string(jvm, &name).await?;
+                let file = JavaLangString::from_rust_string(jvm, &name).await?;
                 let handler = jvm.new_class("rustjava/ByteArrayURLHandler", "([B)V", (data,)).await?;
 
                 let url = jvm
@@ -192,7 +192,7 @@ impl ClassPathClassLoader {
                     manifest = Some(data.clone())
                 }
 
-                let name = String::from_rust_string(jvm, file.name()).await?;
+                let name = JavaLangString::from_rust_string(jvm, file.name()).await?;
 
                 let mut data_array = jvm.instantiate_array("B", data.len()).await?;
                 jvm.store_byte_array(&mut data_array, 0, cast_vec(data))?;
@@ -211,9 +211,9 @@ impl ClassPathClassLoader {
 
         // TODO we need java/util/jar/Manifest
         let main_class_name = Self::get_main_class_name(&manifest.unwrap());
-        let main_class_name = String::from_rust_string(jvm, &main_class_name).await?;
+        let main_class_name = JavaLangString::from_rust_string(jvm, &main_class_name).await?;
 
-        Ok(main_class_name)
+        Ok(main_class_name.into())
     }
 
     fn get_main_class_name(manifest: &[u8]) -> RustString {

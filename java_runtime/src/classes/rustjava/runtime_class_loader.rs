@@ -2,7 +2,10 @@ use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use java_constants::FieldAccessFlags;
-use jvm::{runtime::JavaLangClass, Array, ClassInstanceRef, Jvm};
+use jvm::{
+    runtime::{JavaLangClass, JavaLangString},
+    Array, ClassInstanceRef, Jvm,
+};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -42,7 +45,7 @@ impl RuntimeClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.RuntimeClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let name = String::to_rust_string(jvm, &name)?;
+        let name = JavaLangString::to_rust_string(jvm, name.into())?;
 
         let java_classes_array: ClassInstanceRef<Array<Class>> = jvm
             .get_static_field("rustjava/RuntimeClassLoader", "classes", "[Ljava/lang/Class;")

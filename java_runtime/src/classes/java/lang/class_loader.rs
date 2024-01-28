@@ -2,7 +2,7 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{
@@ -160,7 +160,7 @@ impl ClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
-        let rust_name = String::to_rust_string(jvm, &name)?;
+        let rust_name = JavaLangString::to_rust_string(jvm, name.into())?;
         let class = jvm.get_class(&rust_name).await?;
 
         if class.is_none() {

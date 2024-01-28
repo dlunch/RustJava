@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -41,7 +41,7 @@ impl ArrayClassLoader {
     ) -> JavaResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ArrayClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let name = String::to_rust_string(jvm, &name)?;
+        let name = JavaLangString::to_rust_string(jvm, name.into())?;
 
         if let Some(element_type_name) = name.strip_prefix('[') {
             let class = jvm.define_array_class(element_type_name, this.into()).await?;

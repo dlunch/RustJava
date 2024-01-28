@@ -8,8 +8,8 @@ use std::io::Write;
 
 use bytemuck::cast_vec;
 
-use java_runtime::{classes::java::lang::String as JavaString, Runtime};
-use jvm::{JavaValue, Jvm, JvmResult};
+use java_runtime::Runtime;
+use jvm::{runtime::JavaLangString, JavaValue, Jvm, JvmResult};
 use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
@@ -33,7 +33,7 @@ where
 pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> JvmResult<()> {
     let class_loader = jvm.get_system_class_loader().await?;
 
-    let file_name = JavaString::from_rust_string(jvm, file_name).await?;
+    let file_name = JavaLangString::from_rust_string(jvm, file_name).await?;
 
     let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
     jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec()))?;
@@ -54,13 +54,13 @@ pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> JvmResult<String> {
         .invoke_virtual(&class_loader, "addJarFile", "([B)Ljava/lang/String;", (data_storage,))
         .await?;
 
-    JavaString::to_rust_string(jvm, &main_class_name)
+    JavaLangString::to_rust_string(jvm, main_class_name)
 }
 
 pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
-        java_args.push(JavaString::from_rust_string(jvm, arg).await?);
+        java_args.push(JavaLangString::from_rust_string(jvm, arg).await?);
     }
     let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
     jvm.store_array(&mut array, 0, java_args).unwrap();

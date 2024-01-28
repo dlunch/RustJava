@@ -5,7 +5,7 @@ use alloc::{
 };
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -73,7 +73,7 @@ impl StringBuffer {
     ) -> JavaResult<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, &string,);
 
-        let string = String::to_rust_string(jvm, &string)?;
+        let string = JavaLangString::to_rust_string(jvm, string.into())?;
 
         Self::append(jvm, &mut this, &string).await?;
 
