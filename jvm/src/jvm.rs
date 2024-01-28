@@ -30,7 +30,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct Class {
-    definition: Box<dyn ClassDefinition>,
+    pub definition: Box<dyn ClassDefinition>,
     java_class: Option<Box<dyn ClassInstance>>,
 }
 
