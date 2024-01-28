@@ -3,7 +3,7 @@ use alloc::{boxed::Box, vec::Vec};
 use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, value::JavaValue, JvmResult};
 
 pub trait ArrayClassInstance: ClassInstance {
-    fn class(&self) -> Box<dyn ClassDefinition>;
+    fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn destroy(self: Box<Self>);
     fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool>;
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()>;
@@ -19,7 +19,7 @@ impl<T: ArrayClassInstance> ClassInstance for T {
     }
 
     fn class_definition(&self) -> Box<dyn ClassDefinition> {
-        ArrayClassInstance::class(self)
+        ArrayClassInstance::class_definition(self)
     }
 
     fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool> {

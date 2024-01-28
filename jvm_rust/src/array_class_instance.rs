@@ -35,7 +35,7 @@ impl ArrayClassInstanceImpl {
 }
 
 impl ArrayClassInstance for ArrayClassInstanceImpl {
-    fn class(&self) -> Box<dyn ClassDefinition> {
+    fn class_definition(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }
 

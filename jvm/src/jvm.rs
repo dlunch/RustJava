@@ -276,7 +276,7 @@ impl Jvm {
         tracing::trace!("Get array element type {}", array.class_definition().name());
 
         let array = array.as_array_instance().context("Expected array class instance")?;
-        let class = ArrayClassInstance::class(array);
+        let class = ArrayClassInstance::class_definition(array);
 
         let type_name = &class.name()[1..]; // TODO can we store JavaType on class?
 
