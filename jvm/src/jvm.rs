@@ -38,7 +38,6 @@ use crate::{
 
 struct LoadedClass {
     class: Box<dyn ClassDefinition>,
-    #[allow(dead_code)]
     java_class: Option<Box<dyn ClassInstance>>,
 }
 
