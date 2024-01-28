@@ -1,7 +1,7 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -28,10 +28,14 @@ impl Object {
     }
 
     async fn get_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Self>> {
-        tracing::warn!("stub java.lang.Object::get_class({:?})", &this);
+        tracing::warn!("java.lang.Object::getClass({:?})", &this);
 
-        let result = jvm.new_class("java/lang/Class", "()V", []).await?;
+        // TODO can we get class directly?
+        let this: Box<dyn ClassInstance> = this.into();
+        let class_name = this.class().name();
 
-        Ok(result.into())
+        let class = jvm.get_class(&class_name).await?;
+
+        Ok(class.into())
     }
 }
