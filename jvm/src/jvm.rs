@@ -36,13 +36,13 @@ use crate::{
     JvmResult,
 };
 
-struct LoadedClass {
-    class: Box<dyn ClassDefinition>,
+struct Class {
+    definition: Box<dyn ClassDefinition>,
     java_class: Option<Box<dyn ClassInstance>>,
 }
 
 pub struct Jvm {
-    classes: RefCell<BTreeMap<String, LoadedClass>>,
+    classes: RefCell<BTreeMap<String, Class>>,
     system_class_loader: RefCell<Option<Box<dyn ClassInstance>>>,
     detail: RefCell<Box<dyn JvmDetail>>,
 }
@@ -315,7 +315,7 @@ impl Jvm {
         if let Some(x) = &class.java_class {
             Ok(Some(x.clone()))
         } else {
-            let java_class = JavaLangClass::from_rust_class(self, class.class.clone(), None).await?;
+            let java_class = JavaLangClass::from_rust_class(self, class.definition.clone(), None).await?;
 
             drop(classes);
             self.classes.borrow_mut().get_mut(class_name).unwrap().java_class = Some(java_class.clone());
@@ -325,7 +325,7 @@ impl Jvm {
     }
 
     fn get_class_definition(&self, class_name: &str) -> Option<Box<dyn ClassDefinition>> {
-        self.classes.borrow().get(class_name).map(|x| x.class.clone())
+        self.classes.borrow().get(class_name).map(|x| x.definition.clone())
     }
 
     #[async_recursion::async_recursion(?Send)]
@@ -356,8 +356,8 @@ impl Jvm {
 
         self.classes.borrow_mut().insert(
             class.name().to_owned(),
-            LoadedClass {
-                class: class.clone(),
+            Class {
+                definition: class.clone(),
                 java_class: Some(java_class),
             },
         );
@@ -382,8 +382,8 @@ impl Jvm {
 
         self.classes.borrow_mut().insert(
             class.name().to_owned(),
-            LoadedClass {
-                class: class.clone(),
+            Class {
+                definition: class.clone(),
                 java_class,
             },
         );
