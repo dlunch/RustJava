@@ -10,6 +10,7 @@ mod detail;
 mod field;
 mod jvm;
 mod method;
+mod runtime;
 mod thread;
 mod r#type;
 mod value;

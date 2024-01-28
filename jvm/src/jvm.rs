@@ -30,9 +30,10 @@ use crate::{
     field::Field,
     method::Method,
     r#type::JavaType,
+    runtime::JavaLangString,
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
-    JavaChar, JvmResult,
+    JvmResult,
 };
 
 pub struct Jvm {
@@ -346,14 +347,11 @@ impl Jvm {
     }
 
     async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        let mut class_name_array = self.instantiate_array("C", class_name.len()).await?;
-        self.store_array(&mut class_name_array, 0, class_name.chars().map(|x| x as JavaChar))?;
-
-        let class_name_string = self.new_class("java/lang/String", "([C)V", (class_name_array,)).await?;
+        let java_class_name = JavaLangString::from_rust_string(self, class_name).await?;
 
         let class_loader = self.get_system_class_loader().await?;
         let java_class: Option<Box<dyn ClassInstance>> = self
-            .invoke_virtual(&class_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (class_name_string,))
+            .invoke_virtual(&class_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (java_class_name,))
             .await?;
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
