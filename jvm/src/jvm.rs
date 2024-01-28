@@ -177,7 +177,7 @@ impl Jvm {
     {
         tracing::trace!("Invoke virtual {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
-        let class = self.resolve_class_definition(&instance.class_definition().name()).await?.unwrap();
+        let class = instance.class_definition();
         let method = self
             .find_virtual_method(&*class, name, descriptor)?
             .with_context(|| format!("No such method {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
