@@ -4,12 +4,12 @@ use core::{
     fmt::{self, Debug, Formatter},
 };
 
-use jvm::{ArrayClass, ArrayClassInstance, Class, ClassInstance, JavaType, JavaValue, JvmResult};
+use jvm::{ArrayClass, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, JvmResult};
 
 use crate::array_class::ArrayClassImpl;
 
 struct ArrayClassInstanceInner {
-    class: Box<dyn Class>,
+    class: Box<dyn ClassDefinition>,
     length: usize,
     elements: RefCell<Vec<JavaValue>>,
 }
@@ -35,7 +35,7 @@ impl ArrayClassInstanceImpl {
 }
 
 impl ArrayClassInstance for ArrayClassInstanceImpl {
-    fn class(&self) -> Box<dyn Class> {
+    fn class(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }
 

@@ -4,12 +4,12 @@ use core::{
     fmt::{self, Debug, Formatter},
 };
 
-use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, JvmResult};
 
-use crate::{class::ClassImpl, FieldImpl};
+use crate::{class_definition::ClassDefinitionImpl, FieldImpl};
 
 struct ClassInstanceInner {
-    class: Box<dyn Class>,
+    class: Box<dyn ClassDefinition>,
     storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
@@ -19,7 +19,7 @@ pub struct ClassInstanceImpl {
 }
 
 impl ClassInstanceImpl {
-    pub fn new(class: &ClassImpl) -> Self {
+    pub fn new(class: &ClassDefinitionImpl) -> Self {
         Self {
             inner: Rc::new(ClassInstanceInner {
                 class: Box::new(class.clone()),
@@ -32,7 +32,7 @@ impl ClassInstanceImpl {
 impl ClassInstance for ClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
-    fn class(&self) -> Box<dyn Class> {
+    fn class(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }
 

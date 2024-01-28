@@ -2,14 +2,14 @@ use core::future::Future;
 
 use alloc::boxed::Box;
 
-use jvm::{Class, Jvm, JvmResult};
+use jvm::{ClassDefinition, Jvm, JvmResult};
 
 use crate::RuntimeClassProto;
 
 async fn load_runtime_classes<T, F>(jvm: &Jvm, class_creator: &T) -> JvmResult<()>
 where
     T: Fn(&str, RuntimeClassProto) -> F,
-    F: Future<Output = Box<dyn Class>>,
+    F: Future<Output = Box<dyn ClassDefinition>>,
 {
     // superclass should come before subclasses
     let class_protos = [
@@ -88,7 +88,7 @@ where
 pub async fn initialize<T, F>(jvm: &Jvm, class_creator: T) -> JvmResult<()>
 where
     T: Fn(&str, RuntimeClassProto) -> F,
-    F: Future<Output = Box<dyn Class>>,
+    F: Future<Output = Box<dyn ClassDefinition>>,
 {
     // minimum set of classes to instantiate and use classloader
     jvm.register_class(

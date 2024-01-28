@@ -1,11 +1,11 @@
 use alloc::boxed::Box;
 
-use crate::{class::Class, class_instance::ClassInstance, jvm::Jvm, JvmResult};
+use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, jvm::Jvm, JvmResult};
 
 pub struct JavaLangClass {}
 
 impl JavaLangClass {
-    pub fn to_rust_class(jvm: &Jvm, this: Box<dyn ClassInstance>) -> JvmResult<Box<dyn Class>> {
+    pub fn to_rust_class(jvm: &Jvm, this: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassDefinition>> {
         let rust_class = jvm.get_rust_object_field(&this, "raw")?;
 
         Ok(rust_class)
@@ -13,7 +13,7 @@ impl JavaLangClass {
 
     pub async fn from_rust_class(
         jvm: &Jvm,
-        rust_class: Box<dyn Class>,
+        rust_class: Box<dyn ClassDefinition>,
         class_loader: Option<Box<dyn ClassInstance>>,
     ) -> JvmResult<Box<dyn ClassInstance>> {
         let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;

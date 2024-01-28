@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{Class as JvmClass, ClassInstanceRef, Jvm};
+use jvm::{ClassDefinition as JvmClass, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{io::InputStream, lang::String},

@@ -5,16 +5,16 @@ use alloc::{
 };
 use dyn_clone::clone_trait_object;
 
-use crate::{class::Class, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, JvmResult};
+use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, JvmResult};
 
-pub trait ArrayClass: Class {
+pub trait ArrayClass: ClassDefinition {
     fn element_type_name(&self) -> String;
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance>;
 }
 
 clone_trait_object!(ArrayClass);
 
-impl<T: ArrayClass> Class for T {
+impl<T: ArrayClass> ClassDefinition for T {
     fn name(&self) -> String {
         format!("[{}", self.element_type_name())
     }

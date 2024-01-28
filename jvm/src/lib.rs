@@ -4,7 +4,7 @@ extern crate alloc;
 mod array_class;
 mod array_class_instance;
 mod as_any;
-mod class;
+mod class_definition;
 mod class_instance;
 mod detail;
 mod field;
@@ -26,7 +26,7 @@ pub trait JvmCallback {
 pub use self::{
     array_class::ArrayClass,
     array_class_instance::ArrayClassInstance,
-    class::Class,
+    class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
     detail::JvmDetail,
     field::Field,

@@ -14,11 +14,11 @@ use core::{
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
 use java_constants::FieldAccessFlags;
-use jvm::{Class, ClassInstance, Field, JavaValue, JvmResult, Method};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, JvmResult, Method};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
-struct ClassInner {
+struct ClassDefinitionInner {
     name: String,
     super_class_name: Option<String>,
     methods: Vec<MethodImpl>,
@@ -27,14 +27,14 @@ struct ClassInner {
 }
 
 #[derive(Clone)]
-pub struct ClassImpl {
-    inner: Rc<ClassInner>,
+pub struct ClassDefinitionImpl {
+    inner: Rc<ClassDefinitionInner>,
 }
 
-impl ClassImpl {
+impl ClassDefinitionImpl {
     pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
         Self {
-            inner: Rc::new(ClassInner {
+            inner: Rc::new(ClassDefinitionInner {
                 name: name.to_string(),
                 super_class_name,
                 methods,
@@ -75,7 +75,7 @@ impl ClassImpl {
     }
 }
 
-impl Class for ClassImpl {
+impl ClassDefinition for ClassDefinitionImpl {
     fn name(&self) -> String {
         self.inner.name.clone()
     }
@@ -128,7 +128,7 @@ impl Class for ClassImpl {
     }
 }
 
-impl Debug for ClassImpl {
+impl Debug for ClassDefinitionImpl {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Class({})", self.name())
     }

@@ -16,7 +16,7 @@ pub mod test {
     use core::future::ready;
 
     use jvm::Jvm;
-    use jvm_rust::{ClassImpl, JvmDetailImpl};
+    use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
     use crate::{initialize, runtime::test::DummyRuntime};
 
@@ -24,7 +24,7 @@ pub mod test {
         let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
         initialize(&jvm, |name, proto| {
-            ready(Box::new(ClassImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>)) as Box<_>)
+            ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, Box::new(DummyRuntime) as Box<_>)) as Box<_>)
         })
         .await?;
 

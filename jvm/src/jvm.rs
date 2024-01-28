@@ -24,7 +24,7 @@ use java_constants::MethodAccessFlags;
 
 use crate::{
     array_class_instance::ArrayClassInstance,
-    class::Class,
+    class_definition::ClassDefinition,
     class_instance::ClassInstance,
     detail::JvmDetail,
     field::Field,
@@ -37,7 +37,7 @@ use crate::{
 };
 
 struct LoadedClass {
-    class: Box<dyn Class>,
+    class: Box<dyn ClassDefinition>,
     #[allow(dead_code)]
     java_class: Option<Box<dyn ClassInstance>>,
 }
@@ -64,7 +64,7 @@ impl Jvm {
         tracing::trace!("Instantiate {}", class_name);
 
         let class = self
-            .resolve_class(class_name)
+            .resolve_class_definition(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
@@ -102,7 +102,7 @@ impl Jvm {
         tracing::trace!("Get static field {}.{}:{}", class_name, name, descriptor);
 
         let class = self
-            .resolve_class(class_name)
+            .resolve_class_definition(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
@@ -120,7 +120,7 @@ impl Jvm {
         tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
         let mut class = self
-            .resolve_class(class_name)
+            .resolve_class_definition(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
@@ -165,7 +165,7 @@ impl Jvm {
         tracing::trace!("Invoke static {}.{}:{}", class_name, name, descriptor);
 
         let class = self
-            .resolve_class(class_name)
+            .resolve_class_definition(class_name)
             .await?
             .with_context(|| format!("No such class {}", class_name))?;
 
@@ -185,7 +185,7 @@ impl Jvm {
     {
         tracing::trace!("Invoke virtual {}.{}:{}", instance.class().name(), name, descriptor);
 
-        let class = self.resolve_class(&instance.class().name()).await?.unwrap();
+        let class = self.resolve_class_definition(&instance.class().name()).await?.unwrap();
         let method = self
             .find_virtual_method(&*class, name, descriptor)?
             .with_context(|| format!("No such method {}.{}:{}", instance.class().name(), name, descriptor))?;
@@ -214,7 +214,7 @@ impl Jvm {
     {
         tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
-        let class = self.resolve_class(class_name).await?.unwrap();
+        let class = self.resolve_class_definition(class_name).await?.unwrap();
         let method = class
             .method(name, descriptor)
             .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
@@ -304,10 +304,6 @@ impl Jvm {
         Ok(())
     }
 
-    pub fn get_class(&self, class_name: &str) -> Option<Box<dyn Class>> {
-        self.classes.borrow().get(class_name).map(|x| x.class.clone())
-    }
-
     pub async fn get_java_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
         let classes = self.classes.borrow();
         let class = classes.get(class_name);
@@ -329,9 +325,13 @@ impl Jvm {
         }
     }
 
+    fn get_class_definition(&self, class_name: &str) -> Option<Box<dyn ClassDefinition>> {
+        self.classes.borrow().get(class_name).map(|x| x.class.clone())
+    }
+
     #[async_recursion::async_recursion(?Send)]
-    pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn Class>>> {
-        let class = self.get_class(class_name);
+    async fn resolve_class_definition(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>> {
+        let class = self.get_class_definition(class_name);
         if let Some(x) = class {
             return Ok(Some(x));
         }
@@ -340,7 +340,7 @@ impl Jvm {
             tracing::debug!("Loaded class {}", class_name);
 
             self.register_java_class(x).await?;
-            let class = self.get_class(class_name);
+            let class = self.get_class_definition(class_name);
 
             return Ok(class);
         }
@@ -348,11 +348,11 @@ impl Jvm {
         Ok(None)
     }
 
-    pub async fn register_java_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<()> {
+    async fn register_java_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<()> {
         let class = JavaLangClass::to_rust_class(self, java_class.clone())?;
 
         if let Some(super_class) = class.super_class_name() {
-            self.resolve_class(&super_class).await?;
+            self.resolve_class_definition(&super_class).await?;
         }
 
         self.classes.borrow_mut().insert(
@@ -367,11 +367,11 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn register_class(&self, class: Box<dyn Class>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
+    pub async fn register_class(&self, class: Box<dyn ClassDefinition>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
         tracing::debug!("Register class {}", class.name());
 
         if let Some(super_class) = class.super_class_name() {
-            self.resolve_class(&super_class).await?;
+            self.resolve_class_definition(&super_class).await?;
         }
 
         // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
@@ -393,7 +393,7 @@ impl Jvm {
         Ok(())
     }
 
-    async fn init_class(&self, class: &dyn Class) -> JvmResult<()> {
+    async fn init_class(&self, class: &dyn ClassDefinition) -> JvmResult<()> {
         let clinit = class.method("<clinit>", "()V");
 
         if let Some(x) = clinit {
@@ -486,26 +486,26 @@ impl Jvm {
         Ok(())
     }
 
-    fn find_field(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
+    fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Field>>> {
         let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class(&x).unwrap();
+            let super_class = self.get_class_definition(&x).unwrap();
             self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
         }
     }
 
-    fn find_virtual_method(&self, class: &dyn Class, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Method>>> {
+    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Method>>> {
         let method = class.method(name, descriptor);
 
         if let Some(x) = method {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class(&x).unwrap();
+            let super_class = self.get_class_definition(&x).unwrap();
             self.find_virtual_method(&*super_class, name, descriptor)
         } else {
             Ok(None)

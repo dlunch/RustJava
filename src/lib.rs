@@ -10,7 +10,7 @@ use bytemuck::cast_vec;
 
 use java_runtime::{classes::java::lang::String as JavaString, Runtime};
 use jvm::{JavaValue, Jvm, JvmResult};
-use jvm_rust::{ClassImpl, JvmDetailImpl};
+use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
 
@@ -23,7 +23,7 @@ where
     let jvm = Jvm::new(JvmDetailImpl::new()).await?;
 
     java_runtime::initialize(&jvm, |name, proto| {
-        ready(Box::new(ClassImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
+        ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
     })
     .await?;
 
