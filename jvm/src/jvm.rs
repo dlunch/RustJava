@@ -36,8 +36,14 @@ use crate::{
     JvmResult,
 };
 
+struct LoadedClass {
+    class: Box<dyn Class>,
+    #[allow(dead_code)]
+    java_class: Option<Box<dyn ClassInstance>>,
+}
+
 pub struct Jvm {
-    classes: RefCell<BTreeMap<String, Box<dyn Class>>>,
+    classes: RefCell<BTreeMap<String, LoadedClass>>,
     system_class_loader: RefCell<Option<Box<dyn ClassInstance>>>,
     detail: RefCell<Box<dyn JvmDetail>>,
 }
@@ -299,7 +305,7 @@ impl Jvm {
     }
 
     pub fn get_class(&self, class_name: &str) -> Option<Box<dyn Class>> {
-        self.classes.borrow().get(class_name).cloned()
+        self.classes.borrow().get(class_name).map(|x| x.class.clone())
     }
 
     #[async_recursion::async_recursion(?Send)]
@@ -328,7 +334,13 @@ impl Jvm {
             self.resolve_class(&super_class).await?;
         }
 
-        self.classes.borrow_mut().insert(class.name().to_owned(), class.clone());
+        self.classes.borrow_mut().insert(
+            class.name().to_owned(),
+            LoadedClass {
+                class: class.clone(),
+                java_class: None,
+            },
+        );
         self.init_class(&*class).await?;
 
         Ok(())
