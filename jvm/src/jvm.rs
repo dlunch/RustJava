@@ -86,6 +86,7 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
+        // we can't use classloader here as we won't have classloader on bootstrap
         let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
         let array_class = class.as_array_class().unwrap();
 
