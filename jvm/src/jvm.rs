@@ -318,46 +318,42 @@ impl Jvm {
         }
     }
 
-    fn get_class_definition(&self, class_name: &str) -> Option<Box<dyn ClassDefinition>> {
-        self.classes.borrow().get(class_name).map(|x| x.definition.clone())
-    }
-
     #[async_recursion::async_recursion(?Send)]
     async fn resolve_class_definition(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>> {
-        let class = self.get_class_definition(class_name);
+        let class = self.classes.borrow().get(class_name).map(|x| x.definition.clone());
+
         if let Some(x) = class {
             return Ok(Some(x));
         }
 
-        if let Some(x) = self.load_class(class_name).await? {
+        // load class
+        let class_loader = self.get_system_class_loader().await?;
+        let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
+
+        anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
+
+        if let Some(x) = java_class {
             tracing::debug!("Loaded class {}", class_name);
 
-            self.register_java_class(x).await?;
-            let class = self.get_class_definition(class_name);
+            let class = JavaLangClass::to_rust_class(self, x.clone())?;
 
-            return Ok(class);
+            if let Some(super_class) = class.super_class_name() {
+                self.resolve_class_definition(&super_class).await?;
+            }
+
+            self.classes.borrow_mut().insert(
+                class.name().to_owned(),
+                Class {
+                    definition: class.clone(),
+                    java_class: Some(x),
+                },
+            );
+            self.init_class(&*class).await?;
+
+            return Ok(Some(class));
         }
 
         Ok(None)
-    }
-
-    async fn register_java_class(&self, java_class: Box<dyn ClassInstance>) -> JvmResult<()> {
-        let class = JavaLangClass::to_rust_class(self, java_class.clone())?;
-
-        if let Some(super_class) = class.super_class_name() {
-            self.resolve_class_definition(&super_class).await?;
-        }
-
-        self.classes.borrow_mut().insert(
-            class.name().to_owned(),
-            Class {
-                definition: class.clone(),
-                java_class: Some(java_class),
-            },
-        );
-        self.init_class(&*class).await?;
-
-        Ok(())
     }
 
     pub async fn register_class(&self, class: Box<dyn ClassDefinition>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
@@ -396,15 +392,6 @@ impl Jvm {
         }
 
         Ok(())
-    }
-
-    async fn load_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
-        let class_loader = self.get_system_class_loader().await?;
-        let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
-
-        anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
-
-        Ok(Some(java_class.unwrap()))
     }
 
     pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
@@ -485,7 +472,7 @@ impl Jvm {
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class_definition(&x).unwrap();
+            let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
             self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
@@ -498,7 +485,7 @@ impl Jvm {
         if let Some(x) = method {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.get_class_definition(&x).unwrap();
+            let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
             self.find_virtual_method(&*super_class, name, descriptor)
         } else {
             Ok(None)
