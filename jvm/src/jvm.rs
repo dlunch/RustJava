@@ -62,11 +62,20 @@ impl Jvm {
     where
         T: JvmDetail + 'static,
     {
-        Ok(Self {
+        let result = Self {
             classes: RefCell::new(BTreeMap::new()),
             system_class_loader: RefCell::new(None),
             detail: RefCell::new(Box::new(detail)),
-        })
+        };
+
+        let element_types = ["Z", "B", "C", "S", "I", "J", "F", "D"];
+        for element_type in element_types {
+            let array_class = result.detail.borrow().define_array_class(&result, element_type).await?;
+
+            result.register_class(array_class, None).await?;
+        }
+
+        Ok(result)
     }
 
     pub async fn instantiate_class(&self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
@@ -96,12 +105,19 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        // we can't use classloader here as we won't have classloader on bootstrap
-        let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
+        let class = if self.system_class_loader.borrow().is_none() {
+            // bootstrapping
+            let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
+            self.register_class_internal(definition.clone(), None).await?;
+
+            definition
+        } else {
+            let class_name = format!("[{}", element_type_name);
+            self.resolve_class(&class_name).await?.unwrap().definition
+        };
         let array_class = class.as_array_class_definition().unwrap();
 
         let instance = array_class.instantiate_array(length);
-
         Ok(instance)
     }
 
@@ -363,9 +379,11 @@ impl Jvm {
     }
 
     async fn register_class_internal(&self, class_definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
-        if let Some(super_class) = class_definition.super_class_name() {
-            // ensure superclass is loaded
-            self.resolve_class(&super_class).await?;
+        if !class_definition.name().starts_with('[') {
+            if let Some(super_class) = class_definition.super_class_name() {
+                // ensure superclass is loaded
+                self.resolve_class(&super_class).await?;
+            }
         }
 
         self.classes.borrow_mut().insert(
