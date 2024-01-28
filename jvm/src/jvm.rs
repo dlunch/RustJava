@@ -96,14 +96,18 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
+        let class_name = format!("[{}", element_type_name);
         let class = if self.system_class_loader.borrow().is_none() || element_type_name.len() == 1 {
-            // bootstrapping or primitive type
-            let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
-            self.register_class_internal(definition.clone(), None).await?;
+            if self.has_class(&class_name) {
+                self.resolve_class(&class_name).await?.unwrap().definition
+            } else {
+                // bootstrapping or primitive type
+                let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
+                self.register_class_internal(definition.clone(), None).await?;
 
-            definition
+                definition
+            }
         } else {
-            let class_name = format!("[{}", element_type_name);
             self.resolve_class(&class_name).await?.unwrap().definition
         };
         let array_class = class.as_array_class_definition().unwrap();
