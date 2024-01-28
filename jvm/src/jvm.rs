@@ -327,23 +327,12 @@ impl Jvm {
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
-        if let Some(x) = java_class {
+        if let Some(x) = &java_class {
             tracing::debug!("Loaded class {}", class_name);
 
             let class = JavaLangClass::to_rust_class(self, x.clone())?;
 
-            if let Some(super_class) = class.super_class_name() {
-                self.resolve_class_definition(&super_class).await?;
-            }
-
-            self.classes.borrow_mut().insert(
-                class.name().to_owned(),
-                Class {
-                    definition: class.clone(),
-                    java_class: Some(x),
-                },
-            );
-            self.init_class(&*class).await?;
+            self.register_class_internal(class.clone(), java_class).await?;
 
             return Ok(Some(class));
         }
@@ -354,10 +343,6 @@ impl Jvm {
     pub async fn register_class(&self, class: Box<dyn ClassDefinition>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
         tracing::debug!("Register class {}", class.name());
 
-        if let Some(super_class) = class.super_class_name() {
-            self.resolve_class_definition(&super_class).await?;
-        }
-
         // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
         let java_class = if class_loader.is_some() {
             Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader).await?)
@@ -365,23 +350,29 @@ impl Jvm {
             None
         };
 
-        self.classes.borrow_mut().insert(
-            class.name().to_owned(),
-            Class {
-                definition: class.clone(),
-                java_class,
-            },
-        );
-        self.init_class(&*class).await?;
+        self.register_class_internal(class, java_class).await?;
 
         Ok(())
     }
 
-    async fn init_class(&self, class: &dyn ClassDefinition) -> JvmResult<()> {
-        let clinit = class.method("<clinit>", "()V");
+    async fn register_class_internal(&self, class_definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
+        if let Some(super_class) = class_definition.super_class_name() {
+            // ensure superclass is loaded
+            self.resolve_class_definition(&super_class).await?;
+        }
+
+        self.classes.borrow_mut().insert(
+            class_definition.name().to_owned(),
+            Class {
+                definition: class_definition.clone(),
+                java_class,
+            },
+        );
+
+        let clinit = class_definition.method("<clinit>", "()V");
 
         if let Some(x) = clinit {
-            tracing::debug!("Calling <clinit> for {}", class.name());
+            tracing::debug!("Calling <clinit> for {}", class_definition.name());
 
             x.run(self, Box::new([])).await?;
         }
