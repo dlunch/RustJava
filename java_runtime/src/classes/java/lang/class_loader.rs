@@ -206,9 +206,13 @@ impl ClassLoader {
     ) -> JavaResult<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResourceAsStream({:?})", &this);
 
-        let resource_url = jvm
+        let resource_url: ClassInstanceRef<URL> = jvm
             .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
             .await?;
+
+        if resource_url.is_null() {
+            return Ok(None.into());
+        }
 
         let stream = jvm.invoke_virtual(&resource_url, "openStream", "()Ljava/io/InputStream;", ()).await?;
 
