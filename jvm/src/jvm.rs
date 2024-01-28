@@ -30,7 +30,7 @@ use crate::{
     field::Field,
     method::Method,
     r#type::JavaType,
-    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
+    runtime::{JavaLangClass, JavaLangClassLoader},
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,

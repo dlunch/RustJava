@@ -5,6 +5,7 @@ use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, JvmResult};
 pub struct JavaLangString {}
 
 impl JavaLangString {
+    #[allow(dead_code)]
     pub fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> JvmResult<String> {
         let value = jvm.get_field(&this, "value", "[C")?;
 
