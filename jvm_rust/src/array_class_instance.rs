@@ -4,9 +4,9 @@ use core::{
     fmt::{self, Debug, Formatter},
 };
 
-use jvm::{ArrayClass, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, JvmResult};
+use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, JvmResult};
 
-use crate::array_class::ArrayClassImpl;
+use crate::array_class_definition::ArrayClassDefinitionImpl;
 
 struct ArrayClassInstanceInner {
     class: Box<dyn ClassDefinition>,
@@ -20,7 +20,7 @@ pub struct ArrayClassInstanceImpl {
 }
 
 impl ArrayClassInstanceImpl {
-    pub fn new(class: &ArrayClassImpl, length: usize) -> Self {
+    pub fn new(class: &ArrayClassDefinitionImpl, length: usize) -> Self {
         let element_type = class.element_type_name();
         let default_value = JavaType::parse(&element_type).default();
 

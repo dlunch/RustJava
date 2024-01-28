@@ -2,7 +2,7 @@ use alloc::{boxed::Box, collections::BTreeMap};
 
 use jvm::{ClassDefinition, Jvm, JvmDetail, JvmResult, ThreadContext, ThreadId};
 
-use crate::{array_class::ArrayClassImpl, thread::ThreadContextImpl, ClassDefinitionImpl};
+use crate::{array_class_definition::ArrayClassDefinitionImpl, thread::ThreadContextImpl, ClassDefinitionImpl};
 
 #[derive(Default)]
 pub struct JvmDetailImpl {
@@ -24,7 +24,7 @@ impl JvmDetail for JvmDetailImpl {
     }
 
     async fn define_array_class(&self, _jvm: &Jvm, element_type_name: &str) -> JvmResult<Box<dyn ClassDefinition>> {
-        Ok(Box::new(ArrayClassImpl::new(element_type_name)))
+        Ok(Box::new(ArrayClassDefinitionImpl::new(element_type_name)))
     }
 
     fn thread_context(&mut self, thread_id: ThreadId) -> Box<dyn ThreadContext> {

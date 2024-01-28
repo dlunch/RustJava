@@ -1,7 +1,7 @@
 #![no_std]
 extern crate alloc;
 
-mod array_class;
+mod array_class_definition;
 mod array_class_instance;
 mod class_definition;
 mod class_instance;

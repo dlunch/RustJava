@@ -7,14 +7,14 @@ use dyn_clone::clone_trait_object;
 
 use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, JvmResult};
 
-pub trait ArrayClass: ClassDefinition {
+pub trait ArrayClassDefinition: ClassDefinition {
     fn element_type_name(&self) -> String;
     fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance>;
 }
 
-clone_trait_object!(ArrayClass);
+clone_trait_object!(ArrayClassDefinition);
 
-impl<T: ArrayClass> ClassDefinition for T {
+impl<T: ArrayClassDefinition> ClassDefinition for T {
     fn name(&self) -> String {
         format!("[{}", self.element_type_name())
     }
@@ -43,7 +43,7 @@ impl<T: ArrayClass> ClassDefinition for T {
         panic!("Array classes do not have static fields")
     }
 
-    fn as_array_class(&self) -> Option<&dyn ArrayClass> {
+    fn as_array_class_definition(&self) -> Option<&dyn ArrayClassDefinition> {
         Some(self)
     }
 }

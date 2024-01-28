@@ -88,7 +88,7 @@ impl Jvm {
 
         // we can't use classloader here as we won't have classloader on bootstrap
         let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
-        let array_class = class.as_array_class().unwrap();
+        let array_class = class.as_array_class_definition().unwrap();
 
         let instance = array_class.instantiate_array(length);
 
