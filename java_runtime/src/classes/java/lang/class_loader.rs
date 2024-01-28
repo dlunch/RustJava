@@ -161,7 +161,7 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
         let rust_name = String::to_rust_string(jvm, &name)?;
-        let class = jvm.get_java_class(&rust_name).await?;
+        let class = jvm.get_class(&rust_name).await?;
 
         if class.is_none() {
             return Ok(None.into());

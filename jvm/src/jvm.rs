@@ -297,7 +297,7 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn get_java_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
+    pub async fn get_class(&self, class_name: &str) -> JvmResult<Option<Box<dyn ClassInstance>>> {
         let classes = self.classes.borrow();
         let class = classes.get(class_name);
 
@@ -412,7 +412,7 @@ impl Jvm {
 
         self.register_class(class, Some(class_loader)).await?;
 
-        Ok(self.get_java_class(name).await?.unwrap())
+        Ok(self.get_class(name).await?.unwrap())
     }
 
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
@@ -420,7 +420,7 @@ impl Jvm {
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
-        Ok(self.get_java_class(&class.name()).await?.unwrap())
+        Ok(self.get_class(&class.name()).await?.unwrap())
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
