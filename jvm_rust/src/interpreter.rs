@@ -378,6 +378,7 @@ impl Interpreter {
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
             ValueConstant::String(x) => JavaValue::Object(Some(Self::create_java_string(jvm, x).await?)),
+            ValueConstant::Class(x) => JavaValue::Object(jvm.get_java_class(x).await?),
             _ => unimplemented!(),
         })
     }

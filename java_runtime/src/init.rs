@@ -79,7 +79,7 @@ where
     for class_proto in class_protos {
         let class = class_creator(class_proto.0, class_proto.1).await;
 
-        jvm.register_class(class).await?;
+        jvm.register_class(class, None).await?;
     }
 
     Ok(())
@@ -91,24 +91,43 @@ where
     F: Future<Output = Box<dyn Class>>,
 {
     // minimum set of classes to instantiate and use classloader
-    jvm.register_class(class_creator("java/lang/Object", crate::classes::java::lang::Object::as_proto()).await)
-        .await?;
-    jvm.register_class(class_creator("java/lang/String", crate::classes::java::lang::String::as_proto()).await)
-        .await?;
-    jvm.register_class(class_creator("java/lang/Class", crate::classes::java::lang::Class::as_proto()).await)
-        .await?;
-    jvm.register_class(class_creator("java/lang/ClassLoader", crate::classes::java::lang::ClassLoader::as_proto()).await)
-        .await?;
-    jvm.register_class(class_creator("rustjava/RuntimeClassLoader", crate::classes::rustjava::RuntimeClassLoader::as_proto()).await)
-        .await?;
-    jvm.register_class(class_creator("rustjava/ArrayClassLoader", crate::classes::rustjava::ArrayClassLoader::as_proto()).await)
-        .await?;
+    jvm.register_class(
+        class_creator("java/lang/Object", crate::classes::java::lang::Object::as_proto()).await,
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        class_creator("java/lang/String", crate::classes::java::lang::String::as_proto()).await,
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        class_creator("java/lang/Class", crate::classes::java::lang::Class::as_proto()).await,
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        class_creator("java/lang/ClassLoader", crate::classes::java::lang::ClassLoader::as_proto()).await,
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        class_creator("rustjava/RuntimeClassLoader", crate::classes::rustjava::RuntimeClassLoader::as_proto()).await,
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        class_creator("rustjava/ArrayClassLoader", crate::classes::rustjava::ArrayClassLoader::as_proto()).await,
+        None,
+    )
+    .await?;
     jvm.register_class(
         class_creator(
             "rustjava/ClassPathClassLoader",
             crate::classes::rustjava::ClassPathClassLoader::as_proto(),
         )
         .await,
+        None,
     )
     .await?;
 

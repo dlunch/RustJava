@@ -44,7 +44,7 @@ impl ArrayClassLoader {
         let name = String::to_rust_string(jvm, &name)?;
 
         if let Some(element_type_name) = name.strip_prefix('[') {
-            let class = jvm.define_array_class(element_type_name).await?;
+            let class = jvm.define_array_class(element_type_name, this.into()).await?;
 
             return Ok(class.into());
         }

@@ -2,7 +2,7 @@ mod test_helper;
 
 use test_helper::run_jar;
 
-//#[futures_test::test]
+#[futures_test::test]
 async fn test_jar() -> anyhow::Result<()> {
     let jar = include_bytes!("../test_data/jar/test.jar");
 

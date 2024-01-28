@@ -320,7 +320,7 @@ impl Jvm {
         if let Some(x) = &class.java_class {
             Ok(Some(x.clone()))
         } else {
-            let java_class = JavaLangClass::from_rust_class(self, class.class.clone()).await?;
+            let java_class = JavaLangClass::from_rust_class(self, class.class.clone(), None).await?;
 
             drop(classes);
             self.classes.borrow_mut().get_mut(class_name).unwrap().java_class = Some(java_class.clone());
@@ -367,18 +367,25 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn register_class(&self, class: Box<dyn Class>) -> JvmResult<()> {
+    pub async fn register_class(&self, class: Box<dyn Class>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
         tracing::debug!("Register class {}", class.name());
 
         if let Some(super_class) = class.super_class_name() {
             self.resolve_class(&super_class).await?;
         }
 
+        // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
+        let java_class = if class_loader.is_some() {
+            Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader).await?)
+        } else {
+            None
+        };
+
         self.classes.borrow_mut().insert(
             class.name().to_owned(),
             LoadedClass {
                 class: class.clone(),
-                java_class: None,
+                java_class,
             },
         );
         self.init_class(&*class).await?;
@@ -407,18 +414,18 @@ impl Jvm {
         Ok(Some(java_class.unwrap()))
     }
 
-    pub async fn define_class(&self, name: &str, data: &[u8]) -> JvmResult<Box<dyn ClassInstance>> {
+    pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
         let class = self.detail.borrow().define_class(self, name, data).await?;
 
-        self.register_class(class).await?;
+        self.register_class(class, Some(class_loader)).await?;
 
         Ok(self.get_java_class(name).await?.unwrap())
     }
 
-    pub async fn define_array_class(&self, element_type_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
+    pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
         let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
 
-        self.register_class(class.clone()).await?;
+        self.register_class(class.clone(), Some(class_loader)).await?;
 
         Ok(self.get_java_class(&class.name()).await?.unwrap())
     }

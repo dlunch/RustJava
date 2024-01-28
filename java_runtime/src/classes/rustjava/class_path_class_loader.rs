@@ -87,7 +87,7 @@ impl ClassPathClassLoader {
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
 
         let name = String::to_rust_string(jvm, &name)?;
-        let class = jvm.define_class(&name, cast_slice(&data)).await?;
+        let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
 
         Ok(class.into())
     }
