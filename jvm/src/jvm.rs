@@ -403,9 +403,9 @@ impl Jvm {
     pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
         let class = self.detail.borrow().define_class(self, name, data).await?;
 
-        self.register_class(class, Some(class_loader)).await?;
+        self.register_class(class.clone(), Some(class_loader)).await?;
 
-        self.resolve_class(name).await?.unwrap().java_class(self).await
+        self.resolve_class(&class.name()).await?.unwrap().java_class(self).await
     }
 
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {

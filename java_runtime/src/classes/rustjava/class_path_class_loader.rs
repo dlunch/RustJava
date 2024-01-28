@@ -87,8 +87,7 @@ impl ClassPathClassLoader {
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
 
         let name = JavaLangString::to_rust_string(jvm, name.into())?;
-        let normalized_name = name.replace('.', "/");
-        let class = jvm.define_class(&normalized_name, cast_slice(&data), this.into()).await?;
+        let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
 
         Ok(class.into())
     }
