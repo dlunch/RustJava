@@ -30,7 +30,7 @@ use crate::{
     field::Field,
     method::Method,
     r#type::JavaType,
-    runtime::JavaLangString,
+    runtime::{JavaLangClass, JavaLangString},
     thread::{ThreadContext, ThreadId},
     value::JavaValue,
     JvmResult,
@@ -356,7 +356,7 @@ impl Jvm {
 
         anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
-        let rust_class = self.get_rust_object_field(&java_class.unwrap(), "raw")?;
+        let rust_class = JavaLangClass::to_rust_class(self, java_class.unwrap())?;
 
         Ok(Some(rust_class))
     }
