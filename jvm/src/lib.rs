@@ -8,6 +8,7 @@ mod class_definition;
 mod class_instance;
 mod detail;
 mod field;
+mod invoke_arg;
 mod jvm;
 mod method;
 mod runtime;
