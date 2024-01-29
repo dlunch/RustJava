@@ -1,6 +1,6 @@
 #![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
 
-use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, rc::Rc, string::String, vec::Vec};
 use core::{
     cell::RefCell,
     fmt::Debug,
@@ -31,20 +31,21 @@ use crate::{
 #[derive(Clone)]
 pub struct Class {
     pub definition: Box<dyn ClassDefinition>,
-    java_class: Option<Box<dyn ClassInstance>>,
+    java_class: Rc<RefCell<Option<Box<dyn ClassInstance>>>>,
 }
 
 impl Class {
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn java_class(&mut self, jvm: &Jvm) -> JvmResult<Box<dyn ClassInstance>> {
-        if let Some(x) = &self.java_class {
-            Ok((*x).clone())
+        if let Some(x) = &*self.java_class.borrow() {
+            Ok(x.clone())
         } else {
             // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
 
             let class_loader = jvm.get_system_class_loader().await?;
             let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), Some(class_loader)).await?;
 
-            self.java_class = Some(java_class.clone());
+            self.java_class.replace(Some(java_class.clone()));
 
             Ok(java_class)
         }
@@ -386,7 +387,7 @@ impl Jvm {
             class_definition.name().to_owned(),
             Class {
                 definition: class_definition.clone(),
-                java_class,
+                java_class: Rc::new(RefCell::new(java_class)),
             },
         );
 
