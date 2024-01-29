@@ -4,9 +4,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[lints.clippy]
-await_holding_refcell_ref = "allow" # There's false positives https://github.com/rust-lang/rust-clippy/issues/6353
-
 [dependencies]
 anyhow = { workspace = true }
 async-recursion = { workspace = true }

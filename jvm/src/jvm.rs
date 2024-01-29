@@ -93,6 +93,7 @@ impl Jvm {
         Ok(instance)
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
@@ -400,6 +401,7 @@ impl Jvm {
         Ok(())
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
         let class = self.detail.borrow().define_class(self, name, data).await?;
 
@@ -408,6 +410,7 @@ impl Jvm {
         self.resolve_class(&class.name()).await?.unwrap().java_class(self).await
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> JvmResult<Box<dyn ClassInstance>> {
         let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
 
