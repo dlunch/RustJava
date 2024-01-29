@@ -37,9 +37,12 @@ pub struct Class {
 impl Class {
     #[allow(clippy::await_holding_refcell_ref)]
     pub async fn java_class(&mut self, jvm: &Jvm) -> JvmResult<Box<dyn ClassInstance>> {
-        if let Some(x) = &*self.java_class.borrow() {
+        let java_class = self.java_class.borrow();
+        if let Some(x) = &*java_class {
             Ok(x.clone())
         } else {
+            drop(java_class);
+
             // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
 
             let class_loader = jvm.get_system_class_loader().await?;
