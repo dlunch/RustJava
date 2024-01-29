@@ -3,7 +3,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 use nom::{
     combinator::{flat_map, map, success},
     multi::length_count,
-    number::complete::{be_i16, be_i32, be_u16, be_u32, u8},
+    number::complete::{be_i16, be_i32, be_u16, be_u32, i8, u8},
     sequence::tuple,
     IResult,
 };
@@ -118,7 +118,7 @@ pub enum Opcode {
     Ifle(i16),
     Ifnonnull(i16),
     Ifnull(i16),
-    Iinc(u8, u8),
+    Iinc(u8, i8),
     Iload(u8),
     Imul,
     Ineg,
@@ -322,7 +322,7 @@ impl Opcode {
             0x9e => map(be_i16, Opcode::Ifle)(data),
             0xc7 => map(be_i16, Opcode::Ifnonnull)(data),
             0xc6 => map(be_i16, Opcode::Ifnull)(data),
-            0x84 => map(tuple((u8, u8)), |(index, constant)| Opcode::Iinc(index, constant))(data),
+            0x84 => map(tuple((u8, i8)), |(index, constant)| Opcode::Iinc(index, constant))(data),
             0x15 => map(u8, Opcode::Iload)(data),
             0x1a => success(Opcode::Iload(0))(data),
             0x1b => success(Opcode::Iload(1))(data),
