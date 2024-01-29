@@ -9,12 +9,11 @@ await_holding_refcell_ref = "allow" # There's false positives https://github.com
 
 [dependencies]
 anyhow = { workspace = true }
+async-recursion = { workspace = true }
 async-trait = { workspace = true }
 bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 nom = { workspace = true }
 tracing = { workspace = true }
-
-async-recursion = { version = "^1.0" }
 
 java_constants = { workspace = true }

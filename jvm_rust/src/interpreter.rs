@@ -277,7 +277,13 @@ impl Interpreter {
                 Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
                 Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Multianewarray(x, d) => {
+                    let dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
+                    let element_type_name = format!("L{};", x.as_class());
+                    let array = Self::new_multi_array(jvm, &element_type_name, &dimensions).await?;
 
+                    stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
+                }
                 Opcode::New(x) => {
                     let class = jvm.instantiate_class(x.as_class()).await?;
 
@@ -403,5 +409,20 @@ impl Interpreter {
             ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.unwrap().java_class(jvm).await?)),
             _ => unimplemented!(),
         })
+    }
+
+    #[async_recursion::async_recursion(?Send)]
+    async fn new_multi_array(jvm: &Jvm, element_type_name: &str, dimensions: &[i32]) -> JvmResult<Box<dyn ClassInstance>> {
+        let element_type_name = "[".repeat(dimensions.len() - 1) + element_type_name;
+        let mut array = jvm.instantiate_array(&element_type_name, dimensions[0] as _).await?;
+
+        if dimensions.len() > 1 {
+            for i in 0..dimensions[0] {
+                let element = Self::new_multi_array(jvm, &element_type_name[1..], &dimensions[1..]).await?;
+                jvm.store_array(&mut array, i as _, [element])?;
+            }
+        }
+
+        Ok(array)
     }
 }
