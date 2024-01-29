@@ -73,7 +73,9 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
                 }
-                Opcode::Areturn => return Ok(stack_frame.operand_stack.pop().unwrap()),
+                Opcode::Areturn | Opcode::Dreturn | Opcode::Freturn | Opcode::Ireturn | Opcode::Lreturn => {
+                    return Ok(stack_frame.operand_stack.pop().unwrap())
+                }
                 Opcode::Arraylength => {
                     let array = stack_frame.operand_stack.pop().unwrap();
 
