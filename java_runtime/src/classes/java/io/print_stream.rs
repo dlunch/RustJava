@@ -36,8 +36,12 @@ impl PrintStream {
     async fn println_string(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> JavaResult<()> {
         tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &str);
 
-        let rust_str = JavaLangString::to_rust_string(jvm, str.into())?;
-        context.println(&rust_str);
+        if str.is_null() {
+            context.println("null");
+        } else {
+            let rust_str = JavaLangString::to_rust_string(jvm, str.into())?;
+            context.println(&rust_str);
+        }
 
         Ok(())
     }
