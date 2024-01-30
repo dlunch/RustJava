@@ -222,9 +222,11 @@ impl String {
     async fn value_of_object(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<Object>) -> JavaResult<ClassInstanceRef<Self>> {
         tracing::warn!("stub java.lang.String::valueOf({:?})", &value);
 
-        // TODO Object.toString()
-
-        Ok(JavaLangString::from_rust_string(jvm, "").await?.into())
+        Ok(if value.is_null() {
+            JavaLangString::from_rust_string(jvm, "null").await?.into()
+        } else {
+            jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?
+        })
     }
 
     async fn index_of_with_from(
