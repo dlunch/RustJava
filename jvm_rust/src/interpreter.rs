@@ -75,14 +75,17 @@ impl Interpreter {
                 Opcode::Areturn | Opcode::Dreturn | Opcode::Freturn | Opcode::Ireturn | Opcode::Lreturn => {
                     let return_value = stack_frame.operand_stack.pop().unwrap();
                     if matches!(opcode, Opcode::Ireturn) {
+                        let value: i32 = return_value.into();
                         if *return_type == JavaType::Boolean {
-                            return Ok(JavaValue::Boolean(return_value.into()));
+                            return Ok(JavaValue::Boolean(value == 1));
                         } else if *return_type == JavaType::Char {
-                            return Ok(JavaValue::Char(return_value.into()));
+                            return Ok(JavaValue::Char(value as _));
                         } else if *return_type == JavaType::Byte {
-                            return Ok(JavaValue::Byte(return_value.into()));
+                            return Ok(JavaValue::Byte(value as _));
                         } else if *return_type == JavaType::Short {
-                            return Ok(JavaValue::Short(return_value.into()));
+                            return Ok(JavaValue::Short(value as _));
+                        } else {
+                            return Ok(JavaValue::Int(value));
                         }
                     }
                     return Ok(return_value);
