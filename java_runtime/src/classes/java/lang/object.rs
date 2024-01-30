@@ -1,8 +1,8 @@
-use alloc::{boxed::Box, vec};
+use alloc::{boxed::Box, format, vec};
 
 use java_class_proto::{JavaMethodProto, JavaResult};
 use java_constants::MethodAccessFlags;
-use jvm::{ClassInstance, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -68,12 +68,18 @@ impl Object {
         todo!()
     }
 
-    async fn to_string(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<String>> {
-        tracing::warn!("stub java.lang.Object::toString({:?})", &this);
+    async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Object::toString({:?})", &this);
 
-        // TODO return getClass().getName() + "@" + Integer.toHexString(hashCode());
+        let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
+        let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;
+        let class_name_rust = JavaLangString::to_rust_string(jvm, class_name)?;
 
-        todo!()
+        let hash_code: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
+
+        let result = format!("{}@{:x}", class_name_rust, hash_code);
+
+        Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }
 
     async fn notify(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
