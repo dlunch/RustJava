@@ -12,7 +12,7 @@ use core::{
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{JavaValue, Jvm, JvmCallback, JvmResult, Method};
+use jvm::{JavaType, JavaValue, Jvm, JvmCallback, JvmResult, Method};
 
 use crate::interpreter::Interpreter;
 
@@ -134,7 +134,10 @@ impl Method for MethodImpl {
 
     async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         Ok(match &self.inner.body {
-            MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args).await?,
+            MethodBody::ByteCode(x) => {
+                let r#type = JavaType::parse(&self.inner.descriptor);
+                Interpreter::run(jvm, x, args, r#type.as_method().1).await?
+            }
             MethodBody::Rust(x) => x.call(jvm, args).await?,
         })
     }

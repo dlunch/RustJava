@@ -9,7 +9,7 @@ use crate::stack_frame::StackFrame;
 pub struct Interpreter;
 
 impl Interpreter {
-    pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+    pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>, return_type: &JavaType) -> JvmResult<JavaValue> {
         let mut stack_frame = StackFrame::new();
 
         stack_frame.local_variables = args.into_vec();
@@ -73,7 +73,19 @@ impl Interpreter {
                     stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
                 }
                 Opcode::Areturn | Opcode::Dreturn | Opcode::Freturn | Opcode::Ireturn | Opcode::Lreturn => {
-                    return Ok(stack_frame.operand_stack.pop().unwrap())
+                    let return_value = stack_frame.operand_stack.pop().unwrap();
+                    if matches!(opcode, Opcode::Ireturn) {
+                        if *return_type == JavaType::Boolean {
+                            return Ok(JavaValue::Boolean(return_value.into()));
+                        } else if *return_type == JavaType::Char {
+                            return Ok(JavaValue::Char(return_value.into()));
+                        } else if *return_type == JavaType::Byte {
+                            return Ok(JavaValue::Byte(return_value.into()));
+                        } else if *return_type == JavaType::Short {
+                            return Ok(JavaValue::Short(return_value.into()));
+                        }
+                    }
+                    return Ok(return_value);
                 }
                 Opcode::Arraylength => {
                     let array = stack_frame.operand_stack.pop().unwrap();
