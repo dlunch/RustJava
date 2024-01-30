@@ -123,8 +123,6 @@ impl String {
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> JavaResult<bool> {
         tracing::debug!("java.lang.String::equals({:?}, {:?})", &this, &other);
 
-        // TODO Object.equals()
-
         let other_string = JavaLangString::to_rust_string(jvm, other.clone())?;
         let this_string = JavaLangString::to_rust_string(jvm, this.clone())?;
 
