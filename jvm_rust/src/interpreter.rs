@@ -92,6 +92,19 @@ impl Interpreter {
                     stack_frame.operand_stack.push(value.clone());
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::Dup2 => {
+                    let value = stack_frame.operand_stack.pop().unwrap();
+                    if matches!(value, JavaValue::Long(_) | JavaValue::Double(_)) {
+                        stack_frame.operand_stack.push(value.clone());
+                        stack_frame.operand_stack.push(value);
+                    } else {
+                        let value2 = stack_frame.operand_stack.pop().unwrap();
+                        stack_frame.operand_stack.push(value2.clone());
+                        stack_frame.operand_stack.push(value.clone());
+                        stack_frame.operand_stack.push(value2);
+                        stack_frame.operand_stack.push(value);
+                    }
+                }
                 Opcode::Getfield(x) => {
                     let instance = stack_frame.operand_stack.pop().unwrap();
 
