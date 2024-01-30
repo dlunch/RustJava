@@ -30,7 +30,7 @@ impl Interpreter {
                 | Opcode::Laload
                 | Opcode::Saload => {
                     // TODO type checking
-                    let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let index = Self::pop_integer(&mut stack_frame);
                     let array = stack_frame.operand_stack.pop().unwrap();
 
                     let value = jvm.load_array(&array.into(), index as usize, 1).unwrap().pop().unwrap();
@@ -47,7 +47,7 @@ impl Interpreter {
                 | Opcode::Sastore => {
                     // TODO type checking
                     let value = stack_frame.operand_stack.pop().unwrap();
-                    let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let index = Self::pop_integer(&mut stack_frame);
                     let mut array = stack_frame.operand_stack.pop().unwrap().into();
 
                     let element_type = jvm.array_element_type(&array).unwrap();
