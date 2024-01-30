@@ -1,7 +1,7 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassDefinition, ClassInstanceRef, Jvm};
 
 use crate::{
     classes::java::{io::InputStream, lang::String},
@@ -18,6 +18,7 @@ impl Class {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
@@ -36,6 +37,15 @@ impl Class {
         tracing::debug!("java.lang.Class::<init>({:?})", &this);
 
         Ok(())
+    }
+
+    async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Class::getName({:?})", &this);
+
+        let rust_class: Box<dyn ClassDefinition> = jvm.get_rust_object_field(&this, "raw")?;
+        let result = JavaLangString::from_rust_string(jvm, &rust_class.name()).await?;
+
+        Ok(result.into())
     }
 
     async fn get_resource_as_stream(
