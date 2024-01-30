@@ -59,9 +59,12 @@ impl Object {
     }
 
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> JavaResult<bool> {
-        tracing::warn!("stub java.lang.Object::equals({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.Object::equals({:?}, {:?})", &this, &other);
 
-        todo!()
+        let rust_this: Box<dyn ClassInstance> = this.into();
+        let rust_other: Box<dyn ClassInstance> = other.into();
+
+        rust_this.equals(&*rust_other)
     }
 
     async fn java_clone(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<Self>> {
