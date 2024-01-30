@@ -99,10 +99,12 @@ impl Object {
         todo!()
     }
 
-    async fn wait_long(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> JavaResult<()> {
-        tracing::warn!("stub java.lang.Object::wait({:?}, {:?})", &this, millis);
+    async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> JavaResult<()> {
+        tracing::debug!("java.lang.Object::wait({:?}, {:?})", &this, millis);
 
-        todo!()
+        jvm.invoke_virtual(&this, "wait", "(JI)V", (millis, 0)).await?;
+
+        Ok(())
     }
 
     async fn wait_long_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> JavaResult<()> {
@@ -111,10 +113,12 @@ impl Object {
         todo!()
     }
 
-    async fn wait(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
-        tracing::warn!("stub java.lang.Object::wait({:?})", &this);
+    async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+        tracing::debug!("java.lang.Object::wait({:?})", &this);
 
-        todo!()
+        jvm.invoke_virtual(&this, "wait", "(JI)V", (0, 0)).await?;
+
+        Ok(())
     }
 
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
