@@ -62,7 +62,7 @@ impl Interpreter {
                     jvm.store_array(&mut array, index as usize, [value]).unwrap();
                 }
                 Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
-                Opcode::Aload(x) | Opcode::Iload(x) => {
+                Opcode::Aload(x) | Opcode::Dload(x) | Opcode::Fload(x) | Opcode::Iload(x) | Opcode::Lload(x) => {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
@@ -82,7 +82,7 @@ impl Interpreter {
                     let length = jvm.array_length(&array.into())?;
                     stack_frame.operand_stack.push(JavaValue::Int(length as _));
                 }
-                Opcode::Astore(x) | Opcode::Istore(x) => {
+                Opcode::Astore(x) | Opcode::Dstore(x) | Opcode::Fstore(x) | Opcode::Istore(x) | Opcode::Lstore(x) => {
                     let value = stack_frame.operand_stack.pop();
                     stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
@@ -140,28 +140,6 @@ impl Interpreter {
                     stack_frame.operand_stack.push(JavaValue::Int(value1 & value2));
                 }
                 Opcode::Iconst(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
-                Opcode::Invokevirtual(x) => {
-                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
-
-                    let instance = stack_frame.operand_stack.pop().unwrap();
-
-                    let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
-                    Self::push_invoke_result(&mut stack_frame, result);
-                }
-                Opcode::Invokespecial(x) => {
-                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
-
-                    let instance = stack_frame.operand_stack.pop().unwrap();
-
-                    let result = jvm.invoke_special(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
-                    Self::push_invoke_result(&mut stack_frame, result);
-                }
-                Opcode::Invokestatic(x) => {
-                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
-
-                    let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
-                    Self::push_invoke_result(&mut stack_frame, result);
-                }
                 Opcode::Idiv => {
                     let value2 = Self::pop_integer(&mut stack_frame);
                     let value1 = Self::pop_integer(&mut stack_frame);
@@ -270,6 +248,33 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 * value2));
                 }
+                Opcode::Ineg => {
+                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(-value));
+                }
+                Opcode::Invokevirtual(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+
+                    let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
+                }
+                Opcode::Invokespecial(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+
+                    let result = jvm.invoke_special(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
+                }
+                Opcode::Invokestatic(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
+                }
                 Opcode::Ior => {
                     let value2 = Self::pop_integer(&mut stack_frame);
                     let value1 = Self::pop_integer(&mut stack_frame);
@@ -300,9 +305,110 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 - value2));
                 }
+                Opcode::Iushr => {
+                    let value2 = Self::pop_integer(&mut stack_frame);
+                    let value1 = Self::pop_integer(&mut stack_frame);
+
+                    stack_frame.operand_stack.push(JavaValue::Int(((value1 as u32) >> (value2 as u32)) as _));
+                }
+                Opcode::Ixor => {
+                    let value2 = Self::pop_integer(&mut stack_frame);
+                    let value1 = Self::pop_integer(&mut stack_frame);
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1 ^ value2));
+                }
+                Opcode::L2d => {
+                    let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Double(value as _));
+                }
+                Opcode::L2f => {
+                    let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Float(value as _));
+                }
+                Opcode::L2i => {
+                    let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Int(value as _));
+                }
+                Opcode::Ladd => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 + value2));
+                }
+                Opcode::Land => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 & value2));
+                }
+                Opcode::Lcmp => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Int(value1.cmp(&value2) as _));
+                }
                 Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
                 Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Ldiv => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 / value2));
+                }
+                Opcode::Lmul => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 * value2));
+                }
+                Opcode::Lneg => {
+                    let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(-value));
+                }
+                Opcode::Lor => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 | value2));
+                }
+                Opcode::Lrem => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 % value2));
+                }
+                Opcode::Lshl => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 << value2));
+                }
+                Opcode::Lshr => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 >> value2));
+                }
+                Opcode::Lsub => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 - value2));
+                }
+                Opcode::Lushr => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(((value1 as u64) >> (value2 as u64)) as _));
+                }
+                Opcode::Lxor => {
+                    let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Long(value1 ^ value2));
+                }
                 Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
                     let key = Self::pop_integer(&mut stack_frame);
 
