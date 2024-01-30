@@ -9,7 +9,6 @@ use crate::stack_frame::StackFrame;
 pub struct Interpreter;
 
 impl Interpreter {
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
         let mut stack_frame = StackFrame::new();
 
