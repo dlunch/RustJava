@@ -117,27 +117,27 @@ impl Interpreter {
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Goto(x) => iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..),
                 Opcode::I2b => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Byte(value as _));
                 }
                 Opcode::I2c => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Char(value as _));
                 }
                 Opcode::I2d => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Double(value as _));
                 }
                 Opcode::I2f => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Float(value as _));
                 }
                 Opcode::I2l => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Long(value as _));
                 }
                 Opcode::I2s => {
-                    let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Short(value as _));
                 }
                 Opcode::Iadd => {
