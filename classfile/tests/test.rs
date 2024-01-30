@@ -46,7 +46,7 @@ fn test_hello() -> anyhow::Result<()> {
             matches!(x.code.get(&3).unwrap(), Opcode::Ldc(x) if matches!(x, ValueConstant::String(y) if *y == "Hello, world!".to_string().into()))
         );
         assert!(
-            matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(x) if x.class == "java/io/PrintStream" .to_string().into()&& x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into())
+            matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(x) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into())
         );
         assert!(matches!(x.code.get(&8).unwrap(), Opcode::Return));
     } else {
