@@ -42,6 +42,10 @@ impl ClassInstance for ClassInstanceImpl {
         Ok(Rc::ptr_eq(&self.inner, &other.inner))
     }
 
+    fn hash_code(&self) -> i32 {
+        Rc::as_ptr(&self.inner) as i32
+    }
+
     fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 

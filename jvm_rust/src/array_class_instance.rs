@@ -47,6 +47,10 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(Rc::ptr_eq(&self.inner, &other.inner))
     }
 
+    fn hash_code(&self) -> i32 {
+        Rc::as_ptr(&self.inner) as i32
+    }
+
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
         anyhow::ensure!(offset + values.len() <= self.inner.length, "Array index out of bounds");
 

@@ -51,9 +51,11 @@ impl Object {
     }
 
     async fn hash_code(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
-        tracing::warn!("stub java.lang.Object::hashCode({:?})", &this);
+        tracing::debug!("java.lang.Object::hashCode({:?})", &this);
 
-        todo!()
+        let rust_this: Box<dyn ClassInstance> = this.into();
+
+        Ok(rust_this.hash_code())
     }
 
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> JavaResult<bool> {
