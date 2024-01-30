@@ -65,6 +65,9 @@ impl Interpreter {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     stack_frame.operand_stack.push(value);
                 }
+                Opcode::Athrow => {
+                    todo!()
+                }
                 Opcode::Anewarray(x) => {
                     let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
                     let element_type_name = format!("L{};", x.as_class());
@@ -101,6 +104,67 @@ impl Interpreter {
                     stack_frame.local_variables[*x as usize] = value.unwrap();
                 }
                 Opcode::Bipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
+                Opcode::Checkcast(_) => {
+                    todo!()
+                }
+                Opcode::D2f => {
+                    let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Float(value as _));
+                }
+                Opcode::D2i => {
+                    let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Int(value as _));
+                }
+                Opcode::D2l => {
+                    let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Long(value as _));
+                }
+                Opcode::Dadd => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(value1 + value2));
+                }
+                Opcode::Dcmpg => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value1.is_nan() || value2.is_nan() {
+                        stack_frame.operand_stack.push(JavaValue::Int(1));
+                    } else {
+                        stack_frame.operand_stack.push(JavaValue::Int(value1.partial_cmp(&value2).unwrap() as _));
+                    }
+                }
+                Opcode::Dcmpl => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value1.is_nan() || value2.is_nan() {
+                        stack_frame.operand_stack.push(JavaValue::Int(-1));
+                    } else {
+                        stack_frame.operand_stack.push(JavaValue::Int(value1.partial_cmp(&value2).unwrap() as _));
+                    }
+                }
+                Opcode::Dconst(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Double(*x as f64));
+                }
+                Opcode::Ddiv => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(value1 / value2));
+                }
+                Opcode::Dmul => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(value1 * value2));
+                }
+                Opcode::Dneg => {
+                    let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(-value));
+                }
                 Opcode::Dup => {
                     let value = stack_frame.operand_stack.pop().unwrap();
                     stack_frame.operand_stack.push(value.clone());
@@ -119,6 +183,100 @@ impl Interpreter {
                         stack_frame.operand_stack.push(value);
                     }
                 }
+                Opcode::Dup2X1 => {
+                    todo!()
+                }
+                Opcode::Dup2X2 => {
+                    todo!()
+                }
+                Opcode::DupX1 => {
+                    todo!()
+                }
+                Opcode::DupX2 => {
+                    todo!()
+                }
+                Opcode::Drem => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(value1 % value2));
+                }
+                Opcode::Dsub => {
+                    let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Double(value1 - value2));
+                }
+                Opcode::F2d => {
+                    let value: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Double(value as _));
+                }
+                Opcode::F2i => {
+                    let value: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Int(value as _));
+                }
+                Opcode::F2l => {
+                    let value: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    stack_frame.operand_stack.push(JavaValue::Long(value as _));
+                }
+                Opcode::Fadd => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(value1 + value2));
+                }
+                Opcode::Fcmpg => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value1.is_nan() || value2.is_nan() {
+                        stack_frame.operand_stack.push(JavaValue::Int(1));
+                    } else {
+                        stack_frame.operand_stack.push(JavaValue::Int(value1.partial_cmp(&value2).unwrap() as _));
+                    }
+                }
+                Opcode::Fcmpl => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    if value1.is_nan() || value2.is_nan() {
+                        stack_frame.operand_stack.push(JavaValue::Int(-1));
+                    } else {
+                        stack_frame.operand_stack.push(JavaValue::Int(value1.partial_cmp(&value2).unwrap() as _));
+                    }
+                }
+                Opcode::Fconst(x) => {
+                    stack_frame.operand_stack.push(JavaValue::Float(*x as f32));
+                }
+                Opcode::Fdiv => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(value1 / value2));
+                }
+                Opcode::Fmul => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(value1 * value2));
+                }
+                Opcode::Fneg => {
+                    let value: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(-value));
+                }
+                Opcode::Frem => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(value1 % value2));
+                }
+                Opcode::Fsub => {
+                    let value2: f32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let value1: f32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    stack_frame.operand_stack.push(JavaValue::Float(value1 - value2));
+                }
                 Opcode::Getfield(x) => {
                     let instance = stack_frame.operand_stack.pop().unwrap();
 
@@ -130,6 +288,7 @@ impl Interpreter {
                     .operand_stack
                     .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
                 Opcode::Goto(x) => iter = code_attribute.code.range((*offset as i32 + *x as i32) as u32..),
+                Opcode::GotoW(x) => iter = code_attribute.code.range((*offset as i32 + *x) as u32..),
                 Opcode::I2b => {
                     let value = Self::pop_integer(&mut stack_frame);
                     stack_frame.operand_stack.push(JavaValue::Byte(value as _));
@@ -280,13 +439,14 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(-value));
                 }
-                Opcode::Invokevirtual(x) => {
-                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
-
-                    let instance = stack_frame.operand_stack.pop().unwrap();
-
-                    let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
-                    Self::push_invoke_result(&mut stack_frame, result);
+                Opcode::Instanceof(_) => {
+                    todo!()
+                }
+                Opcode::Invokedynamic(_) => {
+                    todo!()
+                }
+                Opcode::Invokeinterface(_, _, _) => {
+                    todo!()
                 }
                 Opcode::Invokespecial(x) => {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
@@ -300,6 +460,14 @@ impl Interpreter {
                     let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
 
                     let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
+                    Self::push_invoke_result(&mut stack_frame, result);
+                }
+                Opcode::Invokevirtual(x) => {
+                    let params = Self::extract_invoke_params(&mut stack_frame, &x.descriptor);
+
+                    let instance = stack_frame.operand_stack.pop().unwrap();
+
+                    let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(&mut stack_frame, result);
                 }
                 Opcode::Ior => {
@@ -343,6 +511,12 @@ impl Interpreter {
                     let value1 = Self::pop_integer(&mut stack_frame);
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 ^ value2));
+                }
+                Opcode::Jsr(_) => {
+                    todo!()
+                }
+                Opcode::JsrW(_) => {
+                    todo!()
                 }
                 Opcode::L2d => {
                     let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -452,6 +626,12 @@ impl Interpreter {
                         iter = code_attribute.code.range((*offset as i32 + *default) as u32..);
                     }
                 }
+                Opcode::Monitorenter => {
+                    todo!()
+                }
+                Opcode::Monitorexit => {
+                    todo!()
+                }
                 Opcode::Multianewarray(x, d) => {
                     let dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
                     let element_type_name = format!("L{};", x.as_class());
@@ -482,8 +662,15 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
                 }
+                Opcode::Nop => {}
                 Opcode::Pop => {
                     stack_frame.operand_stack.pop().unwrap();
+                }
+                Opcode::Pop2 => {
+                    let value = stack_frame.operand_stack.pop().unwrap();
+                    if matches!(value, JavaValue::Long(_) | JavaValue::Double(_)) {
+                        stack_frame.operand_stack.pop().unwrap();
+                    }
                 }
                 Opcode::Putfield(x) => {
                     let value = stack_frame.operand_stack.pop().unwrap();
@@ -495,9 +682,21 @@ impl Interpreter {
                     jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
                         .await?
                 }
+                Opcode::Ret(_) => {
+                    todo!()
+                }
                 Opcode::Return => return Ok(JavaValue::Void),
                 Opcode::Sipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
-                _ => panic!("Unimplemented opcode {:?}", opcode),
+                Opcode::Swap => {
+                    let value1 = stack_frame.operand_stack.pop().unwrap();
+                    let value2 = stack_frame.operand_stack.pop().unwrap();
+
+                    stack_frame.operand_stack.push(value1);
+                    stack_frame.operand_stack.push(value2);
+                }
+                Opcode::Wide => {
+                    todo!()
+                }
             }
         }
 
