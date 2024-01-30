@@ -102,3 +102,26 @@ fn test_superclass() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_switch() -> anyhow::Result<()> {
+    let super_class = include_bytes!("../../test_data/Switch.class");
+
+    let class = ClassInfo::parse(super_class)?;
+
+    assert_eq!(class.methods[1].name, "main".to_string().into());
+    assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
+    if let AttributeInfo::Code(code_attribute) = &class.methods[1].attributes[0] {
+        assert!(matches!(
+            code_attribute.code.get(&8).unwrap(),
+            Opcode::Tableswitch(default, pairs) if *default == 70 && *pairs == vec![(1, 32), (2, 43), (3, 54), (4, 62)]
+        ));
+
+        assert!(matches!(
+            code_attribute.code.get(&79).unwrap(),
+            Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]
+        ));
+    }
+
+    Ok(())
+}

@@ -52,11 +52,15 @@ impl AttributeInfoCode {
         let mut result = BTreeMap::new();
 
         let mut data = code;
-        while let Ok((remaining, opcode)) = Opcode::parse(data, constant_pool) {
-            let offset = unsafe { data.as_ptr().offset_from(code.as_ptr()) } as u32;
-            result.insert(offset, opcode);
+        loop {
+            let offset = unsafe { data.as_ptr().offset_from(code.as_ptr()) } as usize;
+            if let Ok((remaining, opcode)) = Opcode::parse(data, offset, constant_pool) {
+                result.insert(offset as _, opcode);
 
-            data = remaining;
+                data = remaining;
+            } else {
+                break;
+            }
         }
 
         result

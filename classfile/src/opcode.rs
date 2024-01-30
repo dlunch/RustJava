@@ -1,9 +1,10 @@
 use alloc::{collections::BTreeMap, vec::Vec};
 
 use nom::{
+    bytes::complete::take,
     combinator::{flat_map, map, success},
-    multi::length_count,
-    number::complete::{be_i16, be_i32, be_u16, be_u32, i8, u8},
+    multi::count,
+    number::complete::{be_i16, be_i32, be_u16, i8, u8},
     sequence::tuple,
     IResult,
 };
@@ -189,16 +190,16 @@ pub enum Opcode {
     Sastore,
     Sipush(i16),
     Swap,
-    Tableswitch(i32, i32, i32, Vec<i32>),
+    Tableswitch(i32, Vec<(i32, i32)>),
     Wide,
 }
 
 impl Opcode {
-    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
-        flat_map(u8, |x| move |i| Self::parse_opcode(x, i, constant_pool))(data)
+    pub fn parse<'a>(data: &'a [u8], offset: usize, constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
+        flat_map(u8, |x| move |i| Self::parse_opcode(x, offset, i, constant_pool))(data)
     }
 
-    fn parse_opcode<'a>(opcode: u8, data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
+    fn parse_opcode<'a>(opcode: u8, offset: usize, data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         match opcode {
             0x32 => success(Opcode::Aaload)(data),
             0x53 => success(Opcode::Aastore)(data),
@@ -382,8 +383,12 @@ impl Opcode {
             0x21 => success(Opcode::Lload3)(data),
             0x69 => success(Opcode::Lmul)(data),
             0x75 => success(Opcode::Lneg)(data),
-            0xab => map(tuple((be_i32, length_count(be_u32, tuple((be_i32, be_i32))))), |(default, pairs)| {
-                Opcode::Lookupswitch(default, pairs)
+            0xab => flat_map(tuple((take((4 - (offset + 1) % 4) % 4), be_i32, be_i32)), |(_, default, npairs)| {
+                move |x| {
+                    map(count(tuple((be_i32, be_i32)), npairs as _), |offsets| {
+                        Opcode::Lookupswitch(default, offsets)
+                    })(x)
+                }
             })(data),
             0x81 => success(Opcode::Lor)(data),
             0x71 => success(Opcode::Lrem)(data),
@@ -418,9 +423,15 @@ impl Opcode {
             0x56 => success(Opcode::Sastore)(data),
             0x11 => map(be_i16, Opcode::Sipush)(data),
             0x5f => success(Opcode::Swap)(data),
-            0xaa => map(
-                tuple((be_i32, be_i32, be_i32, length_count(be_u32, be_i32))),
-                |(default, low, high, offsets)| Opcode::Tableswitch(default, low, high, offsets),
+            0xaa => flat_map(
+                tuple((take((4 - (offset + 1) % 4) % 4), be_i32, be_i32, be_i32)),
+                |(_, default, low, high)| {
+                    move |x| {
+                        map(count(be_i32, ((high - low) + 1) as _), |offsets| {
+                            Opcode::Tableswitch(default, (low..=high).zip(offsets).collect())
+                        })(x)
+                    }
+                },
             )(data),
             0xc4 => success(Opcode::Wide)(data),
             _ => panic!("Unknown opcode: {:02x}", opcode),
