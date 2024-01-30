@@ -303,6 +303,22 @@ impl Interpreter {
                 Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
                 Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
                 Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
+                    let key = Self::pop_integer(&mut stack_frame);
+
+                    let mut found = false;
+                    for (k, current_offset) in pairs {
+                        if *k == key {
+                            iter = code_attribute.code.range((*offset as i32 + *current_offset) as u32..);
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if !found {
+                        iter = code_attribute.code.range((*offset as i32 + *default) as u32..);
+                    }
+                }
                 Opcode::Multianewarray(x, d) => {
                     let dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
                     let element_type_name = format!("L{};", x.as_class());
