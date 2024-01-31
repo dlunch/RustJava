@@ -22,6 +22,7 @@ impl Vector {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
+                JavaMethodProto::new("addElement", "(Ljava/lang/Object;)V", Self::add_element, Default::default()),
                 JavaMethodProto::new("elementAt", "(I)Ljava/lang/Object;", Self::element_at, Default::default()),
                 JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
@@ -57,6 +58,16 @@ impl Vector {
         rust_vector.borrow_mut().push(element);
 
         Ok(true)
+    }
+
+    async fn add_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> JavaResult<()> {
+        tracing::debug!("java.util.Vector::addElement({:?}, {:?})", &this, &element);
+
+        // do we need to call add() instead?
+        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        rust_vector.borrow_mut().push(element);
+
+        Ok(())
     }
 
     async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> JavaResult<ClassInstanceRef<Object>> {
