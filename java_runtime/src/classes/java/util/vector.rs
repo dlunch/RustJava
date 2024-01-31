@@ -43,7 +43,7 @@ impl Vector {
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> JavaResult<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?})", &this, capacity);
 
-        jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity,)).await?;
+        jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity, 0)).await?;
 
         Ok(())
     }
@@ -130,7 +130,7 @@ mod test {
     use crate::{classes::java::lang::Object, test::test_jvm};
 
     #[futures_test::test]
-    async fn test_hashmap() -> anyhow::Result<()> {
+    async fn test_vector() -> anyhow::Result<()> {
         let jvm = test_jvm().await?;
 
         let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
