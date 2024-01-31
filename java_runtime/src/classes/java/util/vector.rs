@@ -21,6 +21,7 @@ impl Vector {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "(II)V", Self::init_with_capacity_increment, Default::default()),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
                 JavaMethodProto::new("addElement", "(Ljava/lang/Object;)V", Self::add_element, Default::default()),
                 JavaMethodProto::new("elementAt", "(I)Ljava/lang/Object;", Self::element_at, Default::default()),
@@ -39,8 +40,22 @@ impl Vector {
         Ok(())
     }
 
-    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, capacity: i32) -> JavaResult<()> {
+    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> JavaResult<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?})", &this, capacity);
+
+        jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity,)).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_capacity_increment(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        capacity: i32,
+        capacity_increment: i32,
+    ) -> JavaResult<()> {
+        tracing::debug!("java.util.Vector::<init>({:?}, {:?}, {:?})", &this, capacity, capacity_increment);
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
