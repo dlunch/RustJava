@@ -16,7 +16,7 @@ impl Object {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("getClass", "()Ljava/lang/Class;", Self::get_class, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("getClass", "()Ljava/lang/Class;", Self::get_class, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::NATIVE),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
                 JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::java_clone, MethodAccessFlags::NATIVE),
