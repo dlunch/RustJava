@@ -18,7 +18,12 @@ impl System {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<clinit>", "()V", Self::cl_init, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("currentTimeMillis", "()J", Self::current_time_millis, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new(
+                    "currentTimeMillis",
+                    "()J",
+                    Self::current_time_millis,
+                    MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new("gc", "()V", Self::gc, MethodAccessFlags::STATIC),
                 JavaMethodProto::new(
                     "arraycopy",
