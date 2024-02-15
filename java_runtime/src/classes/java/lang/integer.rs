@@ -1,8 +1,8 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodProto, JavaResult};
+use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -24,7 +24,7 @@ impl Integer {
         }
     }
 
-    async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, s: ClassInstanceRef<String>) -> JavaResult<i32> {
+    async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, s: ClassInstanceRef<String>) -> JvmResult<i32> {
         tracing::debug!("java.lang.Integer::parseInt({:?})", &s);
 
         let s = JavaLangString::to_rust_string(jvm, s.into())?;

@@ -4,7 +4,7 @@ use core::{
     fmt::{self, Debug, Formatter},
 };
 
-use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, JvmResult};
+use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, JvmError, JvmResult};
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
@@ -52,7 +52,10 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> JvmResult<()> {
-        anyhow::ensure!(offset + values.len() <= self.inner.length, "Array index out of bounds");
+        if offset + values.len() > self.inner.length {
+            // TODO real exception
+            return Err(JvmError::FatalError("ArrayIndexOutOfBoundsException".into()));
+        }
 
         self.inner.elements.borrow_mut().splice(offset..offset + values.len(), values.into_vec());
 
@@ -60,7 +63,10 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     fn load(&self, offset: usize, length: usize) -> JvmResult<Vec<JavaValue>> {
-        anyhow::ensure!(offset + length <= self.inner.length, "Array index out of bounds");
+        if offset + length > self.inner.length {
+            // TODO real exception
+            return Err(JvmError::FatalError("ArrayIndexOutOfBoundsException".into()));
+        }
 
         Ok(self.inner.elements.borrow()[offset..offset + length].to_vec())
     }

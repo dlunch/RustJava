@@ -7,6 +7,7 @@ mod as_any;
 mod class_definition;
 mod class_instance;
 mod detail;
+mod error;
 mod field;
 mod invoke_arg;
 mod jvm;
@@ -16,12 +17,12 @@ mod value;
 
 pub mod runtime;
 
-pub type JvmResult<T> = anyhow::Result<T>;
+pub type JvmResult<T> = Result<T, error::JvmError>;
 
 use alloc::boxed::Box;
 #[async_trait::async_trait(?Send)]
 pub trait JvmCallback {
-    async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> anyhow::Result<JavaValue>;
+    async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
 }
 
 pub use self::{
@@ -30,6 +31,7 @@ pub use self::{
     class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
     detail::JvmDetail,
+    error::JvmError,
     field::Field,
     jvm::Jvm,
     method::Method,

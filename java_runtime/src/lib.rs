@@ -15,12 +15,12 @@ pub mod test {
     use alloc::boxed::Box;
     use core::future::ready;
 
-    use jvm::Jvm;
+    use jvm::{Jvm, JvmResult};
     use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
     use crate::{initialize, runtime::test::DummyRuntime};
 
-    pub async fn test_jvm() -> anyhow::Result<Jvm> {
+    pub async fn test_jvm() -> JvmResult<Jvm> {
         let jvm = Jvm::new(JvmDetailImpl).await?;
 
         initialize(&jvm, |name, proto| {

@@ -6,6 +6,7 @@ use std::{
 use clap::{ArgGroup, Parser};
 use futures_executor::block_on;
 
+use jvm::JvmResult;
 use rust_java::{create_jvm, load_class_file, load_jar_file, run_java_main};
 
 #[derive(Parser)]
@@ -19,7 +20,7 @@ struct Opts {
     args: Vec<String>,
 }
 
-pub fn main() -> anyhow::Result<()> {
+pub fn main() -> JvmResult<()> {
     let opts = Opts::parse();
 
     block_on(async {
@@ -27,13 +28,13 @@ pub fn main() -> anyhow::Result<()> {
 
         let main_class_name = if let Some(x) = opts.main_class {
             let file_name = x.replace('.', "/") + ".class";
-            let data = fs::read(&file_name)?;
+            let data = fs::read(&file_name).unwrap();
 
             load_class_file(&jvm, &file_name, &data).await?;
 
             x
         } else if let Some(x) = opts.jar {
-            let data = fs::read(&x)?;
+            let data = fs::read(&x).unwrap();
 
             load_jar_file(&jvm, &data).await?
         } else {

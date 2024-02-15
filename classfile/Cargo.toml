@@ -5,9 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
 nom = { workspace = true }
 
-java_constants = { workspace = true }
-
 nom-derive = { version = "^0.10", default-features = false }
+
+java_constants = { workspace = true }

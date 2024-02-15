@@ -3,10 +3,10 @@ use java_constants::ClassAccessFlags;
 use classfile::{AttributeInfo, ClassInfo, Opcode, ValueConstant};
 
 #[test]
-fn test_hello() -> anyhow::Result<()> {
+fn test_hello() {
     let hello = include_bytes!("../../test_data/Hello.class");
 
-    let class = ClassInfo::parse(hello)?;
+    let class = ClassInfo::parse(hello).unwrap();
 
     assert_eq!(class.magic, 0xCAFEBABE);
     assert_eq!(class.major_version, 65);
@@ -54,15 +54,13 @@ fn test_hello() -> anyhow::Result<()> {
     }
 
     assert!(matches!(class.attributes[0], AttributeInfo::SourceFile { .. }));
-
-    Ok(())
 }
 
 #[test]
-fn test_odd_even() -> anyhow::Result<()> {
+fn test_odd_even() {
     let odd_even = include_bytes!("../../test_data/OddEven.class");
 
-    let class = ClassInfo::parse(odd_even)?;
+    let class = ClassInfo::parse(odd_even).unwrap();
 
     assert_eq!(class.methods[2].name, "run".to_string().into());
     assert!(matches!(class.methods[2].attributes[0], AttributeInfo::Code { .. }));
@@ -84,30 +82,26 @@ fn test_odd_even() -> anyhow::Result<()> {
             assert_eq!(local_variable_table[2].index, 2);
         }
     }
-
-    Ok(())
 }
 
 #[test]
-fn test_superclass() -> anyhow::Result<()> {
+fn test_superclass() {
     let super_class = include_bytes!("../../test_data/SuperClass.class");
 
-    let class = ClassInfo::parse(super_class)?;
+    let class = ClassInfo::parse(super_class).unwrap();
 
     assert_eq!(class.methods[1].name, "run".to_string().into());
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(code_attribute) = &class.methods[2].attributes[0] {
         assert!(matches!(code_attribute.attributes[0], AttributeInfo::LineNumberTable { .. }));
     }
-
-    Ok(())
 }
 
 #[test]
-fn test_switch() -> anyhow::Result<()> {
+fn test_switch() {
     let super_class = include_bytes!("../../test_data/Switch.class");
 
-    let class = ClassInfo::parse(super_class)?;
+    let class = ClassInfo::parse(super_class).unwrap();
 
     assert_eq!(class.methods[1].name, "main".to_string().into());
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
@@ -122,6 +116,4 @@ fn test_switch() -> anyhow::Result<()> {
             Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]
         ));
     }
-
-    Ok(())
 }

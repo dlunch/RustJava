@@ -54,9 +54,9 @@ pub struct ClassInfo {
 }
 
 impl ClassInfo {
-    pub fn parse(file: &[u8]) -> anyhow::Result<Self> {
-        let result = Parse::parse(file).map_err(|e| anyhow::anyhow!("{}", e))?.1;
+    pub fn parse(file: &[u8]) -> Option<Self> {
+        let result = Parse::parse(file).ok()?.1;
 
-        Ok(result)
+        Some(result)
     }
 }

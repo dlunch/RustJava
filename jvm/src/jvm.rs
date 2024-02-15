@@ -8,7 +8,6 @@ use core::{
     mem::{forget, size_of_val},
 };
 
-use anyhow::Context;
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
 
@@ -19,6 +18,7 @@ use crate::{
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
     detail::JvmDetail,
+    error::JvmError,
     field::Field,
     invoke_arg::InvokeArg,
     method::Method,
@@ -76,10 +76,7 @@ impl Jvm {
     pub async fn instantiate_class(&self, class_name: &str) -> JvmResult<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
-        let class = self
-            .resolve_class(class_name)
-            .await?
-            .with_context(|| format!("No such class {}", class_name))?;
+        let class = self.resolve_class(class_name).await?;
 
         let instance = class.definition.instantiate();
 
@@ -104,7 +101,7 @@ impl Jvm {
         let class_name = format!("[{}", element_type_name);
         let class = if self.system_class_loader.borrow().is_none() || element_type_name.len() == 1 {
             if self.has_class(&class_name) {
-                self.resolve_class(&class_name).await?.unwrap().definition
+                self.resolve_class(&class_name).await?.definition
             } else {
                 // bootstrapping or primitive type
                 let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
@@ -113,7 +110,7 @@ impl Jvm {
                 definition
             }
         } else {
-            self.resolve_class(&class_name).await?.unwrap().definition
+            self.resolve_class(&class_name).await?.definition
         };
         let array_class = class.as_array_class_definition().unwrap();
 
@@ -127,15 +124,9 @@ impl Jvm {
     {
         tracing::trace!("Get static field {}.{}:{}", class_name, name, descriptor);
 
-        let class = self
-            .resolve_class(class_name)
-            .await?
-            .with_context(|| format!("No such class {}", class_name))?;
+        let class = self.resolve_class(class_name).await?;
 
-        let field = class
-            .definition
-            .field(name, descriptor, true)
-            .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
+        let field = class.definition.field(name, descriptor, true).unwrap(); // TODO NoSuchFieldError
 
         Ok(class.definition.get_static_field(&*field)?.into())
     }
@@ -146,15 +137,9 @@ impl Jvm {
     {
         tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
-        let mut class = self
-            .resolve_class(class_name)
-            .await?
-            .with_context(|| format!("No such class {}", class_name))?;
+        let mut class = self.resolve_class(class_name).await?;
 
-        let field = class
-            .definition
-            .field(name, descriptor, true)
-            .with_context(|| format!("No such field {}.{}:{}", class_name, name, descriptor))?;
+        let field = class.definition.field(name, descriptor, true).unwrap(); // TODO NoSuchFieldError
 
         class.definition.put_static_field(&*field, value.into())
     }
@@ -165,9 +150,7 @@ impl Jvm {
     {
         tracing::trace!("Get field {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
-        let field = self
-            .find_field(&*instance.class_definition(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor)?.unwrap(); // TODO NoSuchFieldError
 
         Ok(instance.get_field(&*field)?.into())
     }
@@ -178,9 +161,7 @@ impl Jvm {
     {
         tracing::trace!("Put field {}.{}:{} = {:?}", instance.class_definition().name(), name, descriptor, value);
 
-        let field = self
-            .find_field(&*instance.class_definition(), name, descriptor)?
-            .with_context(|| format!("No such field {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor)?.unwrap(); // TODO NoSuchFieldError
 
         instance.put_field(&*field, value.into())
     }
@@ -192,17 +173,13 @@ impl Jvm {
     {
         tracing::trace!("Invoke static {}.{}:{}", class_name, name, descriptor);
 
-        let class = self
-            .resolve_class(class_name)
-            .await?
-            .with_context(|| format!("No such class {}", class_name))?;
+        let class = self.resolve_class(class_name).await?;
 
-        let method = class
-            .definition
-            .method(name, descriptor)
-            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
+        let method = class.definition.method(name, descriptor).unwrap(); // TODO NoSuchMethodError
 
-        anyhow::ensure!(method.access_flags().contains(MethodAccessFlags::STATIC), "Method is not static");
+        if !method.access_flags().contains(MethodAccessFlags::STATIC) {
+            return Err(JvmError::FatalError("NoSuchMethodError".into())); // TODO use real exception class
+        }
 
         Ok(method.run(self, args.into_arg()).await?.into())
     }
@@ -215,15 +192,11 @@ impl Jvm {
         tracing::trace!("Invoke virtual {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
         let class = instance.class_definition();
-        let method = self
-            .find_virtual_method(&*class, name, descriptor)?
-            .with_context(|| format!("No such method {}.{}:{}", instance.class_definition().name(), name, descriptor))?;
+        let method = self.find_virtual_method(&*class, name, descriptor, false)?;
 
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
-
-        anyhow::ensure!(!method.access_flags().contains(MethodAccessFlags::STATIC), "Method is static");
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
@@ -243,17 +216,16 @@ impl Jvm {
     {
         tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
-        let class = self.resolve_class(class_name).await?.unwrap();
-        let method = class
-            .definition
-            .method(name, descriptor)
-            .with_context(|| format!("No such method {}.{}:{}", class_name, name, descriptor))?;
+        let class = self.resolve_class(class_name).await?;
+        let method = class.definition.method(name, descriptor).unwrap(); // TODO NoSuchMethodError
 
         let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
             .chain(args.into_iter())
             .collect::<Vec<_>>();
 
-        anyhow::ensure!(!method.access_flags().contains(MethodAccessFlags::STATIC), "Method is static");
+        if method.access_flags().contains(MethodAccessFlags::STATIC) {
+            return Err(JvmError::FatalError("NoSuchMethodError".into())); // TODO use real exception class
+        }
 
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
@@ -265,7 +237,7 @@ impl Jvm {
     {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
-        let array = array.as_array_instance_mut().context("Expected array class instance")?;
+        let array = array.as_array_instance_mut().unwrap(); // TODO IllegalArgumentException
 
         let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
         array.store(offset, values.into_boxed_slice())
@@ -277,7 +249,7 @@ impl Jvm {
     {
         tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
 
-        let array = array.as_array_instance().context("Expected array class instance")?;
+        let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
 
         let values = array.load(offset, count)?;
 
@@ -287,7 +259,7 @@ impl Jvm {
     pub fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> JvmResult<()> {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
-        let array = array.as_array_instance_mut().context("Expected array class instance")?;
+        let array = array.as_array_instance_mut().unwrap(); // TODO IllegalArgumentException
 
         array.store_bytes(offset, values.into_boxed_slice())
     }
@@ -295,7 +267,7 @@ impl Jvm {
     pub fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> JvmResult<Vec<i8>> {
         tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
 
-        let array = array.as_array_instance().context("Expected array class instance")?;
+        let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
 
         let values = array.load_bytes(offset, count)?;
 
@@ -305,7 +277,7 @@ impl Jvm {
     pub fn array_length(&self, array: &Box<dyn ClassInstance>) -> JvmResult<usize> {
         tracing::trace!("Get array length {}", array.class_definition().name());
 
-        let array = array.as_array_instance().context("Expected array class instance")?;
+        let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
 
         Ok(array.length())
     }
@@ -313,7 +285,7 @@ impl Jvm {
     pub fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> JvmResult<JavaType> {
         tracing::trace!("Get array element type {}", array.class_definition().name());
 
-        let array = array.as_array_instance().context("Expected array class instance")?;
+        let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
         let class = ArrayClassInstance::class_definition(array);
 
         let type_name = &class.name()[1..]; // TODO can we store JavaType on class?
@@ -335,18 +307,16 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion(?Send)]
-    pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Option<Class>> {
+    pub async fn resolve_class(&self, class_name: &str) -> JvmResult<Class> {
         let class = self.classes.borrow().get(class_name).cloned();
 
         if let Some(x) = class {
-            return Ok(Some(x));
+            return Ok(x);
         }
 
         // load class
         let class_loader = self.get_system_class_loader().await?;
         let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
-
-        anyhow::ensure!(java_class.is_some(), "Class {} not found", class_name);
 
         if let Some(x) = &java_class {
             tracing::debug!("Loaded class {}", class_name);
@@ -357,10 +327,10 @@ impl Jvm {
 
             let class = self.classes.borrow().get(class_name).unwrap().clone();
 
-            return Ok(Some(class));
+            return Ok(class);
         }
 
-        Ok(None)
+        Err(JvmError::FatalError("NoClassDefFoundError".into())) // TODO use real exception class
     }
 
     pub async fn register_class(&self, class: Box<dyn ClassDefinition>, class_loader: Option<Box<dyn ClassInstance>>) -> JvmResult<()> {
@@ -411,7 +381,7 @@ impl Jvm {
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
-        self.resolve_class(&class.name()).await?.unwrap().java_class(self).await
+        self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
     #[allow(clippy::await_holding_refcell_ref)]
@@ -420,7 +390,7 @@ impl Jvm {
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
-        self.resolve_class(&class.name()).await?.unwrap().java_class(self).await
+        self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
@@ -463,7 +433,7 @@ impl Jvm {
 
         // delete old java data
         let new_raw = self.instantiate_array("B", 0).await?;
-        self.put_field(instance, name, "[B", new_raw).unwrap();
+        self.put_field(instance, name, "[B", new_raw)?;
 
         Ok(*rust)
     }
@@ -492,16 +462,17 @@ impl Jvm {
         }
     }
 
-    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> JvmResult<Option<Box<dyn Method>>> {
+    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> JvmResult<Box<dyn Method>> {
         let method = class.method(name, descriptor);
 
         if let Some(x) = method {
-            Ok(Some(x))
+            if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
+                return Ok(x);
+            }
         } else if let Some(x) = class.super_class_name() {
             let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
-            self.find_virtual_method(&*super_class, name, descriptor)
-        } else {
-            Ok(None)
+            return self.find_virtual_method(&*super_class, name, descriptor, is_static);
         }
+        Err(JvmError::FatalError("NoSuchMethodError".into())) // TODO use real exception class
     }
 }

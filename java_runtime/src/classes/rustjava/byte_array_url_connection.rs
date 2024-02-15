@@ -1,7 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{Array, ClassInstanceRef, Jvm};
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use jvm::{Array, ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{classes::java::net::URL, RuntimeClassProto, RuntimeContext};
 
@@ -27,7 +27,7 @@ impl ByteArrayURLConnection {
         mut this: ClassInstanceRef<Self>,
         url: ClassInstanceRef<URL>,
         data: ClassInstanceRef<Array<i8>>,
-    ) -> JavaResult<()> {
+    ) -> JvmResult<()> {
         tracing::debug!("rustjava.ByteArrayURLConnection::<init>({:?}, {:?})", &this, &url);
 
         jvm.invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url,))
@@ -38,7 +38,7 @@ impl ByteArrayURLConnection {
         Ok(())
     }
 
-    async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<ClassInstanceRef<()>> {
+    async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<()>> {
         tracing::debug!("rustjava.ByteArrayURLConnection::getInputStream({:?})", &this);
 
         let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B")?;

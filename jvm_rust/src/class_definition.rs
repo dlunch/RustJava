@@ -61,7 +61,7 @@ impl ClassDefinitionImpl {
     }
 
     pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
-        let class = ClassInfo::parse(data)?;
+        let class = ClassInfo::parse(data).unwrap(); // TODO ClassFormatError
 
         let fields = class.fields.into_iter().map(FieldImpl::from_fieldinfo).collect::<Vec<_>>();
 

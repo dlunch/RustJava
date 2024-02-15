@@ -33,7 +33,7 @@ impl Interpreter {
                     let index = Self::pop_integer(&mut stack_frame);
                     let array = stack_frame.operand_stack.pop().unwrap();
 
-                    let value = jvm.load_array(&array.into(), index as usize, 1).unwrap().pop().unwrap();
+                    let value = jvm.load_array(&array.into(), index as usize, 1)?.pop().unwrap();
 
                     stack_frame.operand_stack.push(value);
                 }
@@ -50,7 +50,7 @@ impl Interpreter {
                     let index = Self::pop_integer(&mut stack_frame);
                     let mut array = stack_frame.operand_stack.pop().unwrap().into();
 
-                    let element_type = jvm.array_element_type(&array).unwrap();
+                    let element_type = jvm.array_element_type(&array)?;
 
                     let value = if element_type == JavaType::Char || element_type == JavaType::Boolean {
                         Self::integer_to_type(value, element_type)
@@ -58,7 +58,7 @@ impl Interpreter {
                         value
                     };
 
-                    jvm.store_array(&mut array, index as usize, [value]).unwrap();
+                    jvm.store_array(&mut array, index as usize, [value])?;
                 }
                 Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
                 Opcode::Aload(x) | Opcode::Dload(x) | Opcode::Fload(x) | Opcode::Iload(x) | Opcode::Lload(x) => {
@@ -780,7 +780,7 @@ impl Interpreter {
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
             ValueConstant::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
-            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.unwrap().java_class(jvm).await?)),
+            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class(jvm).await?)),
             _ => unimplemented!(),
         })
     }

@@ -3,8 +3,8 @@ use core::{cell::RefCell, mem};
 
 use hashbrown::HashMap;
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use jvm::{ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
@@ -36,7 +36,7 @@ impl Hashtable {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> JvmResult<()> {
         tracing::debug!("java.util.Hashtable::<init>({:?})", &this);
 
         let rust_hash_map: RustHashMap = Rc::new(RefCell::new(HashMap::new()));
@@ -47,7 +47,7 @@ impl Hashtable {
 
     // TODO we need to add synchronized
     #[allow(clippy::await_holding_refcell_ref)]
-    async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> JavaResult<bool> {
+    async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> JvmResult<bool> {
         tracing::debug!("java.util.Hashtable::containsKey({:?}, {:?})", &this, &key);
 
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
@@ -74,7 +74,7 @@ impl Hashtable {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         key: ClassInstanceRef<Object>,
-    ) -> JavaResult<ClassInstanceRef<Object>> {
+    ) -> JvmResult<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::get({:?}, {:?})", &this, &key);
 
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
@@ -102,7 +102,7 @@ impl Hashtable {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         key: ClassInstanceRef<Object>,
-    ) -> JavaResult<ClassInstanceRef<Object>> {
+    ) -> JvmResult<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::remove({:?}, {:?})", &this, &key);
 
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
@@ -133,7 +133,7 @@ impl Hashtable {
         this: ClassInstanceRef<Self>,
         key: ClassInstanceRef<Object>,
         value: ClassInstanceRef<Object>,
-    ) -> JavaResult<ClassInstanceRef<Object>> {
+    ) -> JvmResult<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::put({:?}, {:?}, {:?})", &this, &key, &value);
 
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
@@ -156,19 +156,19 @@ impl Hashtable {
         Ok(None.into())
     }
 
-    fn get_rust_hashmap(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JavaResult<RustHashMap> {
+    fn get_rust_hashmap(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JvmResult<RustHashMap> {
         jvm.get_rust_object_field(this, "raw")
     }
 }
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, ClassInstanceRef};
+    use jvm::{runtime::JavaLangString, ClassInstanceRef, JvmResult};
 
     use crate::{classes::java::lang::Object, test::test_jvm};
 
     #[futures_test::test]
-    async fn test_hashmap() -> anyhow::Result<()> {
+    async fn test_hashmap() -> JvmResult<()> {
         let jvm = test_jvm().await?;
 
         let hash_map = jvm.new_class("java/util/Hashtable", "()V", ()).await?;

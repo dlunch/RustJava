@@ -1,7 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{ClassInstanceRef, Jvm};
+use java_class_proto::JavaMethodProto;
+use jvm::{ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -21,13 +21,13 @@ impl Random {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
         tracing::warn!("stub java.util.Random::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn next_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JavaResult<i32> {
+    async fn next_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<i32> {
         tracing::warn!("stub java.util.Random::nextInt({:?})", &this);
 
         let random = 12351352; // TODO

@@ -1,10 +1,10 @@
 use alloc::{vec, vec::Vec};
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::FieldAccessFlags;
 use jvm::{
     runtime::{JavaLangClass, JavaLangString},
-    Array, ClassInstanceRef, Jvm,
+    Array, ClassInstanceRef, Jvm, JvmResult,
 };
 
 use crate::{
@@ -28,7 +28,7 @@ impl RuntimeClassLoader {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JvmResult<()> {
         tracing::debug!("rustjava.RuntimeClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -42,7 +42,7 @@ impl RuntimeClassLoader {
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<Class>> {
+    ) -> JvmResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.RuntimeClassLoader::findClass({:?}, {:?})", &this, name);
 
         let name = JavaLangString::to_rust_string(jvm, name.into())?;

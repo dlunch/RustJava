@@ -1,7 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::{JavaMethodProto, JavaResult};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm};
+use java_class_proto::JavaMethodProto;
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -24,7 +24,7 @@ impl ArrayClassLoader {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JvmResult<()> {
         tracing::debug!("rustjava.ArrayClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -38,7 +38,7 @@ impl ArrayClassLoader {
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<Class>> {
+    ) -> JvmResult<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ArrayClassLoader::findClass({:?}, {:?})", &this, name);
 
         let name = JavaLangString::to_rust_string(jvm, name.into())?;

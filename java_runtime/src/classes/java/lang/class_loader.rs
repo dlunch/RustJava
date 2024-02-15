@@ -1,8 +1,8 @@
 use alloc::vec;
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto, JavaResult};
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, JvmResult};
 
 use crate::{
     classes::java::{
@@ -62,7 +62,7 @@ impl ClassLoader {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> JavaResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> JvmResult<()> {
         tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
 
         jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent)?;
@@ -70,7 +70,7 @@ impl ClassLoader {
         Ok(())
     }
 
-    async fn get_system_class_loader(jvm: &Jvm, _: &mut RuntimeContext) -> JavaResult<ClassInstanceRef<Self>> {
+    async fn get_system_class_loader(jvm: &Jvm, _: &mut RuntimeContext) -> JvmResult<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.ClassLoader::getSystemClassLoader()");
 
         let system_class_loader: ClassInstanceRef<Self> = jvm
@@ -109,7 +109,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<Class>> {
+    ) -> JvmResult<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::loadClass({:?}, {:?})", &this, name);
 
         let class: ClassInstanceRef<Class> = jvm
@@ -144,7 +144,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<Class>> {
+    ) -> JvmResult<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findClass({:?}, {:?})", &this, name);
 
         // TODO raise ClassNotFoundException
@@ -157,7 +157,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<Class>> {
+    ) -> JvmResult<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
         let rust_name = JavaLangString::to_rust_string(jvm, name.into())?;
@@ -165,9 +165,9 @@ impl ClassLoader {
             return Ok(None.into());
         }
 
-        let class = jvm.resolve_class(&rust_name).await?;
+        let mut class = jvm.resolve_class(&rust_name).await?;
 
-        Ok(class.unwrap().java_class(jvm).await?.into())
+        Ok(class.java_class(jvm).await?.into())
     }
 
     async fn get_resource(
@@ -175,7 +175,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<URL>> {
+    ) -> JvmResult<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResource({:?})", &this);
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
@@ -203,7 +203,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<URL>> {
+    ) -> JvmResult<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResourceAsStream({:?})", &this);
 
         let resource_url: ClassInstanceRef<URL> = jvm
@@ -224,7 +224,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         _: ClassInstanceRef<String>,
-    ) -> JavaResult<ClassInstanceRef<String>> {
+    ) -> JvmResult<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.ClassLoader::findResource({:?})", &this);
 
         Ok(None.into())

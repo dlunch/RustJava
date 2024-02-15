@@ -1,9 +1,11 @@
 mod test_helper;
 
+use jvm::JvmResult;
+
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_array() -> anyhow::Result<()> {
+async fn test_array() -> JvmResult<()> {
     let array = include_bytes!("../test_data/Array.class");
 
     let result = run_class("Array", &[("Array", array)], &[]).await?;
