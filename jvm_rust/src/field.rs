@@ -35,7 +35,7 @@ impl FieldImpl {
         Self::new(&proto.name, &proto.descriptor, proto.access_flags)
     }
 
-    pub fn from_fieldinfo(field_info: FieldInfo) -> Self {
+    pub fn from_field_info(field_info: FieldInfo) -> Self {
         Self {
             inner: Rc::new(FieldInner {
                 name: field_info.name.to_string(),

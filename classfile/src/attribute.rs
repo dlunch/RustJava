@@ -105,7 +105,7 @@ impl LocalVariableTableEntry {
 pub enum AttributeInfo {
     ConstantValue(ValueConstant),
     Code(AttributeInfoCode),
-    StackMap(Vec<u8>),      // TODO Older variant of stackmaptable
+    StackMap(Vec<u8>),      // TODO Older variant of StackMapTable
     StackMapTable(Vec<u8>), // TODO
     Exceptions(Vec<u8>),    // TODO
     InnerClasses(Vec<u8>),  // TODO

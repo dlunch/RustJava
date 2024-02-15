@@ -16,7 +16,7 @@ pub trait Runtime: DynClone {
     fn encode_str(&self, s: &str) -> Vec<u8>; // TODO implement java charset conversion
     fn decode_str(&self, bytes: &[u8]) -> String;
 
-    fn println(&mut self, s: &str); // TODO Properly implement printstream handler
+    fn println(&mut self, s: &str); // TODO Properly implement PrintStream handler
 }
 
 clone_trait_object!(Runtime);

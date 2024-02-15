@@ -96,7 +96,7 @@ impl MethodImpl {
         )
     }
 
-    pub fn from_methodinfo(method_info: MethodInfo) -> Self {
+    pub fn from_method_info(method_info: MethodInfo) -> Self {
         Self {
             inner: Rc::new(MethodInner {
                 name: method_info.name.to_string(),
