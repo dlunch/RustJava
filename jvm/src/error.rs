@@ -1,14 +1,11 @@
 use alloc::{
-    boxed::Box,
     fmt::{self, Display, Formatter},
     string::String,
 };
 
-use crate::ClassInstance;
-
 #[derive(Debug)]
 pub enum JvmError {
-    JavaException(Box<dyn ClassInstance>),
+    JavaException(String),
     FatalError(String),
 }
 
