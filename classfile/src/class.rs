@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use nom::{combinator::map, number::complete::be_u16, IResult};
 use nom_derive::{NomBE, Parse};
@@ -7,14 +7,14 @@ use java_constants::ClassAccessFlags;
 
 use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
 
-fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Rc<String>> {
+fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Arc<String>> {
     map(be_u16, |x| {
         let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
         constant_pool.get(&class_name_index).unwrap().utf8()
     })(data)
 }
 
-fn parse_super_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Option<Rc<String>>> {
+fn parse_super_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Option<Arc<String>>> {
     map(be_u16, |x| {
         if x != 0 {
             let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
@@ -40,11 +40,11 @@ pub struct ClassInfo {
     #[nom(Parse = "map(be_u16, ClassAccessFlags::from_bits_truncate)")]
     pub access_flags: ClassAccessFlags,
     #[nom(Parse = "{ |x| parse_this_class(x, &constant_pool) }")]
-    pub this_class: Rc<String>,
+    pub this_class: Arc<String>,
     #[nom(Parse = "{ |x| parse_super_class(x, &constant_pool) }")]
-    pub super_class: Option<Rc<String>>,
+    pub super_class: Option<Arc<String>>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| parse_interface(x, &constant_pool) }")]
-    pub interfaces: Vec<Rc<String>>,
+    pub interfaces: Vec<Arc<String>>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| FieldInfo::parse(x, &constant_pool) }")]
     pub fields: Vec<FieldInfo>,
     #[nom(LengthCount = "be_u16", Parse = "{ |x| MethodInfo::parse(x, &constant_pool) }")]

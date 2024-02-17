@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use nom::{
     bytes::complete::take,
@@ -16,7 +16,7 @@ pub struct CodeAttributeExceptionTable {
     pub start_pc: u16,
     pub end_pc: u16,
     pub handler_pc: u16,
-    pub catch_type: Option<Rc<String>>,
+    pub catch_type: Option<Arc<String>>,
 }
 
 impl CodeAttributeExceptionTable {
@@ -95,8 +95,8 @@ pub struct AttributeInfoLineNumberTableEntry {
 pub struct LocalVariableTableEntry {
     pub start_pc: u16,
     pub length: u16,
-    pub name: Rc<String>,
-    pub descriptor: Rc<String>,
+    pub name: Arc<String>,
+    pub descriptor: Arc<String>,
     pub index: u16,
 }
 
@@ -129,7 +129,7 @@ pub enum AttributeInfo {
     Exceptions(Vec<u8>),    // TODO
     InnerClasses(Vec<u8>),  // TODO
     Synthetic(Vec<u8>),     // TODO
-    SourceFile(Rc<String>),
+    SourceFile(Arc<String>),
     SourceDebugExtension,
     LineNumberTable(Vec<AttributeInfoLineNumberTableEntry>),
     LocalVariableTable(Vec<LocalVariableTableEntry>),
@@ -163,7 +163,7 @@ impl AttributeInfo {
         )(data)
     }
 
-    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Rc<String>> {
+    fn parse_source_file<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Arc<String>> {
         map(be_u16, |x| constant_pool.get(&x).unwrap().utf8())(data)
     }
 

@@ -1,8 +1,7 @@
 #![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
 
-use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, rc::Rc, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
-    cell::RefCell,
     fmt::Debug,
     iter,
     mem::{forget, size_of_val},
@@ -10,6 +9,7 @@ use core::{
 
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
+use spin::RwLock;
 
 use java_constants::MethodAccessFlags;
 
@@ -31,13 +31,13 @@ use crate::{
 #[derive(Clone)]
 pub struct Class {
     pub definition: Box<dyn ClassDefinition>,
-    java_class: Rc<RefCell<Option<Box<dyn ClassInstance>>>>,
+    java_class: Arc<RwLock<Option<Box<dyn ClassInstance>>>>,
 }
 
 impl Class {
     #[allow(clippy::await_holding_refcell_ref)]
     pub async fn java_class(&mut self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
-        let java_class = self.java_class.borrow();
+        let java_class = self.java_class.read();
         if let Some(x) = &*java_class {
             Ok(x.clone())
         } else {
@@ -48,7 +48,7 @@ impl Class {
             let class_loader = jvm.get_system_class_loader().await?;
             let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), Some(class_loader)).await?;
 
-            self.java_class.replace(Some(java_class.clone()));
+            self.java_class.write().replace(java_class.clone());
 
             Ok(java_class)
         }
@@ -56,9 +56,9 @@ impl Class {
 }
 
 pub struct Jvm {
-    classes: RefCell<BTreeMap<String, Class>>,
-    system_class_loader: RefCell<Option<Box<dyn ClassInstance>>>,
-    detail: RefCell<Box<dyn JvmDetail>>,
+    classes: RwLock<BTreeMap<String, Class>>,
+    system_class_loader: RwLock<Option<Box<dyn ClassInstance>>>,
+    detail: RwLock<Box<dyn JvmDetail>>,
 }
 
 impl Jvm {
@@ -67,9 +67,9 @@ impl Jvm {
         T: JvmDetail + 'static,
     {
         Ok(Self {
-            classes: RefCell::new(BTreeMap::new()),
-            system_class_loader: RefCell::new(None),
-            detail: RefCell::new(Box::new(detail)),
+            classes: RwLock::new(BTreeMap::new()),
+            system_class_loader: RwLock::new(None),
+            detail: RwLock::new(Box::new(detail)),
         })
     }
 
@@ -99,12 +99,12 @@ impl Jvm {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
         let class_name = format!("[{}", element_type_name);
-        let class = if self.system_class_loader.borrow().is_none() || element_type_name.len() == 1 {
+        let class = if self.system_class_loader.read().is_none() || element_type_name.len() == 1 {
             if self.has_class(&class_name) {
                 self.resolve_class(&class_name).await?.definition
             } else {
                 // bootstrapping or primitive type
-                let definition = self.detail.borrow().define_array_class(self, element_type_name).await?;
+                let definition = self.detail.read().define_array_class(self, element_type_name).await?;
                 self.register_class_internal(definition.clone(), None).await?;
 
                 definition
@@ -378,12 +378,12 @@ impl Jvm {
     }
 
     pub fn has_class(&self, class_name: &str) -> bool {
-        self.classes.borrow().contains_key(class_name)
+        self.classes.read().contains_key(class_name)
     }
 
     #[async_recursion::async_recursion(?Send)]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
-        let class = self.classes.borrow().get(class_name).cloned();
+        let class = self.classes.read().get(class_name).cloned();
 
         if let Some(x) = class {
             return Ok(x);
@@ -400,7 +400,7 @@ impl Jvm {
 
             self.register_class_internal(class.clone(), java_class).await?;
 
-            let class = self.classes.borrow().get(class_name).unwrap().clone();
+            let class = self.classes.read().get(class_name).unwrap().clone();
 
             return Ok(class);
         }
@@ -461,11 +461,11 @@ impl Jvm {
             }
         }
 
-        self.classes.borrow_mut().insert(
+        self.classes.write().insert(
             class_definition.name().to_owned(),
             Class {
                 definition: class_definition.clone(),
-                java_class: Rc::new(RefCell::new(java_class)),
+                java_class: Arc::new(RwLock::new(java_class)),
             },
         );
 
@@ -480,18 +480,16 @@ impl Jvm {
         Ok(())
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.borrow().define_class(self, name, data).await?;
+        let class = self.detail.read().define_class(self, name, data).await?;
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
         self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.borrow().define_array_class(self, element_type_name).await?;
+        let class = self.detail.read().define_array_class(self, element_type_name).await?;
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
@@ -499,17 +497,17 @@ impl Jvm {
     }
 
     pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
-        self.system_class_loader.replace(Some(class_loader)); // TODO we need Thread.setContextClassLoader
+        self.system_class_loader.write().replace(class_loader); // TODO we need Thread.setContextClassLoader
     }
 
     pub async fn get_system_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
-        if self.system_class_loader.borrow().is_none() {
+        if self.system_class_loader.read().is_none() {
             let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
 
-            self.system_class_loader.replace(Some(system_class_loader));
+            self.system_class_loader.write().replace(system_class_loader);
         }
 
-        Ok(self.system_class_loader.borrow().as_ref().unwrap().clone())
+        Ok(self.system_class_loader.read().as_ref().unwrap().clone())
     }
 
     pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
@@ -561,7 +559,7 @@ impl Jvm {
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
+            let super_class = self.classes.read().get(&x).unwrap().definition.clone();
             self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
@@ -577,7 +575,7 @@ impl Jvm {
                 return Ok(x);
             }
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
+            let super_class = self.classes.read().get(&x).unwrap().definition.clone();
             return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
         }
 

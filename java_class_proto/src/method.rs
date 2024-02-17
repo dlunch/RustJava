@@ -31,9 +31,10 @@ macro_rules! __impl_method_body {
         #[async_trait::async_trait(?Send)]
         impl<F, C, R, E, $($arg),*> MethodBody<E, C> for MethodHolder<F, R, ($($arg,)*)>
         where
-            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)>,
+            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + Sync + Send,
             C: ?Sized,
-            R: TypeConverter<R>,
+            R: TypeConverter<R> + Sync + Send,
+            $($arg: Sync + Send),*
         {
             async fn call(&self, jvm: &Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E> {
                 let result = self.0.do_call(jvm, context, args).await?;
@@ -48,10 +49,10 @@ macro_rules! __impl_method_impl {
     ($($arg: ident),*) => {
         impl<F, C, R, E, $($arg),*> MethodImpl<F, C, R, E, ($($arg,)*)> for F
         where
-            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + 'static,
+            F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + 'static + Sync + Send,
             C: ?Sized,
-            R: TypeConverter<R> + 'static,
-            $($arg: 'static),*
+            R: TypeConverter<R> + 'static + Sync + Send,
+            $($arg: 'static + Sync + Send),*
         {
             fn into_body(self) -> Box<dyn MethodBody<E, C>> {
                 Box::new(MethodHolder(self, PhantomData))
@@ -69,7 +70,7 @@ macro_rules! __generate {
 }
 
 #[async_trait::async_trait(?Send)]
-pub trait MethodBody<E, C>
+pub trait MethodBody<E, C>: Sync + Send
 where
     C: ?Sized,
 {

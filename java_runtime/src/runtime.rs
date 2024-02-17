@@ -6,7 +6,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 use jvm::JvmCallback;
 
 #[async_trait::async_trait(?Send)]
-pub trait Runtime: DynClone {
+pub trait Runtime: Sync + Send + DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
     fn spawn(&self, callback: Box<dyn JvmCallback>);

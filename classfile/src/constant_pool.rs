@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, rc::Rc, string::String};
+use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
 use nom::{
     bytes::complete::take,
@@ -8,15 +8,15 @@ use nom::{
 };
 use nom_derive::{NomBE, Parse};
 
-fn parse_utf8(data: &[u8]) -> IResult<&[u8], Rc<String>> {
-    map(flat_map(be_u16, take), |x: &[u8]| Rc::new(String::from_utf8(x.to_vec()).unwrap()))(data)
+fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
+    map(flat_map(be_u16, take), |x: &[u8]| Arc::new(String::from_utf8(x.to_vec()).unwrap()))(data)
 }
 
 #[derive(NomBE, Debug)]
 #[nom(Selector = "u8")]
 pub enum ConstantPoolItem {
     #[nom(Selector = "1")]
-    Utf8(#[nom(Parse = "parse_utf8")] Rc<String>),
+    Utf8(#[nom(Parse = "parse_utf8")] Arc<String>),
     #[nom(Selector = "3")]
     Integer(i32),
     #[nom(Selector = "4")]
@@ -75,7 +75,7 @@ impl ConstantPoolItem {
         flat_map(u8, |x| move |i| Self::parse(i, x))(data)
     }
 
-    pub fn utf8(&self) -> Rc<String> {
+    pub fn utf8(&self) -> Arc<String> {
         if let ConstantPoolItem::Utf8(x) = self {
             x.clone()
         } else {
@@ -110,8 +110,8 @@ pub enum ValueConstant {
     Float(f32),
     Long(i64),
     Double(f64),
-    String(Rc<String>),
-    Class(Rc<String>),
+    String(Arc<String>),
+    Class(Arc<String>),
     Method(ReferenceConstant),
     Field(ReferenceConstant),
 }
@@ -157,9 +157,9 @@ impl ValueConstant {
 
 #[derive(Clone, Debug)]
 pub struct ReferenceConstant {
-    pub class: Rc<String>,
-    pub name: Rc<String>,
-    pub descriptor: Rc<String>,
+    pub class: Arc<String>,
+    pub name: Arc<String>,
+    pub descriptor: Arc<String>,
 }
 
 impl ReferenceConstant {

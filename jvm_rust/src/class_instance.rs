@@ -1,8 +1,7 @@
-use alloc::{boxed::Box, collections::BTreeMap, rc::Rc};
-use core::{
-    cell::RefCell,
-    fmt::{self, Debug, Formatter},
-};
+use alloc::{boxed::Box, collections::BTreeMap, sync::Arc};
+use core::fmt::{self, Debug, Formatter};
+
+use spin::RwLock;
 
 use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Result};
 
@@ -10,20 +9,20 @@ use crate::{class_definition::ClassDefinitionImpl, FieldImpl};
 
 struct ClassInstanceInner {
     class: Box<dyn ClassDefinition>,
-    storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
+    storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
 #[derive(Clone)]
 pub struct ClassInstanceImpl {
-    inner: Rc<ClassInstanceInner>,
+    inner: Arc<ClassInstanceInner>,
 }
 
 impl ClassInstanceImpl {
     pub fn new(class: &ClassDefinitionImpl) -> Self {
         Self {
-            inner: Rc::new(ClassInstanceInner {
+            inner: Arc::new(ClassInstanceInner {
                 class: Box::new(class.clone()),
-                storage: RefCell::new(BTreeMap::new()),
+                storage: RwLock::new(BTreeMap::new()),
             }),
         }
     }
@@ -39,17 +38,17 @@ impl ClassInstance for ClassInstanceImpl {
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
         let other = other.as_any().downcast_ref::<ClassInstanceImpl>().unwrap();
 
-        Ok(Rc::ptr_eq(&self.inner, &other.inner))
+        Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
 
     fn hash_code(&self) -> i32 {
-        Rc::as_ptr(&self.inner) as i32
+        Arc::as_ptr(&self.inner) as i32
     }
 
     fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.borrow();
+        let storage = self.inner.storage.read();
         let value = storage.get(field);
 
         if let Some(x) = value {
@@ -62,7 +61,7 @@ impl ClassInstance for ClassInstanceImpl {
     fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.borrow_mut().insert(field.clone(), value);
+        self.inner.storage.write().insert(field.clone(), value);
 
         Ok(())
     }

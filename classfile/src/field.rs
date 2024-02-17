@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, rc::Rc, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use nom::{combinator::map, multi::length_count, number::complete::be_u16, sequence::tuple, IResult};
 
@@ -8,8 +8,8 @@ use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem};
 
 pub struct FieldInfo {
     pub access_flags: FieldAccessFlags,
-    pub name: Rc<String>,
-    pub descriptor: Rc<String>,
+    pub name: Arc<String>,
+    pub descriptor: Arc<String>,
     pub attributes: Vec<AttributeInfo>,
 }
 

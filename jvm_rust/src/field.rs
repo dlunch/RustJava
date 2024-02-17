@@ -1,6 +1,6 @@
 use alloc::{
-    rc::Rc,
     string::{String, ToString},
+    sync::Arc,
 };
 
 use classfile::FieldInfo;
@@ -17,13 +17,13 @@ struct FieldInner {
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct FieldImpl {
-    inner: Rc<FieldInner>,
+    inner: Arc<FieldInner>,
 }
 
 impl FieldImpl {
     pub fn new(name: &str, descriptor: &str, access_flags: FieldAccessFlags) -> Self {
         Self {
-            inner: Rc::new(FieldInner {
+            inner: Arc::new(FieldInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 access_flags,
@@ -37,7 +37,7 @@ impl FieldImpl {
 
     pub fn from_field_info(field_info: FieldInfo) -> Self {
         Self {
-            inner: Rc::new(FieldInner {
+            inner: Arc::new(FieldInner {
                 name: field_info.name.to_string(),
                 descriptor: field_info.descriptor.to_string(),
                 access_flags: field_info.access_flags,

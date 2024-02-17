@@ -1,7 +1,7 @@
 use alloc::{
     boxed::Box,
-    rc::Rc,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 use core::{
@@ -46,13 +46,13 @@ struct MethodInner {
 
 #[derive(Clone, Debug)]
 pub struct MethodImpl {
-    inner: Rc<MethodInner>,
+    inner: Arc<MethodInner>,
 }
 
 impl MethodImpl {
     pub fn new(name: &str, descriptor: &str, body: MethodBody, access_flags: MethodAccessFlags) -> Self {
         Self {
-            inner: Rc::new(MethodInner {
+            inner: Arc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 body,
@@ -64,12 +64,12 @@ impl MethodImpl {
     pub fn from_method_proto<C, Context>(proto: JavaMethodProto<C>, context: Context) -> Self
     where
         C: ?Sized + 'static,
-        Context: DerefMut + Deref<Target = C> + Clone + 'static,
+        Context: Sync + Send + DerefMut + Deref<Target = C> + Clone + 'static,
     {
         struct MethodProxy<C, Context>
         where
             C: ?Sized,
-            Context: DerefMut + Deref<Target = C> + Clone,
+            Context: Sync + Send + DerefMut + Deref<Target = C> + Clone,
         {
             body: Box<dyn java_class_proto::MethodBody<JavaError, C>>,
             context: Context,
@@ -79,7 +79,7 @@ impl MethodImpl {
         impl<C, Context> JvmCallback for MethodProxy<C, Context>
         where
             C: ?Sized,
-            Context: DerefMut + Deref<Target = C> + Clone,
+            Context: Sync + Send + DerefMut + Deref<Target = C> + Clone,
         {
             async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
                 let mut context = self.context.clone();
@@ -98,7 +98,7 @@ impl MethodImpl {
 
     pub fn from_method_info(method_info: MethodInfo) -> Self {
         Self {
-            inner: Rc::new(MethodInner {
+            inner: Arc::new(MethodInner {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
                 body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),

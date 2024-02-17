@@ -1,7 +1,7 @@
 use alloc::{
     boxed::Box,
-    rc::Rc,
     string::{String, ToString},
+    sync::Arc,
 };
 use core::fmt::{self, Debug, Formatter};
 
@@ -15,13 +15,13 @@ struct ArrayClassDefinitionInner {
 
 #[derive(Clone)]
 pub struct ArrayClassDefinitionImpl {
-    inner: Rc<ArrayClassDefinitionInner>,
+    inner: Arc<ArrayClassDefinitionInner>,
 }
 
 impl ArrayClassDefinitionImpl {
     pub fn new(element_type_name: &str) -> Self {
         Self {
-            inner: Rc::new(ArrayClassDefinitionInner {
+            inner: Arc::new(ArrayClassDefinitionInner {
                 element_type_name: element_type_name.to_string(),
             }),
         }

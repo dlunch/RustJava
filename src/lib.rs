@@ -15,7 +15,7 @@ use runtime::RuntimeImpl;
 
 pub async fn create_jvm<T>(stdout: T) -> Result<Jvm>
 where
-    T: Write + 'static,
+    T: Sync + Send + Write + 'static,
 {
     let runtime = Box::new(RuntimeImpl::new(stdout)) as Box<dyn Runtime>;
 

@@ -1,15 +1,16 @@
 use alloc::{
     boxed::Box,
     collections::BTreeMap,
-    rc::Rc,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 use core::{
-    cell::RefCell,
     fmt::{self, Debug, Formatter},
     ops::{Deref, DerefMut},
 };
+
+use spin::RwLock;
 
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
@@ -23,23 +24,23 @@ struct ClassDefinitionInner {
     super_class_name: Option<String>,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
-    storage: RefCell<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
+    storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
 #[derive(Clone)]
 pub struct ClassDefinitionImpl {
-    inner: Rc<ClassDefinitionInner>,
+    inner: Arc<ClassDefinitionInner>,
 }
 
 impl ClassDefinitionImpl {
     pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
         Self {
-            inner: Rc::new(ClassDefinitionInner {
+            inner: Arc::new(ClassDefinitionInner {
                 name: name.to_string(),
                 super_class_name,
                 methods,
                 fields,
-                storage: RefCell::new(BTreeMap::new()),
+                storage: RwLock::new(BTreeMap::new()),
             }),
         }
     }
@@ -47,7 +48,7 @@ impl ClassDefinitionImpl {
     pub fn from_class_proto<C, Context>(name: &str, proto: JavaClassProto<C>, context: Context) -> Self
     where
         C: ?Sized + 'static,
-        Context: DerefMut + Deref<Target = C> + Clone + 'static,
+        Context: Sync + Send + DerefMut + Deref<Target = C> + Clone + 'static,
     {
         let methods = proto
             .methods
@@ -109,7 +110,7 @@ impl ClassDefinition for ClassDefinitionImpl {
     fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.borrow();
+        let storage = self.inner.storage.read();
         let value = storage.get(field);
 
         if let Some(x) = value {
@@ -122,7 +123,7 @@ impl ClassDefinition for ClassDefinitionImpl {
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.borrow_mut().insert(field.clone(), value);
+        self.inner.storage.write().insert(field.clone(), value);
 
         Ok(())
     }

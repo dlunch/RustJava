@@ -9,7 +9,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use crate::{as_any::AsAny, value::JavaValue, ArrayClassInstance, ClassDefinition, Field, Result};
 
-pub trait ClassInstance: AsAny + Debug + DynClone + 'static {
+pub trait ClassInstance: Sync + Send + AsAny + Debug + DynClone + 'static {
     fn destroy(self: Box<Self>);
     fn hash_code(&self) -> i32;
     fn class_definition(&self) -> Box<dyn ClassDefinition>;

@@ -5,7 +5,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use crate::{as_any::AsAny, ArrayClassDefinition, ClassInstance, Field, JavaValue, Method, Result};
 
-pub trait ClassDefinition: AsAny + Debug + DynClone {
+pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
     fn instantiate(&self) -> Box<dyn ClassInstance>;

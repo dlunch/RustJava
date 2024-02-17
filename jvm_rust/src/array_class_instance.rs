@@ -1,8 +1,7 @@
-use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
-use core::{
-    cell::RefCell,
-    fmt::{self, Debug, Formatter},
-};
+use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
+use core::fmt::{self, Debug, Formatter};
+
+use spin::RwLock;
 
 use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaError, JavaType, JavaValue, Result};
 
@@ -11,12 +10,12 @@ use crate::array_class_definition::ArrayClassDefinitionImpl;
 struct ArrayClassInstanceInner {
     class: Box<dyn ClassDefinition>,
     length: usize,
-    elements: RefCell<Vec<JavaValue>>,
+    elements: RwLock<Vec<JavaValue>>,
 }
 
 #[derive(Clone)]
 pub struct ArrayClassInstanceImpl {
-    inner: Rc<ArrayClassInstanceInner>,
+    inner: Arc<ArrayClassInstanceInner>,
 }
 
 impl ArrayClassInstanceImpl {
@@ -25,10 +24,10 @@ impl ArrayClassInstanceImpl {
         let default_value = JavaType::parse(&element_type).default();
 
         Self {
-            inner: Rc::new(ArrayClassInstanceInner {
+            inner: Arc::new(ArrayClassInstanceInner {
                 class: Box::new(class.clone()),
                 length,
-                elements: RefCell::new(vec![default_value; length]),
+                elements: RwLock::new(vec![default_value; length]),
             }),
         }
     }
@@ -44,11 +43,11 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
         let other = other.as_any().downcast_ref::<ArrayClassInstanceImpl>().unwrap();
 
-        Ok(Rc::ptr_eq(&self.inner, &other.inner))
+        Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
 
     fn hash_code(&self) -> i32 {
-        Rc::as_ptr(&self.inner) as i32
+        Arc::as_ptr(&self.inner) as i32
     }
 
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
@@ -57,7 +56,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
             return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
         }
 
-        self.inner.elements.borrow_mut().splice(offset..offset + values.len(), values.into_vec());
+        self.inner.elements.write().splice(offset..offset + values.len(), values.into_vec());
 
         Ok(())
     }
@@ -68,7 +67,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
             return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
         }
 
-        Ok(self.inner.elements.borrow()[offset..offset + length].to_vec())
+        Ok(self.inner.elements.read()[offset..offset + length].to_vec())
     }
 
     fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
