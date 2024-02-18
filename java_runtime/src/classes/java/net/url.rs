@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, JvmResult};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::java::{
@@ -49,7 +49,7 @@ impl URL {
         port: i32,
         file: ClassInstanceRef<String>,
         handler: ClassInstanceRef<URLStreamHandler>,
-    ) -> JvmResult<()> {
+    ) -> Result<()> {
         tracing::debug!(
             "java.net.URL::<init>({:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
             &this,
@@ -71,7 +71,7 @@ impl URL {
         Ok(())
     }
 
-    async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<InputStream>> {
+    async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URL::openStream({:?})", &this);
 
         let handler: ClassInstanceRef<URLStreamHandler> = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;")?;

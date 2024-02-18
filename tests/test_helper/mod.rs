@@ -3,7 +3,7 @@
 use core::cell::RefCell;
 use std::{io, str};
 
-use jvm::JvmResult;
+use jvm::Result;
 use rust_java::{create_jvm, load_class_file, load_jar_file, run_java_main};
 
 thread_local! {
@@ -22,7 +22,7 @@ impl io::Write for Output {
     }
 }
 
-pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &[String]) -> JvmResult<String> {
+pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &[String]) -> Result<String> {
     OUTPUT.with_borrow_mut(|x| x.clear());
 
     let jvm = create_jvm(Output).await?;
@@ -39,7 +39,7 @@ pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &
     Ok(result)
 }
 
-pub async fn run_jar(jar: &[u8], args: &[String]) -> JvmResult<String> {
+pub async fn run_jar(jar: &[u8], args: &[String]) -> Result<String> {
     OUTPUT.with_borrow_mut(|x| x.clear());
 
     let jvm = create_jvm(Output).await?;

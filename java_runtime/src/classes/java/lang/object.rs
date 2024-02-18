@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec};
 
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -32,13 +32,13 @@ impl Object {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::<init>({:?})", &this);
 
         Ok(())
     }
 
-    async fn get_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<Self>> {
+    async fn get_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Object::getClass({:?})", &this);
 
         // TODO can we get class directly?
@@ -50,7 +50,7 @@ impl Object {
         Ok(class.into())
     }
 
-    async fn hash_code(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<i32> {
+    async fn hash_code(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.Object::hashCode({:?})", &this);
 
         let rust_this: Box<dyn ClassInstance> = this.into();
@@ -58,7 +58,7 @@ impl Object {
         Ok(rust_this.hash_code())
     }
 
-    async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> JvmResult<bool> {
+    async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Object::equals({:?}, {:?})", &this, &other);
 
         let rust_this: Box<dyn ClassInstance> = this.into();
@@ -67,13 +67,13 @@ impl Object {
         rust_this.equals(&*rust_other)
     }
 
-    async fn java_clone(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<Self>> {
+    async fn java_clone(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::warn!("stub java.lang.Object::clone({:?})", &this);
 
         todo!()
     }
 
-    async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<String>> {
+    async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Object::toString({:?})", &this);
 
         let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
@@ -87,19 +87,19 @@ impl Object {
         Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }
 
-    async fn notify(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn notify(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::notify({:?})", &this);
 
         todo!()
     }
 
-    async fn notify_all(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn notify_all(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::notifyAll({:?})", &this);
 
         todo!()
     }
 
-    async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> JvmResult<()> {
+    async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({:?}, {:?})", &this, millis);
 
         jvm.invoke_virtual(&this, "wait", "(JI)V", (millis, 0)).await?;
@@ -107,13 +107,13 @@ impl Object {
         Ok(())
     }
 
-    async fn wait_long_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> JvmResult<()> {
+    async fn wait_long_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
         tracing::warn!("stub java.lang.Object::wait({:?}, {:?}, {:?})", &this, millis, nanos);
 
         todo!()
     }
 
-    async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({:?})", &this);
 
         jvm.invoke_virtual(&this, "wait", "(JI)V", (0, 0)).await?;
@@ -121,7 +121,7 @@ impl Object {
         Ok(())
     }
 
-    async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::finalize({:?})", &this);
 
         todo!()

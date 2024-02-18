@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, JvmResult};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::net::URL, RuntimeClassProto, RuntimeContext};
 
@@ -18,7 +18,7 @@ impl URLConnection {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> JvmResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({:?}, {:?})", &this, &url,);
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;

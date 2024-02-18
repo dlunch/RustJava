@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use jvm::{ClassInstanceRef, Jvm, JvmResult};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -21,7 +21,7 @@ impl URLStreamHandler {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.net.URLStreamHandler::<init>({:?})", &this);
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;

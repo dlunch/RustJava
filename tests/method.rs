@@ -1,11 +1,11 @@
 mod test_helper;
 
-use jvm::JvmResult;
+use jvm::Result;
 
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_method() -> JvmResult<()> {
+async fn test_method() -> Result<()> {
     let method = include_bytes!("../test_data/Method.class");
 
     let result = run_class("Method", &[("Method", method)], &[]).await?;

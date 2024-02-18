@@ -1,7 +1,7 @@
 use alloc::{string::String as RustString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -27,7 +27,7 @@ impl ClassPathEntry {
         mut this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
         data: ClassInstanceRef<Array<i8>>,
-    ) -> JvmResult<()> {
+    ) -> Result<()> {
         tracing::debug!("rustjava.ClassPathEntry::<init>({:?}, {:?}, {:?})", &this, &name, &data);
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
@@ -38,13 +38,13 @@ impl ClassPathEntry {
         Ok(())
     }
 
-    pub fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JvmResult<RustString> {
+    pub fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustString> {
         let name = jvm.get_field(this, "name", "Ljava/lang/String;")?;
 
         JavaLangString::to_rust_string(jvm, name)
     }
 
-    pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JvmResult<ClassInstanceRef<Array<i8>>> {
+    pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
         jvm.get_field(this, "data", "[B")
     }
 }

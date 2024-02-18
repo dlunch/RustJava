@@ -1,11 +1,11 @@
 mod test_helper;
 
-use jvm::JvmResult;
+use jvm::Result;
 
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_superclass() -> JvmResult<()> {
+async fn test_superclass() -> Result<()> {
     let super_class = include_bytes!("../test_data/SuperClass.class");
     let inner = include_bytes!("../test_data/SuperClass$InnerClass.class");
     let inner_derived = include_bytes!("../test_data/SuperClass$InnerDerivedClass.class");

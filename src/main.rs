@@ -6,7 +6,7 @@ use std::{
 use clap::{ArgGroup, Parser};
 use futures_executor::block_on;
 
-use jvm::JvmResult;
+use jvm::Result;
 use rust_java::{create_jvm, load_class_file, load_jar_file, run_java_main};
 
 #[derive(Parser)]
@@ -20,7 +20,7 @@ struct Opts {
     args: Vec<String>,
 }
 
-pub fn main() -> JvmResult<()> {
+pub fn main() -> Result<()> {
     let opts = Opts::parse();
 
     block_on(async {

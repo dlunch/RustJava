@@ -2,7 +2,7 @@ use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{ClassInstanceRef, Jvm, JvmResult};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -24,7 +24,7 @@ impl Calendar {
         }
     }
 
-    async fn get_instance(jvm: &Jvm, _: &mut RuntimeContext) -> JvmResult<ClassInstanceRef<Calendar>> {
+    async fn get_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Calendar>> {
         tracing::warn!("stub java.util.Calendar::getInstance()");
 
         let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;

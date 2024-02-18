@@ -2,7 +2,7 @@ use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{Jvm, JvmResult};
+use jvm::{Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -19,7 +19,7 @@ impl Math {
         }
     }
 
-    async fn abs(_: &Jvm, _: &mut RuntimeContext, x: i32) -> JvmResult<i32> {
+    async fn abs(_: &Jvm, _: &mut RuntimeContext, x: i32) -> Result<i32> {
         tracing::debug!("java.lang.Math::abs({:?})", x);
 
         Ok(x.abs())

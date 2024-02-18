@@ -5,7 +5,7 @@ use alloc::{
 };
 use dyn_clone::clone_trait_object;
 
-use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, JvmResult};
+use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, Result};
 
 pub trait ArrayClassDefinition: ClassDefinition {
     fn element_type_name(&self) -> String;
@@ -35,11 +35,11 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         None
     }
 
-    fn get_static_field(&self, _field: &dyn Field) -> JvmResult<JavaValue> {
+    fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {
         panic!("Array classes do not have static fields")
     }
 
-    fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> JvmResult<()> {
+    fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
         panic!("Array classes do not have static fields")
     }
 

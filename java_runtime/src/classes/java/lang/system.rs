@@ -4,7 +4,7 @@ use jvm::JavaValue;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{Array, ClassInstanceRef, Jvm, JvmResult};
+use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -36,7 +36,7 @@ impl System {
         }
     }
 
-    async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> JvmResult<()> {
+    async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
         let out = jvm.new_class("java/io/PrintStream", "()V", []).await?;
@@ -47,13 +47,13 @@ impl System {
         Ok(())
     }
 
-    async fn current_time_millis(_: &Jvm, context: &mut RuntimeContext) -> JvmResult<i64> {
+    async fn current_time_millis(_: &Jvm, context: &mut RuntimeContext) -> Result<i64> {
         tracing::debug!("java.lang.System::currentTimeMillis()");
 
         Ok(context.now() as _)
     }
 
-    async fn gc(_: &Jvm, _: &mut RuntimeContext) -> JvmResult<i32> {
+    async fn gc(_: &Jvm, _: &mut RuntimeContext) -> Result<i32> {
         tracing::warn!("stub java.lang.System::gc()");
 
         Ok(0)
@@ -67,7 +67,7 @@ impl System {
         mut dest: ClassInstanceRef<Array<()>>,
         dest_pos: i32,
         length: i32,
-    ) -> JvmResult<()> {
+    ) -> Result<()> {
         tracing::debug!(
             "java.lang.System::arraycopy({:?}, {}, {:?}, {}, {})",
             &src,

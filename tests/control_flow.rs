@@ -1,11 +1,11 @@
 mod test_helper;
 
-use jvm::JvmResult;
+use jvm::Result;
 
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_control_flow() -> JvmResult<()> {
+async fn test_control_flow() -> Result<()> {
     let control_flo = include_bytes!("../test_data/ControlFlow.class");
 
     let result = run_class("ControlFlow", &[("ControlFlow", control_flo)], &[]).await?;

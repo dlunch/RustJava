@@ -17,12 +17,14 @@ mod value;
 
 pub mod runtime;
 
-pub type JvmResult<T> = Result<T, error::JvmError>;
-
 use alloc::boxed::Box;
+use core::result;
+
+pub type Result<T> = result::Result<T, error::JavaError>;
+
 #[async_trait::async_trait(?Send)]
 pub trait JvmCallback {
-    async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
+    async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue>;
 }
 
 pub use self::{
@@ -31,7 +33,7 @@ pub use self::{
     class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
     detail::JvmDetail,
-    error::JvmError,
+    error::JavaError,
     field::Field,
     jvm::Jvm,
     method::Method,

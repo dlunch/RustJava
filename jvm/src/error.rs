@@ -7,27 +7,27 @@ use alloc::{
 use crate::ClassInstance;
 
 #[derive(Debug)]
-pub enum JvmError {
+pub enum JavaError {
     JavaException(Box<dyn ClassInstance>),
     FatalError(String),
 }
 
-impl Display for JvmError {
+impl Display for JavaError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            JvmError::JavaException(e) => write!(f, "Java exception: {:?}", e),
-            JvmError::FatalError(e) => write!(f, "Fatal error: {}", e),
+            JavaError::JavaException(e) => write!(f, "Java exception: {:?}", e),
+            JavaError::FatalError(e) => write!(f, "Fatal error: {}", e),
         }
     }
 }
 
 // XXX until https://github.com/rust-lang/rust/issues/103765 fixed
 extern crate std;
-impl std::error::Error for JvmError {
+impl std::error::Error for JavaError {
     fn description(&self) -> &str {
         match self {
-            JvmError::JavaException(_) => "Java exception",
-            JvmError::FatalError(_) => "Fatal error",
+            JavaError::JavaException(_) => "Java exception",
+            JavaError::FatalError(_) => "Fatal error",
         }
     }
 }

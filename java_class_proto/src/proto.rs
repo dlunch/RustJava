@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassInstanceRef, JavaChar, JavaValue, Jvm, JvmError};
+use jvm::{ClassInstanceRef, JavaChar, JavaError, JavaValue, Jvm};
 
 use crate::method::{MethodBody, MethodImpl, TypeConverter};
 
@@ -37,7 +37,7 @@ where
 {
     pub name: String,
     pub descriptor: String,
-    pub body: Box<dyn MethodBody<JvmError, C>>,
+    pub body: Box<dyn MethodBody<JavaError, C>>,
     pub access_flags: MethodAccessFlags,
 }
 
@@ -47,7 +47,7 @@ where
 {
     pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: MethodAccessFlags) -> Self
     where
-        M: MethodImpl<F, C, R, JvmError, P>,
+        M: MethodImpl<F, C, R, JavaError, P>,
     {
         Self {
             name: name.into(),
@@ -64,13 +64,13 @@ where
         }
 
         #[async_trait::async_trait(?Send)]
-        impl<C> MethodBody<JvmError, C> for AbstractCall
+        impl<C> MethodBody<JavaError, C> for AbstractCall
         where
             C: ?Sized,
         {
-            async fn call(&self, _: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JvmError> {
+            async fn call(&self, _: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO java.lang.AbstractMethodError
-                Err(JvmError::FatalError(format!("Abstract {}{} method called", self.name, self.descriptor)))
+                Err(JavaError::FatalError(format!("Abstract {}{} method called", self.name, self.descriptor)))
             }
         }
 

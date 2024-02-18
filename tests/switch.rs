@@ -1,11 +1,11 @@
 mod test_helper;
 
-use jvm::JvmResult;
+use jvm::Result;
 
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_switch() -> JvmResult<()> {
+async fn test_switch() -> Result<()> {
     let class = include_bytes!("../test_data/Switch.class");
 
     let result = run_class("Switch", &[("Switch", class)], &["1".into()]).await?;

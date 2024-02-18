@@ -3,7 +3,7 @@ use core::{cell::RefCell, mem};
 use alloc::{rc::Rc, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, JvmResult};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
@@ -32,7 +32,7 @@ impl Vector {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?})", &this);
 
         jvm.invoke_special(&this, "java/util/Vector", "<init>", "(I)V", (0,)).await?;
@@ -40,7 +40,7 @@ impl Vector {
         Ok(())
     }
 
-    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> JvmResult<()> {
+    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?})", &this, capacity);
 
         jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity, 0)).await?;
@@ -54,7 +54,7 @@ impl Vector {
         mut this: ClassInstanceRef<Self>,
         capacity: i32,
         capacity_increment: i32,
-    ) -> JvmResult<()> {
+    ) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?}, {:?})", &this, capacity, capacity_increment);
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
@@ -66,7 +66,7 @@ impl Vector {
         Ok(())
     }
 
-    async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> JvmResult<bool> {
+    async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this)?;
@@ -75,7 +75,7 @@ impl Vector {
         Ok(true)
     }
 
-    async fn add_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> JvmResult<()> {
+    async fn add_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.Vector::addElement({:?}, {:?})", &this, &element);
 
         // do we need to call add() instead?
@@ -85,7 +85,7 @@ impl Vector {
         Ok(())
     }
 
-    async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> JvmResult<ClassInstanceRef<Object>> {
+    async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this)?;
@@ -100,7 +100,7 @@ impl Vector {
         this: ClassInstanceRef<Self>,
         index: i32,
         element: ClassInstanceRef<Object>,
-    ) -> JvmResult<ClassInstanceRef<Object>> {
+    ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this)?;
@@ -109,7 +109,7 @@ impl Vector {
         Ok(old_element)
     }
 
-    async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> JvmResult<i32> {
+    async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Vector::size({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this)?;
@@ -118,19 +118,19 @@ impl Vector {
         Ok(size as _)
     }
 
-    fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> JvmResult<RustVector> {
+    fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
         jvm.get_rust_object_field(this, "raw")
     }
 }
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, ClassInstanceRef, JvmResult};
+    use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
     use crate::{classes::java::lang::Object, test::test_jvm};
 
     #[futures_test::test]
-    async fn test_vector() -> JvmResult<()> {
+    async fn test_vector() -> Result<()> {
         let jvm = test_jvm().await?;
 
         let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;

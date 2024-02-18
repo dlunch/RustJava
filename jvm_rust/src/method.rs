@@ -12,7 +12,7 @@ use core::{
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{JavaType, JavaValue, Jvm, JvmCallback, JvmError, JvmResult, Method};
+use jvm::{JavaError, JavaType, JavaValue, Jvm, JvmCallback, Method, Result};
 
 use crate::interpreter::Interpreter;
 
@@ -71,7 +71,7 @@ impl MethodImpl {
             C: ?Sized,
             Context: DerefMut + Deref<Target = C> + Clone,
         {
-            body: Box<dyn java_class_proto::MethodBody<JvmError, C>>,
+            body: Box<dyn java_class_proto::MethodBody<JavaError, C>>,
             context: Context,
         }
 
@@ -81,7 +81,7 @@ impl MethodImpl {
             C: ?Sized,
             Context: DerefMut + Deref<Target = C> + Clone,
         {
-            async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+            async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
                 let mut context = self.context.clone();
 
                 self.body.call(jvm, &mut context, args).await
@@ -132,7 +132,7 @@ impl Method for MethodImpl {
         self.inner.access_flags
     }
 
-    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue> {
+    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
         Ok(match &self.inner.body {
             MethodBody::ByteCode(x) => {
                 let r#type = JavaType::parse(&self.inner.descriptor);

@@ -1,11 +1,11 @@
 mod test_helper;
 
-use jvm::JvmResult;
+use jvm::Result;
 
 use test_helper::run_class;
 
 #[futures_test::test]
-async fn test_field() -> JvmResult<()> {
+async fn test_field() -> Result<()> {
     let field = include_bytes!("../test_data/Field.class");
 
     let result = run_class("Field", &[("Field", field)], &[]).await?;

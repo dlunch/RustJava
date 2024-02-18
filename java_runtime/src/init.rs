@@ -2,11 +2,11 @@ use core::future::Future;
 
 use alloc::boxed::Box;
 
-use jvm::{ClassDefinition, Jvm, JvmResult};
+use jvm::{ClassDefinition, Jvm, Result};
 
 use crate::RuntimeClassProto;
 
-async fn load_runtime_classes<T, F>(jvm: &Jvm, class_creator: &T) -> JvmResult<()>
+async fn load_runtime_classes<T, F>(jvm: &Jvm, class_creator: &T) -> Result<()>
 where
     T: Fn(&str, RuntimeClassProto) -> F,
     F: Future<Output = Box<dyn ClassDefinition>>,
@@ -85,7 +85,7 @@ where
     Ok(())
 }
 
-pub async fn initialize<T, F>(jvm: &Jvm, class_creator: T) -> JvmResult<()>
+pub async fn initialize<T, F>(jvm: &Jvm, class_creator: T) -> Result<()>
 where
     T: Fn(&str, RuntimeClassProto) -> F,
     F: Future<Output = Box<dyn ClassDefinition>>,

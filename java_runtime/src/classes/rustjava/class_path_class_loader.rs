@@ -8,7 +8,7 @@ use bytemuck::{cast_slice, cast_vec};
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::{
@@ -45,7 +45,7 @@ impl ClassPathClassLoader {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> JvmResult<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> Result<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::<init>({:?}, {:?})", &this, &parent);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -62,7 +62,7 @@ impl ClassPathClassLoader {
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JvmResult<ClassInstanceRef<Class>> {
+    ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
         let class_file_name = JavaLangString::to_rust_string(jvm, name.clone())?.replace('.', "/") + ".class";
@@ -97,7 +97,7 @@ impl ClassPathClassLoader {
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
-    ) -> JvmResult<ClassInstanceRef<URL>> {
+    ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findResource({:?}, {:?})", &this, name);
 
         let name = JavaLangString::to_rust_string(jvm, name.clone())?;
@@ -139,7 +139,7 @@ impl ClassPathClassLoader {
         mut this: ClassInstanceRef<Self>,
         file_name: ClassInstanceRef<String>,
         data: ClassInstanceRef<Array<i8>>,
-    ) -> JvmResult<()> {
+    ) -> Result<()> {
         tracing::debug!("rustjava.ClassPathClassLoader::addClassFile({:?})", &this);
 
         let entry = jvm
@@ -165,7 +165,7 @@ impl ClassPathClassLoader {
         _runtime: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
         data: ClassInstanceRef<Array<i8>>,
-    ) -> JvmResult<ClassInstanceRef<String>> {
+    ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("rustjava.ClassPathClassLoader::addJarFile({:?})", &this);
         // TODO we need to implement java/util/jar/JarFile
 

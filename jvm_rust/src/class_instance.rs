@@ -4,7 +4,7 @@ use core::{
     fmt::{self, Debug, Formatter},
 };
 
-use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, JvmResult};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Result};
 
 use crate::{class_definition::ClassDefinitionImpl, FieldImpl};
 
@@ -36,7 +36,7 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.class.clone()
     }
 
-    fn equals(&self, other: &dyn ClassInstance) -> JvmResult<bool> {
+    fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
         let other = other.as_any().downcast_ref::<ClassInstanceImpl>().unwrap();
 
         Ok(Rc::ptr_eq(&self.inner, &other.inner))
@@ -46,7 +46,7 @@ impl ClassInstance for ClassInstanceImpl {
         Rc::as_ptr(&self.inner) as i32
     }
 
-    fn get_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
+    fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         let storage = self.inner.storage.borrow();
@@ -59,7 +59,7 @@ impl ClassInstance for ClassInstanceImpl {
         }
     }
 
-    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
+    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         self.inner.storage.borrow_mut().insert(field.clone(), value);

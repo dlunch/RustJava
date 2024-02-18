@@ -2,14 +2,14 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-use jvm::{runtime::JavaLangString, ClassInstance, JavaType, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, ClassInstance, JavaType, JavaValue, Jvm, Result};
 
 use crate::stack_frame::StackFrame;
 
 pub struct Interpreter;
 
 impl Interpreter {
-    pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>, return_type: &JavaType) -> JvmResult<JavaValue> {
+    pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>, return_type: &JavaType) -> Result<JavaValue> {
         let mut stack_frame = StackFrame::new();
 
         stack_frame.local_variables = args.into_vec();
@@ -773,7 +773,7 @@ impl Interpreter {
         }
     }
 
-    async fn constant_to_value(jvm: &Jvm, constant: &ValueConstant) -> JvmResult<JavaValue> {
+    async fn constant_to_value(jvm: &Jvm, constant: &ValueConstant) -> Result<JavaValue> {
         Ok(match constant {
             ValueConstant::Integer(x) => JavaValue::Int(*x),
             ValueConstant::Float(x) => JavaValue::Float(*x),
@@ -786,7 +786,7 @@ impl Interpreter {
     }
 
     #[async_recursion::async_recursion(?Send)]
-    async fn new_multi_array(jvm: &Jvm, element_type_name: &str, dimensions: &[i32]) -> JvmResult<Box<dyn ClassInstance>> {
+    async fn new_multi_array(jvm: &Jvm, element_type_name: &str, dimensions: &[i32]) -> Result<Box<dyn ClassInstance>> {
         let element_type_name = "[".repeat(dimensions.len() - 1) + element_type_name;
         let mut array = jvm.instantiate_array(&element_type_name, dimensions[0] as _).await?;
 

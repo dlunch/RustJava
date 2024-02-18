@@ -14,7 +14,7 @@ use core::{
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
 use java_constants::FieldAccessFlags;
-use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, JvmResult, Method};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Method, Result};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
@@ -60,7 +60,7 @@ impl ClassDefinitionImpl {
         Self::new(name, proto.parent_class.map(|x| x.to_string()), methods, fields)
     }
 
-    pub fn from_classfile(data: &[u8]) -> JvmResult<Self> {
+    pub fn from_classfile(data: &[u8]) -> Result<Self> {
         let class = ClassInfo::parse(data).unwrap(); // TODO ClassFormatError
 
         let fields = class.fields.into_iter().map(FieldImpl::from_field_info).collect::<Vec<_>>();
@@ -106,7 +106,7 @@ impl ClassDefinition for ClassDefinitionImpl {
             .map(|x| Box::new(x.clone()) as Box<dyn Field>)
     }
 
-    fn get_static_field(&self, field: &dyn Field) -> JvmResult<JavaValue> {
+    fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         let storage = self.inner.storage.borrow();
@@ -119,7 +119,7 @@ impl ClassDefinition for ClassDefinitionImpl {
         }
     }
 
-    fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> JvmResult<()> {
+    fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
         self.inner.storage.borrow_mut().insert(field.clone(), value);

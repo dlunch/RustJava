@@ -3,7 +3,7 @@ use core::fmt::Debug;
 
 use java_constants::MethodAccessFlags;
 
-use crate::{as_any::AsAny, JavaValue, Jvm, JvmResult};
+use crate::{as_any::AsAny, JavaValue, Jvm, Result};
 
 #[async_trait::async_trait(?Send)]
 pub trait Method: AsAny + Debug {
@@ -11,5 +11,5 @@ pub trait Method: AsAny + Debug {
     fn descriptor(&self) -> String;
     fn access_flags(&self) -> MethodAccessFlags;
 
-    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> JvmResult<JavaValue>;
+    async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue>;
 }

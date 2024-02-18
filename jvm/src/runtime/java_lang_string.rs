@@ -1,11 +1,11 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, JvmResult};
+use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, Result};
 
 pub struct JavaLangString {}
 
 impl JavaLangString {
-    pub fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> JvmResult<String> {
+    pub fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<String> {
         let value = jvm.get_field(&this, "value", "[C")?;
 
         let length = jvm.array_length(&value)?;
@@ -14,13 +14,13 @@ impl JavaLangString {
         Ok(String::from_utf16(&string).unwrap())
     }
 
-    pub async fn from_rust_string(jvm: &Jvm, string: &str) -> JvmResult<Box<dyn ClassInstance>> {
+    pub async fn from_rust_string(jvm: &Jvm, string: &str) -> Result<Box<dyn ClassInstance>> {
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
         Self::from_utf16(jvm, utf16).await
     }
 
-    async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> JvmResult<Box<dyn ClassInstance>> {
+    async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> Result<Box<dyn ClassInstance>> {
         let mut java_value = jvm.instantiate_array("C", data.len()).await?;
 
         jvm.store_array(&mut java_value, 0, data.to_vec())?;

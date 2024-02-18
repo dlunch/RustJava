@@ -9,12 +9,12 @@ use std::io::Write;
 use bytemuck::cast_vec;
 
 use java_runtime::Runtime;
-use jvm::{runtime::JavaLangString, JavaValue, Jvm, JvmResult};
+use jvm::{runtime::JavaLangString, JavaValue, Jvm, Result};
 use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
 
-pub async fn create_jvm<T>(stdout: T) -> JvmResult<Jvm>
+pub async fn create_jvm<T>(stdout: T) -> Result<Jvm>
 where
     T: Write + 'static,
 {
@@ -30,7 +30,7 @@ where
     Ok(jvm)
 }
 
-pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> JvmResult<()> {
+pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> Result<()> {
     let class_loader = jvm.get_system_class_loader().await?;
 
     let file_name = JavaLangString::from_rust_string(jvm, file_name).await?;
@@ -44,7 +44,7 @@ pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> JvmResu
     Ok(())
 }
 
-pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> JvmResult<String> {
+pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> Result<String> {
     let class_loader = jvm.get_system_class_loader().await?;
 
     let mut data_storage = jvm.instantiate_array("B", jar.len()).await?;
@@ -57,7 +57,7 @@ pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> JvmResult<String> {
     JavaLangString::to_rust_string(jvm, main_class_name)
 }
 
-pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> JvmResult<()> {
+pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> Result<()> {
     let mut java_args = Vec::with_capacity(args.len());
     for arg in args {
         java_args.push(JavaLangString::from_rust_string(jvm, arg).await?);
