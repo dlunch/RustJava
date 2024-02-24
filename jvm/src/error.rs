@@ -21,13 +21,8 @@ impl Display for JavaError {
     }
 }
 
-// XXX until https://github.com/rust-lang/rust/issues/103765 fixed
-extern crate std;
-impl std::error::Error for JavaError {
-    fn description(&self) -> &str {
-        match self {
-            JavaError::JavaException(_) => "Java exception",
-            JavaError::FatalError(_) => "Fatal error",
-        }
+impl From<JavaError> for anyhow::Error {
+    fn from(e: JavaError) -> Self {
+        anyhow::anyhow!("{:?}", e)
     }
 }
