@@ -2,7 +2,6 @@ extern crate alloc;
 
 mod runtime;
 
-use alloc::string::String;
 use core::future::ready;
 use std::io::Write;
 
