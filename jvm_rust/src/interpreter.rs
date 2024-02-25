@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-use jvm::{runtime::JavaLangString, ClassInstance, JavaType, JavaValue, Jvm, Result};
+use jvm::{runtime::JavaLangString, ClassInstance, JavaError, JavaType, JavaValue, Jvm, Result};
 
 use crate::stack_frame::StackFrame;
 
@@ -27,13 +27,15 @@ impl Interpreter {
         while let Some((offset, opcode)) = iter.next() {
             tracing::trace!("Opcode {:?}", opcode);
 
-            let result = Self::execute_opcode(jvm, *offset, opcode, &mut stack_frame, return_type).await?;
+            let result = Self::execute_opcode(jvm, *offset, opcode, &mut stack_frame, return_type).await;
             match result {
-                ExecuteNext::Continue => {}
-                ExecuteNext::Jump(offset) => {
+                Ok(ExecuteNext::Continue) => {}
+                Ok(ExecuteNext::Jump(offset)) => {
                     iter = code_attribute.code.range(offset..);
                 }
-                ExecuteNext::Return(value) => return Ok(value),
+                Ok(ExecuteNext::Return(value)) => return Ok(value),
+                Err(JavaError::JavaException(e)) => todo!("Java Exception thrown: {:?}", e),
+                Err(e) => return Err(e),
             }
         }
 
