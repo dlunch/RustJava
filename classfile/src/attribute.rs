@@ -23,7 +23,7 @@ pub struct CodeAttributeExceptionTable {
 pub struct AttributeInfoCode {
     pub max_stack: u16,
     pub max_locals: u16,
-    pub code: BTreeMap<u32, Opcode>,
+    pub code: BTreeMap<u32, Opcode>, // TODO we can store it Vec<u8> and create code iterator..
     pub exception_table: Vec<CodeAttributeExceptionTable>,
     pub attributes: Vec<AttributeInfo>,
 }

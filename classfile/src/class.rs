@@ -36,7 +36,7 @@ pub struct ClassInfo {
     pub minor_version: u16,
     pub major_version: u16,
     #[nom(Parse = "ConstantPoolItem::parse_all")]
-    pub constant_pool: BTreeMap<u16, ConstantPoolItem>,
+    pub constant_pool: BTreeMap<u16, ConstantPoolItem>, // TODO change to Vec
     #[nom(Parse = "map(be_u16, ClassAccessFlags::from_bits_truncate)")]
     pub access_flags: ClassAccessFlags,
     #[nom(Parse = "{ |x| parse_this_class(x, &constant_pool) }")]
