@@ -88,7 +88,9 @@ impl Interpreter {
                 stack_frame.operand_stack.push(value);
             }
             Opcode::Athrow => {
-                todo!()
+                let exception = stack_frame.operand_stack.pop().unwrap().into();
+
+                return Err(JavaError::JavaException(exception));
             }
             Opcode::Anewarray(x) => {
                 let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
