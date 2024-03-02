@@ -17,10 +17,12 @@ mod string_buffer;
 mod system;
 mod thread;
 mod throwable;
+mod unsupported_operation_exception;
 
 pub use self::{
     class::Class, class_loader::ClassLoader, exception::Exception, illegal_argument_exception::IllegalArgumentException,
     index_out_of_bounds_exception::IndexOutOfBoundsException, integer::Integer, interrupted_exception::InterruptedException, math::Math,
     null_pointer_exception::NullPointerException, object::Object, runnable::Runnable, runtime::Runtime, runtime_exception::RuntimeException,
     security_exception::SecurityException, string::String, string_buffer::StringBuffer, system::System, thread::Thread, throwable::Throwable,
+    unsupported_operation_exception::UnsupportedOperationException,
 };

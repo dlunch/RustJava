@@ -51,6 +51,10 @@ where
         ("java/lang/StringBuffer", crate::classes::java::lang::StringBuffer::as_proto()),
         ("java/lang/System", crate::classes::java::lang::System::as_proto()),
         ("java/lang/Thread", crate::classes::java::lang::Thread::as_proto()),
+        (
+            "java/lang/UnsupportedOperationException",
+            crate::classes::java::lang::UnsupportedOperationException::as_proto(),
+        ),
         ("java/net/URL", crate::classes::java::net::URL::as_proto()),
         ("java/net/URLConnection", crate::classes::java::net::URLConnection::as_proto()),
         ("java/net/URLStreamHandler", crate::classes::java::net::URLStreamHandler::as_proto()),

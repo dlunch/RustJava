@@ -5,10 +5,10 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.lang.IllegalArgumentException
-pub struct IllegalArgumentException {}
+// class java.lang.UnsupportedOperationException
+pub struct UnsupportedOperationException {}
 
-impl IllegalArgumentException {
+impl UnsupportedOperationException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
@@ -19,7 +19,7 @@ impl IllegalArgumentException {
     }
 
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.IllegalArgumentException::<init>({:?})", &this);
+        tracing::debug!("java.lang.UnsupportedOperationException::<init>({:?})", &this);
 
         Ok(())
     }
