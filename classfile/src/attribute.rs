@@ -12,12 +12,26 @@ use nom_derive::{NomBE, Parse};
 
 use crate::{constant_pool::ConstantPoolItem, opcode::Opcode, ValueConstant};
 
-#[derive(NomBE)]
 pub struct CodeAttributeExceptionTable {
     pub start_pc: u16,
     pub end_pc: u16,
     pub handler_pc: u16,
-    pub catch_type: u16,
+    pub catch_type: Rc<String>,
+}
+
+impl CodeAttributeExceptionTable {
+    pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
+        map(tuple((be_u16, be_u16, be_u16, be_u16)), |(start_pc, end_pc, handler_pc, catch_type)| {
+            let catch_type = constant_pool.get(&catch_type).unwrap().class_name_index();
+            let catch_type = constant_pool.get(&catch_type).unwrap().utf8();
+            Self {
+                start_pc,
+                end_pc,
+                handler_pc,
+                catch_type,
+            }
+        })(data)
+    }
 }
 
 pub struct AttributeInfoCode {
@@ -35,7 +49,7 @@ impl AttributeInfoCode {
                 be_u16,
                 be_u16,
                 map(flat_map(be_u32, take), |x: &[u8]| Self::parse_code(x, constant_pool)),
-                length_count(be_u16, CodeAttributeExceptionTable::parse),
+                length_count(be_u16, |x| CodeAttributeExceptionTable::parse(x, constant_pool)),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             )),
             |(max_stack, max_locals, code, exception_table, attributes)| Self {
