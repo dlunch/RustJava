@@ -341,6 +341,27 @@ impl Jvm {
         Ok(())
     }
 
+    pub async fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> Result<bool> {
+        let instance_class = instance.class_definition();
+
+        self.is_instance_by_name(&instance_class.name(), class_name).await
+    }
+
+    #[async_recursion::async_recursion(?Send)]
+    async fn is_instance_by_name(&self, instance_class_name: &str, class_name: &str) -> Result<bool> {
+        let instance_class = self.resolve_class(instance_class_name).await?.definition;
+
+        if instance_class.name() == class_name {
+            return Ok(true);
+        }
+
+        if let Some(super_class) = instance_class.super_class_name() {
+            return self.is_instance_by_name(&super_class, class_name).await;
+        }
+
+        Ok(false)
+    }
+
     async fn register_class_internal(&self, class_definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> Result<()> {
         if !class_definition.name().starts_with('[') {
             if let Some(super_class) = class_definition.super_class_name() {
