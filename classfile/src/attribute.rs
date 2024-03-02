@@ -16,14 +16,19 @@ pub struct CodeAttributeExceptionTable {
     pub start_pc: u16,
     pub end_pc: u16,
     pub handler_pc: u16,
-    pub catch_type: Rc<String>,
+    pub catch_type: Option<Rc<String>>,
 }
 
 impl CodeAttributeExceptionTable {
     pub fn parse<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Self> {
         map(tuple((be_u16, be_u16, be_u16, be_u16)), |(start_pc, end_pc, handler_pc, catch_type)| {
-            let catch_type = constant_pool.get(&catch_type).unwrap().class_name_index();
-            let catch_type = constant_pool.get(&catch_type).unwrap().utf8();
+            let catch_type = if catch_type != 0 {
+                let index = constant_pool.get(&catch_type).unwrap().class_name_index();
+                Some(constant_pool.get(&index).unwrap().utf8())
+            } else {
+                None
+            };
+
             Self {
                 start_pc,
                 end_pc,
