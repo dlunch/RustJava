@@ -76,7 +76,8 @@ impl DataInputStream {
     async fn read_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.DataInputStream::readBoolean({:?})", &this);
 
-        let byte: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let byte: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(byte != 0)
     }
@@ -84,8 +85,10 @@ impl DataInputStream {
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         tracing::debug!("java.lang.DataInputStream::readChar({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok((byte1 as JavaChar) << 8 | (byte2 as JavaChar))
     }
@@ -93,8 +96,10 @@ impl DataInputStream {
     async fn read_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         tracing::debug!("java.lang.DataInputStream::readShort({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok((byte1 as i16) << 8 | (byte2 as i16))
     }
@@ -102,25 +107,29 @@ impl DataInputStream {
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.DataInputStream::readInt({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte3: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte4: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
 
-        Ok((byte1 as i32) << 24 | (byte2 as i32) << 16 | (byte3 as i32) << 8 | (byte4 as i32))
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte3: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte4: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+
+        Ok(byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4)
     }
 
     async fn read_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.lang.DataInputStream::readLong({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte3: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte4: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte5: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte6: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte7: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte8: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte3: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte4: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte5: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte6: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte7: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte8: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok((byte1 as i64) << 56
             | (byte2 as i64) << 48
@@ -135,10 +144,12 @@ impl DataInputStream {
     async fn read_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         tracing::debug!("java.lang.DataInputStream::readFloat({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte3: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte4: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte3: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte4: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(f32::from_be_bytes([byte1 as u8, byte2 as u8, byte3 as u8, byte4 as u8]))
     }
@@ -146,14 +157,16 @@ impl DataInputStream {
     async fn read_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.lang.DataInputStream::readDouble({:?})", &this);
 
-        let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte3: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte4: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte5: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte6: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte7: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
-        let byte8: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte3: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte4: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte5: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte6: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte7: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
+        let byte8: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(f64::from_be_bytes([
             byte1 as u8,
@@ -180,6 +193,8 @@ impl DataInputStream {
 #[cfg(test)]
 mod test {
     use alloc::vec;
+
+    use bytemuck::cast_vec;
 
     use jvm::Result;
 
@@ -223,6 +238,48 @@ mod test {
 
         let double: f64 = jvm.invoke_virtual(&data_input_stream, "readDouble", "()D", []).await?;
         assert_eq!(double, f64::from_be_bytes([0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b]));
+
+        Ok(())
+    }
+
+    #[futures_test::test]
+    async fn test_data_input_stream_high_bit() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        let data = cast_vec(vec![
+            0x81u8, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96,
+            0x97, 0x98, 0x99, 0x9a, 0x9b,
+        ]);
+        let data_len = data.len();
+
+        let mut data_array = jvm.instantiate_array("B", data_len).await?;
+        jvm.store_byte_array(&mut data_array, 0, data)?;
+
+        let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data_array,)).await?;
+        let data_input_stream = jvm
+            .new_class("java/io/DataInputStream", "(Ljava/io/InputStream;)V", (input_stream,))
+            .await?;
+
+        let available: i32 = jvm.invoke_virtual(&data_input_stream, "available", "()I", []).await?;
+        assert_eq!(available, data_len as i32);
+
+        let byte: i8 = jvm.invoke_virtual(&data_input_stream, "readByte", "()B", []).await?;
+        assert_eq!(byte, i8::from_be_bytes([0x81]));
+
+        let short: i16 = jvm.invoke_virtual(&data_input_stream, "readShort", "()S", []).await?;
+        assert_eq!(short, i16::from_be_bytes([0x82, 0x83]));
+
+        let int: i32 = jvm.invoke_virtual(&data_input_stream, "readInt", "()I", []).await?;
+        assert_eq!(int, i32::from_be_bytes([0x84, 0x85, 0x86, 0x87]));
+
+        let long: i64 = jvm.invoke_virtual(&data_input_stream, "readLong", "()J", []).await?;
+        assert_eq!(long, i64::from_be_bytes([0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f]));
+
+        let float: f32 = jvm.invoke_virtual(&data_input_stream, "readFloat", "()F", []).await?;
+        assert_eq!(float, f32::from_be_bytes([0x90, 0x91, 0x92, 0x93]));
+
+        let double: f64 = jvm.invoke_virtual(&data_input_stream, "readDouble", "()D", []).await?;
+        assert_eq!(double, f64::from_be_bytes([0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b]));
 
         Ok(())
     }
