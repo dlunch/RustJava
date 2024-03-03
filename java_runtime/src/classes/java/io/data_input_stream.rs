@@ -87,7 +87,7 @@ impl DataInputStream {
         let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
         let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
 
-        Ok(((byte1 as u16) << 8 | (byte2 as u16)) as JavaChar)
+        Ok((byte1 as JavaChar) << 8 | (byte2 as JavaChar))
     }
 
     async fn read_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
@@ -96,7 +96,7 @@ impl DataInputStream {
         let byte1: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
         let byte2: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
 
-        Ok(((byte1 as i16) << 8 | (byte2 as i16)) as i16)
+        Ok((byte1 as i16) << 8 | (byte2 as i16))
     }
 
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -107,7 +107,7 @@ impl DataInputStream {
         let byte3: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
         let byte4: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
 
-        Ok(((byte1 as i32) << 24 | (byte2 as i32) << 16 | (byte3 as i32) << 8 | (byte4 as i32)) as i32)
+        Ok((byte1 as i32) << 24 | (byte2 as i32) << 16 | (byte3 as i32) << 8 | (byte4 as i32))
     }
 
     async fn read_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
@@ -122,14 +122,14 @@ impl DataInputStream {
         let byte7: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
         let byte8: i8 = jvm.invoke_virtual(&this, "readByte", "()B", []).await?;
 
-        Ok(((byte1 as i64) << 56
+        Ok((byte1 as i64) << 56
             | (byte2 as i64) << 48
             | (byte3 as i64) << 40
             | (byte4 as i64) << 32
             | (byte5 as i64) << 24
             | (byte6 as i64) << 16
             | (byte7 as i64) << 8
-            | (byte8 as i64)) as i64)
+            | (byte8 as i64))
     }
 
     async fn read_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
