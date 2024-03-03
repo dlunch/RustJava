@@ -90,8 +90,7 @@ impl ByteArrayInputStream {
             return Ok(-1);
         }
 
-        let result = jvm.load_byte_array(&buf, pos as _, 1)?[0];
-        let result = u8::from_be_bytes(result.to_be_bytes()); // this method should return 0-255 unsigned byte as int type
+        let result = jvm.load_byte_array(&buf, pos as _, 1)?[0] as u8;
 
         jvm.put_field(&mut this, "pos", "I", pos + 1)?;
 
