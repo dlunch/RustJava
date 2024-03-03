@@ -11,7 +11,7 @@ pub struct IllegalArgumentException {}
 impl IllegalArgumentException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            parent_class: Some("java/lang/Object"),
+            parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
             fields: vec![],
