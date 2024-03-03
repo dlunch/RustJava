@@ -79,7 +79,7 @@ impl ByteArrayInputStream {
         Ok(len)
     }
 
-    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i8> {
+    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B")?;
@@ -94,7 +94,7 @@ impl ByteArrayInputStream {
 
         jvm.put_field(&mut this, "pos", "I", pos + 1)?;
 
-        Ok(result)
+        Ok(result as _)
     }
 
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> Result<()> {
