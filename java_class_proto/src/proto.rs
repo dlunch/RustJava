@@ -1,9 +1,9 @@
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassInstanceRef, JavaChar, JavaError, JavaValue, Jvm};
+use jvm::{JavaError, JavaValue, Jvm};
 
-use crate::method::{MethodBody, MethodImpl, TypeConverter};
+use crate::method::{MethodBody, MethodImpl};
 
 pub struct JavaClassProto<C>
 where
@@ -83,83 +83,5 @@ where
             }),
             access_flags: flag,
         }
-    }
-}
-
-impl TypeConverter<i8> for i8 {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> i8 {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: i8) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<i16> for i16 {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> i16 {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: i16) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<i32> for i32 {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> i32 {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: i32) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<JavaChar> for JavaChar {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> JavaChar {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: JavaChar) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<i64> for i64 {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> i64 {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: i64) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<bool> for bool {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> bool {
-        raw.into()
-    }
-
-    fn from_rust(_: &Jvm, rust: bool) -> JavaValue {
-        rust.into()
-    }
-}
-
-impl TypeConverter<()> for () {
-    fn to_rust(_: &Jvm, _: JavaValue) {}
-
-    fn from_rust(_: &Jvm, _: ()) -> JavaValue {
-        JavaValue::Void
-    }
-}
-
-impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T> {
-    fn to_rust(_: &Jvm, raw: JavaValue) -> Self {
-        Self::new(raw.into())
-    }
-
-    fn from_rust(_: &Jvm, value: Self) -> JavaValue {
-        value.instance.into()
     }
 }

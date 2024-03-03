@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::{future::Future, marker::PhantomData};
 
-use jvm::{JavaValue, Jvm};
+use jvm::{ClassInstanceRef, JavaChar, JavaValue, Jvm};
 
 macro_rules! __impl_fn_helper {
     ($($arg: ident),*) => {
@@ -108,3 +108,101 @@ __generate!(P0, P1, P2, P3, P4, P5);
 __generate!(P0, P1, P2, P3, P4, P5, P6);
 __generate!(P0, P1, P2, P3, P4, P5, P6, P7);
 __generate!(P0, P1, P2, P3, P4, P5, P6, P7, P8);
+
+impl TypeConverter<i8> for i8 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i8 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: i8) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<i16> for i16 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i16 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: i16) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<i32> for i32 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i32 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: i32) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<JavaChar> for JavaChar {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> JavaChar {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: JavaChar) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<i64> for i64 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> i64 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: i64) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<bool> for bool {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> bool {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: bool) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<f32> for f32 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> f32 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: f32) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<f64> for f64 {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> f64 {
+        raw.into()
+    }
+
+    fn from_rust(_: &Jvm, rust: f64) -> JavaValue {
+        rust.into()
+    }
+}
+
+impl TypeConverter<()> for () {
+    fn to_rust(_: &Jvm, _: JavaValue) {}
+
+    fn from_rust(_: &Jvm, _: ()) -> JavaValue {
+        JavaValue::Void
+    }
+}
+
+impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T> {
+    fn to_rust(_: &Jvm, raw: JavaValue) -> Self {
+        Self::new(raw.into())
+    }
+
+    fn from_rust(_: &Jvm, value: Self) -> JavaValue {
+        value.instance.into()
+    }
+}
