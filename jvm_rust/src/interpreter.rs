@@ -34,7 +34,17 @@ impl Interpreter {
                     iter = code_attribute.code.range(offset..);
                 }
                 Ok(ExecuteNext::Return(value)) => return Ok(value),
-                Err(JavaError::JavaException(e)) => todo!("Java Exception thrown: {:?}", e),
+                Err(JavaError::JavaException(e)) => {
+                    let exception_handler = Self::find_exception_handler(jvm, &*e, code_attribute, *offset).await;
+                    if let Some(x) = exception_handler {
+                        stack_frame.operand_stack.clear();
+                        stack_frame.operand_stack.push(JavaValue::Object(Some(e)));
+
+                        iter = code_attribute.code.range(x..);
+                    } else {
+                        return Err(JavaError::JavaException(e));
+                    }
+                }
                 Err(e) => return Err(e),
             }
         }
@@ -719,6 +729,23 @@ impl Interpreter {
         }
 
         Ok(ExecuteNext::Continue)
+    }
+
+    async fn find_exception_handler(jvm: &Jvm, exception: &dyn ClassInstance, code_attribute: &AttributeInfoCode, pc: u32) -> Option<u32> {
+        for exception_table in &code_attribute.exception_table {
+            if exception_table.start_pc <= pc as u16 && exception_table.end_pc > pc as u16 {
+                if exception_table.catch_type.is_none() {
+                    return Some(exception_table.handler_pc as _);
+                }
+
+                let catch_type = exception_table.catch_type.as_ref().unwrap();
+                if jvm.is_instance(exception, catch_type).await.unwrap() {
+                    return Some(exception_table.handler_pc as _);
+                }
+            }
+        }
+
+        None
     }
 
     fn integer_condition<T>(stack_frame: &mut StackFrame, pred: T) -> bool
