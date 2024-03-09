@@ -104,7 +104,7 @@ pub enum Opcode {
     Iload(u8),
     Imul,
     Ineg,
-    Instanceof(u16),
+    Instanceof(ValueConstant),
     Invokedynamic(ReferenceConstant),
     Invokeinterface(ReferenceConstant, u8, u8),
     Invokespecial(ReferenceConstant),
@@ -304,7 +304,7 @@ impl Opcode {
             0x1d => success(Opcode::Iload(3))(data),
             0x68 => success(Opcode::Imul)(data),
             0x74 => success(Opcode::Ineg)(data),
-            0xc1 => map(be_u16, Opcode::Instanceof)(data),
+            0xc1 => map(be_u16, |x| Opcode::Instanceof(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
             0xba => map(be_u16, |x| {
                 Opcode::Invokedynamic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
             })(data),

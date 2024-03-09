@@ -473,8 +473,11 @@ impl Interpreter {
 
                 stack_frame.operand_stack.push(JavaValue::Int(-value));
             }
-            Opcode::Instanceof(_) => {
-                todo!()
+            Opcode::Instanceof(x) => {
+                let instance: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+
+                let result = jvm.is_instance(&*instance, x.as_class()).await?;
+                stack_frame.operand_stack.push(JavaValue::Boolean(result));
             }
             Opcode::Invokedynamic(_) => {
                 todo!()
