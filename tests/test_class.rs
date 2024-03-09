@@ -8,7 +8,16 @@ use test_helper::run_class;
 
 // TODO parameterized tests..
 fn get_test_data() -> Vec<(String, Vec<u8>, String)> {
-    let tests = ["Array", "ControlFlow", "Exception", "Field", "Hello", "Method", "MultiArray"];
+    let tests = [
+        "Array",
+        "ControlFlow",
+        "Exception",
+        "Field",
+        "Hello",
+        "Instanceof",
+        "Method",
+        "MultiArray",
+    ];
 
     let base_path = Path::new("test_data");
 

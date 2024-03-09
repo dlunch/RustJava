@@ -1,0 +1,7 @@
+a is an Object
+System.out is a PrintStream
+System.out is an OutputStream
+System.out is an Object
+args is an Object
+args is a String[]
+b is an Instanceof
