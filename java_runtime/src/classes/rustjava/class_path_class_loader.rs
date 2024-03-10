@@ -52,7 +52,7 @@ impl ClassPathClassLoader {
             .await?;
 
         let entries = jvm.instantiate_array("Lrustjava/ClassPathEntry;", 0).await?;
-        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", entries)?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", entries).await?;
 
         Ok(())
     }
@@ -65,7 +65,7 @@ impl ClassPathClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let class_file_name = JavaLangString::to_rust_string(jvm, name.clone())?.replace('.', "/") + ".class";
+        let class_file_name = JavaLangString::to_rust_string(jvm, name.clone()).await?.replace('.', "/") + ".class";
         let class_file_name = JavaLangString::from_rust_string(jvm, &class_file_name).await?;
 
         let resource: ClassInstanceRef<URL> = jvm
@@ -86,7 +86,7 @@ impl ClassPathClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
 
-        let name = JavaLangString::to_rust_string(jvm, name.into())?;
+        let name = JavaLangString::to_rust_string(jvm, name.into()).await?;
         let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
 
         Ok(class.into())
@@ -100,16 +100,16 @@ impl ClassPathClassLoader {
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findResource({:?}, {:?})", &this, name);
 
-        let name = JavaLangString::to_rust_string(jvm, name.clone())?;
+        let name = JavaLangString::to_rust_string(jvm, name.clone()).await?;
 
-        let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
+        let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
 
         let entries = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
         for entry in entries {
-            let entry_name = ClassPathEntry::name(jvm, &entry)?;
+            let entry_name = ClassPathEntry::name(jvm, &entry).await?;
 
             if name == entry_name {
-                let data = ClassPathEntry::data(jvm, &entry)?;
+                let data = ClassPathEntry::data(jvm, &entry).await?;
 
                 let protocol = JavaLangString::from_rust_string(jvm, "bytes").await?;
                 let host = JavaLangString::from_rust_string(jvm, "").await?;
@@ -146,7 +146,7 @@ impl ClassPathClassLoader {
             .new_class("rustjava/ClassPathEntry", "(Ljava/lang/String;[B)V", (file_name, data))
             .await?;
 
-        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
+        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
 
         let length = jvm.array_length(&entries)?;
         let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, length)?;
@@ -155,7 +155,7 @@ impl ClassPathClassLoader {
 
         let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", length + 1).await?;
         jvm.store_array(&mut new_entries, 0, entries)?;
-        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries).await?;
 
         Ok(())
     }
@@ -171,7 +171,7 @@ impl ClassPathClassLoader {
 
         let data = jvm.load_byte_array(&data, 0, jvm.array_length(&data)?)?;
 
-        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;")?;
+        let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
         let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
 
         // XXX is there no_std zip library?..
@@ -207,7 +207,7 @@ impl ClassPathClassLoader {
 
         let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", entries.len()).await?;
         jvm.store_array(&mut new_entries, 0, entries)?;
-        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries)?;
+        jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries).await?;
 
         // TODO we need java/util/jar/Manifest
         if let Some(x) = manifest {

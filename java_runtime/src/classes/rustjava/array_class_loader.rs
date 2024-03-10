@@ -41,7 +41,7 @@ impl ArrayClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ArrayClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let name = JavaLangString::to_rust_string(jvm, name.into())?;
+        let name = JavaLangString::to_rust_string(jvm, name.into()).await?;
 
         if let Some(element_type_name) = name.strip_prefix('[') {
             let class = jvm.define_array_class(element_type_name, this.into()).await?;

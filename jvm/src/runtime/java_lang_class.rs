@@ -5,8 +5,8 @@ use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, jv
 pub struct JavaLangClass {}
 
 impl JavaLangClass {
-    pub fn to_rust_class(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<Box<dyn ClassDefinition>> {
-        let rust_class = jvm.get_rust_object_field(&this, "raw")?;
+    pub async fn to_rust_class(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<Box<dyn ClassDefinition>> {
+        let rust_class = jvm.get_rust_object_field(&this, "raw").await?;
 
         Ok(rust_class)
     }
@@ -19,7 +19,8 @@ impl JavaLangClass {
         let mut java_class = jvm.new_class("java/lang/Class", "()V", ()).await?;
 
         jvm.put_rust_object_field(&mut java_class, "raw", rust_class).await?;
-        jvm.put_field(&mut java_class, "classLoader", "Ljava/lang/ClassLoader;", class_loader)?;
+        jvm.put_field(&mut java_class, "classLoader", "Ljava/lang/ClassLoader;", class_loader)
+            .await?;
 
         Ok(java_class)
     }

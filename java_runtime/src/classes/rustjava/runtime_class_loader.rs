@@ -45,7 +45,7 @@ impl RuntimeClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.RuntimeClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let name = JavaLangString::to_rust_string(jvm, name.into())?;
+        let name = JavaLangString::to_rust_string(jvm, name.into()).await?;
 
         let java_classes_array: ClassInstanceRef<Array<Class>> = jvm
             .get_static_field("rustjava/RuntimeClassLoader", "classes", "[Ljava/lang/Class;")
@@ -54,7 +54,7 @@ impl RuntimeClassLoader {
         if !java_classes_array.is_null() {
             let java_classes: Vec<ClassInstanceRef<Class>> = jvm.load_array(&java_classes_array, 0, jvm.array_length(&java_classes_array)?)?;
             for java_class in java_classes {
-                let rust_class = JavaLangClass::to_rust_class(jvm, java_class.clone())?; // TODO we can use class.name()
+                let rust_class = JavaLangClass::to_rust_class(jvm, java_class.clone()).await?; // TODO we can use class.name()
                 if rust_class.name() == name {
                     return Ok(java_class);
                 }

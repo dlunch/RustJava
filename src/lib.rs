@@ -53,7 +53,7 @@ pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> Result<String> {
         .invoke_virtual(&class_loader, "addJarFile", "([B)Ljava/lang/String;", (data_storage,))
         .await?;
 
-    JavaLangString::to_rust_string(jvm, main_class_name)
+    JavaLangString::to_rust_string(jvm, main_class_name).await
 }
 
 pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> Result<()> {

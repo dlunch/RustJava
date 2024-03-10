@@ -33,7 +33,7 @@ impl ByteArrayURLConnection {
         jvm.invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url,))
             .await?;
 
-        jvm.put_field(&mut this, "data", "[B", data)?;
+        jvm.put_field(&mut this, "data", "[B", data).await?;
 
         Ok(())
     }
@@ -41,7 +41,7 @@ impl ByteArrayURLConnection {
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<()>> {
         tracing::debug!("rustjava.ByteArrayURLConnection::getInputStream({:?})", &this);
 
-        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B")?;
+        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B").await?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data,)).await?;
 

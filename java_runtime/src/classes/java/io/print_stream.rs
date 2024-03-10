@@ -39,7 +39,7 @@ impl PrintStream {
         if str.is_null() {
             context.println("null");
         } else {
-            let rust_str = JavaLangString::to_rust_string(jvm, str.into())?;
+            let rust_str = JavaLangString::to_rust_string(jvm, str.into()).await?;
             context.println(&rust_str);
         }
 

@@ -65,7 +65,7 @@ impl ClassLoader {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
 
-        jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent)?;
+        jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent).await?;
 
         Ok(())
     }
@@ -120,7 +120,7 @@ impl ClassLoader {
             return Ok(class);
         }
 
-        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
+        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
         let class: ClassInstanceRef<Class> = if !parent.is_null() {
             jvm.invoke_virtual(&parent, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
                 .await?
@@ -160,7 +160,7 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
-        let rust_name = JavaLangString::to_rust_string(jvm, name.into())?;
+        let rust_name = JavaLangString::to_rust_string(jvm, name.into()).await?;
         if !jvm.has_class(&rust_name) {
             return Ok(None.into());
         }
@@ -178,7 +178,7 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResource({:?})", &this);
 
-        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;")?;
+        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
 
         let result: ClassInstanceRef<URL> = if !parent.is_null() {
             jvm.invoke_virtual(&parent, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))

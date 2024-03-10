@@ -32,19 +32,19 @@ impl ClassPathEntry {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name)?;
-        jvm.put_field(&mut this, "data", "[B", data)?;
+        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
+        jvm.put_field(&mut this, "data", "[B", data).await?;
 
         Ok(())
     }
 
-    pub fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustString> {
-        let name = jvm.get_field(this, "name", "Ljava/lang/String;")?;
+    pub async fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustString> {
+        let name = jvm.get_field(this, "name", "Ljava/lang/String;").await?;
 
-        JavaLangString::to_rust_string(jvm, name)
+        JavaLangString::to_rust_string(jvm, name).await
     }
 
-    pub fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
-        jvm.get_field(this, "data", "[B")
+    pub async fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
+        jvm.get_field(this, "data", "[B").await
     }
 }

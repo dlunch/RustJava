@@ -50,7 +50,7 @@ impl Hashtable {
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::containsKey({:?}, {:?})", &this, &key);
 
-        let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
+        let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
         let rust_hash_map = rust_hash_map.borrow();
@@ -72,7 +72,7 @@ impl Hashtable {
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::get({:?}, {:?})", &this, &key);
 
-        let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
+        let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
         let rust_hash_map = rust_hash_map.borrow();
@@ -100,7 +100,7 @@ impl Hashtable {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::remove({:?}, {:?})", &this, &key);
 
-        let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
+        let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
         let mut rust_hash_map = rust_hash_map.borrow_mut();
@@ -131,7 +131,7 @@ impl Hashtable {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::put({:?}, {:?}, {:?})", &this, &key, &value);
 
-        let rust_hash_map = Self::get_rust_hashmap(jvm, &this)?;
+        let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
         let mut rust_hash_map = rust_hash_map.borrow_mut();
@@ -151,8 +151,8 @@ impl Hashtable {
         Ok(None.into())
     }
 
-    fn get_rust_hashmap(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustHashMap> {
-        jvm.get_rust_object_field(this, "raw")
+    async fn get_rust_hashmap(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustHashMap> {
+        jvm.get_rust_object_field(this, "raw").await
     }
 }
 
@@ -184,14 +184,14 @@ mod test {
             .invoke_virtual(&hash_map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key.clone(),))
             .await?;
 
-        let value_string = JavaLangString::to_rust_string(&jvm, value)?;
+        let value_string = JavaLangString::to_rust_string(&jvm, value).await?;
         assert_eq!(value_string, "testValue");
 
         let value = jvm
             .invoke_virtual(&hash_map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key.clone(),))
             .await?;
 
-        let value_string = JavaLangString::to_rust_string(&jvm, value)?;
+        let value_string = JavaLangString::to_rust_string(&jvm, value).await?;
         assert_eq!(value_string, "testValue");
 
         let value: ClassInstanceRef<Object> = jvm

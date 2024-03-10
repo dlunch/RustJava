@@ -5,8 +5,8 @@ use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, Result};
 pub struct JavaLangString {}
 
 impl JavaLangString {
-    pub fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<String> {
-        let value = jvm.get_field(&this, "value", "[C")?;
+    pub async fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<String> {
+        let value = jvm.get_field(&this, "value", "[C").await?;
 
         let length = jvm.array_length(&value)?;
         let string: Vec<JavaChar> = jvm.load_array(&value, 0, length)?;

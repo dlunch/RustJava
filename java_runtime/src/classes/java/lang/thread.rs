@@ -29,7 +29,7 @@ impl Thread {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, target: ClassInstanceRef<Runnable>) -> Result<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, &target);
 
-        jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target)?;
+        jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target).await?;
 
         Ok(())
     }
@@ -54,7 +54,7 @@ impl Thread {
             }
         }
 
-        let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;")?;
+        let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
 
         context.spawn(Box::new(ThreadStartProxy {
             thread_id: format!("{:?}", &runnable),

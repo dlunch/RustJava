@@ -42,7 +42,7 @@ impl Class {
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Class::getName({:?})", &this);
 
-        let rust_class: Box<dyn ClassDefinition> = jvm.get_rust_object_field(&this, "raw")?;
+        let rust_class: Box<dyn ClassDefinition> = jvm.get_rust_object_field(&this, "raw").await?;
         let result = JavaLangString::from_rust_string(jvm, &rust_class.name()).await?;
 
         Ok(result.into())
@@ -56,7 +56,7 @@ impl Class {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {:?})", &this, &name);
 
-        let class_loader = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;")?;
+        let class_loader = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
 
         jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
             .await
@@ -75,11 +75,11 @@ mod test {
 
         let java_class = jvm.resolve_class("java/lang/String").await?.java_class(&jvm).await?;
 
-        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class.clone())?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class.clone()).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         // try call to_rust_class twice to test if box is not dropped
-        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class)?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         Ok(())

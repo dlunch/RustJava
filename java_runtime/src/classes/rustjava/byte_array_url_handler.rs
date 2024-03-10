@@ -34,7 +34,7 @@ impl ByteArrayURLHandler {
 
         jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "data", "[B", data)?;
+        jvm.put_field(&mut this, "data", "[B", data).await?;
 
         Ok(())
     }
@@ -47,7 +47,7 @@ impl ByteArrayURLHandler {
     ) -> Result<ClassInstanceRef<ByteArrayURLConnection>> {
         tracing::debug!("rustjava.ByteArrayURLHandler::openConnection({:?}, {:?})", &this, &url);
 
-        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B")?;
+        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B").await?;
         let url_connection = jvm
             .new_class("rustjava/ByteArrayURLConnection", "(Ljava/net/URL;[B)V", (url, data))
             .await?;

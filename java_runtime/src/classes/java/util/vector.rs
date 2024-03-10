@@ -69,7 +69,7 @@ impl Vector {
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
-        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         rust_vector.borrow_mut().push(element);
 
         Ok(true)
@@ -79,7 +79,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::addElement({:?}, {:?})", &this, &element);
 
         // do we need to call add() instead?
-        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         rust_vector.borrow_mut().push(element);
 
         Ok(())
@@ -88,7 +88,7 @@ impl Vector {
     async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
 
-        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let element = (*rust_vector.borrow().get(index as usize).unwrap()).clone();
 
         Ok(element.into())
@@ -103,7 +103,7 @@ impl Vector {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
-        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let old_element = mem::replace(&mut rust_vector.borrow_mut()[index as usize], element);
 
         Ok(old_element)
@@ -112,14 +112,14 @@ impl Vector {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Vector::size({:?})", &this);
 
-        let rust_vector = Self::get_rust_vector(jvm, &this)?;
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let size = rust_vector.borrow().len();
 
         Ok(size as _)
     }
 
-    fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
-        jvm.get_rust_object_field(this, "raw")
+    async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
+        jvm.get_rust_object_field(this, "raw").await
     }
 }
 
@@ -145,7 +145,7 @@ mod test {
         assert_eq!(size, 2);
 
         let element_at1: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,)).await?;
-        assert_eq!(JavaLangString::to_rust_string(&jvm, element_at1.into())?, "testValue1");
+        assert_eq!(JavaLangString::to_rust_string(&jvm, element_at1.into()).await?, "testValue1");
 
         Ok(())
     }

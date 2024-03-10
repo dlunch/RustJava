@@ -62,11 +62,11 @@ impl URL {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "protocol", "Ljava/lang/String;", protocol)?;
-        jvm.put_field(&mut this, "host", "Ljava/lang/String;", host)?;
-        jvm.put_field(&mut this, "port", "I", port)?;
-        jvm.put_field(&mut this, "file", "Ljava/lang/String;", file)?;
-        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler)?;
+        jvm.put_field(&mut this, "protocol", "Ljava/lang/String;", protocol).await?;
+        jvm.put_field(&mut this, "host", "Ljava/lang/String;", host).await?;
+        jvm.put_field(&mut this, "port", "I", port).await?;
+        jvm.put_field(&mut this, "file", "Ljava/lang/String;", file).await?;
+        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
 
         Ok(())
     }
@@ -74,7 +74,7 @@ impl URL {
     async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URL::openStream({:?})", &this);
 
-        let handler: ClassInstanceRef<URLStreamHandler> = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;")?;
+        let handler: ClassInstanceRef<URLStreamHandler> = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection: ClassInstanceRef<URLConnection> = jvm
             .invoke_virtual(&handler, "openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", (this,))
             .await?;

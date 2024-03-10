@@ -144,7 +144,7 @@ impl Jvm {
         class.definition.put_static_field(&*field, value.into())
     }
 
-    pub fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str) -> Result<T>
+    pub async fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str) -> Result<T>
     where
         T: From<JavaValue>,
     {
@@ -155,7 +155,7 @@ impl Jvm {
         Ok(instance.get_field(&*field)?.into())
     }
 
-    pub fn put_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> Result<()>
+    pub async fn put_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> Result<()>
     where
         T: Into<JavaValue> + Debug,
     {
@@ -314,7 +314,7 @@ impl Jvm {
         if let Some(x) = &java_class {
             tracing::debug!("Loaded class {}", class_name);
 
-            let class = JavaLangClass::to_rust_class(self, x.clone())?;
+            let class = JavaLangClass::to_rust_class(self, x.clone()).await?;
 
             self.register_class_internal(class.clone(), java_class).await?;
 
@@ -421,11 +421,11 @@ impl Jvm {
         Ok(self.system_class_loader.borrow().as_ref().unwrap().clone())
     }
 
-    pub fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
+    pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
     where
         T: Clone,
     {
-        let raw_storage = self.get_field(instance, name, "[B")?;
+        let raw_storage = self.get_field(instance, name, "[B").await?;
         let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
 
         let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
@@ -439,7 +439,7 @@ impl Jvm {
     }
 
     pub async fn get_rust_object_field_move<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str) -> Result<T> {
-        let raw_storage = self.get_field(instance, name, "[B")?;
+        let raw_storage = self.get_field(instance, name, "[B").await?;
         let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
 
         let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
@@ -447,7 +447,7 @@ impl Jvm {
 
         // delete old java data
         let new_raw = self.instantiate_array("B", 0).await?;
-        self.put_field(instance, name, "[B", new_raw)?;
+        self.put_field(instance, name, "[B", new_raw).await?;
 
         Ok(*rust)
     }
@@ -458,7 +458,7 @@ impl Jvm {
         let mut raw_storage = self.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
         self.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())?;
 
-        self.put_field(instance, name, "[B", raw_storage)?;
+        self.put_field(instance, name, "[B", raw_storage).await?;
 
         Ok(())
     }

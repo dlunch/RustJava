@@ -34,7 +34,7 @@ impl DataInputStream {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.lang.DataInputStream::<init>({:?}, {:?})", &this, &r#in);
 
-        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in)?;
+        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in).await?;
 
         Ok(())
     }
@@ -42,7 +42,7 @@ impl DataInputStream {
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.DataInputStream::available({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let available: i32 = jvm.invoke_virtual(&r#in, "available", "()I", []).await?;
 
         Ok(available)
@@ -58,7 +58,7 @@ impl DataInputStream {
     ) -> Result<i32> {
         tracing::debug!("java.lang.DataInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let result: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (b, off, len)).await?;
 
         Ok(result)
@@ -67,7 +67,7 @@ impl DataInputStream {
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         tracing::debug!("java.lang.DataInputStream::readByte({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let result: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(result as _)
@@ -76,7 +76,7 @@ impl DataInputStream {
     async fn read_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.DataInputStream::readBoolean({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let byte: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
 
         Ok(byte != 0)
@@ -85,7 +85,7 @@ impl DataInputStream {
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         tracing::debug!("java.lang.DataInputStream::readChar({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -96,7 +96,7 @@ impl DataInputStream {
     async fn read_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         tracing::debug!("java.lang.DataInputStream::readShort({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -107,7 +107,7 @@ impl DataInputStream {
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.DataInputStream::readInt({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -120,7 +120,7 @@ impl DataInputStream {
     async fn read_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.lang.DataInputStream::readLong({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -144,7 +144,7 @@ impl DataInputStream {
     async fn read_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         tracing::debug!("java.lang.DataInputStream::readFloat({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -157,7 +157,7 @@ impl DataInputStream {
     async fn read_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.lang.DataInputStream::readDouble({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", []).await?;
@@ -183,7 +183,7 @@ impl DataInputStream {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.DataInputStream::close({:?})", &this);
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;")?;
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         jvm.invoke_virtual(&r#in, "close", "()V", []).await?;
 
         Ok(())
