@@ -35,7 +35,7 @@ pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> Result<
     let file_name = JavaLangString::from_rust_string(jvm, file_name).await?;
 
     let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
-    jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec()))?;
+    jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec())).await?;
 
     jvm.invoke_virtual(&class_loader, "addClassFile", "(Ljava/lang/String;[B)V", (file_name, data_storage))
         .await?;
@@ -47,7 +47,7 @@ pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> Result<String> {
     let class_loader = jvm.get_system_class_loader().await?;
 
     let mut data_storage = jvm.instantiate_array("B", jar.len()).await?;
-    jvm.store_byte_array(&mut data_storage, 0, cast_vec(jar.to_vec()))?;
+    jvm.store_byte_array(&mut data_storage, 0, cast_vec(jar.to_vec())).await?;
 
     let main_class_name = jvm
         .invoke_virtual(&class_loader, "addJarFile", "([B)Ljava/lang/String;", (data_storage,))
@@ -62,7 +62,7 @@ pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) ->
         java_args.push(JavaLangString::from_rust_string(jvm, arg).await?);
     }
     let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
-    jvm.store_array(&mut array, 0, java_args).unwrap();
+    jvm.store_array(&mut array, 0, java_args).await.unwrap();
 
     let normalized_name = main_class_name.replace('.', "/");
     jvm.invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])

@@ -34,7 +34,7 @@ impl InputStream {
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.lang.InputStream::read({:?}, {:?})", &this, &b);
 
-        let array_length = jvm.array_length(&b)? as i32;
+        let array_length = jvm.array_length(&b).await? as i32;
 
         jvm.invoke_virtual(&this, "read", "([BII)I", (b, 0, array_length)).await
     }

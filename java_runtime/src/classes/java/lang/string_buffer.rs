@@ -52,7 +52,7 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::<init>({:?}, {:?})", &this, &string,);
 
         let value_array = jvm.get_field(&string, "value", "[C").await?;
-        let length = jvm.array_length(&value_array)? as i32;
+        let length = jvm.array_length(&value_array).await? as i32;
 
         jvm.put_field(&mut this, "value", "[C", value_array).await?;
         jvm.put_field(&mut this, "count", "I", length).await?;
@@ -118,15 +118,15 @@ impl StringBuffer {
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, capacity: usize) -> Result<()> {
         let java_value_array = jvm.get_field(this, "value", "[C").await?;
-        let current_capacity = jvm.array_length(&java_value_array)?;
+        let current_capacity = jvm.array_length(&java_value_array).await?;
 
         if current_capacity < capacity {
-            let old_values: Vec<JavaChar> = jvm.load_array(&java_value_array, 0, current_capacity)?;
+            let old_values: Vec<JavaChar> = jvm.load_array(&java_value_array, 0, current_capacity).await?;
             let new_capacity = capacity * 2;
 
             let mut java_new_value_array = jvm.instantiate_array("C", new_capacity).await?;
             jvm.put_field(this, "value", "[C", java_new_value_array.clone()).await?;
-            jvm.store_array(&mut java_new_value_array, 0, old_values)?;
+            jvm.store_array(&mut java_new_value_array, 0, old_values).await?;
         }
 
         Ok(())
@@ -141,7 +141,7 @@ impl StringBuffer {
         StringBuffer::ensure_capacity(jvm, this, (current_count + count_to_add) as _).await?;
 
         let mut java_value_array = jvm.get_field(this, "value", "[C").await?;
-        jvm.store_array(&mut java_value_array, current_count as _, value_to_add)?;
+        jvm.store_array(&mut java_value_array, current_count as _, value_to_add).await?;
         jvm.put_field(this, "count", "I", current_count + count_to_add).await?;
 
         Ok(())

@@ -211,7 +211,7 @@ mod test {
         let data_len = data.len();
 
         let mut data_array = jvm.instantiate_array("B", data_len).await?;
-        jvm.store_byte_array(&mut data_array, 0, data)?;
+        jvm.store_byte_array(&mut data_array, 0, data).await?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data_array,)).await?;
         let data_input_stream = jvm
@@ -253,7 +253,7 @@ mod test {
         let data_len = data.len();
 
         let mut data_array = jvm.instantiate_array("B", data_len).await?;
-        jvm.store_byte_array(&mut data_array, 0, data)?;
+        jvm.store_byte_array(&mut data_array, 0, data).await?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data_array,)).await?;
         let data_input_stream = jvm

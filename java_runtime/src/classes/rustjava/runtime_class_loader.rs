@@ -52,7 +52,9 @@ impl RuntimeClassLoader {
             .await?;
         // can be null before initialization
         if !java_classes_array.is_null() {
-            let java_classes: Vec<ClassInstanceRef<Class>> = jvm.load_array(&java_classes_array, 0, jvm.array_length(&java_classes_array)?)?;
+            let java_classes: Vec<ClassInstanceRef<Class>> = jvm
+                .load_array(&java_classes_array, 0, jvm.array_length(&java_classes_array).await?)
+                .await?;
             for java_class in java_classes {
                 let rust_class = JavaLangClass::to_rust_class(jvm, java_class.clone()).await?; // TODO we can use class.name()
                 if rust_class.name() == name {

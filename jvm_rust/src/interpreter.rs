@@ -65,7 +65,7 @@ impl Interpreter {
                 let index = Self::pop_integer(stack_frame);
                 let array = stack_frame.operand_stack.pop().unwrap();
 
-                let value = jvm.load_array(&array.into(), index as usize, 1)?.pop().unwrap();
+                let value = jvm.load_array(&array.into(), index as usize, 1).await?.pop().unwrap();
 
                 stack_frame.operand_stack.push(value);
             }
@@ -82,7 +82,7 @@ impl Interpreter {
                 let index = Self::pop_integer(stack_frame);
                 let mut array = stack_frame.operand_stack.pop().unwrap().into();
 
-                let element_type = jvm.array_element_type(&array)?;
+                let element_type = jvm.array_element_type(&array).await?;
 
                 let value = if element_type == JavaType::Char || element_type == JavaType::Boolean {
                     Self::integer_to_type(value, element_type)
@@ -90,7 +90,7 @@ impl Interpreter {
                     value
                 };
 
-                jvm.store_array(&mut array, index as usize, [value])?;
+                jvm.store_array(&mut array, index as usize, [value]).await?;
             }
             Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
             Opcode::Aload(x) | Opcode::Dload(x) | Opcode::Fload(x) | Opcode::Iload(x) | Opcode::Lload(x) => {
@@ -130,7 +130,7 @@ impl Interpreter {
             Opcode::Arraylength => {
                 let array = stack_frame.operand_stack.pop().unwrap();
 
-                let length = jvm.array_length(&array.into())?;
+                let length = jvm.array_length(&array.into()).await?;
                 stack_frame.operand_stack.push(JavaValue::Int(length as _));
             }
             Opcode::Astore(x) | Opcode::Dstore(x) | Opcode::Fstore(x) | Opcode::Istore(x) | Opcode::Lstore(x) => {
@@ -841,7 +841,7 @@ impl Interpreter {
         if dimensions.len() > 1 {
             for i in 0..dimensions[0] {
                 let element = Self::new_multi_array(jvm, &element_type_name[1..], &dimensions[1..]).await?;
-                jvm.store_array(&mut array, i as _, [element])?;
+                jvm.store_array(&mut array, i as _, [element]).await?;
             }
         }
 

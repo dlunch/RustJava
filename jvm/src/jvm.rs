@@ -223,7 +223,7 @@ impl Jvm {
         Ok(method.run(self, args.into_boxed_slice()).await?.into())
     }
 
-    pub fn store_array<T, U>(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> Result<()>
+    pub async fn store_array<T, U>(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> Result<()>
     where
         T: IntoIterator<Item = U>,
         U: Into<JavaValue>,
@@ -236,7 +236,7 @@ impl Jvm {
         array.store(offset, values.into_boxed_slice())
     }
 
-    pub fn load_array<T>(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<T>>
+    pub async fn load_array<T>(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<T>>
     where
         T: From<JavaValue>,
     {
@@ -249,7 +249,7 @@ impl Jvm {
         Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
     }
 
-    pub fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> Result<()> {
+    pub async fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> Result<()> {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance_mut().unwrap(); // TODO IllegalArgumentException
@@ -257,7 +257,7 @@ impl Jvm {
         array.store_bytes(offset, values.into_boxed_slice())
     }
 
-    pub fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<i8>> {
+    pub async fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<i8>> {
         tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
 
         let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
@@ -267,7 +267,7 @@ impl Jvm {
         Ok(values)
     }
 
-    pub fn array_length(&self, array: &Box<dyn ClassInstance>) -> Result<usize> {
+    pub async fn array_length(&self, array: &Box<dyn ClassInstance>) -> Result<usize> {
         tracing::trace!("Get array length {}", array.class_definition().name());
 
         let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
@@ -275,7 +275,7 @@ impl Jvm {
         Ok(array.length())
     }
 
-    pub fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> Result<JavaType> {
+    pub async fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> Result<JavaType> {
         tracing::trace!("Get array element type {}", array.class_definition().name());
 
         let array = array.as_array_instance().unwrap(); // TODO IllegalArgumentException
@@ -426,7 +426,7 @@ impl Jvm {
         T: Clone,
     {
         let raw_storage = self.get_field(instance, name, "[B").await?;
-        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
+        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
 
         let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
 
@@ -440,7 +440,7 @@ impl Jvm {
 
     pub async fn get_rust_object_field_move<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str) -> Result<T> {
         let raw_storage = self.get_field(instance, name, "[B").await?;
-        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage)?)?;
+        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
 
         let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
         let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
@@ -456,7 +456,8 @@ impl Jvm {
         let rust_class_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
 
         let mut raw_storage = self.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
-        self.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())?;
+        self.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())
+            .await?;
 
         self.put_field(instance, name, "[B", raw_storage).await?;
 

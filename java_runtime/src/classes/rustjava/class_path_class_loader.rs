@@ -84,7 +84,7 @@ impl ClassPathClassLoader {
 
         let _: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (array.clone(),)).await?;
 
-        let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _)?;
+        let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _).await?;
 
         let name = JavaLangString::to_rust_string(jvm, name.into()).await?;
         let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
@@ -104,7 +104,7 @@ impl ClassPathClassLoader {
 
         let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
 
-        let entries = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
+        let entries = jvm.load_array(&entries, 0, jvm.array_length(&entries).await?).await?;
         for entry in entries {
             let entry_name = ClassPathEntry::name(jvm, &entry).await?;
 
@@ -148,13 +148,13 @@ impl ClassPathClassLoader {
 
         let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
 
-        let length = jvm.array_length(&entries)?;
-        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, length)?;
+        let length = jvm.array_length(&entries).await?;
+        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, length).await?;
 
         entries.push(entry.into());
 
         let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", length + 1).await?;
-        jvm.store_array(&mut new_entries, 0, entries)?;
+        jvm.store_array(&mut new_entries, 0, entries).await?;
         jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries).await?;
 
         Ok(())
@@ -169,10 +169,10 @@ impl ClassPathClassLoader {
         tracing::debug!("rustjava.ClassPathClassLoader::addJarFile({:?})", &this);
         // TODO we need to implement java/util/jar/JarFile
 
-        let data = jvm.load_byte_array(&data, 0, jvm.array_length(&data)?)?;
+        let data = jvm.load_byte_array(&data, 0, jvm.array_length(&data).await?).await?;
 
         let entries = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
-        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, jvm.array_length(&entries)?)?;
+        let mut entries: Vec<ClassInstanceRef<ClassPathEntry>> = jvm.load_array(&entries, 0, jvm.array_length(&entries).await?).await?;
 
         // XXX is there no_std zip library?..
         extern crate std;
@@ -195,7 +195,7 @@ impl ClassPathClassLoader {
                 let name = JavaLangString::from_rust_string(jvm, file.name()).await?;
 
                 let mut data_array = jvm.instantiate_array("B", data.len()).await?;
-                jvm.store_byte_array(&mut data_array, 0, cast_vec(data))?;
+                jvm.store_byte_array(&mut data_array, 0, cast_vec(data)).await?;
 
                 let entry = jvm
                     .new_class("rustjava/ClassPathEntry", "(Ljava/lang/String;[B)V", (name, data_array))
@@ -206,7 +206,7 @@ impl ClassPathClassLoader {
         }
 
         let mut new_entries = jvm.instantiate_array("Ljava/lang/String;", entries.len()).await?;
-        jvm.store_array(&mut new_entries, 0, entries)?;
+        jvm.store_array(&mut new_entries, 0, entries).await?;
         jvm.put_field(&mut this, "entries", "[Lrustjava/ClassPathEntry;", new_entries).await?;
 
         // TODO we need java/util/jar/Manifest

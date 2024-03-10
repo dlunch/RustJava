@@ -8,8 +8,8 @@ impl JavaLangString {
     pub async fn to_rust_string(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<String> {
         let value = jvm.get_field(&this, "value", "[C").await?;
 
-        let length = jvm.array_length(&value)?;
-        let string: Vec<JavaChar> = jvm.load_array(&value, 0, length)?;
+        let length = jvm.array_length(&value).await?;
+        let string: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
 
         Ok(String::from_utf16(&string).unwrap())
     }
@@ -23,7 +23,7 @@ impl JavaLangString {
     async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> Result<Box<dyn ClassInstance>> {
         let mut java_value = jvm.instantiate_array("C", data.len()).await?;
 
-        jvm.store_array(&mut java_value, 0, data.to_vec())?;
+        jvm.store_array(&mut java_value, 0, data.to_vec()).await?;
 
         let instance = jvm.new_class("java/lang/String", "([C)V", (java_value,)).await?;
 

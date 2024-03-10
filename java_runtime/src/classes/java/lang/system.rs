@@ -78,8 +78,8 @@ impl System {
         );
 
         // TODO i think we can make it faster
-        let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _)?;
-        jvm.store_array(&mut dest, dest_pos as _, src)?;
+        let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _).await?;
+        jvm.store_array(&mut dest, dest_pos as _, src).await?;
 
         Ok(())
     }

@@ -41,7 +41,7 @@ impl ByteArrayInputStream {
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let buf_length = jvm.array_length(&buf)? as i32;
+        let buf_length = jvm.array_length(&buf).await? as i32;
 
         Ok((buf_length - pos) as _)
     }
@@ -57,7 +57,7 @@ impl ByteArrayInputStream {
         tracing::debug!("java.lang.ByteArrayInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf_length = jvm.array_length(&buf)?;
+        let buf_length = jvm.array_length(&buf).await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
         let available = (buf_length as i32 - pos) as _;
@@ -83,14 +83,14 @@ impl ByteArrayInputStream {
         tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf_length = jvm.array_length(&buf)?;
+        let buf_length = jvm.array_length(&buf).await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
         if pos as usize >= buf_length {
             return Ok(-1);
         }
 
-        let result = jvm.load_byte_array(&buf, pos as _, 1)?[0] as u8;
+        let result = jvm.load_byte_array(&buf, pos as _, 1).await?[0] as u8;
 
         jvm.put_field(&mut this, "pos", "I", pos + 1).await?;
 

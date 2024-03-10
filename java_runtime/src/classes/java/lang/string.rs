@@ -49,7 +49,7 @@ impl String {
     async fn init_with_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
 
-        let count = jvm.array_length(&value)? as i32;
+        let count = jvm.array_length(&value).await? as i32;
 
         jvm.invoke_special(&this, "java/lang/String", "<init>", "([BII)V", (value, 0, count))
             .await?;
@@ -65,7 +65,7 @@ impl String {
     ) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
 
-        let count = jvm.array_length(&value)? as i32;
+        let count = jvm.array_length(&value).await? as i32;
 
         jvm.invoke_special(&this, "java/lang/String", "<init>", "([CII)V", (value, 0, count))
             .await?;
@@ -86,8 +86,8 @@ impl String {
         let mut array = jvm.instantiate_array("C", count as _).await?;
         jvm.put_field(&mut this, "value", "[C", array.clone()).await?;
 
-        let data: Vec<JavaChar> = jvm.load_array(&value, offset as _, count as _)?;
-        jvm.store_array(&mut array, 0, data)?; // TODO we should store value, offset, count like in java
+        let data: Vec<JavaChar> = jvm.load_array(&value, offset as _, count as _).await?;
+        jvm.store_array(&mut array, 0, data).await?; // TODO we should store value, offset, count like in java
 
         Ok(())
     }
@@ -102,13 +102,13 @@ impl String {
     ) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
 
-        let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _)?;
+        let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
         let string = context.decode_str(cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
         let mut array = jvm.instantiate_array("C", utf16.len()).await?;
-        jvm.store_array(&mut array, 0, utf16)?;
+        jvm.store_array(&mut array, 0, utf16).await?;
 
         jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
 
@@ -133,7 +133,7 @@ impl String {
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
-        Ok(jvm.load_array(&value, index as _, 1)?[0])
+        Ok(jvm.load_array(&value, index as _, 1).await?[0])
     }
 
     async fn concat(
@@ -161,7 +161,7 @@ impl String {
         let bytes: Vec<i8> = cast_vec(bytes);
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_array(&mut byte_array, 0, bytes)?;
+        jvm.store_array(&mut byte_array, 0, bytes).await?;
 
         Ok(byte_array.into())
     }
@@ -171,7 +171,7 @@ impl String {
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
-        Ok(jvm.array_length(&value)? as _)
+        Ok(jvm.array_length(&value).await? as _)
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, begin_index: i32) -> Result<ClassInstanceRef<Self>> {
