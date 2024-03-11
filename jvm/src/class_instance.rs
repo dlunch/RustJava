@@ -44,6 +44,15 @@ impl<T> ClassInstanceRef<T> {
     }
 }
 
+impl<T> Clone for ClassInstanceRef<T> {
+    fn clone(&self) -> Self {
+        Self {
+            instance: self.instance.clone(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
 impl<T> ClassInstanceRef<T> {
     pub fn is_null(&self) -> bool {
         self.instance.is_none()

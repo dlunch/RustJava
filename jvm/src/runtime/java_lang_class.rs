@@ -5,8 +5,9 @@ use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, jv
 pub struct JavaLangClass {}
 
 impl JavaLangClass {
-    pub async fn to_rust_class(jvm: &Jvm, this: Box<dyn ClassInstance>) -> Result<Box<dyn ClassDefinition>> {
-        let rust_class = jvm.get_rust_object_field(&this, "raw").await?;
+    #[allow(clippy::borrowed_box)]
+    pub async fn to_rust_class(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Box<dyn ClassDefinition>> {
+        let rust_class = jvm.get_rust_object_field(this, "raw").await?;
 
         Ok(rust_class)
     }

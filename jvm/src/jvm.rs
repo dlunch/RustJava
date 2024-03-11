@@ -394,7 +394,7 @@ impl Jvm {
         if let Some(x) = &java_class {
             tracing::debug!("Loaded class {}", class_name);
 
-            let class = JavaLangClass::to_rust_class(self, x.clone()).await?;
+            let class = JavaLangClass::to_rust_class(self, x).await?;
 
             self.register_class_internal(class.clone(), java_class).await?;
 

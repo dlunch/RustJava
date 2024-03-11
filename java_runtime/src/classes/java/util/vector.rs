@@ -91,7 +91,7 @@ impl Vector {
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let element = (*rust_vector.borrow().get(index as usize).unwrap()).clone();
 
-        Ok(element.into())
+        Ok(element)
     }
 
     async fn set(
@@ -145,7 +145,7 @@ mod test {
         assert_eq!(size, 2);
 
         let element_at1: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,)).await?;
-        assert_eq!(JavaLangString::to_rust_string(&jvm, element_at1.into()).await?, "testValue1");
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &element_at1).await?, "testValue1");
 
         Ok(())
     }

@@ -75,11 +75,11 @@ mod test {
 
         let java_class = jvm.resolve_class("java/lang/String").await?.java_class(&jvm).await?;
 
-        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class.clone()).await?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, &java_class).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         // try call to_rust_class twice to test if box is not dropped
-        let rust_class = JavaLangClass::to_rust_class(&jvm, java_class).await?;
+        let rust_class = JavaLangClass::to_rust_class(&jvm, &java_class).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
 
         Ok(())

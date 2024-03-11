@@ -78,7 +78,7 @@ impl Object {
 
         let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
         let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;
-        let class_name_rust = JavaLangString::to_rust_string(jvm, class_name).await?;
+        let class_name_rust = JavaLangString::to_rust_string(jvm, &class_name).await?;
 
         let hash_code: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
 

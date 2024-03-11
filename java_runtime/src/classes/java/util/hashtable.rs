@@ -82,7 +82,7 @@ impl Hashtable {
             for (key, value) in vec.unwrap() {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
-                    return Ok((*value).clone().into());
+                    return Ok(value.clone());
                 }
             }
         }
@@ -184,14 +184,14 @@ mod test {
             .invoke_virtual(&hash_map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key.clone(),))
             .await?;
 
-        let value_string = JavaLangString::to_rust_string(&jvm, value).await?;
+        let value_string = JavaLangString::to_rust_string(&jvm, &value).await?;
         assert_eq!(value_string, "testValue");
 
         let value = jvm
             .invoke_virtual(&hash_map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key.clone(),))
             .await?;
 
-        let value_string = JavaLangString::to_rust_string(&jvm, value).await?;
+        let value_string = JavaLangString::to_rust_string(&jvm, &value).await?;
         assert_eq!(value_string, "testValue");
 
         let value: ClassInstanceRef<Object> = jvm

@@ -65,7 +65,7 @@ impl ClassPathClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findClass({:?}, {:?})", &this, name);
 
-        let class_file_name = JavaLangString::to_rust_string(jvm, name.clone()).await?.replace('.', "/") + ".class";
+        let class_file_name = JavaLangString::to_rust_string(jvm, &name).await?.replace('.', "/") + ".class";
         let class_file_name = JavaLangString::from_rust_string(jvm, &class_file_name).await?;
 
         let resource: ClassInstanceRef<URL> = jvm
@@ -86,7 +86,7 @@ impl ClassPathClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _).await?;
 
-        let name = JavaLangString::to_rust_string(jvm, name.into()).await?;
+        let name = JavaLangString::to_rust_string(jvm, &name).await?;
         let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
 
         Ok(class.into())
@@ -100,7 +100,7 @@ impl ClassPathClassLoader {
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("rustjava.ClassPathClassLoader::findResource({:?}, {:?})", &this, name);
 
-        let name = JavaLangString::to_rust_string(jvm, name.clone()).await?;
+        let name = JavaLangString::to_rust_string(jvm, &name).await?;
 
         let entries: ClassInstanceRef<Array<ClassPathEntry>> = jvm.get_field(&this, "entries", "[Lrustjava/ClassPathEntry;").await?;
 

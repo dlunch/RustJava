@@ -160,7 +160,7 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
 
-        let rust_name = JavaLangString::to_rust_string(jvm, name.into()).await?;
+        let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
         if !jvm.has_class(&rust_name) {
             return Ok(None.into());
         }

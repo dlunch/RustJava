@@ -41,7 +41,7 @@ impl ClassPathEntry {
     pub async fn name(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustString> {
         let name = jvm.get_field(this, "name", "Ljava/lang/String;").await?;
 
-        JavaLangString::to_rust_string(jvm, name).await
+        JavaLangString::to_rust_string(jvm, &name).await
     }
 
     pub async fn data(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {

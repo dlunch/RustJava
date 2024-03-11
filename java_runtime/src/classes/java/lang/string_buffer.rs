@@ -68,7 +68,7 @@ impl StringBuffer {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, &string,);
 
-        let string = JavaLangString::to_rust_string(jvm, string.into()).await?;
+        let string = JavaLangString::to_rust_string(jvm, &string).await?;
 
         Self::append(jvm, &mut this, &string).await?;
 

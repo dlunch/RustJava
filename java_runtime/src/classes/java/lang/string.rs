@@ -118,8 +118,8 @@ impl String {
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.String::equals({:?}, {:?})", &this, &other);
 
-        let other_string = JavaLangString::to_rust_string(jvm, other.clone()).await?;
-        let this_string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
+        let other_string = JavaLangString::to_rust_string(jvm, &other.clone()).await?;
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         if this_string == other_string {
             Ok(true)
@@ -144,8 +144,8 @@ impl String {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::concat({:?}, {:?})", &this, &other);
 
-        let this_string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
-        let other_string = JavaLangString::to_rust_string(jvm, other.clone()).await?;
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+        let other_string = JavaLangString::to_rust_string(jvm, &other.clone()).await?;
 
         let concat = this_string + &other_string;
 
@@ -155,7 +155,7 @@ impl String {
     async fn get_bytes(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
         tracing::debug!("java.lang.String::getBytes({:?})", &this);
 
-        let string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
+        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let bytes = context.encode_str(&string);
         let bytes: Vec<i8> = cast_vec(bytes);
@@ -177,7 +177,7 @@ impl String {
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, begin_index: i32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::substring({:?}, {})", &this, begin_index);
 
-        let string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
+        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let substr = string.chars().skip(begin_index as usize).collect::<RustString>(); // TODO buffer sharing
 
@@ -193,7 +193,7 @@ impl String {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::substring({:?}, {}, {})", &this, begin_index, end_index);
 
-        let string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
+        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let substr = string
             .chars()
@@ -231,8 +231,8 @@ impl String {
     ) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, &str);
 
-        let this_string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
-        let str_string = JavaLangString::to_rust_string(jvm, str.clone()).await?;
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+        let str_string = JavaLangString::to_rust_string(jvm, &str.clone()).await?;
 
         let index = this_string[from_index as usize..].find(&str_string).map(|x| x as i32 + from_index);
 
@@ -242,7 +242,7 @@ impl String {
     async fn trim(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::trim({:?})", &this);
 
-        let string = JavaLangString::to_rust_string(jvm, this.clone()).await?;
+        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let trimmed = string.trim().to_string();
 
@@ -262,7 +262,7 @@ mod test {
 
         let string = JavaLangString::from_rust_string(&jvm, "test").await?;
 
-        let string = JavaLangString::to_rust_string(&jvm, string).await?;
+        let string = JavaLangString::to_rust_string(&jvm, &string).await?;
 
         assert_eq!(string, "test");
 
@@ -280,7 +280,7 @@ mod test {
             .invoke_virtual(&string1, "concat", "(Ljava/lang/String;)Ljava/lang/String;", (string2,))
             .await?;
 
-        let string = JavaLangString::to_rust_string(&jvm, result).await?;
+        let string = JavaLangString::to_rust_string(&jvm, &result).await?;
 
         assert_eq!(string, "test1test2");
 
