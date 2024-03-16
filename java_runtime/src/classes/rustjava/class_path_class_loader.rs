@@ -224,6 +224,10 @@ impl ClassPathClassLoader {
         for line in manifest.lines() {
             if let Some(x) = line.strip_prefix("Main-Class: ") {
                 return Some(x.to_string());
+            } else if let Some(x) = line.strip_prefix("MIDlet-1: ") {
+                // XXX is it correct to put it here?
+                let split = x.split(',').collect::<Vec<_>>();
+                return Some(split[2].trim().to_string());
             }
         }
 
