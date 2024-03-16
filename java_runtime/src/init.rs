@@ -33,6 +33,11 @@ where
             crate::classes::java::lang::NoClassDefFoundError::as_proto(),
         ),
         (
+            "java/lang/IncompatibleClassChangeError",
+            crate::classes::java::lang::IncompatibleClassChangeError::as_proto(),
+        ),
+        ("java/lang/NoSuchMethodError", crate::classes::java::lang::NoSuchMethodError::as_proto()),
+        (
             "java/lang/IllegalArgumentException",
             crate::classes::java::lang::IllegalArgumentException::as_proto(),
         ),
