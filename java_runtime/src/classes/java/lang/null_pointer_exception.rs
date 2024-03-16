@@ -21,14 +21,19 @@ impl NullPointerException {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.NullPointerException::<init>({:?})", &this);
+
+        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "()V", ()).await?;
 
         Ok(())
     }
 
-    async fn init_with_message(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
+    async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.NullPointerException::<init>({:?}, {:?})", &this, &message);
+
+        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))
+            .await?;
 
         Ok(())
     }

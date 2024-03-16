@@ -13,13 +13,34 @@ impl NoSuchMethodError {
         RuntimeClassProto {
             parent_class: Some("java/lang/IncompatibleClassChangeError"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default())],
+            methods: vec![
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, Default::default()),
+            ],
             fields: vec![],
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.lang.NoSuchMethodError::<init>({:?})", &this);
+
+        jvm.invoke_special(&this, "java/lang/IncompatibleClassChangeError", "<init>", "()V", ())
+            .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.NoSuchMethodError::<init>({:?}, {:?})", &this, &message);
+
+        jvm.invoke_special(
+            &this,
+            "java/lang/IncompatibleClassChangeError",
+            "<init>",
+            "(Ljava/lang/String;)V",
+            (message,),
+        )
+        .await?;
 
         Ok(())
     }
