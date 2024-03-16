@@ -13,12 +13,21 @@ impl UnsupportedOperationException {
         RuntimeClassProto {
             parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default())],
+            methods: vec![
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, Default::default()),
+            ],
             fields: vec![],
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.lang.UnsupportedOperationException::<init>({:?})", &this);
+
+        Ok(())
+    }
+
+    async fn init_with_message(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.UnsupportedOperationException::<init>({:?}, {:?})", &this, &message);
 
         Ok(())

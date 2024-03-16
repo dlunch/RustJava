@@ -40,8 +40,12 @@ async fn test_class() -> Result<()> {
     let tests = get_test_data();
 
     for (name, class, expected) in tests {
-        let result = run_class(&name, &[(&name, &class)], &[]).await?;
-        assert_eq!(result, expected, "Test failed: {}", name);
+        let result = run_class(&name, &[(&name, &class)], &[]).await;
+        if let Err(err) = result {
+            panic!("Test {} failed with error: {}", name, err);
+        } else {
+            assert_eq!(result.as_ref().unwrap().clone(), expected, "Test {} failed: {}", name, result.unwrap());
+        }
     }
 
     Ok(())
