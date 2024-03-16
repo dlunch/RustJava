@@ -218,6 +218,8 @@ impl Jvm {
 
             Ok(method.run(self, args.into_arg()).await?.into())
         } else {
+            tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
+
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
                 .await)
@@ -403,6 +405,8 @@ impl Jvm {
             return Ok(class);
         }
 
+        tracing::error!("No such class: {}", class_name);
+
         Err(self.exception("java/lang/NoClassDefFoundError", class_name).await)
     }
 
@@ -576,6 +580,8 @@ impl Jvm {
             let super_class = self.classes.borrow().get(&x).unwrap().definition.clone();
             return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
         }
+
+        tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
 
         Err(self
             .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
