@@ -26,6 +26,12 @@ where
         ("java/io/PrintStream", crate::classes::java::io::PrintStream::as_proto()),
         ("java/lang/Class", crate::classes::java::lang::Class::as_proto()),
         ("java/lang/ClassLoader", crate::classes::java::lang::ClassLoader::as_proto()),
+        ("java/lang/Error", crate::classes::java::lang::Error::as_proto()),
+        ("java/lang/LinkageError", crate::classes::java::lang::LinkageError::as_proto()),
+        (
+            "java/lang/NoClassDefFoundError",
+            crate::classes::java::lang::NoClassDefFoundError::as_proto(),
+        ),
         (
             "java/lang/IllegalArgumentException",
             crate::classes::java::lang::IllegalArgumentException::as_proto(),
