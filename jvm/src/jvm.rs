@@ -429,7 +429,7 @@ impl Jvm {
 
     async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
-        let instance = self.new_class(r#type, "(java/lang/String)V", (message_str,)).await.unwrap();
+        let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
 
         JavaError::JavaException(instance)
     }
