@@ -7,7 +7,7 @@ use crate::method::{MethodBody, MethodImpl};
 
 pub struct JavaClassProto<C>
 where
-    C: ?Sized,
+    C: ?Sized + Send,
 {
     pub parent_class: Option<&'static str>,
     pub interfaces: Vec<&'static str>,
@@ -33,7 +33,7 @@ impl JavaFieldProto {
 
 pub struct JavaMethodProto<C>
 where
-    C: ?Sized,
+    C: ?Sized + Send,
 {
     pub name: String,
     pub descriptor: String,
@@ -43,7 +43,7 @@ where
 
 impl<C> JavaMethodProto<C>
 where
-    C: ?Sized,
+    C: ?Sized + Send,
 {
     pub fn new<M, F, R, P>(name: &str, descriptor: &str, method: M, flag: MethodAccessFlags) -> Self
     where
@@ -63,10 +63,10 @@ where
             descriptor: String,
         }
 
-        #[async_trait::async_trait(?Send)]
+        #[async_trait::async_trait]
         impl<C> MethodBody<JavaError, C> for AbstractCall
         where
-            C: ?Sized,
+            C: ?Sized + Send,
         {
             async fn call(&self, _: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
                 // TODO java.lang.AbstractMethodError

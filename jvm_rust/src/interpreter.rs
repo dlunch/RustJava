@@ -833,7 +833,7 @@ impl Interpreter {
         })
     }
 
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     async fn new_multi_array(jvm: &Jvm, element_type_name: &str, dimensions: &[i32]) -> Result<Box<dyn ClassInstance>> {
         let element_type_name = "[".repeat(dimensions.len() - 1) + element_type_name;
         let mut array = jvm.instantiate_array(&element_type_name, dimensions[0] as _).await?;

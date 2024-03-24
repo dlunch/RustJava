@@ -6,7 +6,7 @@ use core::{array, iter};
 
 use crate::value::JavaValue;
 
-pub trait InvokeArg {
+pub trait InvokeArg: Sync + Send {
     type IntoIter: Iterator<Item = JavaValue>;
 
     fn into_arg(self) -> Box<[JavaValue]>;
@@ -50,7 +50,7 @@ impl InvokeArg for () {
 
 impl<T1> InvokeArg for (T1,)
 where
-    T1: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 1>;
 
@@ -65,8 +65,8 @@ where
 
 impl<T1, T2> InvokeArg for (T1, T2)
 where
-    T1: Into<JavaValue>,
-    T2: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
+    T2: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 2>;
 
@@ -81,9 +81,9 @@ where
 
 impl<T1, T2, T3> InvokeArg for (T1, T2, T3)
 where
-    T1: Into<JavaValue>,
-    T2: Into<JavaValue>,
-    T3: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
+    T2: Into<JavaValue> + Sync + Send,
+    T3: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 3>;
 
@@ -98,10 +98,10 @@ where
 
 impl<T1, T2, T3, T4> InvokeArg for (T1, T2, T3, T4)
 where
-    T1: Into<JavaValue>,
-    T2: Into<JavaValue>,
-    T3: Into<JavaValue>,
-    T4: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
+    T2: Into<JavaValue> + Sync + Send,
+    T3: Into<JavaValue> + Sync + Send,
+    T4: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 4>;
 
@@ -116,11 +116,11 @@ where
 
 impl<T1, T2, T3, T4, T5> InvokeArg for (T1, T2, T3, T4, T5)
 where
-    T1: Into<JavaValue>,
-    T2: Into<JavaValue>,
-    T3: Into<JavaValue>,
-    T4: Into<JavaValue>,
-    T5: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
+    T2: Into<JavaValue> + Sync + Send,
+    T3: Into<JavaValue> + Sync + Send,
+    T4: Into<JavaValue> + Sync + Send,
+    T5: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 5>;
 
@@ -135,12 +135,12 @@ where
 
 impl<T1, T2, T3, T4, T5, T6> InvokeArg for (T1, T2, T3, T4, T5, T6)
 where
-    T1: Into<JavaValue>,
-    T2: Into<JavaValue>,
-    T3: Into<JavaValue>,
-    T4: Into<JavaValue>,
-    T5: Into<JavaValue>,
-    T6: Into<JavaValue>,
+    T1: Into<JavaValue> + Sync + Send,
+    T2: Into<JavaValue> + Sync + Send,
+    T3: Into<JavaValue> + Sync + Send,
+    T4: Into<JavaValue> + Sync + Send,
+    T5: Into<JavaValue> + Sync + Send,
+    T6: Into<JavaValue> + Sync + Send,
 {
     type IntoIter = array::IntoIter<JavaValue, 6>;
 

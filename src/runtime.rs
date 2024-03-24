@@ -23,7 +23,7 @@ where
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl<T> Runtime for RuntimeImpl<T>
 where
     T: Sync + Send + Write,

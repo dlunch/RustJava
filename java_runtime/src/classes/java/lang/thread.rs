@@ -42,7 +42,7 @@ impl Thread {
             runnable: ClassInstanceRef<Runnable>,
         }
 
-        #[async_trait::async_trait(?Send)]
+        #[async_trait::async_trait]
         impl JvmCallback for ThreadStartProxy {
             #[tracing::instrument(name = "thread", fields(thread = self.thread_id), skip_all)]
             async fn call(&self, jvm: &Jvm, _: Box<[JavaValue]>) -> Result<JavaValue> {

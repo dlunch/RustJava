@@ -6,7 +6,7 @@ use crate::{array_class_definition::ArrayClassDefinitionImpl, ClassDefinitionImp
 
 pub struct JvmDetailImpl;
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl JvmDetail for JvmDetailImpl {
     async fn define_class(&self, _jvm: &Jvm, _name: &str, data: &[u8]) -> Result<Box<dyn ClassDefinition>> {
         ClassDefinitionImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)

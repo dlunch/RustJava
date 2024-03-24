@@ -1,4 +1,5 @@
 use alloc::{
+    collections::BTreeMap,
     string::{String as RustString, ToString},
     vec,
     vec::Vec,
@@ -181,18 +182,24 @@ impl ClassPathClassLoader {
         let mut manifest = None;
 
         let mut archive = ZipArchive::new(Cursor::new(cast_vec(data))).unwrap();
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
+        let files = (0..archive.len())
+            .map(|x| {
+                let mut file = archive.by_index(x).unwrap();
 
-            if file.is_file() {
                 let mut data = Vec::new();
                 file.read_to_end(&mut data).unwrap();
 
-                if file.name() == "META-INF/MANIFEST.MF" {
+                (file.name().to_string(), data)
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for (filename, data) in files {
+            if !data.is_empty() {
+                if filename == "META-INF/MANIFEST.MF" {
                     manifest = Some(data.clone())
                 }
 
-                let name = JavaLangString::from_rust_string(jvm, file.name()).await?;
+                let name = JavaLangString::from_rust_string(jvm, &filename).await?;
 
                 let mut data_array = jvm.instantiate_array("B", data.len()).await?;
                 jvm.store_byte_array(&mut data_array, 0, cast_vec(data)).await?;

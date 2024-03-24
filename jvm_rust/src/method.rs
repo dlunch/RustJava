@@ -63,7 +63,7 @@ impl MethodImpl {
 
     pub fn from_method_proto<C, Context>(proto: JavaMethodProto<C>, context: Context) -> Self
     where
-        C: ?Sized + 'static,
+        C: ?Sized + 'static + Send,
         Context: Sync + Send + DerefMut + Deref<Target = C> + Clone + 'static,
     {
         struct MethodProxy<C, Context>
@@ -75,10 +75,10 @@ impl MethodImpl {
             context: Context,
         }
 
-        #[async_trait::async_trait(?Send)]
+        #[async_trait::async_trait]
         impl<C, Context> JvmCallback for MethodProxy<C, Context>
         where
-            C: ?Sized,
+            C: ?Sized + Send,
             Context: Sync + Send + DerefMut + Deref<Target = C> + Clone,
         {
             async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
@@ -118,7 +118,7 @@ impl MethodImpl {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Method for MethodImpl {
     fn name(&self) -> String {
         self.inner.name.clone()

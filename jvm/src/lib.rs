@@ -22,7 +22,7 @@ use core::result;
 
 pub type Result<T> = result::Result<T, error::JavaError>;
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 pub trait JvmCallback: Sync + Send {
     async fn call(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue>;
 }

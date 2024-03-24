@@ -47,7 +47,7 @@ impl ClassDefinitionImpl {
 
     pub fn from_class_proto<C, Context>(name: &str, proto: JavaClassProto<C>, context: Context) -> Self
     where
-        C: ?Sized + 'static,
+        C: ?Sized + 'static + Send,
         Context: Sync + Send + DerefMut + Deref<Target = C> + Clone + 'static,
     {
         let methods = proto

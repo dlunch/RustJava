@@ -8,8 +8,8 @@ macro_rules! __impl_fn_helper {
         impl<'a, C, E, R, F, Fut, $($arg),*> FnHelper<'a, C, E, R, ($($arg,)*)> for F
         where
             F: Fn(&'a Jvm, &'a mut C, $($arg),*) -> Fut,
-            C: ?Sized + 'a,
-            Fut: Future<Output = Result<R, E>> + 'a,
+            C: ?Sized + 'a + Send,
+            Fut: Future<Output = Result<R, E>> + 'a + Send,
             $($arg: TypeConverter<$arg> + 'a),*
         {
             type Output = Fut;
@@ -28,11 +28,11 @@ macro_rules! __impl_fn_helper {
 #[macro_export]
 macro_rules! __impl_method_body {
     ($($arg: ident),*) => {
-        #[async_trait::async_trait(?Send)]
+        #[async_trait::async_trait]
         impl<F, C, R, E, $($arg),*> MethodBody<E, C> for MethodHolder<F, R, ($($arg,)*)>
         where
             F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + Sync + Send,
-            C: ?Sized,
+            C: ?Sized + Send,
             R: TypeConverter<R> + Sync + Send,
             $($arg: Sync + Send),*
         {
@@ -50,7 +50,7 @@ macro_rules! __impl_method_impl {
         impl<F, C, R, E, $($arg),*> MethodImpl<F, C, R, E, ($($arg,)*)> for F
         where
             F: for<'a> FnHelper<'a, C, E, R, ($($arg,)*)> + 'static + Sync + Send,
-            C: ?Sized,
+            C: ?Sized + Send,
             R: TypeConverter<R> + 'static + Sync + Send,
             $($arg: 'static + Sync + Send),*
         {
@@ -69,19 +69,19 @@ macro_rules! __generate {
     };
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 pub trait MethodBody<E, C>: Sync + Send
 where
-    C: ?Sized,
+    C: ?Sized + Send,
 {
     async fn call(&self, jvm: &Jvm, context: &mut C, args: Box<[JavaValue]>) -> Result<JavaValue, E>;
 }
 
 trait FnHelper<'a, C, E, R, P>
 where
-    C: ?Sized + 'a,
+    C: ?Sized + 'a + Send,
 {
-    type Output: Future<Output = Result<R, E>> + 'a;
+    type Output: Future<Output = Result<R, E>> + 'a + Send;
     fn do_call(&self, jvm: &'a Jvm, context: &'a mut C, args: Box<[JavaValue]>) -> Self::Output;
 }
 
@@ -94,7 +94,7 @@ pub trait TypeConverter<T> {
 
 pub trait MethodImpl<F, C, R, E, P>
 where
-    C: ?Sized,
+    C: ?Sized + Send,
 {
     fn into_body(self) -> Box<dyn MethodBody<E, C>>;
 }
@@ -198,7 +198,10 @@ impl TypeConverter<()> for () {
     }
 }
 
-impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T> {
+impl<T> TypeConverter<ClassInstanceRef<T>> for ClassInstanceRef<T>
+where
+    T: Sync + Send,
+{
     fn to_rust(_: &Jvm, raw: JavaValue) -> Self {
         Self::new(raw.into())
     }

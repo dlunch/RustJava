@@ -1,6 +1,8 @@
-use core::{cell::RefCell, mem};
+use core::mem;
 
-use alloc::{rc::Rc, vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
+
+use spin::RwLock;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
@@ -8,7 +10,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
 // I'm too lazy to implement vector in java, so i'm leveraging rust vector here...
-type RustVector = Rc<RefCell<Vec<ClassInstanceRef<Object>>>>;
+type RustVector = Arc<RwLock<Vec<ClassInstanceRef<Object>>>>;
 
 // class java.util.Vector
 pub struct Vector {}
@@ -59,7 +61,7 @@ impl Vector {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let rust_vector: RustVector = Rc::new(RefCell::new(Vec::with_capacity(capacity as _)));
+        let rust_vector: RustVector = Arc::new(RwLock::new(Vec::with_capacity(capacity as _)));
 
         jvm.put_rust_object_field(&mut this, "raw", rust_vector).await?;
 
@@ -70,7 +72,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.borrow_mut().push(element);
+        rust_vector.write().push(element);
 
         Ok(true)
     }
@@ -80,7 +82,7 @@ impl Vector {
 
         // do we need to call add() instead?
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.borrow_mut().push(element);
+        rust_vector.write().push(element);
 
         Ok(())
     }
@@ -89,7 +91,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let element = rust_vector.borrow().get(index as usize).unwrap().clone();
+        let element = rust_vector.read().get(index as usize).unwrap().clone();
 
         Ok(element)
     }
@@ -104,7 +106,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let old_element = mem::replace(&mut rust_vector.borrow_mut()[index as usize], element);
+        let old_element = mem::replace(&mut rust_vector.write()[index as usize], element);
 
         Ok(old_element)
     }
@@ -113,7 +115,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::size({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let size = rust_vector.borrow().len();
+        let size = rust_vector.read().len();
 
         Ok(size as _)
     }

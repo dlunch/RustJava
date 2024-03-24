@@ -5,8 +5,8 @@ use java_constants::MethodAccessFlags;
 
 use crate::{as_any::AsAny, JavaValue, Jvm, Result};
 
-#[async_trait::async_trait(?Send)]
-pub trait Method: AsAny + Debug {
+#[async_trait::async_trait]
+pub trait Method: Sync + Send + AsAny + Debug {
     fn name(&self) -> String;
     fn descriptor(&self) -> String;
     fn access_flags(&self) -> MethodAccessFlags;

@@ -244,7 +244,7 @@ impl Jvm {
     }
 
     // non-virtual
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     pub async fn invoke_special<T, U>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str, args: T) -> Result<U>
     where
         T: InvokeArg,
@@ -277,10 +277,10 @@ impl Jvm {
         }
     }
 
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     pub async fn store_array<T, U>(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: T) -> Result<()>
     where
-        T: IntoIterator<Item = U>,
+        T: IntoIterator<Item = U> + Send,
         U: Into<JavaValue>,
     {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
@@ -381,7 +381,7 @@ impl Jvm {
         self.classes.read().contains_key(class_name)
     }
 
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
         let class = self.classes.read().get(class_name).cloned();
 
@@ -438,7 +438,7 @@ impl Jvm {
         JavaError::JavaException(instance)
     }
 
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     async fn is_instance_by_name(&self, instance_class_name: &str, class_name: &str) -> Result<bool> {
         let instance_class = self.resolve_class(instance_class_name).await?.definition;
 
@@ -566,7 +566,7 @@ impl Jvm {
         }
     }
 
-    #[async_recursion::async_recursion(?Send)]
+    #[async_recursion::async_recursion]
     async fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> Result<Box<dyn Method>> {
         let method = class.method(name, descriptor);
 

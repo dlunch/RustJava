@@ -5,7 +5,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::JvmCallback;
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 pub trait Runtime: Sync + Send + DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
@@ -34,7 +34,7 @@ pub mod test {
     #[derive(Clone)]
     pub struct DummyRuntime;
 
-    #[async_trait::async_trait(?Send)]
+    #[async_trait::async_trait]
     impl Runtime for DummyRuntime {
         async fn sleep(&self, _duration: Duration) {
             todo!()
