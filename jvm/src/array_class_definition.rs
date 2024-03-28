@@ -14,6 +14,7 @@ pub trait ArrayClassDefinition: ClassDefinition {
 
 clone_trait_object!(ArrayClassDefinition);
 
+#[async_trait::async_trait]
 impl<T: ArrayClassDefinition> ClassDefinition for T {
     fn name(&self) -> String {
         format!("[{}", self.element_type_name())
@@ -35,11 +36,11 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         None
     }
 
-    fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {
+    async fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {
         panic!("Array classes do not have static fields")
     }
 
-    fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
+    async fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
         panic!("Array classes do not have static fields")
     }
 

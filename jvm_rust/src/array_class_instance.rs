@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use core::fmt::{self, Debug, Formatter};
 
-use spin::RwLock;
+use async_lock::RwLock;
 
 use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaError, JavaType, JavaValue, Result};
 
@@ -33,6 +33,7 @@ impl ArrayClassInstanceImpl {
     }
 }
 
+#[async_trait::async_trait]
 impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn class_definition(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
@@ -50,34 +51,34 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Arc::as_ptr(&self.inner) as i32
     }
 
-    fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
+    async fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
         if offset + values.len() > self.inner.length {
             // TODO real exception
             return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
         }
 
-        self.inner.elements.write().splice(offset..offset + values.len(), values.into_vec());
+        self.inner.elements.write().await.splice(offset..offset + values.len(), values.into_vec());
 
         Ok(())
     }
 
-    fn load(&self, offset: usize, length: usize) -> Result<Vec<JavaValue>> {
+    async fn load(&self, offset: usize, length: usize) -> Result<Vec<JavaValue>> {
         if offset + length > self.inner.length {
             // TODO real exception
             return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
         }
 
-        Ok(self.inner.elements.read()[offset..offset + length].to_vec())
+        Ok(self.inner.elements.read().await[offset..offset + length].to_vec())
     }
 
-    fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
+    async fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
         let values = values.into_vec().into_iter().map(JavaValue::Byte).collect::<Vec<_>>();
 
-        self.store(offset, values.into_boxed_slice())
+        self.store(offset, values.into_boxed_slice()).await
     }
 
-    fn load_bytes(&self, offset: usize, length: usize) -> Result<Vec<i8>> {
-        let values = self.load(offset, length)?;
+    async fn load_bytes(&self, offset: usize, length: usize) -> Result<Vec<i8>> {
+        let values = self.load(offset, length).await?;
 
         Ok(values.into_iter().map(|x| x.into()).collect::<Vec<_>>())
     }

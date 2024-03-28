@@ -7,9 +7,9 @@ use core::{
     mem::{forget, size_of_val},
 };
 
+use async_lock::RwLock;
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
-use spin::RwLock;
 
 use java_constants::MethodAccessFlags;
 
@@ -37,7 +37,7 @@ pub struct Class {
 impl Class {
     #[allow(clippy::await_holding_refcell_ref)]
     pub async fn java_class(&mut self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
-        let java_class = self.java_class.read();
+        let java_class = self.java_class.read().await;
         if let Some(x) = &*java_class {
             Ok(x.clone())
         } else {
@@ -48,7 +48,7 @@ impl Class {
             let class_loader = jvm.get_system_class_loader().await?;
             let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), Some(class_loader)).await?;
 
-            self.java_class.write().replace(java_class.clone());
+            self.java_class.write().await.replace(java_class.clone());
 
             Ok(java_class)
         }
@@ -99,12 +99,12 @@ impl Jvm {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
         let class_name = format!("[{}", element_type_name);
-        let class = if self.system_class_loader.read().is_none() || element_type_name.len() == 1 {
-            if self.has_class(&class_name) {
+        let class = if self.system_class_loader.read().await.is_none() || element_type_name.len() == 1 {
+            if self.has_class(&class_name).await {
                 self.resolve_class(&class_name).await?.definition
             } else {
                 // bootstrapping or primitive type
-                let definition = self.detail.read().define_array_class(self, element_type_name).await?;
+                let definition = self.detail.read().await.define_array_class(self, element_type_name).await?;
                 self.register_class_internal(definition.clone(), None).await?;
 
                 definition
@@ -128,7 +128,7 @@ impl Jvm {
 
         let field = class.definition.field(name, descriptor, true);
         if let Some(field) = field {
-            Ok(class.definition.get_static_field(&*field)?.into())
+            Ok(class.definition.get_static_field(&*field).await?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -147,7 +147,7 @@ impl Jvm {
         let field = class.definition.field(name, descriptor, true);
 
         if let Some(field) = field {
-            class.definition.put_static_field(&*field, value.into())
+            class.definition.put_static_field(&*field, value.into()).await
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -161,10 +161,10 @@ impl Jvm {
     {
         tracing::trace!("Get field {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor).await?;
 
         if let Some(field) = field {
-            Ok(instance.get_field(&*field)?.into())
+            Ok(instance.get_field(&*field).await?.into())
         } else {
             Err(self
                 .exception(
@@ -181,10 +181,10 @@ impl Jvm {
     {
         tracing::trace!("Put field {}.{}:{} = {:?}", instance.class_definition().name(), name, descriptor, value);
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor).await?;
 
         if let Some(field) = field {
-            instance.put_field(&*field, value.into())
+            instance.put_field(&*field, value.into()).await
         } else {
             Err(self
                 .exception(
@@ -289,7 +289,7 @@ impl Jvm {
 
         if let Some(array) = array {
             let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
-            array.store(offset, values.into_boxed_slice())?;
+            array.store(offset, values.into_boxed_slice()).await?;
 
             Ok(())
         } else {
@@ -306,7 +306,7 @@ impl Jvm {
         let array = array.as_array_instance();
 
         if let Some(array) = array {
-            let values = array.load(offset, count)?;
+            let values = array.load(offset, count).await?;
 
             Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
         } else {
@@ -320,7 +320,7 @@ impl Jvm {
         let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
-            array.store_bytes(offset, values.into_boxed_slice())
+            array.store_bytes(offset, values.into_boxed_slice()).await
         } else {
             Err(self.exception("java/lang/IllegalArgumentException", "Not an array").await)
         }
@@ -332,7 +332,7 @@ impl Jvm {
         let array = array.as_array_instance();
 
         if let Some(array) = array {
-            let values = array.load_bytes(offset, count)?;
+            let values = array.load_bytes(offset, count).await?;
 
             Ok(values)
         } else {
@@ -377,13 +377,13 @@ impl Jvm {
         Ok(())
     }
 
-    pub fn has_class(&self, class_name: &str) -> bool {
-        self.classes.read().contains_key(class_name)
+    pub async fn has_class(&self, class_name: &str) -> bool {
+        self.classes.read().await.contains_key(class_name)
     }
 
     #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
-        let class = self.classes.read().get(class_name).cloned();
+        let class = self.classes.read().await.get(class_name).cloned();
 
         if let Some(x) = class {
             return Ok(x);
@@ -400,7 +400,7 @@ impl Jvm {
 
             self.register_class_internal(class.clone(), java_class).await?;
 
-            let class = self.classes.read().get(class_name).unwrap().clone();
+            let class = self.classes.read().await.get(class_name).unwrap().clone();
 
             return Ok(class);
         }
@@ -461,7 +461,7 @@ impl Jvm {
             }
         }
 
-        self.classes.write().insert(
+        self.classes.write().await.insert(
             class_definition.name().to_owned(),
             Class {
                 definition: class_definition.clone(),
@@ -481,7 +481,7 @@ impl Jvm {
     }
 
     pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.read().define_class(self, name, data).await?;
+        let class = self.detail.read().await.define_class(self, name, data).await?;
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
@@ -489,25 +489,25 @@ impl Jvm {
     }
 
     pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.read().define_array_class(self, element_type_name).await?;
+        let class = self.detail.read().await.define_array_class(self, element_type_name).await?;
 
         self.register_class(class.clone(), Some(class_loader)).await?;
 
         self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
-    pub fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
-        self.system_class_loader.write().replace(class_loader); // TODO we need Thread.setContextClassLoader
+    pub async fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
+        self.system_class_loader.write().await.replace(class_loader); // TODO we need Thread.setContextClassLoader
     }
 
     pub async fn get_system_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
-        if self.system_class_loader.read().is_none() {
+        if self.system_class_loader.read().await.is_none() {
             let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
 
-            self.system_class_loader.write().replace(system_class_loader);
+            self.system_class_loader.write().await.replace(system_class_loader);
         }
 
-        Ok(self.system_class_loader.read().as_ref().unwrap().clone())
+        Ok(self.system_class_loader.read().await.as_ref().unwrap().clone())
     }
 
     pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
@@ -553,14 +553,15 @@ impl Jvm {
         Ok(())
     }
 
-    fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
+    #[async_recursion::async_recursion]
+    async fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
         let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.read().get(&x).unwrap().definition.clone();
-            self.find_field(&*super_class, name, descriptor)
+            let super_class = self.classes.read().await.get(&x).unwrap().definition.clone();
+            self.find_field(&*super_class, name, descriptor).await
         } else {
             Ok(None)
         }
@@ -575,7 +576,7 @@ impl Jvm {
                 return Ok(x);
             }
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.read().get(&x).unwrap().definition.clone();
+            let super_class = self.classes.read().await.get(&x).unwrap().definition.clone();
             return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
         }
 

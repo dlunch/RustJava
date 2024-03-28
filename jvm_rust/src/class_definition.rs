@@ -10,7 +10,7 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use spin::RwLock;
+use async_lock::RwLock;
 
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
@@ -76,6 +76,7 @@ impl ClassDefinitionImpl {
     }
 }
 
+#[async_trait::async_trait]
 impl ClassDefinition for ClassDefinitionImpl {
     fn name(&self) -> String {
         self.inner.name.clone()
@@ -107,10 +108,10 @@ impl ClassDefinition for ClassDefinitionImpl {
             .map(|x| Box::new(x.clone()) as Box<dyn Field>)
     }
 
-    fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
+    async fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.read();
+        let storage = self.inner.storage.read().await;
         let value = storage.get(field);
 
         if let Some(x) = value {
@@ -120,10 +121,10 @@ impl ClassDefinition for ClassDefinitionImpl {
         }
     }
 
-    fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
+    async fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.write().insert(field.clone(), value);
+        self.inner.storage.write().await.insert(field.clone(), value);
 
         Ok(())
     }

@@ -8,7 +8,7 @@ license.workspace = true
 async-recursion = { workspace = true }
 async-trait = { workspace = true }
 dyn-clone = { workspace = true }
-spin = { workspace = true }
+async-lock = { workspace = true }
 tracing = { workspace = true }
 
 classfile = { workspace = true }

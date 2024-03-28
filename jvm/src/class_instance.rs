@@ -9,13 +9,14 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use crate::{as_any::AsAny, value::JavaValue, ArrayClassInstance, ClassDefinition, Field, Result};
 
+#[async_trait::async_trait]
 pub trait ClassInstance: Sync + Send + AsAny + Debug + DynClone + 'static {
     fn destroy(self: Box<Self>);
     fn hash_code(&self) -> i32;
     fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool>;
-    fn get_field(&self, field: &dyn Field) -> Result<JavaValue>;
-    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()>;
+    async fn get_field(&self, field: &dyn Field) -> Result<JavaValue>;
+    async fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()>;
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
         None
     }

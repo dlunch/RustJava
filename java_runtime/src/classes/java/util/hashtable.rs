@@ -1,8 +1,8 @@
 use alloc::{sync::Arc, vec, vec::Vec};
 use core::mem;
 
+use async_lock::RwLock;
 use hashbrown::HashMap;
-use spin::RwLock;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
@@ -54,7 +54,7 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let rust_hash_map = rust_hash_map.read();
+        let rust_hash_map = rust_hash_map.read().await;
         let vec = rust_hash_map.get(&key_hash);
 
         if vec.is_some() {
@@ -76,7 +76,7 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let rust_hash_map = rust_hash_map.read();
+        let rust_hash_map = rust_hash_map.read().await;
         let vec = rust_hash_map.get(&key_hash);
 
         if vec.is_some() {
@@ -104,7 +104,7 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let mut rust_hash_map = rust_hash_map.write();
+        let mut rust_hash_map = rust_hash_map.write().await;
         let vec = rust_hash_map.get_mut(&key_hash);
 
         if vec.is_some() {
@@ -135,7 +135,7 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let mut rust_hash_map = rust_hash_map.write();
+        let mut rust_hash_map = rust_hash_map.write().await;
         let vec = rust_hash_map.entry(key_hash).or_insert_with(Vec::new);
 
         for (i, (bucket_key, _)) in vec.iter().enumerate() {
