@@ -5,7 +5,10 @@ pub mod classes;
 mod init;
 mod runtime;
 
-pub use self::{init::initialize, runtime::Runtime};
+pub use self::{
+    init::initialize,
+    runtime::{File, FileSize, IOError, InputStream, OutputStream, Runtime},
+};
 
 pub(crate) type RuntimeContext = dyn runtime::Runtime;
 pub(crate) type RuntimeClassProto = java_class_proto::JavaClassProto<dyn runtime::Runtime>;

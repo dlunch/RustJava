@@ -1,9 +1,13 @@
+mod io;
+
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::time::Duration;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::JvmCallback;
+
+pub use io::{File, FileSize, IOError, InputStream, OutputStream};
 
 #[async_trait::async_trait]
 pub trait Runtime: Sync + Send + DynClone {
@@ -17,6 +21,12 @@ pub trait Runtime: Sync + Send + DynClone {
     fn decode_str(&self, bytes: &[u8]) -> String;
 
     fn println(&mut self, s: &str); // TODO Properly implement PrintStream handler
+
+    fn stdin(&self) -> Result<Box<dyn InputStream>, IOError>;
+    fn stdout(&self) -> Result<Box<dyn OutputStream>, IOError>;
+    fn stderr(&self) -> Result<Box<dyn OutputStream>, IOError>;
+
+    async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
 }
 
 clone_trait_object!(Runtime);
@@ -29,7 +39,7 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::runtime::Runtime;
+    use crate::runtime::{File, IOError, InputStream, OutputStream, Runtime};
 
     #[derive(Clone)]
     pub struct DummyRuntime;
@@ -61,6 +71,22 @@ pub mod test {
         }
 
         fn println(&mut self, _s: &str) {
+            todo!()
+        }
+
+        fn stdin(&self) -> Result<Box<dyn InputStream>, IOError> {
+            todo!()
+        }
+
+        fn stdout(&self) -> Result<Box<dyn OutputStream>, IOError> {
+            todo!()
+        }
+
+        fn stderr(&self) -> Result<Box<dyn OutputStream>, IOError> {
+            todo!()
+        }
+
+        async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {
             todo!()
         }
     }
