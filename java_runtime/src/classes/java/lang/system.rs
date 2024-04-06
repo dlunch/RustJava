@@ -39,7 +39,7 @@ impl System {
     async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
-        let out = jvm.new_class("java/io/PrintStream", "()V", []).await?;
+        let out = jvm.new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (None,)).await?;
         // TODO call constructor with dummy output stream?
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out).await?;

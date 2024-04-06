@@ -3,7 +3,10 @@ use alloc::{string::ToString, vec};
 use java_class_proto::JavaMethodProto;
 use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::{io::OutputStream, lang::String},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.io.PrintStream
 pub struct PrintStream {}
@@ -11,10 +14,10 @@ pub struct PrintStream {}
 impl PrintStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            parent_class: Some("java/io/OutputStream"),
+            parent_class: Some("java/io/FilterOutputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, Default::default()),
                 JavaMethodProto::new("println", "(I)V", Self::println_int, Default::default()),
                 JavaMethodProto::new("println", "(J)V", Self::println_long, Default::default()),
@@ -27,8 +30,8 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.io.PrintStream::<init>({:?})", &this);
+    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
+        tracing::warn!("stub java.io.PrintStream::<init>({:?}, {:?})", &this, &out);
 
         Ok(())
     }
