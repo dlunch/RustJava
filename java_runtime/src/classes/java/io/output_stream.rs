@@ -19,7 +19,7 @@ impl OutputStream {
     }
 
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.lang.OutputStream::<init>({:?})", &this);
+        tracing::warn!("stub java.io.OutputStream::<init>({:?})", &this);
 
         Ok(())
     }

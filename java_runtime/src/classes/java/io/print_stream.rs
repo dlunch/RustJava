@@ -28,13 +28,13 @@ impl PrintStream {
     }
 
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::<init>({:?})", &this);
+        tracing::warn!("stub java.io.PrintStream::<init>({:?})", &this);
 
         Ok(())
     }
 
     async fn println_string(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &str);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &str);
 
         if str.is_null() {
             context.println("null");
@@ -47,7 +47,7 @@ impl PrintStream {
     }
 
     async fn println_int(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, int: i32) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &int);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &int);
 
         context.println(&int.to_string());
 
@@ -55,7 +55,7 @@ impl PrintStream {
     }
 
     async fn println_long(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, long: i64) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &long);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &long);
 
         context.println(&long.to_string());
 
@@ -63,7 +63,7 @@ impl PrintStream {
     }
 
     async fn println_char(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, char: JavaChar) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &char);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &char);
 
         let char = char::from_u32(char as _).unwrap();
 
@@ -73,7 +73,7 @@ impl PrintStream {
     }
 
     async fn println_byte(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i8) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &byte);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &byte);
 
         context.println(&byte.to_string());
 
@@ -81,7 +81,7 @@ impl PrintStream {
     }
 
     async fn println_short(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, short: i16) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &short);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &short);
 
         context.println(&short.to_string());
 
@@ -89,7 +89,7 @@ impl PrintStream {
     }
 
     async fn println_bool(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, bool: bool) -> Result<()> {
-        tracing::warn!("stub java.lang.PrintStream::println({:?}, {:?})", &this, &bool);
+        tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &bool);
 
         context.println(&bool.to_string());
 
