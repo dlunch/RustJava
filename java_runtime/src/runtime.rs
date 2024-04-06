@@ -7,7 +7,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::JvmCallback;
 
-pub use io::{File, FileSize, IOError};
+pub use io::{File, FileSize, FileStat, IOError};
 
 #[async_trait::async_trait]
 pub trait Runtime: Sync + Send + DynClone {
@@ -39,7 +39,24 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::runtime::{File, IOError, Runtime};
+    use crate::runtime::{File, FileSize, FileStat, IOError, Runtime};
+
+    struct DummyFile;
+
+    #[async_trait::async_trait]
+    impl File for DummyFile {
+        async fn read(&self, _offset: FileSize, _buf: &mut [u8]) -> Result<usize, IOError> {
+            todo!()
+        }
+
+        async fn write(&self, _offset: FileSize, _buf: &[u8]) -> Result<usize, IOError> {
+            todo!()
+        }
+
+        async fn stat(&self) -> Result<FileStat, IOError> {
+            todo!()
+        }
+    }
 
     #[derive(Clone)]
     pub struct DummyRuntime;
@@ -75,15 +92,15 @@ pub mod test {
         }
 
         fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-            todo!()
+            Ok(Box::new(DummyFile))
         }
 
         fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-            todo!()
+            Ok(Box::new(DummyFile))
         }
 
         fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-            todo!()
+            Ok(Box::new(DummyFile))
         }
 
         async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {

@@ -7,7 +7,7 @@ mod runtime;
 
 pub use self::{
     init::initialize,
-    runtime::{File, FileSize, IOError, Runtime},
+    runtime::{File, FileSize, FileStat, IOError, Runtime},
 };
 
 pub(crate) type RuntimeContext = dyn runtime::Runtime;

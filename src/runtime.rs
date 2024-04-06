@@ -2,8 +2,26 @@ use alloc::sync::Arc;
 use core::time::Duration;
 use std::{io::Write, sync::RwLock};
 
-use java_runtime::{File, IOError, Runtime};
+use java_runtime::{File, FileSize, FileStat, IOError, Runtime};
 use jvm::JvmCallback;
+
+// TODO
+struct DummyFile;
+
+#[async_trait::async_trait]
+impl File for DummyFile {
+    async fn read(&self, _offset: FileSize, _buf: &mut [u8]) -> Result<usize, IOError> {
+        todo!()
+    }
+
+    async fn write(&self, _offset: FileSize, _buf: &[u8]) -> Result<usize, IOError> {
+        todo!()
+    }
+
+    async fn stat(&self) -> Result<FileStat, IOError> {
+        todo!()
+    }
+}
 
 pub struct RuntimeImpl<T>
 where
@@ -58,15 +76,15 @@ where
     }
 
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-        todo!()
+        Ok(Box::new(DummyFile))
     }
 
     fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-        todo!()
+        Ok(Box::new(DummyFile))
     }
 
     fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-        todo!()
+        Ok(Box::new(DummyFile))
     }
 
     async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {
