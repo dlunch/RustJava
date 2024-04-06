@@ -25,6 +25,7 @@ where
         ("java/io/EOFException", crate::classes::java::io::EOFException::as_proto()),
         ("java/io/FilterOutputStream", crate::classes::java::io::FilterOutputStream::as_proto()),
         ("java/io/PrintStream", crate::classes::java::io::PrintStream::as_proto()),
+        ("java/io/FileDescriptor", crate::classes::java::io::FileDescriptor::as_proto()),
         ("java/io/File", crate::classes::java::io::File::as_proto()),
         ("java/io/FileInputStream", crate::classes::java::io::FileInputStream::as_proto()),
         ("java/io/FileOutputStream", crate::classes::java::io::FileOutputStream::as_proto()),

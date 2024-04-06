@@ -2,6 +2,7 @@ mod byte_array_input_stream;
 mod data_input_stream;
 mod eof_exception;
 mod file;
+mod file_descriptor;
 mod file_input_stream;
 mod file_output_stream;
 mod filter_output_stream;
@@ -12,6 +13,7 @@ mod print_stream;
 
 pub use self::{
     byte_array_input_stream::ByteArrayInputStream, data_input_stream::DataInputStream, eof_exception::EOFException, file::File,
-    file_input_stream::FileInputStream, file_output_stream::FileOutputStream, filter_output_stream::FilterOutputStream, input_stream::InputStream,
-    io_exception::IOException, output_stream::OutputStream, print_stream::PrintStream,
+    file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_output_stream::FileOutputStream,
+    filter_output_stream::FilterOutputStream, input_stream::InputStream, io_exception::IOException, output_stream::OutputStream,
+    print_stream::PrintStream,
 };
