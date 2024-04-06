@@ -7,7 +7,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::JvmCallback;
 
-pub use io::{File, FileSize, IOError, InputStream, OutputStream};
+pub use io::{File, FileSize, IOError};
 
 #[async_trait::async_trait]
 pub trait Runtime: Sync + Send + DynClone {
@@ -22,9 +22,9 @@ pub trait Runtime: Sync + Send + DynClone {
 
     fn println(&mut self, s: &str); // TODO Properly implement PrintStream handler
 
-    fn stdin(&self) -> Result<Box<dyn InputStream>, IOError>;
-    fn stdout(&self) -> Result<Box<dyn OutputStream>, IOError>;
-    fn stderr(&self) -> Result<Box<dyn OutputStream>, IOError>;
+    fn stdin(&self) -> Result<Box<dyn File>, IOError>;
+    fn stdout(&self) -> Result<Box<dyn File>, IOError>;
+    fn stderr(&self) -> Result<Box<dyn File>, IOError>;
 
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
 }
@@ -39,7 +39,7 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::runtime::{File, IOError, InputStream, OutputStream, Runtime};
+    use crate::runtime::{File, IOError, Runtime};
 
     #[derive(Clone)]
     pub struct DummyRuntime;
@@ -74,15 +74,15 @@ pub mod test {
             todo!()
         }
 
-        fn stdin(&self) -> Result<Box<dyn InputStream>, IOError> {
+        fn stdin(&self) -> Result<Box<dyn File>, IOError> {
             todo!()
         }
 
-        fn stdout(&self) -> Result<Box<dyn OutputStream>, IOError> {
+        fn stdout(&self) -> Result<Box<dyn File>, IOError> {
             todo!()
         }
 
-        fn stderr(&self) -> Result<Box<dyn OutputStream>, IOError> {
+        fn stderr(&self) -> Result<Box<dyn File>, IOError> {
             todo!()
         }
 

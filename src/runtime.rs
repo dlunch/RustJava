@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use core::time::Duration;
 use std::{io::Write, sync::RwLock};
 
-use java_runtime::{File, IOError, InputStream, OutputStream, Runtime};
+use java_runtime::{File, IOError, Runtime};
 use jvm::JvmCallback;
 
 pub struct RuntimeImpl<T>
@@ -57,15 +57,15 @@ where
         writeln!(self.stdout.write().unwrap(), "{}", s).unwrap();
     }
 
-    fn stdin(&self) -> Result<Box<dyn InputStream>, IOError> {
+    fn stdin(&self) -> Result<Box<dyn File>, IOError> {
         todo!()
     }
 
-    fn stdout(&self) -> Result<Box<dyn OutputStream>, IOError> {
+    fn stdout(&self) -> Result<Box<dyn File>, IOError> {
         todo!()
     }
 
-    fn stderr(&self) -> Result<Box<dyn OutputStream>, IOError> {
+    fn stderr(&self) -> Result<Box<dyn File>, IOError> {
         todo!()
     }
 
