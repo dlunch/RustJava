@@ -11,7 +11,7 @@ pub struct FileStat {
 
 #[async_trait::async_trait]
 pub trait File: Send {
-    async fn read(&self, offset: FileSize, buf: &mut [u8]) -> Result<usize, IOError>;
-    async fn write(&self, offset: FileSize, buf: &[u8]) -> Result<usize, IOError>;
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError>;
+    async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError>;
     async fn stat(&self) -> Result<FileStat, IOError>;
 }

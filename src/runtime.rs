@@ -1,27 +1,16 @@
+mod io;
+
 use alloc::sync::Arc;
 use core::time::Duration;
-use std::{io::Write, sync::RwLock};
+use std::{
+    io::{stderr, stdin, stdout, Write},
+    sync::RwLock,
+};
 
-use java_runtime::{File, FileSize, FileStat, IOError, Runtime};
+use java_runtime::{File, IOError, Runtime};
 use jvm::JvmCallback;
 
-// TODO
-struct DummyFile;
-
-#[async_trait::async_trait]
-impl File for DummyFile {
-    async fn read(&self, _offset: FileSize, _buf: &mut [u8]) -> Result<usize, IOError> {
-        todo!()
-    }
-
-    async fn write(&self, _offset: FileSize, _buf: &[u8]) -> Result<usize, IOError> {
-        todo!()
-    }
-
-    async fn stat(&self) -> Result<FileStat, IOError> {
-        todo!()
-    }
-}
+use self::io::FileImpl;
 
 pub struct RuntimeImpl<T>
 where
@@ -76,19 +65,19 @@ where
     }
 
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(DummyFile))
+        Ok(Box::new(FileImpl::from_read(stdin())))
     }
 
     fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(DummyFile))
+        Ok(Box::new(FileImpl::from_write(stdout())))
     }
 
     fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(DummyFile))
+        Ok(Box::new(FileImpl::from_write(stderr())))
     }
 
-    async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {
-        todo!()
+    async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
+        Ok(Box::new(FileImpl::from_path(path).unwrap()))
     }
 }
 

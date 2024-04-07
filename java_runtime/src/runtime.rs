@@ -39,17 +39,17 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::runtime::{File, FileSize, FileStat, IOError, Runtime};
+    use crate::runtime::{File, FileStat, IOError, Runtime};
 
     struct DummyFile;
 
     #[async_trait::async_trait]
     impl File for DummyFile {
-        async fn read(&self, _offset: FileSize, _buf: &mut [u8]) -> Result<usize, IOError> {
+        async fn read(&mut self, _buf: &mut [u8]) -> Result<usize, IOError> {
             todo!()
         }
 
-        async fn write(&self, _offset: FileSize, _buf: &[u8]) -> Result<usize, IOError> {
+        async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
             todo!()
         }
 
