@@ -1,6 +1,7 @@
 use alloc::vec;
 
-use java_class_proto::JavaMethodProto;
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::FieldAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::io::OutputStream, RuntimeClassProto, RuntimeContext};
@@ -19,12 +20,16 @@ impl FilterOutputStream {
                 Self::init,
                 Default::default(),
             )],
-            fields: vec![],
+            fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PROTECTED)],
         }
     }
 
-    async fn init(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::<init>({:?}, {:?})", &this, &out);
+
+        jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
+
+        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", out).await?;
 
         Ok(())
     }

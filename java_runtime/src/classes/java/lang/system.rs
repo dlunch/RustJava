@@ -6,7 +6,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::io::FileDescriptor, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.System
 pub struct System {}
@@ -39,8 +39,14 @@ impl System {
     async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
-        let out = jvm.new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (None,)).await?;
-        // TODO call constructor with dummy output stream?
+        let out_descriptor: ClassInstanceRef<FileDescriptor> =
+            jvm.get_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;").await?;
+        let file_output_stream = jvm
+            .new_class("java/io/FileOutputStream", "(Ljava/io/FileDescriptor;)V", (out_descriptor,))
+            .await?;
+        let out = jvm
+            .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (file_output_stream,))
+            .await?;
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out).await?;
 

@@ -30,8 +30,11 @@ impl PrintStream {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
-        tracing::warn!("stub java.io.PrintStream::<init>({:?}, {:?})", &this, &out);
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
+        tracing::debug!("java.io.PrintStream::<init>({:?}, {:?})", &this, &out);
+
+        jvm.invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
+            .await?;
 
         Ok(())
     }
