@@ -1,10 +1,10 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::FieldAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::{File, RuntimeClassProto, RuntimeContext};
 
 // class java.io.FileDescriptor
 pub struct FileDescriptor {}
@@ -53,5 +53,9 @@ impl FileDescriptor {
         tracing::debug!("java.io.FileDescriptor::<init>({:?})", &this);
 
         Ok(())
+    }
+
+    pub async fn file(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<Box<dyn File>> {
+        jvm.get_rust_object_field(&this, "raw").await
     }
 }

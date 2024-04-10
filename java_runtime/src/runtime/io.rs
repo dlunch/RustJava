@@ -1,5 +1,7 @@
 use alloc::boxed::Box;
 
+use dyn_clone::{clone_trait_object, DynClone};
+
 #[derive(Debug)]
 pub enum IOError {}
 pub type FileSize = u64;
@@ -10,8 +12,10 @@ pub struct FileStat {
 }
 
 #[async_trait::async_trait]
-pub trait File: Send {
+pub trait File: Send + DynClone {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError>;
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError>;
     async fn stat(&self) -> Result<FileStat, IOError>;
 }
+
+clone_trait_object!(File);

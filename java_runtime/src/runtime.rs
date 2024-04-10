@@ -41,6 +41,7 @@ pub mod test {
 
     use crate::runtime::{File, FileStat, IOError, Runtime};
 
+    #[derive(Clone)]
     struct DummyFile;
 
     #[async_trait::async_trait]

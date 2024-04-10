@@ -1,6 +1,8 @@
+use alloc::sync::Arc;
 use std::{
     fs,
     io::{self, Read, Write},
+    sync::Mutex,
 };
 
 use java_runtime::{File, FileStat, IOError};
@@ -23,14 +25,13 @@ impl Write for DummyWrite {
     }
 }
 
-// TODO
 pub struct FileImpl<R, W>
 where
     R: Read + Sync + Send,
     W: Write + Sync + Send,
 {
-    read: R,
-    write: W,
+    read: Arc<Mutex<R>>,
+    write: Arc<Mutex<W>>,
 }
 
 impl FileImpl<fs::File, fs::File> {
@@ -38,8 +39,8 @@ impl FileImpl<fs::File, fs::File> {
         let file = fs::File::open(path).unwrap();
 
         Ok(Self {
-            read: file.try_clone().unwrap(),
-            write: file,
+            read: Arc::new(Mutex::new(file.try_clone().unwrap())),
+            write: Arc::new(Mutex::new(file)),
         })
     }
 }
@@ -49,7 +50,10 @@ where
     R: Read + Sync + Send,
 {
     pub fn from_read(read: R) -> Self {
-        Self { read, write: DummyWrite }
+        Self {
+            read: Arc::new(Mutex::new(read)),
+            write: Arc::new(Mutex::new(DummyWrite)),
+        }
     }
 }
 
@@ -58,7 +62,10 @@ where
     W: Write + Sync + Send,
 {
     pub fn from_write(write: W) -> Self {
-        Self { read: DummyRead, write }
+        Self {
+            read: Arc::new(Mutex::new(DummyRead)),
+            write: Arc::new(Mutex::new(write)),
+        }
     }
 }
 
@@ -69,14 +76,27 @@ where
     W: Write + Sync + Send,
 {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
-        Ok(self.read.read(buf).unwrap())
+        Ok(self.read.lock().unwrap().read(buf).unwrap())
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError> {
-        Ok(self.write.write(buf).unwrap())
+        Ok(self.write.lock().unwrap().write(buf).unwrap())
     }
 
     async fn stat(&self) -> Result<FileStat, IOError> {
         todo!()
+    }
+}
+
+impl<R, W> Clone for FileImpl<R, W>
+where
+    R: Read + Sync + Send,
+    W: Write + Sync + Send,
+{
+    fn clone(&self) -> Self {
+        Self {
+            read: self.read.clone(),
+            write: self.write.clone(),
+        }
     }
 }
