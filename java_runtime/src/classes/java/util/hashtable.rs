@@ -19,7 +19,7 @@ pub struct Hashtable {}
 impl Hashtable {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            parent_class: Some("java/lang/Object"),
+            parent_class: Some("java/util/Dictionary"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
@@ -39,6 +39,8 @@ impl Hashtable {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::<init>({:?})", &this);
+
+        jvm.invoke_special(&this, "java/util/Dictionary", "<init>", "()V", ()).await?;
 
         let rust_hash_map: RustHashMap = Arc::new(RwLock::new(HashMap::new()));
         jvm.put_rust_object_field(&mut this, "raw", rust_hash_map).await?;

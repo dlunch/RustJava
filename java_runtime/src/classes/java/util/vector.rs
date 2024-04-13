@@ -18,7 +18,7 @@ pub struct Vector {}
 impl Vector {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            parent_class: Some("java/lang/Object"),
+            parent_class: Some("java/util/AbstractList"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
@@ -59,7 +59,7 @@ impl Vector {
     ) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?}, {:?})", &this, capacity, capacity_increment);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
         let rust_vector: RustVector = Arc::new(RwLock::new(Vec::with_capacity(capacity as _)));
 
