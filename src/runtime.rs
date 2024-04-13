@@ -3,8 +3,8 @@ mod io;
 use alloc::sync::Arc;
 use core::time::Duration;
 use std::{
-    io::{stderr, stdin, stdout, Write},
-    sync::RwLock,
+    io::{stderr, stdin, Write},
+    sync::Mutex,
 };
 
 use java_runtime::{File, IOError, Runtime};
@@ -12,20 +12,51 @@ use jvm::JvmCallback;
 
 use self::io::FileImpl;
 
+struct WriteWrapper<T>
+where
+    T: Sync + Send + Write + 'static,
+{
+    write: Arc<Mutex<T>>,
+}
+
+impl<T> Write for WriteWrapper<T>
+where
+    T: Sync + Send + Write + 'static,
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.write.lock().unwrap().write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.write.lock().unwrap().flush()
+    }
+}
+
+impl<T> Clone for WriteWrapper<T>
+where
+    T: Sync + Send + Write + 'static,
+{
+    fn clone(&self) -> Self {
+        Self { write: self.write.clone() }
+    }
+}
+
 pub struct RuntimeImpl<T>
 where
-    T: Sync + Send + Write,
+    T: Sync + Send + Write + 'static,
 {
-    stdout: Arc<RwLock<T>>,
+    stdout: WriteWrapper<T>,
 }
 
 impl<T> RuntimeImpl<T>
 where
-    T: Sync + Send + Write,
+    T: Sync + Send + Write + 'static,
 {
     pub fn new(stdout: T) -> Self {
         Self {
-            stdout: Arc::new(RwLock::new(stdout)),
+            stdout: WriteWrapper {
+                write: Arc::new(Mutex::new(stdout)),
+            },
         }
     }
 }
@@ -33,7 +64,7 @@ where
 #[async_trait::async_trait]
 impl<T> Runtime for RuntimeImpl<T>
 where
-    T: Sync + Send + Write,
+    T: Sync + Send + Write + 'static,
 {
     async fn sleep(&self, _duration: Duration) {
         todo!()
@@ -60,16 +91,12 @@ where
         String::from_utf8(bytes[..end].to_vec()).unwrap()
     }
 
-    fn println(&mut self, s: &str) {
-        writeln!(self.stdout.write().unwrap(), "{}", s).unwrap();
-    }
-
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
         Ok(Box::new(FileImpl::from_read(stdin())))
     }
 
     fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(FileImpl::from_write(stdout())))
+        Ok(Box::new(FileImpl::from_write(self.stdout.clone())))
     }
 
     fn stderr(&self) -> Result<Box<dyn File>, IOError> {
@@ -83,7 +110,7 @@ where
 
 impl<T> Clone for RuntimeImpl<T>
 where
-    T: Sync + Send + Write,
+    T: Sync + Send + Write + 'static,
 {
     fn clone(&self) -> Self {
         Self { stdout: self.stdout.clone() }

@@ -1,31 +1,30 @@
 #![allow(dead_code)]
 
-use core::cell::RefCell;
-use std::{io, str};
+use std::{
+    io, str,
+    sync::{Arc, Mutex},
+};
 
 use jvm::Result;
 use rust_java::{create_jvm, load_class_file, load_jar_file, run_java_main};
 
-thread_local! {
-    static OUTPUT: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+struct Output {
+    output: Arc<Mutex<Vec<u8>>>,
 }
-
-struct Output;
 
 impl io::Write for Output {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        OUTPUT.with_borrow_mut(|x| x.write(buf))
+        self.output.lock().unwrap().write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        io::stdout().flush()
+        Ok(())
     }
 }
 
 pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &[String]) -> Result<String> {
-    OUTPUT.with_borrow_mut(|x| x.clear());
-
-    let jvm = create_jvm(Output).await?;
+    let output = Arc::new(Mutex::new(Vec::new()));
+    let jvm = create_jvm(Output { output: output.clone() }).await?;
 
     for (name, data) in classes {
         let file_name = name.replace('.', "/") + ".class";
@@ -34,21 +33,20 @@ pub async fn run_class(main_class_name: &str, classes: &[(&str, &[u8])], args: &
 
     run_java_main(&jvm, main_class_name, args).await?;
 
-    let result = OUTPUT.with_borrow(|output| str::from_utf8(output).unwrap().to_string());
+    let result = str::from_utf8(&output.lock().unwrap()).unwrap().to_string();
 
     Ok(result)
 }
 
 pub async fn run_jar(jar: &[u8], args: &[String]) -> Result<String> {
-    OUTPUT.with_borrow_mut(|x| x.clear());
-
-    let jvm = create_jvm(Output).await?;
+    let output = Arc::new(Mutex::new(Vec::new()));
+    let jvm = create_jvm(Output { output: output.clone() }).await?;
 
     let main_class_name = load_jar_file(&jvm, jar).await?;
 
     run_java_main(&jvm, &main_class_name, args).await?;
 
-    let result = OUTPUT.with_borrow(|output| str::from_utf8(output).unwrap().to_string());
+    let result = str::from_utf8(&output.lock().unwrap()).unwrap().to_string();
 
     Ok(result)
 }

@@ -20,8 +20,6 @@ pub trait Runtime: Sync + Send + DynClone {
     fn encode_str(&self, s: &str) -> Vec<u8>; // TODO implement java charset conversion
     fn decode_str(&self, bytes: &[u8]) -> String;
 
-    fn println(&mut self, s: &str); // TODO Properly implement PrintStream handler
-
     fn stdin(&self) -> Result<Box<dyn File>, IOError>;
     fn stdout(&self) -> Result<Box<dyn File>, IOError>;
     fn stderr(&self) -> Result<Box<dyn File>, IOError>;
@@ -85,10 +83,6 @@ pub mod test {
         }
 
         fn decode_str(&self, _bytes: &[u8]) -> String {
-            todo!()
-        }
-
-        fn println(&mut self, _s: &str) {
             todo!()
         }
 

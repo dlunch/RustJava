@@ -1,4 +1,6 @@
-use alloc::{string::ToString, vec};
+use alloc::{format, string::ToString, vec};
+
+use bytemuck::cast_vec;
 
 use java_class_proto::JavaMethodProto;
 use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Jvm, Result};
@@ -39,65 +41,83 @@ impl PrintStream {
         Ok(())
     }
 
-    async fn println_string(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> Result<()> {
+    async fn println_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &str);
 
-        if str.is_null() {
-            context.println("null");
+        let result = if str.is_null() {
+            "null\n".into()
         } else {
-            let rust_str = JavaLangString::to_rust_string(jvm, &str).await?;
-            context.println(&rust_str);
-        }
+            format!("{}\n", JavaLangString::to_rust_string(jvm, &str).await?)
+        };
+
+        let bytes = result.into_bytes();
+
+        let mut string_bytes = jvm.instantiate_array("B", bytes.len()).await?;
+        jvm.store_byte_array(&mut string_bytes, 0, cast_vec(bytes)).await?;
+
+        jvm.invoke_virtual(&this, "write", "([B)V", (string_bytes,)).await?;
 
         Ok(())
     }
 
-    async fn println_int(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, int: i32) -> Result<()> {
+    async fn println_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, int: i32) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &int);
 
-        context.println(&int.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &int.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
 
-    async fn println_long(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, long: i64) -> Result<()> {
+    async fn println_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, long: i64) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &long);
 
-        context.println(&long.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &long.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
 
-    async fn println_char(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, char: JavaChar) -> Result<()> {
+    async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, char: JavaChar) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &char);
 
         let char = char::from_u32(char as _).unwrap();
 
-        context.println(&char.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &char.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
 
-    async fn println_byte(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i8) -> Result<()> {
+    async fn println_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i8) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &byte);
 
-        context.println(&byte.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &byte.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
 
-    async fn println_short(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, short: i16) -> Result<()> {
+    async fn println_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, short: i16) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &short);
 
-        context.println(&short.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &short.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
 
-    async fn println_bool(_: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, bool: bool) -> Result<()> {
+    async fn println_bool(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, bool: bool) -> Result<()> {
         tracing::warn!("stub java.io.PrintStream::println({:?}, {:?})", &this, &bool);
 
-        context.println(&bool.to_string());
+        let java_string = JavaLangString::from_rust_string(jvm, &bool.to_string()).await?;
+
+        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
