@@ -81,6 +81,7 @@ where
         ("java/util/Date", crate::classes::java::util::Date::as_proto()),
         ("java/util/GregorianCalendar", crate::classes::java::util::GregorianCalendar::as_proto()),
         ("java/util/Hashtable", crate::classes::java::util::Hashtable::as_proto()),
+        ("java/util/Properties", crate::classes::java::util::Properties::as_proto()),
         ("java/util/Random", crate::classes::java::util::Random::as_proto()),
         ("java/util/Timer", crate::classes::java::util::Timer::as_proto()),
         ("java/util/TimerTask", crate::classes::java::util::TimerTask::as_proto()),
