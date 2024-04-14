@@ -1,3 +1,6 @@
+pub mod jar;
+pub mod zip;
+
 mod abstract_collection;
 mod abstract_list;
 mod calendar;
