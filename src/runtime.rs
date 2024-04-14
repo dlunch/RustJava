@@ -82,15 +82,6 @@ where
         todo!()
     }
 
-    fn encode_str(&self, _s: &str) -> Vec<u8> {
-        todo!()
-    }
-
-    fn decode_str(&self, bytes: &[u8]) -> String {
-        let end = bytes.iter().position(|x| *x == 0).unwrap_or(bytes.len());
-        String::from_utf8(bytes[..end].to_vec()).unwrap()
-    }
-
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
         Ok(Box::new(FileImpl::from_read(stdin())))
     }

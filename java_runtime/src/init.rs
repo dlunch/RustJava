@@ -65,7 +65,6 @@ where
         ("java/lang/SecurityException", crate::classes::java::lang::SecurityException::as_proto()),
         ("java/lang/String", crate::classes::java::lang::String::as_proto()),
         ("java/lang/StringBuffer", crate::classes::java::lang::StringBuffer::as_proto()),
-        ("java/lang/System", crate::classes::java::lang::System::as_proto()),
         ("java/lang/Thread", crate::classes::java::lang::Thread::as_proto()),
         (
             "java/lang/UnsupportedOperationException",
@@ -86,6 +85,7 @@ where
         ("java/util/Timer", crate::classes::java::util::Timer::as_proto()),
         ("java/util/TimerTask", crate::classes::java::util::TimerTask::as_proto()),
         ("java/util/Vector", crate::classes::java::util::Vector::as_proto()),
+        ("java/lang/System", crate::classes::java::lang::System::as_proto()),
         (
             "rustjava/ByteArrayURLConnection",
             crate::classes::rustjava::ByteArrayURLConnection::as_proto(),

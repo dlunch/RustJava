@@ -1,6 +1,6 @@
 mod io;
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::boxed::Box;
 use core::time::Duration;
 
 use dyn_clone::{clone_trait_object, DynClone};
@@ -17,9 +17,6 @@ pub trait Runtime: Sync + Send + DynClone {
 
     fn now(&self) -> u64; // unix time in millis
 
-    fn encode_str(&self, s: &str) -> Vec<u8>; // TODO implement java charset conversion
-    fn decode_str(&self, bytes: &[u8]) -> String;
-
     fn stdin(&self) -> Result<Box<dyn File>, IOError>;
     fn stdout(&self) -> Result<Box<dyn File>, IOError>;
     fn stderr(&self) -> Result<Box<dyn File>, IOError>;
@@ -32,7 +29,7 @@ clone_trait_object!(Runtime);
 // for testing
 #[cfg(test)]
 pub mod test {
-    use alloc::{boxed::Box, string::String, vec::Vec};
+    use alloc::boxed::Box;
     use core::time::Duration;
 
     use jvm::JvmCallback;
@@ -75,14 +72,6 @@ pub mod test {
         }
 
         fn now(&self) -> u64 {
-            todo!()
-        }
-
-        fn encode_str(&self, _s: &str) -> Vec<u8> {
-            todo!()
-        }
-
-        fn decode_str(&self, _bytes: &[u8]) -> String {
             todo!()
         }
 

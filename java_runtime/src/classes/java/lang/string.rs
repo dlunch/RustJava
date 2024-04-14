@@ -1,4 +1,5 @@
 use alloc::{
+    str,
     string::{String as RustString, ToString},
     vec,
     vec::Vec,
@@ -94,7 +95,7 @@ impl String {
 
     async fn init_with_partial_byte_array(
         jvm: &Jvm,
-        context: &mut RuntimeContext,
+        _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Array<i8>>,
         offset: i32,
@@ -103,7 +104,14 @@ impl String {
         tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
 
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
-        let string = context.decode_str(cast_slice(&bytes));
+
+        let charset = Self::get_charset(jvm).await?;
+
+        let string = if charset == "UTF-8" {
+            str::from_utf8(cast_slice(&bytes)).unwrap()
+        } else {
+            unimplemented!("unsupported charset: {}", charset);
+        };
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -152,12 +160,19 @@ impl String {
         Ok(JavaLangString::from_rust_string(jvm, &concat).await?.into())
     }
 
-    async fn get_bytes(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
+    async fn get_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
         tracing::debug!("java.lang.String::getBytes({:?})", &this);
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let bytes = context.encode_str(&string);
+        let charset = Self::get_charset(jvm).await?;
+
+        let bytes = if charset == "UTF-8" {
+            string.as_bytes().to_vec()
+        } else {
+            unimplemented!("unsupported charset: {}", charset);
+        };
+
         let bytes: Vec<i8> = cast_vec(bytes);
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
@@ -247,6 +262,23 @@ impl String {
         let trimmed = string.trim().to_string();
 
         Ok(JavaLangString::from_rust_string(jvm, &trimmed).await?.into()) // TODO buffer sharing
+    }
+
+    async fn get_charset(jvm: &Jvm) -> Result<RustString> {
+        let charset: ClassInstanceRef<Self> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (JavaLangString::from_rust_string(jvm, "file.encoding").await?,),
+            )
+            .await?;
+
+        Ok(if !charset.is_null() {
+            JavaLangString::to_rust_string(jvm, &charset).await?
+        } else {
+            "UTF-8".into()
+        })
     }
 }
 
