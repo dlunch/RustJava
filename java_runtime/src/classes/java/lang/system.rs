@@ -6,7 +6,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::io::FileDescriptor, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::{io::FileDescriptor, lang::String},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.lang.System
 pub struct System {}
@@ -31,8 +34,23 @@ impl System {
                     Self::arraycopy,
                     MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
                 ),
+                JavaMethodProto::new(
+                    "getProperty",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    Self::get_property,
+                    MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "setProperty",
+                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+                    Self::set_property,
+                    MethodAccessFlags::STATIC,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC)],
+            fields: vec![
+                JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
+                JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::STATIC),
+            ],
         }
     }
 
@@ -49,6 +67,9 @@ impl System {
             .await?;
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out).await?;
+
+        let props = jvm.new_class("java/util/Properties", "()V", ()).await?;
+        jvm.put_static_field("java/lang/System", "props", "Ljava/util/Properties;", props).await?;
 
         Ok(())
     }
@@ -88,5 +109,37 @@ impl System {
         jvm.store_array(&mut dest, dest_pos as _, src).await?;
 
         Ok(())
+    }
+
+    async fn get_property(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.System::getProperty({:?})", key);
+
+        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        let value = jvm
+            .invoke_virtual(&props, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .await?;
+
+        Ok(value)
+    }
+
+    async fn set_property(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        key: ClassInstanceRef<String>,
+        value: ClassInstanceRef<String>,
+    ) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.System::setProperty({:?}, {:?})", key, value);
+
+        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        let value = jvm
+            .invoke_virtual(
+                &props,
+                "setProperty",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+                (key, value),
+            )
+            .await?;
+
+        Ok(value)
     }
 }
