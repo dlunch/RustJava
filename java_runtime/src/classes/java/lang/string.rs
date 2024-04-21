@@ -27,6 +27,7 @@ impl String {
                 JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
                 JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
@@ -129,6 +130,17 @@ impl String {
         } else {
             Ok(false)
         }
+    }
+
+    async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.lang.String::hashCode({:?})", &this);
+
+        let chars = jvm.get_field(&this, "value", "[C").await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, jvm.array_length(&chars).await? as _).await?;
+
+        let hash = chars.iter().fold(0i32, |acc, &c| acc.wrapping_mul(31).wrapping_add(c as i32));
+
+        Ok(hash)
     }
 
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<u16> {
@@ -319,6 +331,25 @@ mod test {
         let string = JavaLangString::to_rust_string(&jvm, &result).await?;
 
         assert_eq!(string, "test1test2");
+
+        Ok(())
+    }
+
+    #[futures_test::test]
+    async fn test_hash_code() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        let string = JavaLangString::from_rust_string(&jvm, "Hi").await?;
+        let hash_code: i32 = jvm.invoke_virtual(&string, "hashCode", "()I", ()).await?;
+        assert_eq!(hash_code, 2337);
+
+        let string1 = JavaLangString::from_rust_string(&jvm, "test").await?;
+        let hash_code1: i32 = jvm.invoke_virtual(&string1, "hashCode", "()I", ()).await?;
+        assert_eq!(hash_code1, 3556498);
+
+        let string2 = JavaLangString::from_rust_string(&jvm, "Hi").await?;
+        let hash_code: i32 = jvm.invoke_virtual(&string2, "hashCode", "()I", ()).await?;
+        assert_eq!(hash_code, 2337);
 
         Ok(())
     }

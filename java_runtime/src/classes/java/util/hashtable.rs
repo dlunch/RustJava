@@ -190,6 +190,15 @@ mod test {
         let value_string = JavaLangString::to_rust_string(&jvm, &value).await?;
         assert_eq!(value_string, "testValue");
 
+        let test_key_second = JavaLangString::from_rust_string(&jvm, "testKey").await?;
+
+        let value = jvm
+            .invoke_virtual(&hash_map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key_second.clone(),))
+            .await?;
+
+        let value_string = JavaLangString::to_rust_string(&jvm, &value).await?;
+        assert_eq!(value_string, "testValue");
+
         let value = jvm
             .invoke_virtual(&hash_map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (test_key.clone(),))
             .await?;
@@ -202,7 +211,6 @@ mod test {
             .await?;
 
         assert!(value.is_null());
-
         Ok(())
     }
 }
