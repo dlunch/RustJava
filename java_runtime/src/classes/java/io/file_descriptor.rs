@@ -30,21 +30,32 @@ impl FileDescriptor {
     async fn cl_init(jvm: &Jvm, runtime: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.io.FileDescriptor::<clinit>()");
 
-        let mut stderr = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-        jvm.put_rust_object_field(&mut stderr, "raw", runtime.stderr().unwrap()).await?;
+        let stderr_file = runtime.stderr();
+        if let Ok(stderr_file) = stderr_file {
+            let mut stderr = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
+            jvm.put_rust_object_field(&mut stderr, "raw", stderr_file).await?;
 
-        let mut stdin = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-        jvm.put_rust_object_field(&mut stdin, "raw", runtime.stdin().unwrap()).await?;
+            jvm.put_static_field("java/io/FileDescriptor", "err", "Ljava/io/FileDescriptor;", stderr)
+                .await?;
+        }
 
-        let mut stdout = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-        jvm.put_rust_object_field(&mut stdout, "raw", runtime.stdout().unwrap()).await?;
+        let stdin_file = runtime.stdin();
+        if let Ok(stdin_file) = stdin_file {
+            let mut stdin = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
+            jvm.put_rust_object_field(&mut stdin, "raw", stdin_file).await?;
 
-        jvm.put_static_field("java/io/FileDescriptor", "err", "Ljava/io/FileDescriptor;", stderr)
-            .await?;
-        jvm.put_static_field("java/io/FileDescriptor", "in", "Ljava/io/FileDescriptor;", stdin)
-            .await?;
-        jvm.put_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;", stdout)
-            .await?;
+            jvm.put_static_field("java/io/FileDescriptor", "in", "Ljava/io/FileDescriptor;", stdin)
+                .await?;
+        }
+
+        let stdout_file = runtime.stdout();
+        if let Ok(stdout_file) = stdout_file {
+            let mut stdout = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
+            jvm.put_rust_object_field(&mut stdout, "raw", stdout_file).await?;
+
+            jvm.put_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;", stdout)
+                .await?;
+        }
 
         Ok(())
     }

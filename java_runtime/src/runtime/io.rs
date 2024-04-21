@@ -3,7 +3,9 @@ use alloc::boxed::Box;
 use dyn_clone::{clone_trait_object, DynClone};
 
 #[derive(Debug)]
-pub enum IOError {}
+pub enum IOError {
+    Unsupported,
+}
 pub type FileSize = u64;
 
 pub struct FileStat {

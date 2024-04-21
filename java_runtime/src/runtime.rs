@@ -34,25 +34,7 @@ pub mod test {
 
     use jvm::JvmCallback;
 
-    use crate::runtime::{File, FileStat, IOError, Runtime};
-
-    #[derive(Clone)]
-    struct DummyFile;
-
-    #[async_trait::async_trait]
-    impl File for DummyFile {
-        async fn read(&mut self, _buf: &mut [u8]) -> Result<usize, IOError> {
-            todo!()
-        }
-
-        async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
-            todo!()
-        }
-
-        async fn stat(&self) -> Result<FileStat, IOError> {
-            todo!()
-        }
-    }
+    use crate::runtime::{File, IOError, Runtime};
 
     #[derive(Clone)]
     pub struct DummyRuntime;
@@ -76,15 +58,15 @@ pub mod test {
         }
 
         fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-            Ok(Box::new(DummyFile))
+            Err(IOError::Unsupported)
         }
 
         fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-            Ok(Box::new(DummyFile))
+            Err(IOError::Unsupported)
         }
 
         fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-            Ok(Box::new(DummyFile))
+            Err(IOError::Unsupported)
         }
 
         async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {
