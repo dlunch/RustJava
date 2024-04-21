@@ -106,12 +106,7 @@ impl String {
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = Self::get_charset(jvm).await?;
-
-        let string = if charset == "UTF-8" {
-            str::from_utf8(cast_slice(&bytes)).unwrap()
-        } else {
-            unimplemented!("unsupported charset: {}", charset);
-        };
+        let string = Self::decode_str(&charset, cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -166,17 +161,10 @@ impl String {
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let charset = Self::get_charset(jvm).await?;
-
-        let bytes = if charset == "UTF-8" {
-            string.as_bytes().to_vec()
-        } else {
-            unimplemented!("unsupported charset: {}", charset);
-        };
-
-        let bytes: Vec<i8> = cast_vec(bytes);
+        let bytes = cast_vec(Self::encode_str(&charset, &string));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_array(&mut byte_array, 0, bytes).await?;
+        jvm.store_byte_array(&mut byte_array, 0, bytes).await?;
 
         Ok(byte_array.into())
     }
@@ -279,6 +267,22 @@ impl String {
         } else {
             "UTF-8".into()
         })
+    }
+
+    fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
+        match charset {
+            "UTF-8" => str::from_utf8(bytes).unwrap().to_string(),
+            "EUC-KR" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
+            _ => unimplemented!("unsupported charset: {}", charset),
+        }
+    }
+
+    fn encode_str(charset: &str, string: &str) -> Vec<u8> {
+        match charset {
+            "UTF-8" => string.as_bytes().to_vec(),
+            "EUC-KR" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
+            _ => unimplemented!("unsupported charset: {}", charset),
+        }
     }
 }
 
