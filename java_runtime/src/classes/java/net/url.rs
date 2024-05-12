@@ -27,6 +27,7 @@ impl URL {
                     Self::init,
                     Default::default(),
                 ),
+                JavaMethodProto::new("openConnection", "()Ljava/net/URLConnection;", Self::open_connection, Default::default()),
                 JavaMethodProto::new("openStream", "()Ljava/io/InputStream;", Self::open_stream, Default::default()),
             ],
             fields: vec![
@@ -71,13 +72,21 @@ impl URL {
         Ok(())
     }
 
-    async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.net.URL::openStream({:?})", &this);
+    async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
+        tracing::debug!("java.net.URL::openConnection({:?})", &this);
 
         let handler: ClassInstanceRef<URLStreamHandler> = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection: ClassInstanceRef<URLConnection> = jvm
             .invoke_virtual(&handler, "openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", (this,))
             .await?;
+
+        Ok(connection)
+    }
+
+    async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
+        tracing::debug!("java.net.URL::openStream({:?})", &this);
+
+        let connection = jvm.invoke_virtual(&this, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
 
         let stream = jvm.invoke_virtual(&connection, "getInputStream", "()Ljava/io/InputStream;", ()).await?;
 
