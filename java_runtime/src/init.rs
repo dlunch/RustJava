@@ -71,6 +71,7 @@ where
             crate::classes::java::lang::UnsupportedOperationException::as_proto(),
         ),
         ("java/net/URL", crate::classes::java::net::URL::as_proto()),
+        ("java/net/URLClassLoader", crate::classes::java::net::URLClassLoader::as_proto()),
         ("java/net/URLConnection", crate::classes::java::net::URLConnection::as_proto()),
         ("java/net/URLStreamHandler", crate::classes::java::net::URLStreamHandler::as_proto()),
         ("java/util/AbstractCollection", crate::classes::java::util::AbstractCollection::as_proto()),
