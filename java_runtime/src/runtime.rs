@@ -29,15 +29,26 @@ clone_trait_object!(Runtime);
 // for testing
 #[cfg(test)]
 pub mod test {
-    use alloc::boxed::Box;
-    use core::time::Duration;
+    use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+    use core::{cmp::min, time::Duration};
 
     use jvm::JvmCallback;
 
-    use crate::runtime::{File, IOError, Runtime};
+    use crate::{
+        runtime::{File, IOError, Runtime},
+        FileSize, FileStat,
+    };
 
     #[derive(Clone)]
-    pub struct DummyRuntime;
+    pub struct DummyRuntime {
+        filesystem: BTreeMap<String, Vec<u8>>,
+    }
+
+    impl DummyRuntime {
+        pub fn new(filesystem: BTreeMap<String, Vec<u8>>) -> Self {
+            Self { filesystem }
+        }
+    }
 
     #[async_trait::async_trait]
     impl Runtime for DummyRuntime {
@@ -69,8 +80,45 @@ pub mod test {
             Err(IOError::Unsupported)
         }
 
-        async fn open(&self, _path: &str) -> Result<Box<dyn File>, IOError> {
-            todo!()
+        async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
+            let entry = self.filesystem.get(path);
+            if let Some(data) = entry {
+                Ok(Box::new(DummyFile::new(data.clone())) as Box<_>)
+            } else {
+                Err(IOError::Unsupported)
+            }
+        }
+    }
+
+    #[derive(Clone)]
+    struct DummyFile {
+        data: Vec<u8>,
+    }
+
+    impl DummyFile {
+        pub fn new(data: Vec<u8>) -> Self {
+            Self { data }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl File for DummyFile {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
+            let len = min(buf.len(), self.data.len());
+            buf[..len].copy_from_slice(&self.data[..len]);
+            self.data = self.data[len..].to_vec();
+
+            Ok(len)
+        }
+
+        async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
+            Err(IOError::Unsupported)
+        }
+
+        async fn stat(&self) -> Result<FileStat, IOError> {
+            Ok(FileStat {
+                size: self.data.len() as FileSize,
+            })
         }
     }
 }
