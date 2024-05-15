@@ -101,6 +101,11 @@ where
             "rustjava/ClassPathClassLoader",
             crate::classes::rustjava::ClassPathClassLoader::as_proto(),
         ),
+        (
+            "rustjava/net/FileURLConnection",
+            crate::classes::rustjava::net::FileURLConnection::as_proto(),
+        ),
+        ("rustjava/net/FileURLHandler", crate::classes::rustjava::net::FileURLHandler::as_proto()),
     ];
 
     for class_proto in class_protos {

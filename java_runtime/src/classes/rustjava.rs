@@ -1,3 +1,5 @@
+pub mod net;
+
 mod array_class_loader;
 mod byte_array_url_connection;
 mod byte_array_url_handler;
