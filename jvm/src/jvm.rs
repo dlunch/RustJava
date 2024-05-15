@@ -431,7 +431,7 @@ impl Jvm {
         self.is_instance_by_name(&instance_class.name(), class_name).await
     }
 
-    async fn exception(&self, r#type: &str, message: &str) -> JavaError {
+    pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
         let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
 

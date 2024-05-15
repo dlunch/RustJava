@@ -1,7 +1,9 @@
-use alloc::vec;
+use alloc::{string::ToString, vec};
+
+use url::Url;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::java::{
@@ -42,6 +44,10 @@ impl URL {
                 ),
                 JavaMethodProto::new("openConnection", "()Ljava/net/URLConnection;", Self::open_connection, Default::default()),
                 JavaMethodProto::new("openStream", "()Ljava/io/InputStream;", Self::open_stream, Default::default()),
+                JavaMethodProto::new("getPort", "()I", Self::get_port, Default::default()),
+                JavaMethodProto::new("getProtocol", "()Ljava/lang/String;", Self::get_protocol, Default::default()),
+                JavaMethodProto::new("getHost", "()Ljava/lang/String;", Self::get_host, Default::default()),
+                JavaMethodProto::new("getFile", "()Ljava/lang/String;", Self::get_file, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("protocol", "Ljava/lang/String;", Default::default()),
@@ -95,7 +101,29 @@ impl URL {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        // TODO
+        let spec = JavaLangString::to_rust_string(jvm, &spec).await?;
+        let url = Url::parse(&spec);
+        if let Err(x) = url {
+            return Err(jvm.exception("java/net/MalformedURLException", &x.to_string()).await);
+        }
+
+        let url = url.unwrap();
+
+        let file = url.path().trim_start_matches('/');
+
+        let protocol = JavaLangString::from_rust_string(jvm, url.scheme()).await?;
+        let host = JavaLangString::from_rust_string(jvm, url.host_str().unwrap_or("")).await?;
+        let port = url.port().map(|x| x as i32).unwrap_or(-1);
+        let file = JavaLangString::from_rust_string(jvm, file).await?;
+
+        jvm.invoke_special(
+            &this,
+            "java/net/URL",
+            "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
+            (protocol, host, port, file, handler),
+        )
+        .await?;
 
         Ok(())
     }
@@ -152,6 +180,38 @@ impl URL {
 
         Ok(stream)
     }
+
+    async fn get_port(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.net.URL::getPort({:?})", &this);
+
+        let port = jvm.get_field(&this, "port", "I").await?;
+
+        Ok(port)
+    }
+
+    async fn get_protocol(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.net.URL::getProtocol({:?})", &this);
+
+        let protocol = jvm.get_field(&this, "protocol", "Ljava/lang/String;").await?;
+
+        Ok(protocol)
+    }
+
+    async fn get_host(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.net.URL::getHost({:?})", &this);
+
+        let host = jvm.get_field(&this, "host", "Ljava/lang/String;").await?;
+
+        Ok(host)
+    }
+
+    async fn get_file(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.net.URL::getFile({:?})", &this);
+
+        let file = jvm.get_field(&this, "file", "Ljava/lang/String;").await?;
+
+        Ok(file)
+    }
 }
 
 #[cfg(test)]
@@ -165,16 +225,17 @@ mod test {
         let jvm = test_jvm().await?;
 
         let url_spec = JavaLangString::from_rust_string(&jvm, "file:test.txt").await?;
-        let _url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
+        let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-        /*
-        let connection = jvm.invoke_virtual(&url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
-        let stream = jvm.invoke_virtual(&connection, "getInputStream", "()Ljava/io/InputStream;", ()).await?;
+        let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
+        let host = jvm.invoke_virtual(&url, "getHost", "()Ljava/lang/String;", ()).await?;
+        let port: i32 = jvm.invoke_virtual(&url, "getPort", "()I", ()).await?;
+        let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
 
-        let data: i32 = jvm.invoke_virtual(&stream, "read", "()I", ()).await?;
-
-        assert_eq!(data, 123);
-        */
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "file");
+        assert_eq!(port, -1);
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &host).await?, "");
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "test.txt");
 
         Ok(())
     }
