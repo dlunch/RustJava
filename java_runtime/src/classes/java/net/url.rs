@@ -1,4 +1,4 @@
-use alloc::{string::ToString, vec};
+use alloc::{borrow::ToOwned, string::ToString, vec};
 
 use url::Url;
 
@@ -109,7 +109,10 @@ impl URL {
 
         let url = url.unwrap();
 
-        let file = url.path().trim_start_matches('/');
+        let protocol = url.scheme();
+        let path = url.path().to_owned() + &url.query().map(|x| "?".to_owned() + x).unwrap_or("".into());
+        // TODO handle more elegantly..
+        let file = if protocol == "file" { path.trim_start_matches('/') } else { &path };
 
         let protocol = JavaLangString::from_rust_string(jvm, url.scheme()).await?;
         let host = JavaLangString::from_rust_string(jvm, url.host_str().unwrap_or("")).await?;
@@ -236,6 +239,26 @@ mod test {
         assert_eq!(port, -1);
         assert_eq!(JavaLangString::to_rust_string(&jvm, &host).await?, "");
         assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "test.txt");
+
+        Ok(())
+    }
+
+    #[futures_test::test]
+    async fn test_http_url() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        let url_spec = JavaLangString::from_rust_string(&jvm, "https://www.google.com/search?q=test#test").await?;
+        let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
+
+        let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
+        let host = jvm.invoke_virtual(&url, "getHost", "()Ljava/lang/String;", ()).await?;
+        let port: i32 = jvm.invoke_virtual(&url, "getPort", "()I", ()).await?;
+        let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
+
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "https");
+        assert_eq!(port, -1);
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &host).await?, "www.google.com");
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "/search?q=test");
 
         Ok(())
     }
