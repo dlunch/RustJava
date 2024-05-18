@@ -1,6 +1,4 @@
-use alloc::{borrow::ToOwned, string::ToString, vec};
-
-use url::Url;
+use alloc::{format, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
@@ -44,6 +42,12 @@ impl URL {
                 ),
                 JavaMethodProto::new("openConnection", "()Ljava/net/URLConnection;", Self::open_connection, Default::default()),
                 JavaMethodProto::new("openStream", "()Ljava/io/InputStream;", Self::open_stream, Default::default()),
+                JavaMethodProto::new(
+                    "set",
+                    "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
+                    Self::set,
+                    Default::default(),
+                ),
                 JavaMethodProto::new("getPort", "()I", Self::get_port, Default::default()),
                 JavaMethodProto::new("getProtocol", "()Ljava/lang/String;", Self::get_protocol, Default::default()),
                 JavaMethodProto::new("getHost", "()Ljava/lang/String;", Self::get_host, Default::default()),
@@ -92,7 +96,7 @@ impl URL {
     async fn init_with_context_spec_handler(
         jvm: &Jvm,
         _: &mut RuntimeContext,
-        this: ClassInstanceRef<Self>,
+        mut this: ClassInstanceRef<Self>,
         context: ClassInstanceRef<URL>,
         spec: ClassInstanceRef<String>,
         handler: ClassInstanceRef<URLStreamHandler>,
@@ -101,30 +105,26 @@ impl URL {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let spec = JavaLangString::to_rust_string(jvm, &spec).await?;
-        let url = Url::parse(&spec);
-        if let Err(x) = url {
-            return Err(jvm.exception("java/net/MalformedURLException", &x.to_string()).await);
-        }
+        let spec_str = JavaLangString::to_rust_string(jvm, &spec).await?;
 
-        let url = url.unwrap();
+        let protocol = spec_str.split(':').next().unwrap_or_default();
 
-        let protocol = url.scheme();
-        let path = url.path().to_owned() + &url.query().map(|x| "?".to_owned() + x).unwrap_or("".into());
-        // TODO handle more elegantly..
-        let file = if protocol == "file" { path.trim_start_matches('/') } else { &path };
+        let handler = if protocol == "file" {
+            jvm.new_class("rustjava/net/FileURLHandler", "()V", ()).await?
+        } else {
+            return Err(jvm
+                .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))
+                .await);
+        };
 
-        let protocol = JavaLangString::from_rust_string(jvm, url.scheme()).await?;
-        let host = JavaLangString::from_rust_string(jvm, url.host_str().unwrap_or("")).await?;
-        let port = url.port().map(|x| x as i32).unwrap_or(-1);
-        let file = JavaLangString::from_rust_string(jvm, file).await?;
+        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
+            .await?;
 
-        jvm.invoke_special(
-            &this,
-            "java/net/URL",
-            "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
-            (protocol, host, port, file, handler),
+        jvm.invoke_virtual(
+            &handler,
+            "parseURL",
+            "(Ljava/net/URL;Ljava/lang/String;II)V",
+            (this, spec, 0, spec_str.len() as i32),
         )
         .await?;
 
@@ -154,11 +154,43 @@ impl URL {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
+        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
+
+        jvm.invoke_virtual(
+            &this,
+            "set",
+            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
+            (protocol, host, port, file, None),
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn set(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        protocol: ClassInstanceRef<String>,
+        host: ClassInstanceRef<String>,
+        port: i32,
+        file: ClassInstanceRef<String>,
+        r#ref: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        tracing::debug!(
+            "java.net.URL::set({:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
+            &this,
+            &protocol,
+            &host,
+            &port,
+            &file,
+            &r#ref
+        );
+
         jvm.put_field(&mut this, "protocol", "Ljava/lang/String;", protocol).await?;
         jvm.put_field(&mut this, "host", "Ljava/lang/String;", host).await?;
         jvm.put_field(&mut this, "port", "I", port).await?;
         jvm.put_field(&mut this, "file", "Ljava/lang/String;", file).await?;
-        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
 
         Ok(())
     }
@@ -239,26 +271,6 @@ mod test {
         assert_eq!(port, -1);
         assert_eq!(JavaLangString::to_rust_string(&jvm, &host).await?, "");
         assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "test.txt");
-
-        Ok(())
-    }
-
-    #[futures_test::test]
-    async fn test_http_url() -> Result<()> {
-        let jvm = test_jvm().await?;
-
-        let url_spec = JavaLangString::from_rust_string(&jvm, "https://www.google.com/search?q=test#test").await?;
-        let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
-
-        let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
-        let host = jvm.invoke_virtual(&url, "getHost", "()Ljava/lang/String;", ()).await?;
-        let port: i32 = jvm.invoke_virtual(&url, "getPort", "()I", ()).await?;
-        let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
-
-        assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "https");
-        assert_eq!(port, -1);
-        assert_eq!(JavaLangString::to_rust_string(&jvm, &host).await?, "www.google.com");
-        assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "/search?q=test");
 
         Ok(())
     }
