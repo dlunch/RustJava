@@ -198,8 +198,8 @@ impl URL {
     async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("java.net.URL::openConnection({:?})", &this);
 
-        let handler: ClassInstanceRef<URLStreamHandler> = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
-        let connection: ClassInstanceRef<URLConnection> = jvm
+        let handler = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
+        let connection = jvm
             .invoke_virtual(&handler, "openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", (this,))
             .await?;
 
