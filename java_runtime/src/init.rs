@@ -74,6 +74,14 @@ where
         ("java/net/URLClassLoader", crate::classes::java::net::URLClassLoader::as_proto()),
         ("java/net/URLConnection", crate::classes::java::net::URLConnection::as_proto()),
         ("java/net/URLStreamHandler", crate::classes::java::net::URLStreamHandler::as_proto()),
+        (
+            "java/net/UnknownServiceException",
+            crate::classes::java::net::UnknownServiceException::as_proto(),
+        ),
+        (
+            "java/net/MalformedURLException",
+            crate::classes::java::net::MalformedURLException::as_proto(),
+        ),
         ("java/util/AbstractCollection", crate::classes::java::util::AbstractCollection::as_proto()),
         ("java/util/AbstractList", crate::classes::java::util::AbstractList::as_proto()),
         ("java/util/Dictionary", crate::classes::java::util::Dictionary::as_proto()),
