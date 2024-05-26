@@ -82,6 +82,7 @@ where
             "java/net/MalformedURLException",
             crate::classes::java::net::MalformedURLException::as_proto(),
         ),
+        ("java/net/JarURLConnection", crate::classes::java::net::JarURLConnection::as_proto()),
         ("java/util/AbstractCollection", crate::classes::java::util::AbstractCollection::as_proto()),
         ("java/util/AbstractList", crate::classes::java::util::AbstractList::as_proto()),
         ("java/util/Dictionary", crate::classes::java::util::Dictionary::as_proto()),
