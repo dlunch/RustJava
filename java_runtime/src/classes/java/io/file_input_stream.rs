@@ -48,7 +48,7 @@ impl FileInputStream {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
-        let mut rust_buf = vec![0; length as usize];
+        let mut rust_buf = vec![0; length];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
 
         jvm.store_byte_array(&mut buf, 0, cast_vec(rust_buf)).await?;
