@@ -4,7 +4,10 @@ use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::net::{URLConnection, URL},
+    classes::java::{
+        lang::String,
+        net::{URLConnection, URL},
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -45,7 +48,12 @@ impl FileURLHandler {
     ) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("rustjava.net.FileURLHandler::openConnection({:?}, {:?})", &this, &url);
 
-        let connection = jvm.new_class("rustjava/net/FileURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
+        let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
+        let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
+
+        let connection = jvm
+            .new_class("rustjava/net/FileURLConnection", "(Ljava/net/URL;Ljava/io/File;)V", (url, file))
+            .await?;
 
         Ok(connection.into())
     }
