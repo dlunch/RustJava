@@ -62,7 +62,7 @@ mod test {
 
     use crate::test::test_jvm_filesystem;
 
-    // #[futures_test::test]
+    #[futures_test::test]
     async fn test_file_url() -> Result<()> {
         let filesystem = [("test.txt".into(), b"test file content".to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
@@ -72,7 +72,7 @@ mod test {
 
         let stream = jvm.invoke_virtual(&url, "openStream", "()Ljava/io/InputStream;", ()).await?;
 
-        let buf = jvm.instantiate_array("B", 16).await?;
+        let buf = jvm.instantiate_array("B", 17).await?;
         let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
 
         let data = jvm.load_byte_array(&buf, 0, len as _).await?;

@@ -13,7 +13,10 @@ impl File {
         RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default())],
+            methods: vec![
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
+                JavaMethodProto::new("getPath", "()Ljava/lang/String;", Self::get_path, Default::default()),
+            ],
             fields: vec![JavaFieldProto::new("path", "Ljava/lang/String;", Default::default())],
         }
     }
@@ -24,5 +27,11 @@ impl File {
         jvm.put_field(&mut this, "path", "Ljava/lang/String;", pathname).await?;
 
         Ok(())
+    }
+
+    async fn get_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.io.File::getPath({:?})", &this);
+
+        jvm.get_field(&this, "path", "Ljava/lang/String;").await
     }
 }

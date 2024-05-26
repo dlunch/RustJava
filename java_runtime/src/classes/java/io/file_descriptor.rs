@@ -66,6 +66,13 @@ impl FileDescriptor {
         Ok(())
     }
 
+    pub async fn from_file(jvm: &Jvm, file: Box<dyn File>) -> Result<ClassInstanceRef<Self>> {
+        let mut this = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
+        jvm.put_rust_object_field(&mut this, "raw", file).await?;
+
+        Ok(this.into())
+    }
+
     pub async fn file(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<Box<dyn File>> {
         jvm.get_rust_object_field(&this, "raw").await
     }
