@@ -45,7 +45,7 @@ impl FileURLConnection {
     }
 
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.net.URL::getInputStream({:?})", &this);
+        tracing::debug!("rustjava.net.FileURLConnection::getInputStream({:?})", &this);
 
         let file: ClassInstanceRef<File> = jvm.get_field(&this, "file", "Ljava/io/File;").await?;
         let file_input_stream = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;

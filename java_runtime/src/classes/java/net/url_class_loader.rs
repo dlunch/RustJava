@@ -28,7 +28,7 @@ impl URLClassLoader {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, urls: ClassInstanceRef<Array<URL>>) -> Result<()> {
-        tracing::debug!("rustjava.java.net.URLClassLoader::<init>({:?}, {:?})", &this, &urls);
+        tracing::debug!("java.net.URLClassLoader::<init>({:?}, {:?})", &this, &urls);
 
         jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (None,))
             .await?;
