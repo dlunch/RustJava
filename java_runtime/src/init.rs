@@ -96,7 +96,9 @@ where
         ("java/util/TimerTask", crate::classes::java::util::TimerTask::as_proto()),
         ("java/util/Vector", crate::classes::java::util::Vector::as_proto()),
         ("java/util/zip/ZipFile", crate::classes::java::util::zip::ZipFile::as_proto()),
+        ("java/util/zip/ZipEntry", crate::classes::java::util::zip::ZipEntry::as_proto()),
         ("java/util/jar/JarFile", crate::classes::java::util::jar::JarFile::as_proto()),
+        ("java/util/jar/JarEntry", crate::classes::java::util::jar::JarEntry::as_proto()),
         ("java/lang/System", crate::classes::java::lang::System::as_proto()),
         (
             "rustjava/ByteArrayURLConnection",
