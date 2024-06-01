@@ -17,7 +17,6 @@ pub struct FileStat {
 pub trait File: Send + DynClone {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError>;
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError>;
-    async fn stat(&self) -> Result<FileStat, IOError>;
 }
 
 clone_trait_object!(File);

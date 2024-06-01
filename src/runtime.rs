@@ -7,7 +7,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, IOError, Runtime};
+use java_runtime::{File, FileStat, IOError, Runtime};
 use jvm::JvmCallback;
 
 use self::io::FileImpl;
@@ -96,6 +96,10 @@ where
 
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
         Ok(Box::new(FileImpl::from_path(path).unwrap()))
+    }
+
+    async fn stat(&self, _path: &str) -> Result<FileStat, IOError> {
+        todo!()
     }
 }
 

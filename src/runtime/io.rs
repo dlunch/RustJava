@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileStat, IOError};
+use java_runtime::{File, IOError};
 
 pub struct DummyRead;
 impl Read for DummyRead {
@@ -81,10 +81,6 @@ where
 
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError> {
         Ok(self.write.lock().unwrap().write(buf).unwrap())
-    }
-
-    async fn stat(&self) -> Result<FileStat, IOError> {
-        todo!()
     }
 }
 

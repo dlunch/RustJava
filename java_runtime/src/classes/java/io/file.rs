@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
@@ -16,6 +16,7 @@ impl File {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
                 JavaMethodProto::new("getPath", "()Ljava/lang/String;", Self::get_path, Default::default()),
+                JavaMethodProto::new("length", "()J", Self::length, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("path", "Ljava/lang/String;", Default::default())],
         }
@@ -33,5 +34,16 @@ impl File {
         tracing::debug!("java.io.File::getPath({:?})", &this);
 
         jvm.get_field(&this, "path", "Ljava/lang/String;").await
+    }
+
+    async fn length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
+        tracing::debug!("java.io.File::length({:?})", &this);
+
+        let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
+        let path = JavaLangString::to_rust_string(jvm, &path).await?;
+
+        let stat = context.stat(&path).await.unwrap();
+
+        Ok(stat.size as _)
     }
 }

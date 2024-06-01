@@ -22,6 +22,7 @@ pub trait Runtime: Sync + Send + DynClone {
     fn stderr(&self) -> Result<Box<dyn File>, IOError>;
 
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
+    async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
 }
 
 clone_trait_object!(Runtime);
@@ -88,6 +89,17 @@ pub mod test {
                 Err(IOError::Unsupported)
             }
         }
+
+        async fn stat(&self, path: &str) -> Result<FileStat, IOError> {
+            let entry = self.filesystem.get(path);
+            if let Some(data) = entry {
+                Ok(FileStat {
+                    size: data.len() as FileSize,
+                })
+            } else {
+                Err(IOError::Unsupported)
+            }
+        }
     }
 
     #[derive(Clone)]
@@ -113,12 +125,6 @@ pub mod test {
 
         async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
             Err(IOError::Unsupported)
-        }
-
-        async fn stat(&self) -> Result<FileStat, IOError> {
-            Ok(FileStat {
-                size: self.data.len() as FileSize,
-            })
         }
     }
 }
