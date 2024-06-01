@@ -432,6 +432,8 @@ impl Jvm {
     }
 
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
+        tracing::info!("throwing java exception: {} {}", r#type, message);
+
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
         let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
 
