@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 
 use bytemuck::cast_vec;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -6,7 +6,11 @@ use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 use zip::ZipArchive;
 
 use crate::{
-    classes::java::{io::File, lang::String, util::zip::ZipEntry},
+    classes::java::{
+        io::{File, InputStream},
+        lang::String,
+        util::zip::ZipEntry,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -24,6 +28,12 @@ impl ZipFile {
                     "getEntry",
                     "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
                     Self::get_entry,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "getInputStream",
+                    "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;",
+                    Self::get_input_stream,
                     Default::default(),
                 ),
             ],
@@ -76,16 +86,55 @@ impl ZipFile {
 
         Ok(entry.into())
     }
+
+    async fn get_input_stream(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        entry: ClassInstanceRef<ZipEntry>,
+    ) -> Result<ClassInstanceRef<InputStream>> {
+        tracing::debug!("java.util.zip.ZipFile::getInputStream({:?}, {:?})", &this, &entry);
+
+        let buf = jvm.get_field(&this, "buf", "[B").await?;
+        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
+
+        let entry_name = jvm.invoke_virtual(&entry, "getName", "()Ljava/lang/String;", ()).await?;
+        let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;
+
+        let data = {
+            // XXX
+            extern crate std;
+            use std::io::{Cursor, Read};
+
+            let mut zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
+            let mut file = zip.by_name(&entry_name).unwrap();
+
+            let mut buf = Vec::new();
+            file.read_to_end(&mut buf).unwrap();
+
+            buf
+        };
+        // TODO do we have to use InflaterInputStream?
+
+        let mut java_buf = jvm.instantiate_array("B", data.len() as _).await?;
+        jvm.store_byte_array(&mut java_buf, 0, cast_vec(data)).await?;
+
+        let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (java_buf,)).await?;
+
+        Ok(input_stream.into())
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use bytemuck::cast_vec;
+
     use jvm::{runtime::JavaLangString, Result};
 
     use crate::test::test_jvm_filesystem;
 
     #[futures_test::test]
-    async fn test_zip() -> Result<()> {
+    async fn test_zip_entry() -> Result<()> {
         let jar = include_bytes!("../../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
@@ -101,7 +150,15 @@ mod test {
 
         let size: i64 = jvm.invoke_virtual(&entry, "getSize", "()J", ()).await?;
 
-        assert_eq!(size, 13);
+        let is = jvm
+            .invoke_virtual(&zip, "getInputStream", "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;", (entry,))
+            .await?;
+
+        let buf = jvm.instantiate_array("B", size as _).await?;
+        let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
+
+        let data = jvm.load_byte_array(&buf, 0, size as _).await?;
+        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n".to_vec());
 
         Ok(())
     }
