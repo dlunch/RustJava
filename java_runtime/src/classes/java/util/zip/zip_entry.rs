@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::JavaMethodProto;
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
@@ -13,8 +13,12 @@ impl ZipEntry {
         RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default())],
-            fields: vec![],
+            methods: vec![
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
+                JavaMethodProto::new("setSize", "(J)V", Self::set_size, Default::default()),
+                JavaMethodProto::new("getSize", "()J", Self::get_size, Default::default()),
+            ],
+            fields: vec![JavaFieldProto::new("size", "J", Default::default())],
         }
     }
 
@@ -24,5 +28,19 @@ impl ZipEntry {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
+    }
+
+    async fn set_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i64) -> Result<()> {
+        tracing::debug!("java.util.zip.ZipEntry::setSize({:?}, {:?})", &this, &size);
+
+        jvm.put_field(&mut this, "size", "J", size).await?;
+
+        Ok(())
+    }
+
+    async fn get_size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
+        tracing::debug!("java.util.zip.ZipEntry::getSize({:?})", &this);
+
+        jvm.get_field(&this, "size", "J").await
     }
 }
