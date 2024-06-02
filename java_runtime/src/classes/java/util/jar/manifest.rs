@@ -1,9 +1,12 @@
 use alloc::vec;
 
-use java_class_proto::JavaMethodProto;
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::io::InputStream, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::{io::InputStream, util::jar::Attributes},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.util.jar.Manifest
 pub struct Manifest {}
@@ -16,8 +19,14 @@ impl Manifest {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "(Ljava/io/InputStream;)V", Self::read, Default::default()),
+                JavaMethodProto::new(
+                    "getMainAttributes",
+                    "()Ljava/util/jar/Attributes;",
+                    Self::get_main_attributes,
+                    Default::default(),
+                ),
             ],
-            fields: vec![],
+            fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", Default::default())],
         }
     }
 
@@ -35,5 +44,11 @@ impl Manifest {
         tracing::debug!("java.util.jar.Manifest::read({:?}, {:?})", &this, &is);
 
         Ok(())
+    }
+
+    async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
+        tracing::debug!("java.util.jar.Manifest::getMainAttributes({:?})", &this);
+
+        jvm.get_field(&this, "attrs", "Ljava/util/jar/Attributes;").await
     }
 }
