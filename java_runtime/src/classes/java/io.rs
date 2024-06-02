@@ -1,3 +1,4 @@
+mod buffered_reader;
 mod byte_array_input_stream;
 mod data_input_stream;
 mod eof_exception;
@@ -7,13 +8,15 @@ mod file_input_stream;
 mod file_output_stream;
 mod filter_output_stream;
 mod input_stream;
+mod input_stream_reader;
 mod io_exception;
 mod output_stream;
 mod print_stream;
+mod reader;
 
 pub use self::{
-    byte_array_input_stream::ByteArrayInputStream, data_input_stream::DataInputStream, eof_exception::EOFException, file::File,
-    file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_output_stream::FileOutputStream,
-    filter_output_stream::FilterOutputStream, input_stream::InputStream, io_exception::IOException, output_stream::OutputStream,
-    print_stream::PrintStream,
+    buffered_reader::BufferedReader, byte_array_input_stream::ByteArrayInputStream, data_input_stream::DataInputStream, eof_exception::EOFException,
+    file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_output_stream::FileOutputStream,
+    filter_output_stream::FilterOutputStream, input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException,
+    output_stream::OutputStream, print_stream::PrintStream, reader::Reader,
 };
