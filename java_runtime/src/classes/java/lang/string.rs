@@ -11,7 +11,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::lang::{Object, System},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.lang.String
 pub struct String {}
@@ -106,7 +109,7 @@ impl String {
 
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
-        let charset = Self::get_charset(jvm).await?;
+        let charset = System::get_charset(jvm).await?;
         let string = Self::decode_str(&charset, cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
@@ -172,7 +175,7 @@ impl String {
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let charset = Self::get_charset(jvm).await?;
+        let charset = System::get_charset(jvm).await?;
         let bytes = cast_vec(Self::encode_str(&charset, &string));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
@@ -262,23 +265,6 @@ impl String {
         let trimmed = string.trim().to_string();
 
         Ok(JavaLangString::from_rust_string(jvm, &trimmed).await?.into()) // TODO buffer sharing
-    }
-
-    async fn get_charset(jvm: &Jvm) -> Result<RustString> {
-        let charset: ClassInstanceRef<Self> = jvm
-            .invoke_static(
-                "java/lang/System",
-                "getProperty",
-                "(Ljava/lang/String;)Ljava/lang/String;",
-                (JavaLangString::from_rust_string(jvm, "file.encoding").await?,),
-            )
-            .await?;
-
-        Ok(if !charset.is_null() {
-            JavaLangString::to_rust_string(jvm, &charset).await?
-        } else {
-            "UTF-8".into()
-        })
     }
 
     fn decode_str(charset: &str, bytes: &[u8]) -> RustString {

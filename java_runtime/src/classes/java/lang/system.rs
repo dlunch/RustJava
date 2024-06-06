@@ -1,6 +1,6 @@
-use alloc::{vec, vec::Vec};
+use alloc::{string::String as RustString, vec, vec::Vec};
 
-use jvm::JavaValue;
+use jvm::{runtime::JavaLangString, JavaValue};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
@@ -141,5 +141,22 @@ impl System {
             .await?;
 
         Ok(value)
+    }
+
+    pub async fn get_charset(jvm: &Jvm) -> Result<RustString> {
+        let charset: ClassInstanceRef<Self> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (JavaLangString::from_rust_string(jvm, "file.encoding").await?,),
+            )
+            .await?;
+
+        Ok(if !charset.is_null() {
+            JavaLangString::to_rust_string(jvm, &charset).await?
+        } else {
+            "UTF-8".into()
+        })
     }
 }
