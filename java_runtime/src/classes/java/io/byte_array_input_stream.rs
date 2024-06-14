@@ -74,9 +74,9 @@ impl ByteArrayInputStream {
         )
         .await?;
 
-        jvm.put_field(&mut this, "pos", "I", pos + len).await?;
+        jvm.put_field(&mut this, "pos", "I", pos + len_to_read).await?;
 
-        Ok(len)
+        Ok(len_to_read)
     }
 
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
