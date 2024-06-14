@@ -13,7 +13,10 @@ impl Reader {
         RuntimeClassProto {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
+            methods: vec![
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new_abstract("read", "([CII)I", Default::default()),
+            ],
             fields: vec![],
         }
     }
