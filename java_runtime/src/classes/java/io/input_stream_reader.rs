@@ -14,6 +14,8 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
 };
 
+const BUF_SIZE: usize = 10;
+
 // class java.io.InputStreamReader
 pub struct InputStreamReader {}
 
@@ -52,11 +54,11 @@ impl InputStreamReader {
 
         jvm.put_rust_object_field(&mut this, "decoder", Arc::new(Mutex::new(decoder))).await?;
 
-        let read_buf = jvm.instantiate_array("B", 1024).await?;
+        let read_buf = jvm.instantiate_array("B", BUF_SIZE).await?;
         jvm.put_field(&mut this, "readBuf", "[B", read_buf).await?;
         jvm.put_field(&mut this, "readBufSize", "I", 0).await?;
 
-        let write_buf = jvm.instantiate_array("C", 1024).await?;
+        let write_buf = jvm.instantiate_array("C", BUF_SIZE).await?;
         jvm.put_field(&mut this, "writeBuf", "[C", write_buf).await?;
         jvm.put_field(&mut this, "writeBufSize", "I", 0).await?;
 
@@ -81,8 +83,8 @@ impl InputStreamReader {
             let read_buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "readBuf", "[B").await?;
             let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
 
-            if read_buf_size < 100 {
-                let bytes_to_read = 100 - read_buf_size;
+            if read_buf_size < (BUF_SIZE / 2) as _ {
+                let bytes_to_read = BUF_SIZE as i32 - read_buf_size;
 
                 let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
@@ -104,7 +106,7 @@ impl InputStreamReader {
 
             let decoder: Arc<Mutex<Decoder>> = jvm.get_rust_object_field(&this, "decoder").await?;
 
-            let mut decoded = vec![0; 100];
+            let mut decoded = vec![0; BUF_SIZE * 3];
             let (_, read, wrote, _) = decoder.lock().await.decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
 
             // advance readBuf
