@@ -90,15 +90,18 @@ impl InputStreamReader {
 
                 let temp = jvm.instantiate_array("B", bytes_to_read as _).await?;
                 let read: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (temp.clone(), 0, bytes_to_read)).await?;
-
-                jvm.invoke_static(
-                    "java/lang/System",
-                    "arraycopy",
-                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                    (temp, 0, read_buf.clone(), read_buf_size, read),
-                )
-                .await?;
-                jvm.put_field(&mut this, "readBufSize", "I", read_buf_size + read).await?;
+                if read != -1 {
+                    jvm.invoke_static(
+                        "java/lang/System",
+                        "arraycopy",
+                        "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                        (temp, 0, read_buf.clone(), read_buf_size, read),
+                    )
+                    .await?;
+                    jvm.put_field(&mut this, "readBufSize", "I", read_buf_size + read).await?;
+                } else if read_buf_size == 0 {
+                    return Ok(-1);
+                }
             }
 
             let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;

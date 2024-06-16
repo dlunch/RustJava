@@ -63,7 +63,7 @@ impl ByteArrayInputStream {
         let available = (buf_length as i32 - pos) as _;
         let len_to_read = if len > available { available } else { len };
         if len_to_read == 0 {
-            return Ok(0);
+            return Ok(-1);
         }
 
         jvm.invoke_static(
