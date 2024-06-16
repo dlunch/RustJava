@@ -3,10 +3,7 @@ use alloc::vec;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{
-    classes::java::lang::{Object, String},
-    RuntimeClassProto, RuntimeContext,
-};
+use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.util.jar.Attributes
 pub struct Attributes {}
