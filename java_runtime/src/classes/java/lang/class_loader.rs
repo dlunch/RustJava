@@ -224,7 +224,7 @@ impl ClassLoader {
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         _: ClassInstanceRef<String>,
-    ) -> Result<ClassInstanceRef<String>> {
+    ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::findResource({:?})", &this);
 
         Ok(None.into())
