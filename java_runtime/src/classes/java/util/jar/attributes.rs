@@ -76,7 +76,7 @@ impl Attributes {
 mod test {
     use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
-    use crate::{classes::java::lang::Object, test::test_jvm};
+    use crate::{classes::java::lang::String, test::test_jvm};
 
     #[futures_test::test]
     async fn test_attribute_get_set() -> Result<()> {
@@ -87,7 +87,7 @@ mod test {
         let name = JavaLangString::from_rust_string(&jvm, "Name").await?;
         let value = JavaLangString::from_rust_string(&jvm, "Value").await?;
 
-        let old: ClassInstanceRef<Object> = jvm
+        let old: ClassInstanceRef<String> = jvm
             .invoke_virtual(
                 &attributes,
                 "putValue",
