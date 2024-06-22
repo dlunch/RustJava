@@ -123,6 +123,11 @@ where
             crate::classes::rustjava::net::FileURLConnection::as_proto(),
         ),
         ("rustjava/net/FileURLHandler", crate::classes::rustjava::net::FileURLHandler::as_proto()),
+        (
+            "rustjava/net/JarURLConnection",
+            crate::classes::rustjava::net::JarURLConnection::as_proto(),
+        ),
+        ("rustjava/net/JarURLHandler", crate::classes::rustjava::net::JarURLHandler::as_proto()),
     ];
 
     for class_proto in class_protos {

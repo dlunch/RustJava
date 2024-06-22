@@ -111,6 +111,8 @@ impl URL {
 
         let handler = if protocol == "file" {
             jvm.new_class("rustjava/net/FileURLHandler", "()V", ()).await?
+        } else if protocol == "jar" {
+            jvm.new_class("rustjava/net/JarURLHandler", "()V", ()).await?
         } else {
             return Err(jvm
                 .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))
