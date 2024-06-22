@@ -58,6 +58,10 @@ impl Manifest {
 
             let line = JavaLangString::to_rust_string(jvm, &line).await?;
 
+            if line.trim().is_empty() {
+                continue;
+            }
+
             let parts = line.splitn(2, ':').collect::<Vec<_>>();
 
             let key = JavaLangString::from_rust_string(jvm, parts[0].trim()).await?;
