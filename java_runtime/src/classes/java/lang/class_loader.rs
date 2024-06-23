@@ -1,8 +1,10 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
+
+use bytemuck::cast_slice;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::java::{
@@ -52,6 +54,12 @@ impl ClassLoader {
                     "findResource",
                     "(Ljava/lang/String;)Ljava/net/URL;",
                     Self::find_resource,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "defineClass",
+                    "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                    Self::define_class,
                     Default::default(),
                 ),
             ],
@@ -228,5 +236,31 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::findResource({:?})", &this);
 
         Ok(None.into())
+    }
+
+    async fn define_class(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        name: ClassInstanceRef<String>,
+        bytes: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<ClassInstanceRef<Class>> {
+        tracing::debug!(
+            "java.lang.ClassLoader::defineClass({:?}, {:?}, {:?}, {:?}, {:?})",
+            &this,
+            name,
+            bytes,
+            offset,
+            length
+        );
+
+        let data: Vec<i8> = jvm.load_byte_array(&bytes, 0, length as _).await?;
+
+        let name = JavaLangString::to_rust_string(jvm, &name).await?;
+        let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
+
+        Ok(class.into())
     }
 }

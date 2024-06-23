@@ -5,7 +5,7 @@ use alloc::{
     vec::Vec,
 };
 
-use bytemuck::{cast_slice, cast_vec};
+use bytemuck::cast_vec;
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -77,20 +77,22 @@ impl ClassPathClassLoader {
             return Ok(None.into());
         }
 
-        // TODO use ClassLoader.defineClass
-
         let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
         let length: i32 = jvm.invoke_virtual(&stream, "available", "()I", ()).await?;
         let array = jvm.instantiate_array("B", length as _).await?;
 
         let _: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (array.clone(),)).await?;
 
-        let data: Vec<i8> = jvm.load_byte_array(&array, 0, length as _).await?;
+        let class = jvm
+            .invoke_virtual(
+                &this,
+                "defineClass",
+                "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                (name, array, 0, length),
+            )
+            .await?;
 
-        let name = JavaLangString::to_rust_string(jvm, &name).await?;
-        let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
-
-        Ok(class.into())
+        Ok(class)
     }
 
     async fn find_resource(
