@@ -30,11 +30,14 @@ where
 
 pub async fn get_main_class_name(jvm: &Jvm, jar_path: &Path) -> Result<String> {
     let filename = JavaLangString::from_rust_string(jvm, jar_path.to_str().unwrap()).await?;
-    let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/lang/String;)V", (filename,)).await?;
+    let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (filename,)).await?;
+    let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
+    let manifest = jvm.invoke_virtual(&jar_file, "getManifest", "()Ljava/util/jar/Manifest;", ()).await?;
     let attributes = jvm
-        .invoke_virtual(&jar_file, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+        .invoke_virtual(&manifest, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
         .await?;
+
     let main_class = jvm
         .invoke_virtual(
             &attributes,
