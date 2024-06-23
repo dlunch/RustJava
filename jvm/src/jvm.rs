@@ -1,6 +1,6 @@
 #![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
 
-use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, vec::Vec};
 use core::{
     fmt::Debug,
     iter,
@@ -17,6 +17,7 @@ use crate::{
     array_class_instance::ArrayClassInstance,
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
+    class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, JavaClassLoaderWrapper},
     detail::JvmDetail,
     error::JavaError,
     field::Field,
@@ -28,49 +29,36 @@ use crate::{
     Result,
 };
 
-#[derive(Clone)]
-pub struct Class {
-    pub definition: Box<dyn ClassDefinition>,
-    java_class: Arc<RwLock<Option<Box<dyn ClassInstance>>>>,
-}
-
-impl Class {
-    #[allow(clippy::await_holding_refcell_ref)]
-    pub async fn java_class(&mut self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
-        let java_class = self.java_class.read().await;
-        if let Some(x) = &*java_class {
-            Ok(x.clone())
-        } else {
-            drop(java_class);
-
-            // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
-
-            let class_loader = jvm.get_system_class_loader().await?;
-            let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), Some(class_loader)).await?;
-
-            self.java_class.write().await.replace(java_class.clone());
-
-            Ok(java_class)
-        }
-    }
-}
-
 pub struct Jvm {
     classes: RwLock<BTreeMap<String, Class>>,
-    system_class_loader: RwLock<Option<Box<dyn ClassInstance>>>,
+    class_loader_wrapper: RwLock<Box<dyn ClassLoaderWrapper>>,
     detail: RwLock<Box<dyn JvmDetail>>,
 }
 
 impl Jvm {
-    pub async fn new<T>(detail: T) -> Result<Self>
+    pub async fn new<T, C>(detail: T, bootstrap_class_loader: C) -> Result<Self>
     where
         T: JvmDetail + 'static,
+        C: BootstrapClassLoader + 'static,
     {
-        Ok(Self {
+        let jvm = Self {
             classes: RwLock::new(BTreeMap::new()),
-            system_class_loader: RwLock::new(None),
+            class_loader_wrapper: RwLock::new(Box::new(BootstrapClassLoaderWrapper::new(bootstrap_class_loader))),
             detail: RwLock::new(Box::new(detail)),
-        })
+        };
+
+        // load system classes
+        jvm.resolve_class("java/lang/Object").await?;
+        jvm.resolve_class("java/lang/String").await?;
+        jvm.resolve_class("java/lang/Class").await?;
+        jvm.resolve_class("java/lang/ClassLoader").await?;
+
+        // load system class loader
+        let _ = JavaLangClassLoader::get_system_class_loader(&jvm).await?;
+
+        *jvm.class_loader_wrapper.write().await = Box::new(JavaClassLoaderWrapper::new());
+
+        Ok(jvm)
     }
 
     pub async fn instantiate_class(&self, class_name: &str) -> Result<Box<dyn ClassInstance>> {
@@ -99,18 +87,14 @@ impl Jvm {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
         let class_name = format!("[{}", element_type_name);
-        let class = if self.system_class_loader.read().await.is_none() || element_type_name.len() == 1 {
-            if self.has_class(&class_name).await {
-                self.resolve_class(&class_name).await?.definition
-            } else {
-                // bootstrapping or primitive type
-                let definition = self.detail.read().await.define_array_class(self, element_type_name).await?;
-                self.register_class_internal(definition.clone(), None).await?;
 
-                definition
-            }
-        } else {
+        let class = if self.has_class(&class_name).await {
             self.resolve_class(&class_name).await?.definition
+        } else {
+            let definition = self.detail.read().await.define_array_class(self, element_type_name).await?;
+            self.register_class_internal(Class::new(definition.clone(), None)).await?;
+
+            definition
         };
         let array_class = class.as_array_class_definition().unwrap();
 
@@ -390,15 +374,12 @@ impl Jvm {
         }
 
         // load class
-        let class_loader = self.get_system_class_loader().await?;
-        let java_class = JavaLangClassLoader::load_class(self, class_loader, class_name).await?;
+        let class = self.class_loader_wrapper.read().await.load_class(self, class_name).await?;
 
-        if let Some(x) = &java_class {
+        if let Some(x) = class {
             tracing::debug!("Loaded class {}", class_name);
 
-            let class = JavaLangClass::to_rust_class(self, x).await?;
-
-            self.register_class_internal(class.clone(), java_class).await?;
+            self.register_class_internal(x).await?;
 
             let class = self.classes.read().await.get(class_name).unwrap().clone();
 
@@ -414,13 +395,15 @@ impl Jvm {
         tracing::debug!("Register class {}", class.name());
 
         // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
-        let java_class = if class_loader.is_some() {
+        let java_class = if self.has_class("java/lang/Class").await {
             Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader).await?)
         } else {
             None
         };
 
-        self.register_class_internal(class, java_class).await?;
+        let class = Class::new(class, java_class);
+
+        self.register_class_internal(class).await?;
 
         Ok(())
     }
@@ -455,26 +438,20 @@ impl Jvm {
         Ok(false)
     }
 
-    async fn register_class_internal(&self, class_definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> Result<()> {
-        if !class_definition.name().starts_with('[') {
-            if let Some(super_class) = class_definition.super_class_name() {
+    async fn register_class_internal(&self, class: Class) -> Result<()> {
+        if !class.definition.name().starts_with('[') {
+            if let Some(super_class) = class.definition.super_class_name() {
                 // ensure superclass is loaded
                 self.resolve_class(&super_class).await?;
             }
         }
 
-        self.classes.write().await.insert(
-            class_definition.name().to_owned(),
-            Class {
-                definition: class_definition.clone(),
-                java_class: Arc::new(RwLock::new(java_class)),
-            },
-        );
+        self.classes.write().await.insert(class.definition.name().to_owned(), class.clone());
 
-        let clinit = class_definition.method("<clinit>", "()V");
+        let clinit = class.definition.method("<clinit>", "()V");
 
         if let Some(x) = clinit {
-            tracing::debug!("Calling <clinit> for {}", class_definition.name());
+            tracing::debug!("Calling <clinit> for {}", class.definition.name());
 
             x.run(self, Box::new([])).await?;
         }
@@ -498,20 +475,6 @@ impl Jvm {
         self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
-    pub async fn set_system_class_loader(&self, class_loader: Box<dyn ClassInstance>) {
-        self.system_class_loader.write().await.replace(class_loader); // TODO we need Thread.setContextClassLoader
-    }
-
-    pub async fn get_system_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
-        if self.system_class_loader.read().await.is_none() {
-            let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
-
-            self.system_class_loader.write().await.replace(system_class_loader);
-        }
-
-        Ok(self.system_class_loader.read().await.as_ref().unwrap().clone())
-    }
-
     pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
     where
         T: Clone,
@@ -529,20 +492,6 @@ impl Jvm {
         Ok(result)
     }
 
-    pub async fn get_rust_object_field_move<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str) -> Result<T> {
-        let raw_storage = self.get_field(instance, name, "[B").await?;
-        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
-
-        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
-        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
-
-        // delete old java data
-        let new_raw = self.instantiate_array("B", 0).await?;
-        self.put_field(instance, name, "[B", new_raw).await?;
-
-        Ok(*rust)
-    }
-
     pub async fn put_rust_object_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, value: T) -> Result<()> {
         let rust_class_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
 
@@ -553,6 +502,23 @@ impl Jvm {
         self.put_field(instance, name, "[B", raw_storage).await?;
 
         Ok(())
+    }
+
+    pub async fn get_rust_object_static_field<T>(&self, class_name: &str, name: &str) -> Result<T>
+    where
+        T: Clone,
+    {
+        let raw_storage = self.get_static_field(class_name, name, "[B").await?;
+        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
+
+        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+
+        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
+        let result = (*rust).clone();
+
+        forget(rust); // do not drop box as we still have it in java memory
+
+        Ok(result)
     }
 
     #[async_recursion::async_recursion]

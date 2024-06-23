@@ -2,11 +2,11 @@
 extern crate alloc;
 
 pub mod classes;
-mod init;
+mod loader;
 mod runtime;
 
 pub use self::{
-    init::initialize,
+    loader::get_bootstrap_class_loader,
     runtime::{File, FileSize, FileStat, IOError, Runtime},
 };
 
@@ -21,7 +21,7 @@ pub mod test {
     use jvm::{Jvm, Result};
     use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
-    use crate::{initialize, runtime::test::DummyRuntime};
+    use crate::{get_bootstrap_class_loader, runtime::test::DummyRuntime};
 
     pub async fn test_jvm() -> Result<Jvm> {
         let runtime = DummyRuntime::new(BTreeMap::new());
@@ -34,13 +34,10 @@ pub mod test {
     }
 
     async fn create_test_jvm(runtime: DummyRuntime) -> Result<Jvm> {
-        let jvm = Jvm::new(JvmDetailImpl).await?;
-
-        initialize(&jvm, move |name, proto| {
+        let bootstrap_class_loader = get_bootstrap_class_loader(move |name: &str, proto| {
             ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, Box::new(runtime.clone()) as Box<_>)) as Box<_>)
-        })
-        .await?;
+        });
 
-        Ok(jvm)
+        Jvm::new(JvmDetailImpl, bootstrap_class_loader).await
     }
 }

@@ -6,6 +6,7 @@ mod array_class_instance;
 mod as_any;
 mod class_definition;
 mod class_instance;
+mod class_loader;
 mod detail;
 mod error;
 mod field;
@@ -32,6 +33,7 @@ pub use self::{
     array_class_instance::ArrayClassInstance,
     class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
+    class_loader::BootstrapClassLoader,
     detail::JvmDetail,
     error::JavaError,
     field::Field,

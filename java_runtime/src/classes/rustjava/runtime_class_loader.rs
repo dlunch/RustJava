@@ -1,14 +1,15 @@
-use alloc::{vec, vec::Vec};
+use alloc::{sync::Arc, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::FieldAccessFlags;
 use jvm::{
     runtime::{JavaLangClass, JavaLangString},
-    Array, ClassInstanceRef, Jvm, Result,
+    ClassInstanceRef, Jvm, Result,
 };
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
+    loader::{get_proto, ClassCreator},
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -24,7 +25,7 @@ impl RuntimeClassLoader {
                 JavaMethodProto::new("<init>", "(Ljava/lang/ClassLoader;)V", Self::init, Default::default()),
                 JavaMethodProto::new("findClass", "(Ljava/lang/String;)Ljava/lang/Class;", Self::find_class, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("classes", "[Ljava/lang/Class;", FieldAccessFlags::STATIC)],
+            fields: vec![JavaFieldProto::new("classCreator", "[B", FieldAccessFlags::STATIC)],
         }
     }
 
@@ -47,22 +48,16 @@ impl RuntimeClassLoader {
 
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let java_classes_array: ClassInstanceRef<Array<Class>> = jvm
-            .get_static_field("rustjava/RuntimeClassLoader", "classes", "[Ljava/lang/Class;")
-            .await?;
-        // can be null before initialization
-        if !java_classes_array.is_null() {
-            let java_classes: Vec<ClassInstanceRef<Class>> = jvm
-                .load_array(&java_classes_array, 0, jvm.array_length(&java_classes_array).await?)
-                .await?;
-            for java_class in java_classes {
-                let rust_class = JavaLangClass::to_rust_class(jvm, &java_class).await?; // TODO we can use class.name()
-                if rust_class.name() == name {
-                    return Ok(java_class);
-                }
-            }
+        let class_creator: Arc<dyn ClassCreator> = jvm.get_rust_object_static_field("rustjava/RuntimeClassLoader", "classCreator").await?;
+
+        let proto = get_proto(&name);
+        if proto.is_none() {
+            return Ok(None.into());
         }
 
-        Ok(None.into())
+        let class = class_creator.create_class(&name, proto.unwrap()).await;
+        let java_class = JavaLangClass::from_rust_class(jvm, class, Some(this.into())).await?;
+
+        Ok(java_class.into())
     }
 }
