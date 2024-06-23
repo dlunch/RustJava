@@ -7,45 +7,43 @@ use jvm::Result;
 use test_helper::run_class;
 
 // TODO parameterized tests..
-fn get_test_data() -> Vec<(String, String)> {
-    let tests = [
-        "Array",
-        "ControlFlow",
-        "Exception",
-        "Field",
-        "Hello",
-        "Instanceof",
-        "Method",
-        "MultiArray",
-        "OddEven",
-        "SuperClass",
-        "Switch",
-    ];
-
+#[futures_test::test]
+async fn test_class() -> Result<()> {
     let base_path = Path::new("test_data");
 
-    let mut result = Vec::new();
-    for test in tests {
-        let expected_path = base_path.join(format!("{}.txt", test));
+    let paths = fs::read_dir(base_path).unwrap();
+
+    for path in paths {
+        let path = path.unwrap().path();
+        if let Some(x) = path.extension() {
+            if x != "class" {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        let class_name = path.file_stem().unwrap().to_str().unwrap();
+        if class_name.contains('$') {
+            continue;
+        }
+
+        let expected_path = base_path.join(format!("{}.txt", class_name));
+        println!("{:?}", expected_path);
 
         let expected = fs::read_to_string(expected_path).unwrap();
 
-        result.push((test.to_string(), expected));
-    }
-
-    result
-}
-
-#[futures_test::test]
-async fn test_class() -> Result<()> {
-    let tests = get_test_data();
-
-    for (name, expected) in tests {
-        let result = run_class(&name, &[]).await;
+        let result = run_class(class_name, &[]).await;
         if let Err(err) = result {
-            panic!("Test {} failed with error: {}", name, err);
+            panic!("Test {} failed with error: {}", class_name, err);
         } else {
-            assert_eq!(result.as_ref().unwrap().clone(), expected, "Test {} failed: {}", name, result.unwrap());
+            assert_eq!(
+                result.as_ref().unwrap().clone(),
+                expected,
+                "Test {} failed: {}",
+                class_name,
+                result.unwrap()
+            );
         }
     }
 
