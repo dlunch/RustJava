@@ -90,20 +90,24 @@ impl URLClassLoader {
         for url in urls {
             let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
-            if file.ends_with('/') || file == "." {
+            if file.ends_with('/') || file.is_empty() {
                 // directory
                 let final_path = if file.ends_with('/') {
-                    format!("file:{}{}", file, name_str)
+                    format!("{}{}", file, name_str)
                 } else {
-                    format!("file:{}", name_str)
+                    name_str.clone()
                 };
 
                 if runtime.stat(&final_path).await.is_ok() {
                     let new_url = jvm
                         .new_class(
                             "java/net/URL",
-                            "(Ljava/lang/String;)V",
-                            (JavaLangString::from_rust_string(jvm, &final_path).await?,),
+                            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                            (
+                                JavaLangString::from_rust_string(jvm, "file").await?,
+                                JavaLangString::from_rust_string(jvm, "").await?,
+                                JavaLangString::from_rust_string(jvm, &final_path).await?,
+                            ),
                         )
                         .await?;
 
@@ -146,6 +150,35 @@ mod test {
         let jvm = test_jvm_filesystem(filesystem).await?;
 
         let url_str = JavaLangString::from_rust_string(&jvm, "file:test.jar").await?;
+        let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_str,)).await?;
+        let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
+        jvm.store_array(&mut urls, 0, vec![url]).await?;
+
+        let class_loader = jvm.new_class("java/net/URLClassLoader", "([Ljava/net/URL;)V", (urls,)).await?;
+
+        let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
+        let resource = jvm
+            .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+            .await?;
+
+        let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+
+        let buf = jvm.instantiate_array("B", 17).await?;
+        let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+
+        let data = jvm.load_byte_array(&buf, 0, len as _).await?;
+
+        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n");
+
+        Ok(())
+    }
+
+    #[futures_test::test]
+    async fn test_load_from_dir() -> Result<()> {
+        let filesystem = [("test.txt".into(), b"test content\n".to_vec())].into_iter().collect();
+        let jvm = crate::test::test_jvm_filesystem(filesystem).await?;
+
+        let url_str = JavaLangString::from_rust_string(&jvm, "file:.").await?;
         let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_str,)).await?;
         let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
         jvm.store_array(&mut urls, 0, vec![url]).await?;

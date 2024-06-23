@@ -36,6 +36,12 @@ impl URL {
                 ),
                 JavaMethodProto::new(
                     "<init>",
+                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                    Self::init_with_protocol_host_file,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "<init>",
                     "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
                     Self::init_with_protocol_host_port_file_handler,
                     Default::default(),
@@ -109,15 +115,7 @@ impl URL {
 
         let protocol = spec_str.split(':').next().unwrap_or_default();
 
-        let handler = if protocol == "file" {
-            jvm.new_class("rustjava/net/FileURLHandler", "()V", ()).await?
-        } else if protocol == "jar" {
-            jvm.new_class("rustjava/net/JarURLHandler", "()V", ()).await?
-        } else {
-            return Err(jvm
-                .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))
-                .await);
-        };
+        let handler = Self::get_handler(jvm, protocol).await?;
 
         jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
             .await?;
@@ -127,6 +125,28 @@ impl URL {
             "parseURL",
             "(Ljava/net/URL;Ljava/lang/String;II)V",
             (this, spec, 0, spec_str.len() as i32),
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_protocol_host_file(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        protocol: ClassInstanceRef<String>,
+        host: ClassInstanceRef<String>,
+        file: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?}, {:?})", &this, &protocol, &host, &file);
+
+        jvm.invoke_special(
+            &this,
+            "java/net/URL",
+            "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
+            (protocol, host, -1, file, None),
         )
         .await?;
 
@@ -156,15 +176,24 @@ impl URL {
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
+        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
+            .await?;
 
         jvm.invoke_virtual(
             &this,
             "set",
             "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-            (protocol, host, port, file, None),
+            (protocol.clone(), host, port, file, None),
         )
         .await?;
+
+        if handler.is_null() {
+            let protocol = JavaLangString::to_rust_string(jvm, &protocol).await?;
+            let handler = Self::get_handler(jvm, &protocol).await?;
+
+            jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
+        }
+
         Ok(())
     }
 
@@ -248,6 +277,18 @@ impl URL {
         let file = jvm.get_field(&this, "file", "Ljava/lang/String;").await?;
 
         Ok(file)
+    }
+
+    async fn get_handler(jvm: &Jvm, protocol: &str) -> Result<ClassInstanceRef<URLStreamHandler>> {
+        if protocol == "file" {
+            Ok(jvm.new_class("rustjava/net/FileURLHandler", "()V", ()).await?.into())
+        } else if protocol == "jar" {
+            Ok(jvm.new_class("rustjava/net/JarURLHandler", "()V", ()).await?.into())
+        } else {
+            Err(jvm
+                .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))
+                .await)
+        }
     }
 }
 
