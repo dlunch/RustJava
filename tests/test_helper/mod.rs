@@ -24,9 +24,9 @@ impl io::Write for Output {
     }
 }
 
-pub async fn run_class(main_class_name: &str, args: &[String]) -> Result<String> {
+pub async fn run_class(main_class_name: &str, class_path: &[&Path], args: &[String]) -> Result<String> {
     let output = Arc::new(Mutex::new(Vec::new()));
-    let jvm = create_jvm(Output { output: output.clone() }, &[Path::new("."), Path::new("./test_data/")]).await?;
+    let jvm = create_jvm(Output { output: output.clone() }, class_path).await?;
 
     run_java_main(&jvm, main_class_name, args).await?;
 
