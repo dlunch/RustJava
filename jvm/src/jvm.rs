@@ -478,14 +478,6 @@ impl Jvm {
         self.resolve_class(&class.name()).await?.java_class(self).await
     }
 
-    pub async fn define_array_class(&self, element_type_name: &str, class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.read().await.define_array_class(self, element_type_name).await?;
-
-        self.register_class(class.clone(), Some(class_loader)).await?;
-
-        self.resolve_class(&class.name()).await?.java_class(self).await
-    }
-
     pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
     where
         T: Clone,
