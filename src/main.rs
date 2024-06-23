@@ -24,7 +24,13 @@ pub fn main() -> Result<()> {
     let opts = Opts::parse();
 
     block_on(async {
-        let jvm = create_jvm(io::stdout(), &[Path::new(".")]).await?;
+        let class_path = if let Some(x) = &opts.jar {
+            vec![x.as_path()]
+        } else {
+            vec![Path::new(".")]
+        };
+
+        let jvm = create_jvm(io::stdout(), &class_path).await?;
 
         let main_class_name = if let Some(x) = &opts.main_class {
             x.to_str().unwrap()
