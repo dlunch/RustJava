@@ -1,6 +1,13 @@
 class Switch {
     public static void main(String[] args) {
-        int a = Integer.parseInt(args[0]);
+        run("1");
+        run("3");
+        run("10");
+        run("100");
+    }
+
+    static void run(String arg) {
+        int a = Integer.parseInt(arg);
 
         switch(a) {
             case 1:

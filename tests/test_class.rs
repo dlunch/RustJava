@@ -17,7 +17,9 @@ fn get_test_data() -> Vec<(String, String)> {
         "Instanceof",
         "Method",
         "MultiArray",
+        "OddEven",
         "SuperClass",
+        "Switch",
     ];
 
     let base_path = Path::new("test_data");

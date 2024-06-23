@@ -103,17 +103,16 @@ fn test_switch() {
 
     let class = ClassInfo::parse(super_class).unwrap();
 
-    assert_eq!(class.methods[1].name, "main".to_string().into());
-    assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
-    if let AttributeInfo::Code(code_attribute) = &class.methods[1].attributes[0] {
+    assert_eq!(class.methods[2].name, "run".to_string().into());
+    assert!(matches!(class.methods[2].attributes[0], AttributeInfo::Code { .. }));
+    if let AttributeInfo::Code(code_attribute) = &class.methods[2].attributes[0] {
         assert!(matches!(
-            code_attribute.code.get(&8).unwrap(),
-            Opcode::Tableswitch(default, pairs) if *default == 70 && *pairs == vec![(1, 32), (2, 43), (3, 54), (4, 62)]
+            code_attribute.code.get(&6).unwrap(),
+            Opcode::Tableswitch(default, pairs) if *default == 68 && *pairs == vec![(1, 30), (2, 41), (3, 52), (4, 60)]
         ));
 
         assert!(matches!(
-            code_attribute.code.get(&79).unwrap(),
-            Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]
-        ));
+            code_attribute.code.get(&75).unwrap(),
+            Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]));
     }
 }
