@@ -50,6 +50,9 @@ impl FileInputStream {
 
         let mut rust_buf = vec![0; length];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
+        if read == 0 {
+            return Ok(-1);
+        }
 
         jvm.store_byte_array(&mut buf, 0, cast_vec(rust_buf)).await?;
 

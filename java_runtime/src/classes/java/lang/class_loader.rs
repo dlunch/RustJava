@@ -1,4 +1,4 @@
-use alloc::{vec, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 use bytemuck::cast_slice;
 
@@ -90,23 +90,52 @@ impl ClassLoader {
                 .new_class("rustjava/RuntimeClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
                 .await?;
 
-            let array_class_loader = jvm
-                .new_class("rustjava/ArrayClassLoader", "(Ljava/lang/ClassLoader;)V", (runtime_class_loader,))
+            let class_path: ClassInstanceRef<String> = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "getProperty",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    (JavaLangString::from_rust_string(jvm, "java.class.path").await?,),
+                )
                 .await?;
 
-            let classpath_class_loader = jvm
-                .new_class("rustjava/ClassPathClassLoader", "(Ljava/lang/ClassLoader;)V", (array_class_loader,))
+            let url_array = if !class_path.is_null() {
+                let class_path = JavaLangString::to_rust_string(jvm, &class_path).await?;
+
+                let mut urls = Vec::new();
+                for path in class_path.split(':') {
+                    // TODO File.pathSeparator
+                    let path = JavaLangString::from_rust_string(jvm, &format!("file:{}", path)).await?;
+                    let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (path,)).await?;
+
+                    urls.push(url);
+                }
+
+                let mut url_array = jvm.instantiate_array("Ljava/net/URL;", urls.len()).await?;
+                jvm.store_array(&mut url_array, 0, urls).await?;
+
+                url_array
+            } else {
+                jvm.instantiate_array("Ljava/net/URL;", 0).await?
+            };
+
+            let url_class_loader = jvm
+                .new_class(
+                    "java/net/URLClassLoader",
+                    "([Ljava/net/URL;Ljava/lang/ClassLoader;)V",
+                    (url_array, runtime_class_loader),
+                )
                 .await?;
 
             jvm.put_static_field(
                 "java/lang/ClassLoader",
                 "systemClassLoader",
                 "Ljava/lang/ClassLoader;",
-                classpath_class_loader.clone(),
+                url_class_loader.clone(),
             )
             .await?;
 
-            return Ok(classpath_class_loader.into());
+            return Ok(url_class_loader.into());
         }
 
         Ok(system_class_loader)

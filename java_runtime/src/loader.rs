@@ -81,11 +81,6 @@ pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
         "java/util/zip/ZipEntry" => crate::classes::java::util::zip::ZipEntry::as_proto(),
         "java/util/zip/ZipFile" => crate::classes::java::util::zip::ZipFile::as_proto(),
 
-        "rustjava/ArrayClassLoader" => crate::classes::rustjava::ArrayClassLoader::as_proto(),
-        "rustjava/ByteArrayURLConnection" => crate::classes::rustjava::ByteArrayURLConnection::as_proto(),
-        "rustjava/ByteArrayURLHandler" => crate::classes::rustjava::ByteArrayURLHandler::as_proto(),
-        "rustjava/ClassPathClassLoader" => crate::classes::rustjava::ClassPathClassLoader::as_proto(),
-        "rustjava/ClassPathEntry" => crate::classes::rustjava::ClassPathEntry::as_proto(),
         "rustjava/RuntimeClassLoader" => crate::classes::rustjava::RuntimeClassLoader::as_proto(),
 
         "rustjava/net/FileURLConnection" => crate::classes::rustjava::net::FileURLConnection::as_proto(),

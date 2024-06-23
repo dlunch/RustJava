@@ -3,20 +3,15 @@ extern crate alloc;
 mod runtime;
 
 use core::future::ready;
-use std::io::Write;
-
-use bytemuck::cast_vec;
+use std::{io::Write, path::Path};
 
 use java_runtime::{get_bootstrap_class_loader, Runtime};
-use jvm::{
-    runtime::{JavaLangClassLoader, JavaLangString},
-    JavaValue, Jvm, Result,
-};
+use jvm::{runtime::JavaLangString, JavaValue, Jvm, Result};
 use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
 
-pub async fn create_jvm<T>(stdout: T) -> Result<Jvm>
+pub async fn create_jvm<T>(stdout: T, class_path: &[&Path]) -> Result<Jvm>
 where
     T: Sync + Send + Write + 'static,
 {
@@ -26,34 +21,30 @@ where
         ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
     });
 
-    Jvm::new(JvmDetailImpl, bootstrap_class_loader).await
+    let class_path_str = class_path.iter().map(|x| x.to_str().unwrap()).collect::<Vec<_>>().join(":");
+
+    let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
+
+    Jvm::new(JvmDetailImpl, bootstrap_class_loader, properties).await
 }
 
-pub async fn load_class_file(jvm: &Jvm, file_name: &str, data: &[u8]) -> Result<()> {
-    let class_loader = JavaLangClassLoader::get_system_class_loader(jvm).await?;
+pub async fn get_main_class_name(jvm: &Jvm, jar_path: &Path) -> Result<String> {
+    let filename = JavaLangString::from_rust_string(jvm, jar_path.to_str().unwrap()).await?;
+    let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/lang/String;)V", (filename,)).await?;
 
-    let file_name = JavaLangString::from_rust_string(jvm, file_name).await?;
-
-    let mut data_storage = jvm.instantiate_array("B", data.len()).await?;
-    jvm.store_byte_array(&mut data_storage, 0, cast_vec(data.to_vec())).await?;
-
-    jvm.invoke_virtual(&class_loader, "addClassFile", "(Ljava/lang/String;[B)V", (file_name, data_storage))
+    let attributes = jvm
+        .invoke_virtual(&jar_file, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+        .await?;
+    let main_class = jvm
+        .invoke_virtual(
+            &attributes,
+            "getValue",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (JavaLangString::from_rust_string(jvm, "Main-Class").await?,),
+        )
         .await?;
 
-    Ok(())
-}
-
-pub async fn load_jar_file(jvm: &Jvm, jar: &[u8]) -> Result<String> {
-    let class_loader = JavaLangClassLoader::get_system_class_loader(jvm).await?;
-
-    let mut data_storage = jvm.instantiate_array("B", jar.len()).await?;
-    jvm.store_byte_array(&mut data_storage, 0, cast_vec(jar.to_vec())).await?;
-
-    let main_class_name = jvm
-        .invoke_virtual(&class_loader, "addJarFile", "([B)Ljava/lang/String;", (data_storage,))
-        .await?;
-
-    JavaLangString::to_rust_string(jvm, &main_class_name).await
+    JavaLangString::to_rust_string(jvm, &main_class).await
 }
 
 pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> Result<()> {

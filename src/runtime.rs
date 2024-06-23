@@ -3,6 +3,7 @@ mod io;
 use alloc::sync::Arc;
 use core::time::Duration;
 use std::{
+    fs,
     io::{stderr, stdin, Write},
     sync::Mutex,
 };
@@ -98,8 +99,13 @@ where
         Ok(Box::new(FileImpl::from_path(path).unwrap()))
     }
 
-    async fn stat(&self, _path: &str) -> Result<FileStat, IOError> {
-        todo!()
+    async fn stat(&self, path: &str) -> Result<FileStat, IOError> {
+        let metadata = fs::metadata(path);
+        if let Ok(metadata) = metadata {
+            Ok(FileStat { size: metadata.len() })
+        } else {
+            Err(IOError::NotFound) // TODO error conversion
+        }
     }
 }
 

@@ -70,15 +70,15 @@ pub mod test {
         }
 
         fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-            Err(IOError::NoSuchFile)
+            Err(IOError::NotFound)
         }
 
         fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-            Err(IOError::NoSuchFile)
+            Err(IOError::NotFound)
         }
 
         fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-            Err(IOError::NoSuchFile)
+            Err(IOError::NotFound)
         }
 
         async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
@@ -86,7 +86,7 @@ pub mod test {
             if let Some(data) = entry {
                 Ok(Box::new(DummyFile::new(data.clone())) as Box<_>)
             } else {
-                Err(IOError::NoSuchFile)
+                Err(IOError::NotFound)
             }
         }
 
@@ -97,7 +97,7 @@ pub mod test {
                     size: data.len() as FileSize,
                 })
             } else {
-                Err(IOError::NoSuchFile)
+                Err(IOError::NotFound)
             }
         }
     }

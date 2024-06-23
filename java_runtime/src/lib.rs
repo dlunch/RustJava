@@ -38,6 +38,6 @@ pub mod test {
             ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, Box::new(runtime.clone()) as Box<_>)) as Box<_>)
         });
 
-        Jvm::new(JvmDetailImpl, bootstrap_class_loader).await
+        Jvm::new(JvmDetailImpl, bootstrap_class_loader, BTreeMap::new()).await
     }
 }

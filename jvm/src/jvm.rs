@@ -36,7 +36,7 @@ pub struct Jvm {
 }
 
 impl Jvm {
-    pub async fn new<T, C>(detail: T, bootstrap_class_loader: C) -> Result<Self>
+    pub async fn new<T, C>(detail: T, bootstrap_class_loader: C, properties: BTreeMap<&str, &str>) -> Result<Self>
     where
         T: JvmDetail + 'static,
         C: BootstrapClassLoader + 'static,
@@ -48,10 +48,21 @@ impl Jvm {
         };
 
         // load system classes
-        jvm.resolve_class("java/lang/Object").await?;
-        jvm.resolve_class("java/lang/String").await?;
         jvm.resolve_class("java/lang/Class").await?;
-        jvm.resolve_class("java/lang/ClassLoader").await?;
+
+        for (key, value) in properties {
+            let key = JavaLangString::from_rust_string(&jvm, key).await?;
+            let value = JavaLangString::from_rust_string(&jvm, value).await?;
+
+            let _: Option<Box<dyn ClassInstance>> = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "setProperty",
+                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+                    (key, value),
+                )
+                .await?;
+        }
 
         // load system class loader
         let _ = JavaLangClassLoader::get_system_class_loader(&jvm).await?;
