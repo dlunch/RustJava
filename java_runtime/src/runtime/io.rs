@@ -5,6 +5,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 #[derive(Debug)]
 pub enum IOError {
     Unsupported,
+    NoSuchFile,
 }
 pub type FileSize = u64;
 
