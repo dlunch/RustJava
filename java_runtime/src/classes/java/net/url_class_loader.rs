@@ -46,14 +46,30 @@ impl URLClassLoader {
     }
 
     async fn find_class(
-        _jvm: &Jvm,
+        jvm: &Jvm,
         _runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.net.URLClassLoader::findClass({:?}, {:?})", &this, name);
 
-        Ok(None.into())
+        let resource: ClassInstanceRef<URL> = jvm
+            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
+            .await?;
+        if resource.is_null() {
+            return Ok(None.into());
+        }
+
+        let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+        let available: i32 = jvm.invoke_virtual(&stream, "available", "()I", ()).await?;
+        let buf = jvm.instantiate_array("B", available as _).await?;
+        let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+
+        let class = jvm
+            .invoke_virtual(&this, "defineClass", "(Ljava/lang/String;[BII)Ljava/lang/Class;", (name, buf, 0, len))
+            .await?;
+
+        Ok(class)
     }
 
     async fn find_resource(
