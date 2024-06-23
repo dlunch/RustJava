@@ -49,7 +49,6 @@ impl Hashtable {
     }
 
     // TODO we need to add synchronized
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::containsKey({:?}, {:?})", &this, &key);
 
@@ -71,7 +70,6 @@ impl Hashtable {
     }
 
     // TODO we need to add synchronized
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::get({:?}, {:?})", &this, &key);
 
@@ -94,7 +92,6 @@ impl Hashtable {
     }
 
     // TODO we need to add synchronized
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -124,7 +121,6 @@ impl Hashtable {
     }
 
     // TODO we need to add synchronized
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,

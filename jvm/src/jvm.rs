@@ -93,7 +93,6 @@ impl Jvm {
         Ok(instance)
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 

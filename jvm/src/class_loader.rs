@@ -21,7 +21,6 @@ impl Class {
         }
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn java_class(&mut self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
         let java_class = self.java_class.read().await;
         if let Some(x) = &*java_class {
