@@ -8,7 +8,7 @@ use std::{
 };
 
 use jvm::Result;
-use rust_java::{create_jvm, get_main_class_name, run_java_main};
+use rust_java::{run, StartType};
 
 struct Output {
     output: Arc<Mutex<Vec<u8>>>,
@@ -24,11 +24,10 @@ impl io::Write for Output {
     }
 }
 
-pub async fn run_class(main_class_name: &str, class_path: &[&Path], args: &[String]) -> Result<String> {
+pub async fn run_class(path: &Path, class_path: &[&Path], args: &[String]) -> Result<String> {
     let output = Arc::new(Mutex::new(Vec::new()));
-    let jvm = create_jvm(Output { output: output.clone() }, class_path).await?;
 
-    run_java_main(&jvm, main_class_name, args).await?;
+    run(Output { output: output.clone() }, StartType::Class(path), args, class_path).await?;
 
     let result = str::from_utf8(&output.lock().unwrap()).unwrap().to_string();
 
@@ -37,11 +36,8 @@ pub async fn run_class(main_class_name: &str, class_path: &[&Path], args: &[Stri
 
 pub async fn run_jar(jar_path: &Path, args: &[String]) -> Result<String> {
     let output = Arc::new(Mutex::new(Vec::new()));
-    let jvm = create_jvm(Output { output: output.clone() }, &[jar_path]).await?;
 
-    let main_class_name = get_main_class_name(&jvm, jar_path).await?;
-
-    run_java_main(&jvm, &main_class_name, args).await?;
+    run(Output { output: output.clone() }, StartType::Jar(jar_path), args, &[]).await?;
 
     let result = str::from_utf8(&output.lock().unwrap()).unwrap().to_string();
 

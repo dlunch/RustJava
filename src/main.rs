@@ -7,7 +7,7 @@ use clap::{ArgGroup, Parser};
 use futures_executor::block_on;
 
 use jvm::Result;
-use rust_java::{create_jvm, get_main_class_name, run_java_main};
+use rust_java::{run, StartType};
 
 #[derive(Parser)]
 #[clap(group = ArgGroup::new("target").required(true).multiple(false))]
@@ -24,23 +24,13 @@ pub fn main() -> Result<()> {
     let opts = Opts::parse();
 
     block_on(async {
-        let class_path = if let Some(x) = &opts.jar {
-            vec![x.as_path()]
+        let start_type = if opts.main_class.is_some() {
+            StartType::Class(opts.main_class.as_ref().unwrap())
         } else {
-            vec![Path::new(".")]
+            StartType::Jar(opts.jar.as_ref().unwrap())
         };
 
-        let jvm = create_jvm(io::stdout(), &class_path).await?;
-
-        let main_class_name = if let Some(x) = &opts.main_class {
-            x.to_str().unwrap()
-        } else if let Some(x) = opts.jar {
-            &get_main_class_name(&jvm, &x).await?
-        } else {
-            unreachable!() // should be caught by clap
-        };
-
-        run_java_main(&jvm, main_class_name, &opts.args).await?;
+        run(io::stdout(), start_type, &opts.args, &[Path::new(".")]).await?;
 
         Ok(())
     })

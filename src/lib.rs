@@ -11,9 +11,15 @@ use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
 
-pub async fn create_jvm<T>(stdout: T, class_path: &[&Path]) -> Result<Jvm>
+pub enum StartType<'a> {
+    Jar(&'a Path),
+    Class(&'a Path),
+}
+
+pub async fn run<'a, T, S>(stdout: T, start_type: StartType<'a>, args: &[S], class_path: &[&Path]) -> Result<()>
 where
     T: Sync + Send + Write + 'static,
+    S: AsRef<str>,
 {
     let runtime = Box::new(RuntimeImpl::new(stdout)) as Box<dyn Runtime>;
 
@@ -21,14 +27,35 @@ where
         ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
     });
 
-    let class_path_str = class_path.iter().map(|x| x.to_str().unwrap()).collect::<Vec<_>>().join(":");
+    let mut class_path_str = class_path.iter().map(|x| x.to_str().unwrap()).collect::<Vec<_>>().join(":");
+    if let StartType::Jar(x) = start_type {
+        class_path_str = format!("{}:{}", x.to_str().unwrap(), class_path_str);
+    }
 
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
-    Jvm::new(JvmDetailImpl, bootstrap_class_loader, properties).await
+    let jvm = Jvm::new(JvmDetailImpl, bootstrap_class_loader, properties).await?;
+
+    let main_class_name = match start_type {
+        StartType::Jar(x) => &get_jar_main_class(&jvm, x).await?,
+        StartType::Class(x) => x.file_stem().unwrap().to_str().unwrap(),
+    };
+
+    let mut java_args = Vec::with_capacity(args.len());
+    for arg in args {
+        java_args.push(JavaLangString::from_rust_string(&jvm, arg.as_ref()).await?);
+    }
+    let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
+    jvm.store_array(&mut array, 0, java_args).await.unwrap();
+
+    let normalized_name = main_class_name.replace('.', "/");
+    jvm.invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
+        .await?;
+
+    Ok(())
 }
 
-pub async fn get_main_class_name(jvm: &Jvm, jar_path: &Path) -> Result<String> {
+async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
     let filename = JavaLangString::from_rust_string(jvm, jar_path.to_str().unwrap()).await?;
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (filename,)).await?;
     let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
@@ -48,19 +75,4 @@ pub async fn get_main_class_name(jvm: &Jvm, jar_path: &Path) -> Result<String> {
         .await?;
 
     JavaLangString::to_rust_string(jvm, &main_class).await
-}
-
-pub async fn run_java_main(jvm: &Jvm, main_class_name: &str, args: &[String]) -> Result<()> {
-    let mut java_args = Vec::with_capacity(args.len());
-    for arg in args {
-        java_args.push(JavaLangString::from_rust_string(jvm, arg).await?);
-    }
-    let mut array = jvm.instantiate_array("Ljava/lang/String;", args.len()).await?;
-    jvm.store_array(&mut array, 0, java_args).await.unwrap();
-
-    let normalized_name = main_class_name.replace('.', "/");
-    jvm.invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
-        .await?;
-
-    Ok(())
 }

@@ -35,7 +35,7 @@ async fn test_class() -> Result<()> {
         let result = if extension.unwrap().to_str().unwrap() == "jar" {
             run_jar(&path, &[]).await
         } else {
-            run_class(name, &[Path::new("./test_data/")], &[]).await
+            run_class(&path, &[Path::new("./test_data/")], &[]).await
         };
 
         if let Err(err) = result {

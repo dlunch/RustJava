@@ -43,7 +43,7 @@ async fn test_real_jvm() -> Result<()> {
                 .unwrap();
 
             (
-                run_class(name, &[Path::new("./test_data/")], &[]).await,
+                run_class(&path, &[Path::new("./test_data/")], &[]).await,
                 String::from_utf8(java_result.stdout).unwrap(),
             )
         };
