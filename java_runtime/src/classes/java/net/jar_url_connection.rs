@@ -21,6 +21,7 @@ impl JarURLConnection {
                 JavaMethodProto::new_abstract("getJarFile", "()Ljava/util/jar/JarFile;", Default::default()),
                 JavaMethodProto::new("getEntryName", "()Ljava/lang/String;", Self::get_entry_name, Default::default()),
                 JavaMethodProto::new("getJarFileURL", "()Ljava/net/URL;", Self::get_jar_file_url, Default::default()),
+                JavaMethodProto::new("getJarEntry", "()Ljava/util/jar/JarEntry;", Self::get_jar_entry, Default::default()),
                 JavaMethodProto::new(
                     "getMainAttributes",
                     "()Ljava/util/jar/Attributes;",
@@ -69,6 +70,19 @@ impl JarURLConnection {
         let file_url = jvm.get_field(&this, "fileUrl", "Ljava/net/URL;").await?;
 
         Ok(file_url)
+    }
+
+    async fn get_jar_entry(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
+        tracing::debug!("java.net.JarURLConnection::getJarEntry({:?})", &this);
+
+        let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
+        let entry_name: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getEntryName", "()Ljava/lang/String;", ()).await?;
+
+        let entry = jvm
+            .invoke_virtual(&jar_file, "getJarEntry", "(Ljava/lang/String;)Ljava/util/jar/JarEntry;", (entry_name,))
+            .await?;
+
+        Ok(entry)
     }
 
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
