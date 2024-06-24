@@ -1,10 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use jvm::{
-    runtime::{JavaLangClass, JavaLangString},
-    ClassInstanceRef, Jvm, Result,
-};
+use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::java::lang::{Class, ClassLoader, String},
@@ -53,7 +50,7 @@ impl RuntimeClassLoader {
         }
 
         let class = runtime.define_class_rust(&name, proto.unwrap()).await?;
-        let java_class = JavaLangClass::from_rust_class(jvm, class, Some(this.into())).await?;
+        let java_class = jvm.register_class(class, Some(this.into())).await?;
 
         Ok(java_class.into())
     }
