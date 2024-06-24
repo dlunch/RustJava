@@ -7,7 +7,6 @@ mod as_any;
 mod class_definition;
 mod class_instance;
 mod class_loader;
-mod detail;
 mod error;
 mod field;
 mod invoke_arg;
@@ -34,7 +33,6 @@ pub use self::{
     class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
     class_loader::BootstrapClassLoader,
-    detail::JvmDetail,
     error::JavaError,
     field::Field,
     jvm::Jvm,

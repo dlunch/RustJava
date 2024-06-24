@@ -53,7 +53,7 @@ impl URLClassLoader {
 
     async fn find_class(
         jvm: &Jvm,
-        _runtime: &mut RuntimeContext,
+        _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {

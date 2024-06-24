@@ -1,11 +1,8 @@
-use alloc::{boxed::Box, sync::Arc};
-use core::{future::Future, mem::size_of_val};
-
-use bytemuck::cast_slice;
+use alloc::boxed::Box;
 
 use jvm::{BootstrapClassLoader, ClassDefinition, Jvm, Result};
 
-use crate::RuntimeClassProto;
+use crate::{Runtime, RuntimeClassProto};
 
 pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
     Some(match name {
@@ -91,58 +88,26 @@ pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
     })
 }
 
-#[async_trait::async_trait]
-pub trait ClassCreator: Sync + Send {
-    async fn create_class(&self, name: &str, proto: RuntimeClassProto) -> Box<dyn ClassDefinition>;
-}
-
-#[async_trait::async_trait]
-impl<C, F> ClassCreator for C
-where
-    C: Fn(&str, RuntimeClassProto) -> F + Send + Sync + 'static,
-    F: Future<Output = Box<dyn ClassDefinition>> + Send + Sync + 'static,
-{
-    async fn create_class(&self, name: &str, proto: RuntimeClassProto) -> Box<dyn ClassDefinition> {
-        (self)(name, proto).await
-    }
-}
-
 struct JavaRuntimeClassLoader {
-    class_creator: Arc<dyn ClassCreator>,
+    runtime: Box<dyn Runtime>,
 }
 
 #[async_trait::async_trait]
 impl BootstrapClassLoader for JavaRuntimeClassLoader {
-    async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Box<dyn ClassDefinition>>> {
+    async fn load_class(&self, _jvm: &Jvm, name: &str) -> Result<Option<Box<dyn ClassDefinition>>> {
+        if let Some(element_type_name) = name.strip_prefix('[') {
+            return Ok(Some(self.runtime.define_array_class(element_type_name).await?));
+        }
+
         let proto = get_proto(name);
         if let Some(proto) = proto {
-            let mut class = Some(self.class_creator.create_class(name, proto).await);
-
-            // XXX hack to put class creator to runtime loader
-            if name == "rustjava/RuntimeClassLoader" {
-                let rust_class_raw = Box::into_raw(Box::new(self.class_creator.clone())) as *const u8 as usize;
-
-                let mut raw_storage = jvm.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
-                jvm.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())
-                    .await?;
-
-                let field = class.as_mut().unwrap().field("classCreator", "[B", true).unwrap();
-
-                class.as_mut().unwrap().put_static_field(&*field, raw_storage.into()).await?;
-            }
-
-            Ok(class)
+            Ok(Some(self.runtime.define_class_rust(name, proto).await?))
         } else {
             Ok(None)
         }
     }
 }
 
-pub fn get_bootstrap_class_loader<C>(class_creator: C) -> impl BootstrapClassLoader
-where
-    C: ClassCreator + 'static,
-{
-    JavaRuntimeClassLoader {
-        class_creator: Arc::new(class_creator),
-    }
+pub fn get_bootstrap_class_loader(runtime: Box<dyn Runtime>) -> impl BootstrapClassLoader {
+    JavaRuntimeClassLoader { runtime }
 }

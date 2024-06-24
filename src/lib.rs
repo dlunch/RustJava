@@ -2,12 +2,10 @@ extern crate alloc;
 
 mod runtime;
 
-use core::future::ready;
 use std::{io::Write, path::Path};
 
 use java_runtime::{get_bootstrap_class_loader, Runtime};
 use jvm::{runtime::JavaLangString, JavaValue, Jvm, Result};
-use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
 use runtime::RuntimeImpl;
 
@@ -23,9 +21,7 @@ where
 {
     let runtime = Box::new(RuntimeImpl::new(stdout)) as Box<dyn Runtime>;
 
-    let bootstrap_class_loader = get_bootstrap_class_loader(move |name: &str, proto| {
-        ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, runtime.clone())) as Box<_>)
-    });
+    let bootstrap_class_loader = get_bootstrap_class_loader(runtime.clone());
 
     let mut class_path_str = class_path.iter().map(|x| x.to_str().unwrap()).collect::<Vec<_>>().join(":");
     if let StartType::Jar(x) = start_type {
@@ -34,7 +30,7 @@ where
 
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
-    let jvm = Jvm::new(JvmDetailImpl, bootstrap_class_loader, properties).await?;
+    let jvm = Jvm::new(bootstrap_class_loader, properties).await?;
 
     let main_class_name = match start_type {
         StartType::Jar(x) => &get_jar_main_class(&jvm, x).await?,

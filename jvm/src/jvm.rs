@@ -18,7 +18,6 @@ use crate::{
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
     class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, JavaClassLoaderWrapper},
-    detail::JvmDetail,
     error::JavaError,
     field::Field,
     invoke_arg::InvokeArg,
@@ -32,19 +31,16 @@ use crate::{
 pub struct Jvm {
     classes: RwLock<BTreeMap<String, Class>>,
     class_loader_wrapper: RwLock<Box<dyn ClassLoaderWrapper>>,
-    detail: RwLock<Box<dyn JvmDetail>>,
 }
 
 impl Jvm {
-    pub async fn new<T, C>(detail: T, bootstrap_class_loader: C, properties: BTreeMap<&str, &str>) -> Result<Self>
+    pub async fn new<C>(bootstrap_class_loader: C, properties: BTreeMap<&str, &str>) -> Result<Self>
     where
-        T: JvmDetail + 'static,
         C: BootstrapClassLoader + 'static,
     {
         let jvm = Self {
             classes: RwLock::new(BTreeMap::new()),
             class_loader_wrapper: RwLock::new(Box::new(BootstrapClassLoaderWrapper::new(bootstrap_class_loader))),
-            detail: RwLock::new(Box::new(detail)),
         };
 
         // load system classes
@@ -98,14 +94,7 @@ impl Jvm {
 
         let class_name = format!("[{}", element_type_name);
 
-        let class = if self.has_class(&class_name).await {
-            self.resolve_class(&class_name).await?.definition
-        } else {
-            let definition = self.detail.read().await.define_array_class(self, element_type_name).await?;
-            self.register_class_internal(Class::new(definition.clone(), None)).await?;
-
-            definition
-        };
+        let class = self.resolve_class(&class_name).await?.definition;
         let array_class = class.as_array_class_definition().unwrap();
 
         let instance = array_class.instantiate_array(length);
@@ -401,7 +390,11 @@ impl Jvm {
         Err(self.exception("java/lang/NoClassDefFoundError", class_name).await)
     }
 
-    pub async fn register_class(&self, class: Box<dyn ClassDefinition>, class_loader: Option<Box<dyn ClassInstance>>) -> Result<()> {
+    pub async fn register_class(
+        &self,
+        class: Box<dyn ClassDefinition>,
+        class_loader: Option<Box<dyn ClassInstance>>,
+    ) -> Result<Option<Box<dyn ClassInstance>>> {
         tracing::debug!("Register class {}", class.name());
 
         // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
@@ -411,11 +404,11 @@ impl Jvm {
             None
         };
 
-        let class = Class::new(class, java_class);
+        let class = Class::new(class, java_class.clone());
 
         self.register_class_internal(class).await?;
 
-        Ok(())
+        Ok(java_class)
     }
 
     pub async fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> Result<bool> {
@@ -469,14 +462,6 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn define_class(&self, name: &str, data: &[u8], class_loader: Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let class = self.detail.read().await.define_class(self, name, data).await?;
-
-        self.register_class(class.clone(), Some(class_loader)).await?;
-
-        self.resolve_class(&class.name()).await?.java_class(self).await
-    }
-
     pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
     where
         T: Clone,
@@ -504,23 +489,6 @@ impl Jvm {
         self.put_field(instance, name, "[B", raw_storage).await?;
 
         Ok(())
-    }
-
-    pub async fn get_rust_object_static_field<T>(&self, class_name: &str, name: &str) -> Result<T>
-    where
-        T: Clone,
-    {
-        let raw_storage = self.get_static_field(class_name, name, "[B").await?;
-        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
-
-        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
-
-        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
-        let result = (*rust).clone();
-
-        forget(rust); // do not drop box as we still have it in java memory
-
-        Ok(result)
     }
 
     #[async_recursion::async_recursion]

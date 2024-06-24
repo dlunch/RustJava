@@ -2,14 +2,15 @@ mod io;
 
 use alloc::sync::Arc;
 use core::time::Duration;
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 use std::{
     fs,
     io::{stderr, stdin, Write},
     sync::Mutex,
 };
 
-use java_runtime::{File, FileStat, IOError, Runtime};
-use jvm::JvmCallback;
+use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto};
+use jvm::{ClassDefinition, JvmCallback};
 
 use self::io::FileImpl;
 
@@ -106,6 +107,22 @@ where
         } else {
             Err(IOError::NotFound) // TODO error conversion
         }
+    }
+
+    async fn define_class_rust(&self, name: &str, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
+        Ok(Box::new(ClassDefinitionImpl::from_class_proto(
+            name,
+            proto,
+            Box::new(self.clone()) as Box<_>,
+        )))
+    }
+
+    async fn define_class_java(&self, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
+        ClassDefinitionImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
+    }
+
+    async fn define_array_class(&self, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>> {
+        Ok(Box::new(ArrayClassDefinitionImpl::new(element_type_name)))
     }
 }
 

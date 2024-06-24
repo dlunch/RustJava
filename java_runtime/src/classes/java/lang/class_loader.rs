@@ -143,7 +143,7 @@ impl ClassLoader {
 
     async fn load_class(
         jvm: &Jvm,
-        _: &mut RuntimeContext,
+        runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
@@ -155,6 +155,16 @@ impl ClassLoader {
 
         if !class.is_null() {
             return Ok(class);
+        }
+
+        let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
+
+        if let Some(element_type_name) = name_str.strip_prefix('[') {
+            // TODO do we need another class loader for array?
+            let class = runtime.define_array_class(element_type_name).await?;
+            let java_class = jvm.register_class(class, Some(this.into())).await?;
+
+            return Ok(java_class.into());
         }
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
@@ -269,7 +279,7 @@ impl ClassLoader {
 
     async fn define_class(
         jvm: &Jvm,
-        _: &mut RuntimeContext,
+        runtime: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
         bytes: ClassInstanceRef<Array<i8>>,
@@ -287,9 +297,9 @@ impl ClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&bytes, 0, length as _).await?;
 
-        let name = JavaLangString::to_rust_string(jvm, &name).await?;
-        let class = jvm.define_class(&name, cast_slice(&data), this.into()).await?;
+        let class = runtime.define_class_java(cast_slice(&data)).await?;
+        let java_class = jvm.register_class(class, Some(this.into())).await?;
 
-        Ok(class.into())
+        Ok(java_class.into())
     }
 }

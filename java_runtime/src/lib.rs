@@ -11,15 +11,13 @@ pub use self::{
 };
 
 pub(crate) type RuntimeContext = dyn runtime::Runtime;
-pub(crate) type RuntimeClassProto = java_class_proto::JavaClassProto<dyn runtime::Runtime>;
+pub type RuntimeClassProto = java_class_proto::JavaClassProto<dyn runtime::Runtime>;
 
 #[cfg(test)]
 pub mod test {
     use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-    use core::future::ready;
 
     use jvm::{Jvm, Result};
-    use jvm_rust::{ClassDefinitionImpl, JvmDetailImpl};
 
     use crate::{get_bootstrap_class_loader, runtime::test::DummyRuntime};
 
@@ -34,10 +32,8 @@ pub mod test {
     }
 
     async fn create_test_jvm(runtime: DummyRuntime) -> Result<Jvm> {
-        let bootstrap_class_loader = get_bootstrap_class_loader(move |name: &str, proto| {
-            ready(Box::new(ClassDefinitionImpl::from_class_proto(name, proto, Box::new(runtime.clone()) as Box<_>)) as Box<_>)
-        });
+        let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
 
-        Jvm::new(JvmDetailImpl, bootstrap_class_loader, BTreeMap::new()).await
+        Jvm::new(bootstrap_class_loader, BTreeMap::new()).await
     }
 }
