@@ -218,12 +218,19 @@ impl Jvm {
 
         let class = instance.class_definition();
         let method = self.find_virtual_method(&*class, name, descriptor, false).await?;
+        if let Some(x) = method {
+            let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+                .chain(args.into_iter())
+                .collect::<Vec<_>>();
 
-        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-            .chain(args.into_iter())
-            .collect::<Vec<_>>();
+            Ok(x.run(self, args.into_boxed_slice()).await?.into())
+        } else {
+            tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
 
-        Ok(method.run(self, args.into_boxed_slice()).await?.into())
+            Err(self
+                .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
+                .await)
+        }
     }
 
     // non-virtual
@@ -506,22 +513,24 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion]
-    async fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> Result<Box<dyn Method>> {
+    async fn find_virtual_method(
+        &self,
+        class: &dyn ClassDefinition,
+        name: &str,
+        descriptor: &str,
+        is_static: bool,
+    ) -> Result<Option<Box<dyn Method>>> {
         let method = class.method(name, descriptor);
 
         if let Some(x) = method {
             if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
-                return Ok(x);
+                return Ok(Some(x));
             }
         } else if let Some(x) = class.super_class_name() {
             let super_class = self.classes.read().await.get(&x).unwrap().definition.clone();
             return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
         }
 
-        tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
-
-        Err(self
-            .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
-            .await)
+        Ok(None)
     }
 }
