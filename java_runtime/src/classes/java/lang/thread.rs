@@ -21,8 +21,25 @@ impl Thread {
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
+                JavaMethodProto::new(
+                    "getCurrentThread",
+                    "()Ljava/lang/Thread;",
+                    Self::get_current_thread,
+                    MethodAccessFlags::STATIC,
+                ),
+                // rustjava internal
+                JavaMethodProto::new("attach", "()Ljava/lang/Thread;", Self::attach, MethodAccessFlags::STATIC),
+                JavaMethodProto::new(
+                    "getCurrentNativeThreadId",
+                    "()J",
+                    Self::get_current_native_thread_id,
+                    MethodAccessFlags::STATIC,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default())],
+            fields: vec![
+                JavaFieldProto::new("id", "J", Default::default()),
+                JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default()),
+            ],
         }
     }
 
@@ -83,5 +100,23 @@ impl Thread {
         tracing::warn!("stub java.lang.Thread::setPriority({:?}, {:?})", &this, new_priority);
 
         Ok(())
+    }
+
+    async fn get_current_thread(_jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Thread>> {
+        tracing::debug!("Thread::getCurrentThread()");
+
+        Ok(None.into()) // TODO
+    }
+
+    async fn attach(_jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("Thread::attach()");
+
+        Ok(None.into()) // TODO
+    }
+
+    async fn get_current_native_thread_id(_: &Jvm, runtime: &mut RuntimeContext) -> Result<i64> {
+        tracing::debug!("Thread::getCurrentNativeThreadId()");
+
+        Ok(runtime.current_task_id() as _)
     }
 }
