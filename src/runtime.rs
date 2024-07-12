@@ -2,7 +2,6 @@ mod io;
 
 use alloc::sync::Arc;
 use core::time::Duration;
-use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 use std::{
     fs,
     io::{stderr, stdin, Write},
@@ -11,6 +10,7 @@ use std::{
 
 use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto};
 use jvm::{ClassDefinition, JvmCallback};
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use self::io::FileImpl;
 
