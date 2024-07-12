@@ -28,13 +28,7 @@ impl Thread {
                     MethodAccessFlags::STATIC,
                 ),
                 // rustjava internal
-                JavaMethodProto::new("attach", "()Ljava/lang/Thread;", Self::attach, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "getCurrentNativeThreadId",
-                    "()J",
-                    Self::get_current_native_thread_id,
-                    MethodAccessFlags::STATIC,
-                ),
+                JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("id", "J", Default::default()),
@@ -47,6 +41,15 @@ impl Thread {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, &target);
 
         jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target).await?;
+
+        Ok(())
+    }
+
+    async fn init_internal(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
+        tracing::debug!("Thread::<init>({:?}, {:?})", &this, internal);
+
+        let id = context.current_task_id();
+        jvm.put_field(&mut this, "id", "J", id as i64).await?;
 
         Ok(())
     }
@@ -106,17 +109,5 @@ impl Thread {
         tracing::debug!("Thread::getCurrentThread()");
 
         Ok(None.into()) // TODO
-    }
-
-    async fn attach(_jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("Thread::attach()");
-
-        Ok(None.into()) // TODO
-    }
-
-    async fn get_current_native_thread_id(_: &Jvm, runtime: &mut RuntimeContext) -> Result<i64> {
-        tracing::debug!("Thread::getCurrentNativeThreadId()");
-
-        Ok(runtime.current_task_id() as _)
     }
 }

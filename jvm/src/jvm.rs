@@ -24,12 +24,14 @@ use crate::{
     method::Method,
     r#type::JavaType,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
+    thread::JvmThread,
     value::JavaValue,
     Result,
 };
 
 pub struct Jvm {
     classes: RwLock<BTreeMap<String, Class>>,
+    threads: RwLock<BTreeMap<i64, JvmThread>>,
     class_loader_wrapper: RwLock<Box<dyn ClassLoaderWrapper>>,
 }
 
@@ -40,6 +42,7 @@ impl Jvm {
     {
         let jvm = Self {
             classes: RwLock::new(BTreeMap::new()),
+            threads: RwLock::new(BTreeMap::new()),
             class_loader_wrapper: RwLock::new(Box::new(BootstrapClassLoaderWrapper::new(bootstrap_class_loader))),
         };
 
@@ -64,6 +67,12 @@ impl Jvm {
         let _ = JavaLangClassLoader::get_system_class_loader(&jvm).await?;
 
         *jvm.class_loader_wrapper.write().await = Box::new(JavaClassLoaderWrapper::new());
+
+        // create thread object
+
+        let thread = jvm.new_class("java/lang/Thread", "(Z)V", (true,)).await?;
+        let id: i64 = jvm.get_field(&thread, "id", "J").await?;
+        jvm.threads.write().await.insert(id, JvmThread::new(thread));
 
         Ok(jvm)
     }

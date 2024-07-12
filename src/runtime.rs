@@ -84,6 +84,10 @@ where
         todo!()
     }
 
+    fn current_task_id(&self) -> u64 {
+        0 // TODO it will break on multithread
+    }
+
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
         Ok(Box::new(FileImpl::from_read(stdin())))
     }

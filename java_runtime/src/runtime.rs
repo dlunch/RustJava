@@ -18,6 +18,7 @@ pub trait Runtime: Sync + Send + DynClone {
     fn spawn(&self, callback: Box<dyn JvmCallback>);
 
     fn now(&self) -> u64; // unix time in millis
+    fn current_task_id(&self) -> u64;
 
     fn stdin(&self) -> Result<Box<dyn File>, IOError>;
     fn stdout(&self) -> Result<Box<dyn File>, IOError>;
@@ -74,6 +75,10 @@ pub mod test {
 
         fn now(&self) -> u64 {
             todo!()
+        }
+
+        fn current_task_id(&self) -> u64 {
+            0 // TODO it will break on multithread testing
         }
 
         fn stdin(&self) -> Result<Box<dyn File>, IOError> {

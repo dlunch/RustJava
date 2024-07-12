@@ -12,6 +12,7 @@ mod field;
 mod invoke_arg;
 mod jvm;
 mod method;
+mod thread;
 mod r#type;
 mod value;
 
