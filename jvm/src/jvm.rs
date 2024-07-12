@@ -208,7 +208,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(method.run(self, args.into_arg()).await?.into())
+            Ok(self.execute_method(&method, args.into_arg()).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
@@ -232,7 +232,7 @@ impl Jvm {
                 .chain(args.into_iter())
                 .collect::<Vec<_>>();
 
-            Ok(x.run(self, args.into_boxed_slice()).await?.into())
+            Ok(self.execute_method(&x, args.into_boxed_slice()).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
 
@@ -268,7 +268,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(method.run(self, args.into_boxed_slice()).await?.into())
+            Ok(self.execute_method(&method, args.into_boxed_slice()).await?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -541,5 +541,9 @@ impl Jvm {
         }
 
         Ok(None)
+    }
+
+    async fn execute_method(&self, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
+        method.run(self, args).await
     }
 }
