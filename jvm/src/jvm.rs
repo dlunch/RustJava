@@ -23,7 +23,7 @@ use crate::{
     invoke_arg::InvokeArg,
     method::Method,
     r#type::JavaType,
-    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
+    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString, JavaLangThread},
     thread::JvmThread,
     value::JavaValue,
     Result,
@@ -31,7 +31,7 @@ use crate::{
 
 pub struct Jvm {
     classes: RwLock<BTreeMap<String, Class>>,
-    threads: RwLock<BTreeMap<i64, JvmThread>>,
+    threads: RwLock<BTreeMap<u64, JvmThread>>,
     class_loader_wrapper: RwLock<Box<dyn ClassLoaderWrapper>>,
 }
 
@@ -72,7 +72,7 @@ impl Jvm {
 
         let thread = jvm.new_class("java/lang/Thread", "(Z)V", (true,)).await?;
         let id: i64 = jvm.get_field(&thread, "id", "J").await?;
-        jvm.threads.write().await.insert(id, JvmThread::new(thread));
+        jvm.threads.write().await.insert(id as _, JvmThread::new(thread));
 
         Ok(jvm)
     }
@@ -208,7 +208,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(self.execute_method(&method, args.into_arg()).await?.into())
+            Ok(self.execute_method(&class, &method, args.into_arg()).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
@@ -232,7 +232,8 @@ impl Jvm {
                 .chain(args.into_iter())
                 .collect::<Vec<_>>();
 
-            Ok(self.execute_method(&x, args.into_boxed_slice()).await?.into())
+            let class = self.resolve_class(&class.name()).await?; // TODO we're resolving class twice
+            Ok(self.execute_method(&class, &x, args.into_boxed_slice()).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
 
@@ -268,7 +269,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(self.execute_method(&method, args.into_boxed_slice()).await?.into())
+            Ok(self.execute_method(&class, &method, args.into_boxed_slice()).await?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -543,7 +544,19 @@ impl Jvm {
         Ok(None)
     }
 
-    async fn execute_method(&self, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
-        method.run(self, args).await
+    async fn execute_method(&self, class: &Class, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
+        let current_thread_id = JavaLangThread::current_thread_id(self).await?;
+        self.threads
+            .write()
+            .await
+            .get_mut(&current_thread_id)
+            .unwrap()
+            .push_frame(class, &method.name());
+
+        let result = method.run(self, args).await?;
+
+        self.threads.write().await.get_mut(&current_thread_id).unwrap().pop_frame();
+
+        Ok(result)
     }
 }

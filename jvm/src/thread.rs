@@ -1,30 +1,48 @@
-use alloc::{boxed::Box, vec::Vec};
+#![allow(dead_code)] // TODO
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 
-use crate::{ClassDefinition, ClassInstance, Method};
+use crate::{class_loader::Class, ClassInstance};
 
-#[allow(dead_code)]
 pub struct JvmThread {
     java_thread: Box<dyn ClassInstance>,
-    stack: JvmStack,
+    stack: Vec<JvmStackFrame>,
 }
 
 impl JvmThread {
     pub fn new(java_thread: Box<dyn ClassInstance>) -> Self {
         Self {
             java_thread,
-            stack: JvmStack { stack: Vec::new() },
+            stack: Vec::new(),
         }
+    }
+
+    pub fn push_frame(&mut self, class: &Class, method_name: &str) {
+        self.stack.push(JvmStackFrame::new(class.clone(), method_name));
+    }
+
+    pub fn pop_frame(&mut self) -> Option<JvmStackFrame> {
+        self.stack.pop()
+    }
+
+    pub fn top_frame(&self) -> Option<&JvmStackFrame> {
+        self.stack.last()
     }
 }
 
-#[allow(dead_code)]
-pub struct JvmStack {
-    stack: Vec<JvmStackFrame>,
+pub struct JvmStackFrame {
+    class: Class,
+    method_name: String,
 }
 
-impl JvmStack {}
-#[allow(dead_code)]
-pub struct JvmStackFrame {
-    class: Box<dyn ClassDefinition>,
-    method: Box<dyn Method>,
+impl JvmStackFrame {
+    pub fn new(class: Class, method_name: &str) -> Self {
+        Self {
+            class,
+            method_name: method_name.to_string(),
+        }
+    }
 }
