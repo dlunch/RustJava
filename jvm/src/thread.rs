@@ -1,23 +1,18 @@
 #![allow(dead_code)] // TODO
 use alloc::{
-    boxed::Box,
     string::{String, ToString},
     vec::Vec,
 };
 
-use crate::{class_loader::Class, ClassInstance};
+use crate::class_loader::Class;
 
 pub struct JvmThread {
-    java_thread: Box<dyn ClassInstance>,
     stack: Vec<JvmStackFrame>,
 }
 
 impl JvmThread {
-    pub fn new(java_thread: Box<dyn ClassInstance>) -> Self {
-        Self {
-            java_thread,
-            stack: Vec::new(),
-        }
+    pub fn new() -> Self {
+        Self { stack: Vec::new() }
     }
 
     pub fn push_frame(&mut self, class: &Class, method_name: &str) {

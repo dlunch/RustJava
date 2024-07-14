@@ -29,6 +29,7 @@ impl Thread {
                 ),
                 // rustjava internal
                 JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
+                JavaMethodProto::new("currentThreadId", "()J", Self::current_thread_id, MethodAccessFlags::STATIC),
             ],
             fields: vec![
                 JavaFieldProto::new("id", "J", Default::default()),
@@ -45,11 +46,11 @@ impl Thread {
         Ok(())
     }
 
-    async fn init_internal(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
+    async fn init_internal(jvm: &Jvm, _context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, internal);
 
-        let id = context.current_task_id();
-        jvm.put_field(&mut this, "id", "J", id as i64).await?;
+        let id: i64 = jvm.invoke_static("java/lang/Thread", "currentThreadId", "()J", []).await?;
+        jvm.put_field(&mut this, "id", "J", id).await?;
 
         Ok(())
     }
@@ -109,5 +110,13 @@ impl Thread {
         tracing::debug!("Thread::getCurrentThread()");
 
         Ok(None.into()) // TODO
+    }
+
+    async fn current_thread_id(_jvm: &Jvm, context: &mut RuntimeContext) -> Result<i64> {
+        tracing::debug!("Thread::currentThreadId()");
+
+        let id = context.current_task_id();
+
+        Ok(id as _)
     }
 }

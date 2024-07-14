@@ -46,6 +46,10 @@ impl Jvm {
             class_loader_wrapper: RwLock::new(Box::new(BootstrapClassLoaderWrapper::new(bootstrap_class_loader))),
         };
 
+        // init startup thread
+        let thread_id = JavaLangThread::current_thread_id(&jvm).await?;
+        jvm.threads.write().await.insert(thread_id, JvmThread::new());
+
         // load system classes
         jvm.resolve_class("java/lang/Class").await?;
 
@@ -67,12 +71,6 @@ impl Jvm {
         let _ = JavaLangClassLoader::get_system_class_loader(&jvm).await?;
 
         *jvm.class_loader_wrapper.write().await = Box::new(JavaClassLoaderWrapper::new());
-
-        // create thread object
-
-        let thread = jvm.new_class("java/lang/Thread", "(Z)V", (true,)).await?;
-        let id: i64 = jvm.get_field(&thread, "id", "J").await?;
-        jvm.threads.write().await.insert(id as _, JvmThread::new(thread));
 
         Ok(jvm)
     }
