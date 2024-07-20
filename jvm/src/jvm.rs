@@ -1,6 +1,6 @@
 #![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
 
-use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     fmt::Debug,
     iter,
@@ -30,11 +30,16 @@ use crate::{
     Result,
 };
 
-pub struct Jvm {
+struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
     bootstrapping: AtomicBool,
+}
+
+#[derive(Clone)]
+pub struct Jvm {
+    inner: Arc<JvmInner>,
 }
 
 impl Jvm {
@@ -43,22 +48,24 @@ impl Jvm {
         C: BootstrapClassLoader + 'static,
     {
         let jvm = Self {
-            classes: RwLock::new(BTreeMap::new()),
-            threads: RwLock::new(BTreeMap::new()),
-            bootstrap_class_loader: Box::new(bootstrap_class_loader),
-            bootstrapping: AtomicBool::new(true),
+            inner: Arc::new(JvmInner {
+                classes: RwLock::new(BTreeMap::new()),
+                threads: RwLock::new(BTreeMap::new()),
+                bootstrap_class_loader: Box::new(bootstrap_class_loader),
+                bootstrapping: AtomicBool::new(true),
+            }),
         };
 
         // load bootstrap classes
         let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "java/lang/Class"];
         for class_name in bootstrap_classes.iter() {
-            let class = jvm.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
+            let class = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
             jvm.register_class(class, None).await?;
         }
 
         // init startup thread
         let thread_id = JavaLangThread::current_thread_id(&jvm).await?;
-        jvm.threads.write().await.insert(thread_id, JvmThread::new());
+        jvm.inner.threads.write().await.insert(thread_id, JvmThread::new());
 
         // init properties
         for (key, value) in properties {
@@ -78,7 +85,7 @@ impl Jvm {
         // load system class loader
         JavaLangClassLoader::get_system_class_loader(&jvm).await?;
 
-        jvm.bootstrapping.store(false, Ordering::Relaxed);
+        jvm.inner.bootstrapping.store(false, Ordering::Relaxed);
 
         Ok(jvm)
     }
@@ -384,19 +391,19 @@ impl Jvm {
     }
 
     pub async fn has_class(&self, class_name: &str) -> bool {
-        self.classes.read().await.contains_key(class_name)
+        self.inner.classes.read().await.contains_key(class_name)
     }
 
     #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
-        let class = self.classes.read().await.get(class_name).cloned();
+        let class = self.inner.classes.read().await.get(class_name).cloned();
 
         if let Some(x) = class {
             return Ok(x);
         }
 
-        let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.bootstrapping.load(Ordering::Relaxed) {
-            &BootstrapClassLoaderWrapper::new(&*self.bootstrap_class_loader)
+        let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.inner.bootstrapping.load(Ordering::Relaxed) {
+            &BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)
         } else {
             let calling_class = self.find_calling_class().await?;
 
@@ -430,7 +437,7 @@ impl Jvm {
 
         self.register_class_internal(class.unwrap()).await?;
 
-        let class = self.classes.read().await.get(class_name).unwrap().clone();
+        let class = self.inner.classes.read().await.get(class_name).unwrap().clone();
 
         return Ok(class);
     }
@@ -438,7 +445,7 @@ impl Jvm {
     async fn find_calling_class(&self) -> Result<Option<Class>> {
         let thread_id = JavaLangThread::current_thread_id(self).await?;
 
-        let threads = self.threads.read().await;
+        let threads = self.inner.threads.read().await;
         let thread = threads.get(&thread_id).unwrap();
 
         Ok(thread.top_frame().map(|x| x.class.clone()))
@@ -505,7 +512,7 @@ impl Jvm {
             }
         }
 
-        self.classes.write().await.insert(class.definition.name().to_owned(), class.clone());
+        self.inner.classes.write().await.insert(class.definition.name().to_owned(), class.clone());
 
         let clinit = class.definition.method("<clinit>", "()V");
 
@@ -554,7 +561,7 @@ impl Jvm {
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.read().await.get(&x).unwrap().definition.clone();
+            let super_class = self.inner.classes.read().await.get(&x).unwrap().definition.clone();
             self.find_field(&*super_class, name, descriptor).await
         } else {
             Ok(None)
@@ -576,7 +583,7 @@ impl Jvm {
                 return Ok(Some(x));
             }
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.classes.read().await.get(&x).unwrap().definition.clone();
+            let super_class = self.inner.classes.read().await.get(&x).unwrap().definition.clone();
             return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
         }
 
@@ -585,7 +592,8 @@ impl Jvm {
 
     async fn execute_method(&self, class: &Class, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
         let current_thread_id = JavaLangThread::current_thread_id(self).await?;
-        self.threads
+        self.inner
+            .threads
             .write()
             .await
             .get_mut(&current_thread_id)
@@ -594,7 +602,7 @@ impl Jvm {
 
         let result = method.run(self, args).await?;
 
-        self.threads.write().await.get_mut(&current_thread_id).unwrap().pop_frame();
+        self.inner.threads.write().await.get_mut(&current_thread_id).unwrap().pop_frame();
 
         Ok(result)
     }
