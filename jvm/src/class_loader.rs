@@ -21,7 +21,7 @@ impl Class {
         }
     }
 
-    pub async fn java_class(&mut self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
+    pub async fn java_class(&self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
         let java_class = self.java_class.read().await;
         if let Some(x) = &*java_class {
             Ok(x.clone())
@@ -39,34 +39,29 @@ impl Class {
 }
 
 #[async_trait::async_trait]
-pub trait ClassLoaderWrapper: Sync + Send {
-    async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>>;
-}
-
-#[async_trait::async_trait]
 pub trait BootstrapClassLoader: Sync + Send {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Box<dyn ClassDefinition>>>;
 }
 
-pub struct BootstrapClassLoaderWrapper {
-    load_class: Box<dyn BootstrapClassLoader>,
+#[async_trait::async_trait]
+pub trait ClassLoaderWrapper: Sync + Send {
+    async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>>;
 }
 
-impl BootstrapClassLoaderWrapper {
-    pub fn new<C>(bootstrap_class_loader: C) -> Self
-    where
-        C: BootstrapClassLoader + 'static,
-    {
-        Self {
-            load_class: Box::new(bootstrap_class_loader),
-        }
+pub struct BootstrapClassLoaderWrapper<'a> {
+    bootstrap_class_loader: &'a dyn BootstrapClassLoader,
+}
+
+impl<'a> BootstrapClassLoaderWrapper<'a> {
+    pub fn new(bootstrap_class_loader: &'a dyn BootstrapClassLoader) -> Self {
+        Self { bootstrap_class_loader }
     }
 }
 
 #[async_trait::async_trait]
-impl ClassLoaderWrapper for BootstrapClassLoaderWrapper {
+impl<'a> ClassLoaderWrapper for BootstrapClassLoaderWrapper<'a> {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>> {
-        let definition = self.load_class.load_class(jvm, name).await?;
+        let definition = self.bootstrap_class_loader.load_class(jvm, name).await?;
         if let Some(definition) = definition {
             Ok(Some(Class {
                 definition,
@@ -78,19 +73,20 @@ impl ClassLoaderWrapper for BootstrapClassLoaderWrapper {
     }
 }
 
-pub struct JavaClassLoaderWrapper {}
+pub struct JavaClassLoaderWrapper {
+    class_loader: Box<dyn ClassInstance>,
+}
 
 impl JavaClassLoaderWrapper {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(class_loader: Box<dyn ClassInstance>) -> Self {
+        Self { class_loader }
     }
 }
 
 #[async_trait::async_trait]
 impl ClassLoaderWrapper for JavaClassLoaderWrapper {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>> {
-        let system_class_loader = JavaLangClassLoader::get_system_class_loader(jvm).await?;
-        let class = JavaLangClassLoader::load_class(jvm, system_class_loader, name).await?;
+        let class = JavaLangClassLoader::load_class(jvm, &self.class_loader, name).await?;
 
         if let Some(class) = class {
             let definition = JavaLangClass::to_rust_class(jvm, &class).await?;

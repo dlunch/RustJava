@@ -16,7 +16,10 @@ impl JvmThread {
     }
 
     pub fn push_frame(&mut self, class: &Class, method_name: &str) {
-        self.stack.push(JvmStackFrame::new(class.clone(), method_name));
+        self.stack.push(JvmStackFrame {
+            class: class.clone(),
+            method_name: method_name.to_string(),
+        });
     }
 
     pub fn pop_frame(&mut self) -> Option<JvmStackFrame> {
@@ -29,15 +32,6 @@ impl JvmThread {
 }
 
 pub struct JvmStackFrame {
-    class: Class,
-    method_name: String,
-}
-
-impl JvmStackFrame {
-    pub fn new(class: Class, method_name: &str) -> Self {
-        Self {
-            class,
-            method_name: method_name.to_string(),
-        }
-    }
+    pub class: Class,
+    pub method_name: String,
 }

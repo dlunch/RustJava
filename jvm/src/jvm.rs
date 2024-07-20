@@ -5,6 +5,7 @@ use core::{
     fmt::Debug,
     iter,
     mem::{forget, size_of_val},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use async_lock::RwLock;
@@ -32,7 +33,8 @@ use crate::{
 pub struct Jvm {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
-    class_loader_wrapper: RwLock<Box<dyn ClassLoaderWrapper>>,
+    bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
+    bootstrapping: AtomicBool,
 }
 
 impl Jvm {
@@ -43,16 +45,22 @@ impl Jvm {
         let jvm = Self {
             classes: RwLock::new(BTreeMap::new()),
             threads: RwLock::new(BTreeMap::new()),
-            class_loader_wrapper: RwLock::new(Box::new(BootstrapClassLoaderWrapper::new(bootstrap_class_loader))),
+            bootstrap_class_loader: Box::new(bootstrap_class_loader),
+            bootstrapping: AtomicBool::new(true),
         };
+
+        // load bootstrap classes
+        let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "java/lang/Class"];
+        for class_name in bootstrap_classes.iter() {
+            let class = jvm.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
+            jvm.register_class(class, None).await?;
+        }
 
         // init startup thread
         let thread_id = JavaLangThread::current_thread_id(&jvm).await?;
         jvm.threads.write().await.insert(thread_id, JvmThread::new());
 
-        // load system classes
-        jvm.resolve_class("java/lang/Class").await?;
-
+        // init properties
         for (key, value) in properties {
             let key = JavaLangString::from_rust_string(&jvm, key).await?;
             let value = JavaLangString::from_rust_string(&jvm, value).await?;
@@ -68,9 +76,9 @@ impl Jvm {
         }
 
         // load system class loader
-        let _ = JavaLangClassLoader::get_system_class_loader(&jvm).await?;
+        JavaLangClassLoader::get_system_class_loader(&jvm).await?;
 
-        *jvm.class_loader_wrapper.write().await = Box::new(JavaClassLoaderWrapper::new());
+        jvm.bootstrapping.store(false, Ordering::Relaxed);
 
         Ok(jvm)
     }
@@ -387,22 +395,53 @@ impl Jvm {
             return Ok(x);
         }
 
-        // load class
-        let class = self.class_loader_wrapper.read().await.load_class(self, class_name).await?;
+        let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.bootstrapping.load(Ordering::Relaxed) {
+            &BootstrapClassLoaderWrapper::new(&*self.bootstrap_class_loader)
+        } else {
+            let calling_class = self.find_calling_class().await?;
 
-        if let Some(x) = class {
-            tracing::debug!("Loaded class {}", class_name);
+            if let Some(x) = calling_class {
+                // called in java
 
-            self.register_class_internal(x).await?;
+                let calling_class_class_loader = JavaLangClass::class_loader(self, &x.java_class(self).await?).await?;
+                if let Some(x) = calling_class_class_loader {
+                    &JavaClassLoaderWrapper::new(x)
+                } else {
+                    let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
+                    &JavaClassLoaderWrapper::new(system_class_loader)
+                }
+            } else {
+                // called outside of java
 
-            let class = self.classes.read().await.get(class_name).unwrap().clone();
+                let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
+                &JavaClassLoaderWrapper::new(system_class_loader)
+            }
+        };
 
-            return Ok(class);
+        let class = class_loader_wrapper.load_class(self, class_name).await?;
+
+        if class.is_none() {
+            tracing::error!("No such class: {}", class_name);
+
+            return Err(self.exception("java/lang/NoClassDefFoundError", class_name).await);
         }
 
-        tracing::error!("No such class: {}", class_name);
+        tracing::debug!("Loaded class {}", class_name);
 
-        Err(self.exception("java/lang/NoClassDefFoundError", class_name).await)
+        self.register_class_internal(class.unwrap()).await?;
+
+        let class = self.classes.read().await.get(class_name).unwrap().clone();
+
+        return Ok(class);
+    }
+
+    async fn find_calling_class(&self) -> Result<Option<Class>> {
+        let thread_id = JavaLangThread::current_thread_id(self).await?;
+
+        let threads = self.threads.read().await;
+        let thread = threads.get(&thread_id).unwrap();
+
+        Ok(thread.top_frame().map(|x| x.class.clone()))
     }
 
     pub async fn register_class(
@@ -459,8 +498,10 @@ impl Jvm {
     async fn register_class_internal(&self, class: Class) -> Result<()> {
         if !class.definition.name().starts_with('[') {
             if let Some(super_class) = class.definition.super_class_name() {
-                // ensure superclass is loaded
-                self.resolve_class(&super_class).await?;
+                if !self.has_class(&super_class).await {
+                    // ensure superclass is loaded
+                    self.resolve_class(&super_class).await?;
+                }
             }
         }
 

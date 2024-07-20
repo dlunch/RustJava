@@ -212,7 +212,7 @@ impl ClassLoader {
             return Ok(None.into());
         }
 
-        let mut class = jvm.resolve_class(&rust_name).await?;
+        let class = jvm.resolve_class(&rust_name).await?;
 
         Ok(class.java_class(jvm).await?.into())
     }

@@ -25,4 +25,9 @@ impl JavaLangClass {
 
         Ok(java_class)
     }
+
+    #[allow(clippy::borrowed_box)]
+    pub async fn class_loader(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Option<Box<dyn ClassInstance>>> {
+        jvm.get_field(this, "classLoader", "Ljava/lang/ClassLoader;").await
+    }
 }
