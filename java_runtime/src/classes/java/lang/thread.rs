@@ -3,9 +3,9 @@ use core::time::Duration;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{ClassInstanceRef, JavaValue, Jvm, JvmCallback, Result};
+use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext, SpawnCallback};
 
 // class java.lang.Thread
 pub struct Thread {}
@@ -59,25 +59,25 @@ impl Thread {
         tracing::debug!("Thread::start({:?})", &this);
 
         struct ThreadStartProxy {
+            jvm: Jvm,
             thread_id: String,
             runnable: ClassInstanceRef<Runnable>,
         }
 
         #[async_trait::async_trait]
-        impl JvmCallback for ThreadStartProxy {
+        impl SpawnCallback for ThreadStartProxy {
             #[tracing::instrument(name = "thread", fields(thread = self.thread_id), skip_all)]
-            async fn call(&self, jvm: &Jvm, _: Box<[JavaValue]>) -> Result<JavaValue> {
+            async fn call(&self) {
                 tracing::trace!("Thread start");
 
-                jvm.invoke_virtual(&self.runnable, "run", "()V", []).await?;
-
-                Ok(JavaValue::Void)
+                self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await.unwrap()
             }
         }
 
         let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
 
         context.spawn(Box::new(ThreadStartProxy {
+            jvm: jvm.clone(),
             thread_id: format!("{:?}", &runnable),
             runnable,
         }));

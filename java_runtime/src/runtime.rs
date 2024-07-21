@@ -5,17 +5,22 @@ use core::time::Duration;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
-use jvm::{ClassDefinition, JvmCallback};
+use jvm::ClassDefinition;
 
 use crate::RuntimeClassProto;
 
 pub use io::{File, FileSize, FileStat, IOError};
 
 #[async_trait::async_trait]
+pub trait SpawnCallback: Sync + Send {
+    async fn call(&self);
+}
+
+#[async_trait::async_trait]
 pub trait Runtime: Sync + Send + DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
-    fn spawn(&self, callback: Box<dyn JvmCallback>);
+    fn spawn(&self, callback: Box<dyn SpawnCallback>);
 
     fn now(&self) -> u64; // unix time in millis
     fn current_task_id(&self) -> u64;
@@ -40,11 +45,11 @@ pub mod test {
     use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
     use core::{cmp::min, time::Duration};
 
-    use jvm::{ClassDefinition, JvmCallback};
+    use jvm::ClassDefinition;
     use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
     use crate::{
-        runtime::{File, IOError, Runtime},
+        runtime::{File, IOError, Runtime, SpawnCallback},
         FileSize, FileStat, RuntimeClassProto,
     };
 
@@ -69,7 +74,7 @@ pub mod test {
             todo!()
         }
 
-        fn spawn(&self, _callback: Box<dyn JvmCallback>) {
+        fn spawn(&self, _callback: Box<dyn SpawnCallback>) {
             todo!()
         }
 

@@ -8,8 +8,8 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto};
-use jvm::{ClassDefinition, JvmCallback};
+use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto, SpawnCallback};
+use jvm::ClassDefinition;
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use self::io::FileImpl;
@@ -76,7 +76,7 @@ where
         todo!()
     }
 
-    fn spawn(&self, _callback: Box<dyn JvmCallback>) {
+    fn spawn(&self, _callback: Box<dyn SpawnCallback>) {
         todo!()
     }
 
