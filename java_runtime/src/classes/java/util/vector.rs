@@ -91,7 +91,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let element = rust_vector.read().await.get(index as usize).unwrap().clone();
+        let element = rust_vector.lock().await.get(index as usize).unwrap().clone();
 
         Ok(element)
     }
