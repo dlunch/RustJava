@@ -2,7 +2,7 @@ use core::mem;
 
 use alloc::{sync::Arc, vec, vec::Vec};
 
-use async_lock::RwLock;
+use async_lock::Mutex;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
@@ -10,7 +10,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
 // I'm too lazy to implement vector in java, so i'm leveraging rust vector here...
-type RustVector = Arc<RwLock<Vec<ClassInstanceRef<Object>>>>;
+type RustVector = Arc<Mutex<Vec<ClassInstanceRef<Object>>>>;
 
 // class java.util.Vector
 pub struct Vector {}
@@ -61,7 +61,7 @@ impl Vector {
 
         jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
-        let rust_vector: RustVector = Arc::new(RwLock::new(Vec::with_capacity(capacity as _)));
+        let rust_vector: RustVector = Arc::new(Mutex::new(Vec::with_capacity(capacity as _)));
 
         jvm.put_rust_object_field(&mut this, "raw", rust_vector).await?;
 
@@ -72,7 +72,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.write().await.push(element);
+        rust_vector.lock().await.push(element);
 
         Ok(true)
     }
@@ -82,7 +82,7 @@ impl Vector {
 
         // do we need to call add() instead?
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.write().await.push(element);
+        rust_vector.lock().await.push(element);
 
         Ok(())
     }
@@ -106,7 +106,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let old_element = mem::replace(&mut rust_vector.write().await[index as usize], element);
+        let old_element = mem::replace(&mut rust_vector.lock().await[index as usize], element);
 
         Ok(old_element)
     }
@@ -115,7 +115,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::size({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let size = rust_vector.read().await.len();
+        let size = rust_vector.lock().await.len();
 
         Ok(size as _)
     }
