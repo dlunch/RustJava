@@ -32,7 +32,7 @@ impl JarURLHandler {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("rustjava.net.JarURLHandler::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
 
         Ok(())
     }

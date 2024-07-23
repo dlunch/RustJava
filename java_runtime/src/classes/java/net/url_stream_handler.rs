@@ -36,7 +36,7 @@ impl URLStreamHandler {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.net.URLStreamHandler::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
     }
@@ -64,13 +64,14 @@ impl URLStreamHandler {
             &r#ref,
         );
 
-        jvm.invoke_virtual(
-            &url,
-            "set",
-            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-            (protocol, host, port, file, r#ref),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &url,
+                "set",
+                "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
+                (protocol, host, port, file, r#ref),
+            )
+            .await?;
 
         Ok(())
     }
@@ -112,13 +113,14 @@ impl URLStreamHandler {
         let port = parsed_url.port().map(|x| x as i32).unwrap_or(-1);
         let file = JavaLangString::from_rust_string(jvm, file).await?;
 
-        jvm.invoke_virtual(
-            &this,
-            "setURL",
-            "(Ljava/net/URL;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-            (url, protocol, host, port, file, None),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &this,
+                "setURL",
+                "(Ljava/net/URL;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
+                (url, protocol, host, port, file, None),
+            )
+            .await?;
 
         Ok(())
     }

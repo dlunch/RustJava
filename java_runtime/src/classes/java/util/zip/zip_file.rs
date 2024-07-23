@@ -44,7 +44,7 @@ impl ZipFile {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.util.zip.ZipFile::<init>({:?}, {:?})", &this, &file,);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let length: i64 = jvm.invoke_virtual(&file, "length", "()J", ()).await?;
         let is = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
@@ -82,7 +82,7 @@ impl ZipFile {
             file.size()
         };
 
-        jvm.invoke_virtual(&entry, "setSize", "(J)V", (file_size as i64,)).await?;
+        let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (file_size as i64,)).await?;
 
         Ok(entry.into())
     }

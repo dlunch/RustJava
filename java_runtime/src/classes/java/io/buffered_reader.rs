@@ -33,7 +33,7 @@ impl BufferedReader {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<Reader>) -> Result<()> {
         tracing::debug!("java.io.BufferedReader::<init>({:?}, {:?})", &this, &r#in);
 
-        jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "in", "Ljava/io/Reader;", r#in).await?;
 
@@ -79,13 +79,14 @@ impl BufferedReader {
             let result = jvm.new_class("java/lang/String", "([CII)V", (buf.clone(), 0, x as i32)).await?;
 
             // advance buffer
-            jvm.invoke_static(
-                "java/lang/System",
-                "arraycopy",
-                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                (buf.clone(), (x + 1) as i32, buf, 0, buf_size - x as i32),
-            )
-            .await?;
+            let _: () = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "arraycopy",
+                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                    (buf.clone(), (x + 1) as i32, buf, 0, buf_size - x as i32),
+                )
+                .await?;
             jvm.put_field(&mut this, "bufSize", "I", buf_size - x as i32 - 1).await?;
 
             result.into()

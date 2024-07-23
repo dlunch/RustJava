@@ -45,7 +45,8 @@ where
     jvm.store_array(&mut array, 0, java_args).await.unwrap();
 
     let normalized_name = main_class_name.replace('.', "/");
-    jvm.invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
+    let _: () = jvm
+        .invoke_static(&normalized_name, "main", "([Ljava/lang/String;)V", [JavaValue::Object(Some(array))])
         .await?;
 
     Ok(())

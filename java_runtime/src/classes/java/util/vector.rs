@@ -37,7 +37,7 @@ impl Vector {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/util/Vector", "<init>", "(I)V", (0,)).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "(I)V", (0,)).await?;
 
         Ok(())
     }
@@ -45,7 +45,7 @@ impl Vector {
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?})", &this, capacity);
 
-        jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity, 0)).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity, 0)).await?;
 
         Ok(())
     }
@@ -59,7 +59,7 @@ impl Vector {
     ) -> Result<()> {
         tracing::debug!("java.util.Vector::<init>({:?}, {:?}, {:?})", &this, capacity, capacity_increment);
 
-        jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
         let rust_vector: RustVector = Arc::new(Mutex::new(Vec::with_capacity(capacity as _)));
 

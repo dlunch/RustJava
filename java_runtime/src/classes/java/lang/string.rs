@@ -56,7 +56,8 @@ impl String {
 
         let count = jvm.array_length(&value).await? as i32;
 
-        jvm.invoke_special(&this, "java/lang/String", "<init>", "([BII)V", (value, 0, count))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "([BII)V", (value, 0, count))
             .await?;
 
         Ok(())
@@ -72,7 +73,8 @@ impl String {
 
         let count = jvm.array_length(&value).await? as i32;
 
-        jvm.invoke_special(&this, "java/lang/String", "<init>", "([CII)V", (value, 0, count))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "([CII)V", (value, 0, count))
             .await?;
 
         Ok(())
@@ -117,7 +119,7 @@ impl String {
         let mut array = jvm.instantiate_array("C", utf16.len()).await?;
         jvm.store_array(&mut array, 0, utf16).await?;
 
-        jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
 
         Ok(())
     }

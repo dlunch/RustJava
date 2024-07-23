@@ -39,7 +39,8 @@ impl JarURLConnection {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("java.net.JarURLConnection::<init>({:?}, {:?})", &this, &url,);
 
-        jvm.invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
+        let _: () = jvm
+            .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;
 
         let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;

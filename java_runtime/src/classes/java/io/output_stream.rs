@@ -26,7 +26,7 @@ impl OutputStream {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
     }
@@ -36,7 +36,7 @@ impl OutputStream {
 
         let length = jvm.array_length(&buffer).await?;
 
-        jvm.invoke_virtual(&this, "write", "([BII)V", (buffer, 0, length as i32)).await?;
+        let _: () = jvm.invoke_virtual(&this, "write", "([BII)V", (buffer, 0, length as i32)).await?;
 
         Ok(())
     }
@@ -53,7 +53,7 @@ impl OutputStream {
 
         let bytes = jvm.load_byte_array(&buffer, offset as _, length as _).await?;
         for byte in bytes {
-            jvm.invoke_virtual(&this, "write", "(I)V", (byte as i32,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (byte as i32,)).await?;
         }
 
         Ok(())

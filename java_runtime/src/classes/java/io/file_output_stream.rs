@@ -47,7 +47,7 @@ impl FileOutputStream {
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({:?}, {:?})", &this, &file_descriptor);
 
-        jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", file_descriptor).await?;
 

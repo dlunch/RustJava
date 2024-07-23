@@ -24,7 +24,7 @@ impl SecurityException {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.SecurityException::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "()V", ()).await?;
 
         Ok(())
     }
@@ -32,7 +32,8 @@ impl SecurityException {
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.SecurityException::<init>({:?}, {:?})", &this, &message);
 
-        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))
             .await?;
 
         Ok(())

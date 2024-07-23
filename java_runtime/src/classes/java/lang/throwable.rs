@@ -25,7 +25,7 @@ impl Throwable {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
     }
@@ -33,7 +33,7 @@ impl Throwable {
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::<init>({:?}, {:?})", &this, &message);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
 

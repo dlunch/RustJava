@@ -26,7 +26,7 @@ impl FilterOutputStream {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::<init>({:?}, {:?})", &this, &out);
 
-        jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", out).await?;
 
@@ -50,7 +50,7 @@ impl FilterOutputStream {
         );
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "write", "([BII)V", (bytes, offset, length)).await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "([BII)V", (bytes, offset, length)).await?;
 
         Ok(())
     }
@@ -59,7 +59,7 @@ impl FilterOutputStream {
         tracing::debug!("java.io.FilterOutputStream::write({:?}, {:?})", &this, &byte);
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "write", "(I)V", (byte,)).await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "(I)V", (byte,)).await?;
 
         Ok(())
     }

@@ -28,7 +28,8 @@ impl RuntimeClassLoader {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, parent: ClassInstanceRef<ClassLoader>) -> Result<()> {
         tracing::debug!("rustjava.RuntimeClassLoader::<init>({:?}, {:?})", &this, &parent);
 
-        jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
 
         Ok(())

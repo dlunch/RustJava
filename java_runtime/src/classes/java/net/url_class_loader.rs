@@ -43,7 +43,8 @@ impl URLClassLoader {
     ) -> Result<()> {
         tracing::debug!("java.net.URLClassLoader::<init>({:?}, {:?}, {:?})", &this, &urls, &parent);
 
-        jvm.invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
 
         jvm.put_field(&mut this, "urls", "[Ljava/net/URL;", urls).await?;
@@ -84,23 +85,25 @@ impl URLClassLoader {
 
             if (jvm.array_length(&buf).await? as i32) < read + cur {
                 let new_buf = jvm.instantiate_array("B", (read + cur) as _).await?;
-                jvm.invoke_static(
-                    "java/lang/System",
-                    "arraycopy",
-                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                    (buf.clone(), 0, new_buf.clone(), 0, read),
-                )
-                .await?;
+                let _: () = jvm
+                    .invoke_static(
+                        "java/lang/System",
+                        "arraycopy",
+                        "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                        (buf.clone(), 0, new_buf.clone(), 0, read),
+                    )
+                    .await?;
                 buf = new_buf;
             }
 
-            jvm.invoke_static(
-                "java/lang/System",
-                "arraycopy",
-                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                (temp, 0, buf.clone(), read, cur),
-            )
-            .await?;
+            let _: () = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "arraycopy",
+                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                    (temp, 0, buf.clone(), read, cur),
+                )
+                .await?;
 
             read += cur;
         }

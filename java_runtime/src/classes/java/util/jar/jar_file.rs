@@ -37,7 +37,8 @@ impl JarFile {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.util.jar.JarFile::<init>({:?}, {:?})", &this, &file,);
 
-        jvm.invoke_special(&this, "java/util/zip/ZipFile", "<init>", "(Ljava/io/File;)V", (file,))
+        let _: () = jvm
+            .invoke_special(&this, "java/util/zip/ZipFile", "<init>", "(Ljava/io/File;)V", (file,))
             .await?;
 
         Ok(())

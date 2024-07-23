@@ -21,7 +21,7 @@ impl AbstractCollection {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.util.AbstractCollection::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
     }

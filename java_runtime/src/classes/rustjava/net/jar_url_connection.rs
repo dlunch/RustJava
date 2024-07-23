@@ -28,7 +28,8 @@ impl JarURLConnection {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("rustjava.net.JarURLConnection::<init>({:?}, {:?})", &this, &url);
 
-        jvm.invoke_special(&this, "java/net/JarURLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
+        let _: () = jvm
+            .invoke_special(&this, "java/net/JarURLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;
 
         Ok(())

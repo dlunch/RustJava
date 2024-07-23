@@ -102,7 +102,7 @@ impl Object {
     async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({:?}, {:?})", &this, millis);
 
-        jvm.invoke_virtual(&this, "wait", "(JI)V", (millis, 0)).await?;
+        let _: () = jvm.invoke_virtual(&this, "wait", "(JI)V", (millis, 0)).await?;
 
         Ok(())
     }
@@ -116,7 +116,7 @@ impl Object {
     async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({:?})", &this);
 
-        jvm.invoke_virtual(&this, "wait", "(JI)V", (0, 0)).await?;
+        let _: () = jvm.invoke_virtual(&this, "wait", "(JI)V", (0, 0)).await?;
 
         Ok(())
     }

@@ -40,7 +40,7 @@ impl Hashtable {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/util/Dictionary", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/Dictionary", "<init>", "()V", ()).await?;
 
         let rust_hash_map: RustHashMap = Arc::new(Mutex::new(HashMap::new()));
         jvm.put_rust_object_field(&mut this, "raw", rust_hash_map).await?;

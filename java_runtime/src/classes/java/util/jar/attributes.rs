@@ -30,7 +30,7 @@ impl Attributes {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.jar.Manifest::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         //XXX should be HashMap, but we don't have yet.
         let map = jvm.new_class("java/util/Hashtable", "()V", ()).await?;

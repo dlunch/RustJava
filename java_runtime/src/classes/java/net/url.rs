@@ -72,7 +72,8 @@ impl URL {
     async fn init_with_spec(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, spec: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({:?}, {:?})", &this, &spec);
 
-        jvm.invoke_special(&this, "java/net/URL", "<init>", "(Ljava/net/URL;Ljava/lang/String;)V", (None, spec))
+        let _: () = jvm
+            .invoke_special(&this, "java/net/URL", "<init>", "(Ljava/net/URL;Ljava/lang/String;)V", (None, spec))
             .await?;
 
         Ok(())
@@ -87,14 +88,15 @@ impl URL {
     ) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?})", &this, &context, &spec);
 
-        jvm.invoke_special(
-            &this,
-            "java/net/URL",
-            "<init>",
-            "(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V",
-            (context, spec, None),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_special(
+                &this,
+                "java/net/URL",
+                "<init>",
+                "(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V",
+                (context, spec, None),
+            )
+            .await?;
 
         Ok(())
     }
@@ -109,7 +111,7 @@ impl URL {
     ) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?}, {:?})", &this, &context, &spec, &handler);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let spec_str = JavaLangString::to_rust_string(jvm, &spec).await?;
 
@@ -120,13 +122,14 @@ impl URL {
         jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
             .await?;
 
-        jvm.invoke_virtual(
-            &handler,
-            "parseURL",
-            "(Ljava/net/URL;Ljava/lang/String;II)V",
-            (this, spec, 0, spec_str.len() as i32),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &handler,
+                "parseURL",
+                "(Ljava/net/URL;Ljava/lang/String;II)V",
+                (this, spec, 0, spec_str.len() as i32),
+            )
+            .await?;
 
         Ok(())
     }
@@ -141,14 +144,15 @@ impl URL {
     ) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?}, {:?})", &this, &protocol, &host, &file);
 
-        jvm.invoke_special(
-            &this,
-            "java/net/URL",
-            "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
-            (protocol, host, -1, file, None),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_special(
+                &this,
+                "java/net/URL",
+                "<init>",
+                "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
+                (protocol, host, -1, file, None),
+            )
+            .await?;
 
         Ok(())
     }
@@ -174,18 +178,19 @@ impl URL {
             &handler
         );
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
             .await?;
 
-        jvm.invoke_virtual(
-            &this,
-            "set",
-            "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-            (protocol.clone(), host, port, file, None),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &this,
+                "set",
+                "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
+                (protocol.clone(), host, port, file, None),
+            )
+            .await?;
 
         if handler.is_null() {
             let protocol = JavaLangString::to_rust_string(jvm, &protocol).await?;

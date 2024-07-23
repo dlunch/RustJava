@@ -38,7 +38,7 @@ impl Properties {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Properties::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/util/Hashtable", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/Hashtable", "<init>", "()V", ()).await?;
 
         Ok(())
     }

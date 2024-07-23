@@ -42,7 +42,7 @@ impl InputStreamReader {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.InputStreamReader::<init>({:?}, {:?})", &this, &r#in);
 
-        jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
 
         let charset = System::get_charset(jvm).await?;
 
@@ -91,13 +91,14 @@ impl InputStreamReader {
                 let temp = jvm.instantiate_array("B", bytes_to_read as _).await?;
                 let read: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (temp.clone(), 0, bytes_to_read)).await?;
                 if read != -1 {
-                    jvm.invoke_static(
-                        "java/lang/System",
-                        "arraycopy",
-                        "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                        (temp, 0, read_buf.clone(), read_buf_size, read),
-                    )
-                    .await?;
+                    let _: () = jvm
+                        .invoke_static(
+                            "java/lang/System",
+                            "arraycopy",
+                            "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                            (temp, 0, read_buf.clone(), read_buf_size, read),
+                        )
+                        .await?;
                     jvm.put_field(&mut this, "readBufSize", "I", read_buf_size + read).await?;
                 } else if read_buf_size == 0 {
                     return Ok(-1);
@@ -113,13 +114,14 @@ impl InputStreamReader {
             let (_, read, wrote, _) = decoder.lock().await.decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
 
             // advance readBuf
-            jvm.invoke_static(
-                "java/lang/System",
-                "arraycopy",
-                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                (read_buf.clone(), read as i32, read_buf, 0, (read_buf_size - read as i32)),
-            )
-            .await?;
+            let _: () = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "arraycopy",
+                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                    (read_buf.clone(), read as i32, read_buf, 0, (read_buf_size - read as i32)),
+                )
+                .await?;
             jvm.put_field(&mut this, "readBufSize", "I", read_buf_size - read as i32).await?;
 
             // add to writeBuf
@@ -139,22 +141,24 @@ impl InputStreamReader {
 
         let to_copy = min(length, write_buf_size);
 
-        jvm.invoke_static(
-            "java/lang/System",
-            "arraycopy",
-            "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-            (write_buf.clone(), 0, buf, offset, to_copy),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                (write_buf.clone(), 0, buf, offset, to_copy),
+            )
+            .await?;
 
         // advance writeBuf
-        jvm.invoke_static(
-            "java/lang/System",
-            "arraycopy",
-            "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-            (write_buf.clone(), to_copy, write_buf, 0, write_buf_size - to_copy),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                (write_buf.clone(), to_copy, write_buf, 0, write_buf_size - to_copy),
+            )
+            .await?;
         jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size - to_copy).await?;
 
         Ok(to_copy)

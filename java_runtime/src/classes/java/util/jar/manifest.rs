@@ -33,9 +33,9 @@ impl Manifest {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.util.jar.Manifest::<init>({:?}, {:?})", &this, &is);
 
-        jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.invoke_virtual(&this, "read", "(Ljava/io/InputStream;)V", (is,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "read", "(Ljava/io/InputStream;)V", (is,)).await?;
 
         Ok(())
     }

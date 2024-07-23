@@ -184,7 +184,7 @@ impl DataInputStream {
         tracing::debug!("java.io.DataInputStream::close({:?})", &this);
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        jvm.invoke_virtual(&r#in, "close", "()V", []).await?;
+        let _: () = jvm.invoke_virtual(&r#in, "close", "()V", []).await?;
 
         Ok(())
     }

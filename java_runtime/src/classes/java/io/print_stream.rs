@@ -35,7 +35,8 @@ impl PrintStream {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.PrintStream::<init>({:?}, {:?})", &this, &out);
 
-        jvm.invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
             .await?;
 
         Ok(())
@@ -55,7 +56,7 @@ impl PrintStream {
         let mut string_bytes = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.store_byte_array(&mut string_bytes, 0, cast_vec(bytes)).await?;
 
-        jvm.invoke_virtual(&this, "write", "([B)V", (string_bytes,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "write", "([B)V", (string_bytes,)).await?;
 
         Ok(())
     }
@@ -65,7 +66,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &int.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
@@ -75,7 +76,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &long.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
@@ -87,7 +88,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &char.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
@@ -97,7 +98,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &byte.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
@@ -107,7 +108,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &short.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }
@@ -117,7 +118,7 @@ impl PrintStream {
 
         let java_string = JavaLangString::from_rust_string(jvm, &bool.to_string()).await?;
 
-        jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
         Ok(())
     }

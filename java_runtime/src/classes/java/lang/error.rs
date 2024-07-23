@@ -24,7 +24,7 @@ impl Error {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Error::<init>({:?})", &this);
 
-        jvm.invoke_special(&this, "java/lang/Throwable", "<init>", "()V", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/Throwable", "<init>", "()V", ()).await?;
 
         Ok(())
     }
@@ -32,7 +32,8 @@ impl Error {
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.Error::<init>({:?}, {:?})", &this, &message);
 
-        jvm.invoke_special(&this, "java/lang/Throwable", "<init>", "(Ljava/lang/String;)V", (message,))
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/Throwable", "<init>", "(Ljava/lang/String;)V", (message,))
             .await?;
 
         Ok(())

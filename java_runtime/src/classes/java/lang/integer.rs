@@ -45,10 +45,10 @@ mod test {
 
         let string = JavaLangString::from_rust_string(&jvm, "42").await?;
         assert_eq!(
-            42i32,
-            jvm.invoke_static("java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", (string,))
-                .await?
-        );
+                    42i32,
+        let _:() = jvm.invoke_static("java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", (string,))
+                        .await?
+                );
 
         Ok(())
     }

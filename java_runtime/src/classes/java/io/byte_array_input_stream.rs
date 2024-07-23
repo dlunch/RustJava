@@ -66,13 +66,14 @@ impl ByteArrayInputStream {
             return Ok(-1);
         }
 
-        jvm.invoke_static(
-            "java/lang/System",
-            "arraycopy",
-            "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-            (buf, pos, b, off, len_to_read),
-        )
-        .await?;
+        let _: () = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                (buf, pos, b, off, len_to_read),
+            )
+            .await?;
 
         jvm.put_field(&mut this, "pos", "I", pos + len_to_read).await?;
 

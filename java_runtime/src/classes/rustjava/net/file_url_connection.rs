@@ -36,7 +36,8 @@ impl FileURLConnection {
     ) -> Result<()> {
         tracing::debug!("rustjava.net.FileURLConnection::<init>({:?}, {:?}, {:?})", &this, &url, &file);
 
-        jvm.invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url,))
+        let _: () = jvm
+            .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url,))
             .await?;
 
         jvm.put_field(&mut this, "file", "Ljava/io/File;", file).await?;
