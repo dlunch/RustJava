@@ -106,7 +106,7 @@ impl Jvm {
     {
         let instance = self.instantiate_class(class_name).await?;
 
-        self.invoke_special(&instance, class_name, "<init>", init_descriptor, init_args).await?;
+        let _: () = self.invoke_special(&instance, class_name, "<init>", init_descriptor, init_args).await?;
 
         Ok(instance)
     }
