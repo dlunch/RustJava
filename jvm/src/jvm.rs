@@ -64,8 +64,7 @@ impl Jvm {
         }
 
         // init startup thread
-        let thread_id = JavaLangThread::current_thread_id(&jvm).await?;
-        jvm.inner.threads.write().await.insert(thread_id, JvmThread::new());
+        jvm.attach_thread().await?;
 
         // init properties
         for (key, value) in properties {
@@ -550,6 +549,20 @@ impl Jvm {
             .await?;
 
         self.put_field(instance, name, "[B", raw_storage).await?;
+
+        Ok(())
+    }
+
+    pub async fn attach_thread(&self) -> Result<()> {
+        let thread_id = JavaLangThread::current_thread_id(self).await?;
+        self.inner.threads.write().await.insert(thread_id, JvmThread::new());
+
+        Ok(())
+    }
+
+    pub async fn detach_thread(&self) -> Result<()> {
+        let thread_id = JavaLangThread::current_thread_id(self).await?;
+        self.inner.threads.write().await.remove(&thread_id);
 
         Ok(())
     }

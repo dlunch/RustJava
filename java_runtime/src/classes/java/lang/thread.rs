@@ -70,7 +70,11 @@ impl Thread {
             async fn call(&self) {
                 tracing::trace!("Thread start");
 
-                self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await.unwrap()
+                self.jvm.attach_thread().await.unwrap();
+
+                let _: () = self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await.unwrap();
+
+                self.jvm.detach_thread().await.unwrap();
             }
         }
 
