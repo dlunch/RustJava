@@ -19,8 +19,16 @@ struct Opts {
     args: Vec<String>,
 }
 
-#[tokio::main]
-pub async fn main() -> Result<()> {
+pub fn main() -> Result<()> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    #[cfg(target_arch = "wasm32")]
+    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+
+    runtime.block_on(async_main())
+}
+
+pub async fn async_main() -> Result<()> {
     let opts = Opts::parse();
 
     let start_type = if opts.main_class.is_some() {
