@@ -88,7 +88,7 @@ mod test {
 
     use crate::test::test_jvm_filesystem;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_jar_manifest() -> Result<()> {
         let jar = include_bytes!("../../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();

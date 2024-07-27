@@ -303,7 +303,7 @@ mod test {
 
     use crate::test::test_jvm;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_file_url() -> Result<()> {
         let jvm = test_jvm().await?;
 

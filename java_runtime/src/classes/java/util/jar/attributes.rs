@@ -78,7 +78,7 @@ mod test {
 
     use crate::{classes::java::lang::String, test::test_jvm};
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_attribute_get_set() -> Result<()> {
         let jvm = test_jvm().await?;
 

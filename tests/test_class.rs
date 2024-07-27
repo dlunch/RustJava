@@ -7,7 +7,7 @@ use jvm::Result;
 use test_helper::{run_class, run_jar};
 
 // TODO parameterized tests..
-#[futures_test::test]
+#[tokio::test]
 async fn test_class() -> Result<()> {
     let base_path = Path::new("test_data");
 

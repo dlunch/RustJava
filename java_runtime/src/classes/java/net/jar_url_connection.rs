@@ -105,7 +105,7 @@ mod test {
 
     use crate::test::test_jvm;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_jar_filename() -> Result<()> {
         let jvm = test_jvm().await?;
 

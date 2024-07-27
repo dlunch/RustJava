@@ -186,7 +186,7 @@ mod test {
 
     use crate::test::test_jvm_filesystem;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_jar_loading() -> Result<()> {
         let jar = include_bytes!("../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
@@ -218,7 +218,7 @@ mod test {
         Ok(())
     }
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_load_from_dir() -> Result<()> {
         let filesystem = [("test.txt".into(), b"test content\n".to_vec())].into_iter().collect();
         let jvm = crate::test::test_jvm_filesystem(filesystem).await?;

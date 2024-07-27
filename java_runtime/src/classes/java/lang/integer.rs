@@ -39,7 +39,7 @@ mod test {
 
     use crate::test::test_jvm;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_parse_int() -> Result<()> {
         let jvm = test_jvm().await?;
 

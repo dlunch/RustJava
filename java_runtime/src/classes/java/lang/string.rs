@@ -292,7 +292,7 @@ mod test {
 
     use crate::test::test_jvm;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_string() -> Result<()> {
         let jvm = test_jvm().await?;
 
@@ -305,7 +305,7 @@ mod test {
         Ok(())
     }
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_string_concat() -> Result<()> {
         let jvm = test_jvm().await?;
 
@@ -323,7 +323,7 @@ mod test {
         Ok(())
     }
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_hash_code() -> Result<()> {
         let jvm = test_jvm().await?;
 

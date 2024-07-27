@@ -154,7 +154,7 @@ mod test {
 
     use crate::{classes::java::lang::StringBuffer, test::test_jvm};
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_string_buffer() -> Result<()> {
         let jvm = test_jvm().await?;
 

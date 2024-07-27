@@ -4,7 +4,6 @@ use std::{
 };
 
 use clap::{ArgGroup, Parser};
-use futures_executor::block_on;
 
 use jvm::Result;
 use rust_java::{run, StartType};
@@ -20,18 +19,17 @@ struct Opts {
     args: Vec<String>,
 }
 
-pub fn main() -> Result<()> {
+#[tokio::main]
+pub async fn main() -> Result<()> {
     let opts = Opts::parse();
 
-    block_on(async {
-        let start_type = if opts.main_class.is_some() {
-            StartType::Class(opts.main_class.as_ref().unwrap())
-        } else {
-            StartType::Jar(opts.jar.as_ref().unwrap())
-        };
+    let start_type = if opts.main_class.is_some() {
+        StartType::Class(opts.main_class.as_ref().unwrap())
+    } else {
+        StartType::Jar(opts.jar.as_ref().unwrap())
+    };
 
-        run(io::stdout(), start_type, &opts.args, &[Path::new(".")]).await?;
+    run(io::stdout(), start_type, &opts.args, &[Path::new(".")]).await?;
 
-        Ok(())
-    })
+    Ok(())
 }

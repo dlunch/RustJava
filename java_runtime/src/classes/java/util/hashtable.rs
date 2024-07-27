@@ -161,7 +161,7 @@ mod test {
 
     use crate::{classes::java::lang::Object, test::test_jvm};
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_hashmap() -> Result<()> {
         let jvm = test_jvm().await?;
 

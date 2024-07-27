@@ -16,7 +16,7 @@ nom = { version = "^7.1", default-features = false, features = ["alloc"] }
 async-lock = { version = "^3.3", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
-futures-test = { version = "^0.3" }
+tokio = { version = "^1.0", features = ["rt-multi-thread", "macros"] }
 
 classfile = { path = "classfile" }
 java_class_proto = { path = "java_class_proto" }
@@ -37,14 +37,11 @@ name = "rust_java"
 [dependencies]
 async-trait = { workspace = true }
 bytemuck = { workspace = true }
+tokio = { workspace = true }
 
 clap = { version = "^4.4", features = ["derive"] }
-futures-executor = { version = "^0.3" }
 
 jvm = { workspace = true }
 jvm_rust = { workspace = true }
 java_class_proto = { workspace = true }
 java_runtime = { workspace = true }
-
-[dev-dependencies]
-futures-test = { workspace = true }

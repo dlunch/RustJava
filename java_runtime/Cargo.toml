@@ -21,5 +21,5 @@ java_constants = { workspace = true }
 jvm = { workspace = true }
 
 [dev-dependencies]
-futures-test = { workspace = true }
+tokio = { workspace = true }
 jvm_rust = { workspace = true }

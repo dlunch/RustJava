@@ -131,7 +131,7 @@ mod test {
 
     use crate::{classes::java::lang::Object, test::test_jvm};
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_vector() -> Result<()> {
         let jvm = test_jvm().await?;
 
@@ -152,7 +152,7 @@ mod test {
         Ok(())
     }
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_vector_null() -> Result<()> {
         let jvm = test_jvm().await?;
 

@@ -200,7 +200,7 @@ mod test {
 
     use crate::test::test_jvm;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_data_input_stream() -> Result<()> {
         let jvm = test_jvm().await?;
 
@@ -242,7 +242,7 @@ mod test {
         Ok(())
     }
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_data_input_stream_high_bit() -> Result<()> {
         let jvm = test_jvm().await?;
 

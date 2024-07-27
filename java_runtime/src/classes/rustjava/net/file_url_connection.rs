@@ -63,7 +63,7 @@ mod test {
 
     use crate::test::test_jvm_filesystem;
 
-    #[futures_test::test]
+    #[tokio::test]
     async fn test_file_url() -> Result<()> {
         let filesystem = [("test.txt".into(), b"test file content".to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
