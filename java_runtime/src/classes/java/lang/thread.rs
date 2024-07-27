@@ -202,9 +202,9 @@ mod test {
         let thread = jvm
             .new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (test_class.clone(),))
             .await?;
-        jvm.invoke_virtual(&thread, "start", "()V", []).await?;
+        let _: () = jvm.invoke_virtual(&thread, "start", "()V", []).await?;
 
-        jvm.invoke_virtual(&thread, "join", "()V", []).await?;
+        let _: () = jvm.invoke_virtual(&thread, "join", "()V", []).await?;
 
         let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
         assert!(ran);
