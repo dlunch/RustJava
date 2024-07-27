@@ -39,11 +39,17 @@ pub trait Runtime: Sync + Send + DynClone {
 
 clone_trait_object!(Runtime);
 
-// for testing
+// test helpers
 #[cfg(test)]
 pub mod test {
+    extern crate std;
+
     use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-    use core::{cmp::min, time::Duration};
+    use core::{
+        cmp::min,
+        sync::atomic::{AtomicU64, Ordering},
+        time::Duration,
+    };
 
     use jvm::ClassDefinition;
     use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
@@ -64,6 +70,12 @@ pub mod test {
         }
     }
 
+    tokio::task_local! {
+        static TASK_ID: u64;
+    }
+
+    static LAST_TASK_ID: AtomicU64 = AtomicU64::new(1);
+
     #[async_trait::async_trait]
     impl Runtime for DummyRuntime {
         async fn sleep(&self, _duration: Duration) {
@@ -74,8 +86,15 @@ pub mod test {
             todo!()
         }
 
-        fn spawn(&self, _callback: Box<dyn SpawnCallback>) {
-            todo!()
+        fn spawn(&self, callback: Box<dyn SpawnCallback>) {
+            let task_id = LAST_TASK_ID.fetch_add(1, Ordering::SeqCst);
+            tokio::spawn(async move {
+                TASK_ID
+                    .scope(task_id, async move {
+                        callback.call().await;
+                    })
+                    .await;
+            });
         }
 
         fn now(&self) -> u64 {
@@ -83,7 +102,7 @@ pub mod test {
         }
 
         fn current_task_id(&self) -> u64 {
-            0 // TODO it will break on multithread testing
+            TASK_ID.try_with(|x| *x).unwrap_or(0)
         }
 
         fn stdin(&self) -> Result<Box<dyn File>, IOError> {

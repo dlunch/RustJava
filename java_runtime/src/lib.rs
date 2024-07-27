@@ -19,7 +19,7 @@ pub mod test {
 
     use jvm::{Jvm, Result};
 
-    use crate::{get_bootstrap_class_loader, runtime::test::DummyRuntime};
+    use crate::{get_bootstrap_class_loader, runtime::test::DummyRuntime, Runtime};
 
     pub async fn test_jvm() -> Result<Jvm> {
         let runtime = DummyRuntime::new(BTreeMap::new());
@@ -31,8 +31,11 @@ pub mod test {
         create_test_jvm(runtime).await
     }
 
-    async fn create_test_jvm(runtime: DummyRuntime) -> Result<Jvm> {
-        let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
+    pub async fn create_test_jvm<R>(runtime: R) -> Result<Jvm>
+    where
+        R: Runtime + 'static,
+    {
+        let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime));
 
         Jvm::new(bootstrap_class_loader, BTreeMap::new()).await
     }

@@ -1,9 +1,11 @@
-use alloc::{boxed::Box, format, string::String, vec};
+use alloc::{boxed::Box, format, string::String, sync::Arc, vec};
 use core::time::Duration;
+
+use event_listener::Event;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext, SpawnCallback};
 
@@ -18,6 +20,7 @@ impl Thread {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init, Default::default()),
                 JavaMethodProto::new("start", "()V", Self::start, Default::default()),
+                JavaMethodProto::new("join", "()V", Self::join, Default::default()),
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
@@ -34,6 +37,7 @@ impl Thread {
             fields: vec![
                 JavaFieldProto::new("id", "J", Default::default()),
                 JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default()),
+                JavaFieldProto::new("joinEvent", "[B", Default::default()),
             ],
         }
     }
@@ -55,12 +59,13 @@ impl Thread {
         Ok(())
     }
 
-    async fn start(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn start(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("Thread::start({:?})", &this);
 
         struct ThreadStartProxy {
             jvm: Jvm,
             thread_id: String,
+            join_event: Arc<Event>,
             runnable: ClassInstanceRef<Runnable>,
         }
 
@@ -75,16 +80,39 @@ impl Thread {
                 let _: () = self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await.unwrap();
 
                 self.jvm.detach_thread().await.unwrap();
+
+                self.join_event.notify(usize::MAX);
             }
         }
+
+        let join_event = Arc::new(Event::new());
+        jvm.put_rust_object_field(&mut this, "joinEvent", join_event.clone()).await?;
 
         let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
 
         context.spawn(Box::new(ThreadStartProxy {
             jvm: jvm.clone(),
             thread_id: format!("{:?}", &runnable),
+            join_event,
             runnable,
         }));
+
+        Ok(())
+    }
+
+    async fn join(jvm: &Jvm, _context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("Thread::join({:?})", &this);
+
+        // TODO we don't have get same field twice
+        let raw_join_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "joinEvent", "[B").await?;
+        if raw_join_event.is_null() {
+            return Ok(()); // already joined or not started
+        }
+
+        let join_event: Arc<Event> = jvm.get_rust_object_field(&this, "joinEvent").await?;
+        join_event.listen().await;
+
+        jvm.put_field(&mut this, "joinEvent", "[B", None).await?;
 
         Ok(())
     }
@@ -122,5 +150,65 @@ impl Thread {
         let id = context.current_task_id();
 
         Ok(id as _)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use alloc::{collections::BTreeMap, vec};
+
+    use java_class_proto::{JavaFieldProto, JavaMethodProto};
+    use jvm::{ClassInstanceRef, Jvm, Result};
+
+    use crate::{runtime::test::DummyRuntime, test::create_test_jvm, Runtime, RuntimeClassProto, RuntimeContext};
+
+    struct TestClass {}
+    impl TestClass {
+        pub fn as_proto() -> RuntimeClassProto {
+            RuntimeClassProto {
+                parent_class: Some("java/lang/Runnable"),
+                interfaces: vec![],
+                methods: vec![
+                    JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                    JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                ],
+                fields: vec![JavaFieldProto::new("ran", "Z", Default::default())],
+            }
+        }
+
+        async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+            jvm.put_field(&mut this, "ran", "Z", false).await?;
+
+            Ok(())
+        }
+
+        async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+            jvm.put_field(&mut this, "ran", "Z", true).await?;
+
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_thread() -> Result<()> {
+        let runtime = DummyRuntime::new(BTreeMap::new());
+        let jvm = create_test_jvm(runtime.clone()).await?;
+
+        let class = runtime.define_class_rust("TestClass", TestClass::as_proto()).await?;
+        jvm.register_class(class, None).await?;
+
+        let test_class = jvm.new_class("TestClass", "()V", ()).await?;
+
+        let thread = jvm
+            .new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (test_class.clone(),))
+            .await?;
+        jvm.invoke_virtual(&thread, "start", "()V", []).await?;
+
+        jvm.invoke_virtual(&thread, "join", "()V", []).await?;
+
+        let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
+        assert!(ran);
+
+        Ok(())
     }
 }

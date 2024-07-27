@@ -1,7 +1,10 @@
 mod io;
 
 use alloc::sync::Arc;
-use core::time::Duration;
+use core::{
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
+};
 use std::{
     fs,
     io::{stderr, stdin, Write},
@@ -13,6 +16,12 @@ use jvm::ClassDefinition;
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use self::io::FileImpl;
+
+tokio::task_local! {
+    static TASK_ID: u64;
+}
+
+static LAST_TASK_ID: AtomicU64 = AtomicU64::new(1);
 
 struct WriteWrapper<T>
 where
@@ -76,8 +85,15 @@ where
         todo!()
     }
 
-    fn spawn(&self, _callback: Box<dyn SpawnCallback>) {
-        todo!()
+    fn spawn(&self, callback: Box<dyn SpawnCallback>) {
+        let task_id = LAST_TASK_ID.fetch_add(1, Ordering::SeqCst) + 1;
+        tokio::spawn(async move {
+            TASK_ID
+                .scope(task_id, async move {
+                    callback.call().await;
+                })
+                .await;
+        });
     }
 
     fn now(&self) -> u64 {
@@ -85,7 +101,7 @@ where
     }
 
     fn current_task_id(&self) -> u64 {
-        0 // TODO it will break on multithread
+        TASK_ID.try_with(|x| *x).unwrap_or(0)
     }
 
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
