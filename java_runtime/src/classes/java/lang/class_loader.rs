@@ -161,7 +161,7 @@ impl ClassLoader {
 
         if let Some(element_type_name) = name_str.strip_prefix('[') {
             // TODO do we need another class loader for array?
-            let class = runtime.define_array_class(element_type_name).await?;
+            let class = runtime.define_array_class(jvm, element_type_name).await?;
             let java_class = jvm.register_class(class, Some(this.into())).await?;
 
             return Ok(java_class.into());
@@ -297,7 +297,7 @@ impl ClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&bytes, 0, length as _).await?;
 
-        let class = runtime.define_class_java(cast_slice(&data)).await?;
+        let class = runtime.define_class_java(jvm, cast_slice(&data)).await?;
         let java_class = jvm.register_class(class, Some(this.into())).await?;
 
         Ok(java_class.into())

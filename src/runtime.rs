@@ -12,7 +12,7 @@ use std::{
 };
 
 use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto, SpawnCallback};
-use jvm::ClassDefinition;
+use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use self::io::FileImpl;
@@ -129,7 +129,7 @@ where
         }
     }
 
-    async fn define_class_rust(&self, name: &str, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
+    async fn define_class_rust(&self, _jvm: &Jvm, name: &str, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
         Ok(Box::new(ClassDefinitionImpl::from_class_proto(
             name,
             proto,
@@ -137,11 +137,11 @@ where
         )))
     }
 
-    async fn define_class_java(&self, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
+    async fn define_class_java(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
         ClassDefinitionImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
     }
 
-    async fn define_array_class(&self, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>> {
+    async fn define_array_class(&self, _jvm: &Jvm, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>> {
         Ok(Box::new(ArrayClassDefinitionImpl::new(element_type_name)))
     }
 }

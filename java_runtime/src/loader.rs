@@ -94,14 +94,14 @@ struct JavaRuntimeClassLoader {
 
 #[async_trait::async_trait]
 impl BootstrapClassLoader for JavaRuntimeClassLoader {
-    async fn load_class(&self, _jvm: &Jvm, name: &str) -> Result<Option<Box<dyn ClassDefinition>>> {
+    async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Box<dyn ClassDefinition>>> {
         if let Some(element_type_name) = name.strip_prefix('[') {
-            return Ok(Some(self.runtime.define_array_class(element_type_name).await?));
+            return Ok(Some(self.runtime.define_array_class(jvm, element_type_name).await?));
         }
 
         let proto = get_proto(name);
         if let Some(proto) = proto {
-            Ok(Some(self.runtime.define_class_rust(name, proto).await?))
+            Ok(Some(self.runtime.define_class_rust(jvm, name, proto).await?))
         } else {
             Ok(None)
         }
