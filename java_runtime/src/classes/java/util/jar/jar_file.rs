@@ -7,7 +7,10 @@ use crate::{
     classes::java::{
         io::{File, InputStream},
         lang::String,
-        util::jar::{JarEntry, Manifest},
+        util::{
+            jar::{JarEntry, Manifest},
+            zip::ZipEntry,
+        },
     },
     RuntimeClassProto, RuntimeContext,
 };
@@ -51,6 +54,14 @@ impl JarFile {
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<JarEntry>> {
         tracing::debug!("java.util.jar.JarFile::getJarEntry({:?}, {:?})", &this, &name);
+
+        let zip_entry: ClassInstanceRef<ZipEntry> = jvm
+            .invoke_virtual(&this, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name.clone(),))
+            .await?;
+
+        if zip_entry.is_null() {
+            return Ok(None.into());
+        }
 
         let jar_entry = jvm.new_class("java/util/jar/JarEntry", "(Ljava/lang/String;)V", (name,)).await?;
 

@@ -5,6 +5,7 @@ mod eof_exception;
 mod file;
 mod file_descriptor;
 mod file_input_stream;
+mod file_not_found_exception;
 mod file_output_stream;
 mod filter_output_stream;
 mod input_stream;
@@ -16,7 +17,7 @@ mod reader;
 
 pub use self::{
     buffered_reader::BufferedReader, byte_array_input_stream::ByteArrayInputStream, data_input_stream::DataInputStream, eof_exception::EOFException,
-    file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_output_stream::FileOutputStream,
-    filter_output_stream::FilterOutputStream, input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException,
-    output_stream::OutputStream, print_stream::PrintStream, reader::Reader,
+    file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_not_found_exception::FileNotFoundException,
+    file_output_stream::FileOutputStream, filter_output_stream::FilterOutputStream, input_stream::InputStream,
+    input_stream_reader::InputStreamReader, io_exception::IOException, output_stream::OutputStream, print_stream::PrintStream, reader::Reader,
 };

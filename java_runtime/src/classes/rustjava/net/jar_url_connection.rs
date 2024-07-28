@@ -63,6 +63,10 @@ impl JarURLConnection {
             .invoke_virtual(&jar_file, "getJarEntry", "(Ljava/lang/String;)Ljava/util/jar/JarEntry;", (entry,))
             .await?;
 
+        if jar_entry.is_null() {
+            return Err(jvm.exception("java/io/FileNotFoundException", "entry not found").await);
+        }
+
         let jar_input_stream = jvm
             .invoke_virtual(
                 &jar_file,

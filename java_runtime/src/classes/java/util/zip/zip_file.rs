@@ -77,14 +77,18 @@ impl ZipFile {
             use std::io::Cursor;
 
             let mut zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
-            let file = zip.by_name(&name).unwrap();
+            let file = zip.by_name(&name);
 
-            file.size()
+            file.map(|x| x.size())
         };
 
-        let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (file_size as i64,)).await?;
+        if let Ok(x) = file_size {
+            let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (x as i64,)).await?;
 
-        Ok(entry.into())
+            Ok(entry.into())
+        } else {
+            Ok(None.into())
+        }
     }
 
     async fn get_input_stream(
