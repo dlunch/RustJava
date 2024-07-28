@@ -1,5 +1,7 @@
 use alloc::vec;
 
+use java_class_proto::JavaMethodProto;
+
 use crate::RuntimeClassProto;
 
 // interface java.lang.Runnable
@@ -11,7 +13,7 @@ impl Runnable {
         RuntimeClassProto {
             parent_class: None,
             interfaces: vec![],
-            methods: vec![],
+            methods: vec![JavaMethodProto::new_abstract("run", "()V", Default::default())],
             fields: vec![],
         }
     }
