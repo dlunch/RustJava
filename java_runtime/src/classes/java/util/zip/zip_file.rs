@@ -1,4 +1,6 @@
-use alloc::{vec, vec::Vec};
+use core::iter;
+
+use alloc::{string::ToString, vec, vec::Vec};
 
 use bytemuck::cast_vec;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -9,7 +11,7 @@ use crate::{
     classes::java::{
         io::{File, InputStream},
         lang::String,
-        util::zip::ZipEntry,
+        util::{zip::ZipEntry, Enumeration},
     },
     RuntimeClassProto, RuntimeContext,
 };
@@ -36,6 +38,7 @@ impl ZipFile {
                     Self::get_input_stream,
                     Default::default(),
                 ),
+                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("buf", "[B", Default::default())],
         }
@@ -89,6 +92,38 @@ impl ZipFile {
         } else {
             Ok(None.into())
         }
+    }
+
+    async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
+        tracing::debug!("java.util.zip.ZipFile::entries({:?})", &this);
+
+        let buf = jvm.get_field(&this, "buf", "[B").await?;
+        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
+
+        let names = {
+            // XXX
+            extern crate std;
+            use std::io::Cursor;
+
+            let zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
+            zip.file_names().map(|x| x.to_string()).collect::<Vec<_>>()
+        };
+
+        let mut name_array = jvm.instantiate_array("Ljava/lang/String;", names.len() as _).await?;
+        for (i, name) in names.iter().enumerate() {
+            let name = JavaLangString::from_rust_string(jvm, name).await?;
+            jvm.store_array(&mut name_array, i as _, iter::once(name)).await?;
+        }
+
+        let entries = jvm
+            .new_class(
+                "java/util/zip/ZipFile$Entries",
+                "(Ljava/util/zip/ZipFile;[Ljava/lang/String;)V",
+                (this, name_array),
+            )
+            .await?;
+
+        Ok(entries.into())
     }
 
     async fn get_input_stream(

@@ -74,10 +74,12 @@ pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
         "java/util/jar/Attributes" => crate::classes::java::util::jar::Attributes::as_proto(),
         "java/util/jar/JarEntry" => crate::classes::java::util::jar::JarEntry::as_proto(),
         "java/util/jar/JarFile" => crate::classes::java::util::jar::JarFile::as_proto(),
+        "java/util/jar/JarFile$Entries" => crate::classes::java::util::jar::JarFileEntries::as_proto(),
         "java/util/jar/Manifest" => crate::classes::java::util::jar::Manifest::as_proto(),
 
         "java/util/zip/ZipEntry" => crate::classes::java::util::zip::ZipEntry::as_proto(),
         "java/util/zip/ZipFile" => crate::classes::java::util::zip::ZipFile::as_proto(),
+        "java/util/zip/ZipFile$Entries" => crate::classes::java::util::zip::ZipFileEntries::as_proto(),
 
         "rustjava/RuntimeClassLoader" => crate::classes::rustjava::RuntimeClassLoader::as_proto(),
 

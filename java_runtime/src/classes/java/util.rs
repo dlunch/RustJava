@@ -6,6 +6,7 @@ mod abstract_list;
 mod calendar;
 mod date;
 mod dictionary;
+mod enumeration;
 mod gregorian_calendar;
 mod hashtable;
 mod properties;
@@ -16,6 +17,6 @@ mod vector;
 
 pub use self::{
     abstract_collection::AbstractCollection, abstract_list::AbstractList, calendar::Calendar, date::Date, dictionary::Dictionary,
-    gregorian_calendar::GregorianCalendar, hashtable::Hashtable, properties::Properties, random::Random, timer::Timer, timer_task::TimerTask,
-    vector::Vector,
+    enumeration::Enumeration, gregorian_calendar::GregorianCalendar, hashtable::Hashtable, properties::Properties, random::Random, timer::Timer,
+    timer_task::TimerTask, vector::Vector,
 };

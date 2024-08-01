@@ -15,6 +15,7 @@ impl ZipEntry {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/zip/ZipEntry;)V", Self::init_with_zip_entry, Default::default()),
                 JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
                 JavaMethodProto::new("setSize", "(J)V", Self::set_size, Default::default()),
                 JavaMethodProto::new("getSize", "()J", Self::get_size, Default::default()),
@@ -32,6 +33,25 @@ impl ZipEntry {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_zip_entry(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        zip_entry: ClassInstanceRef<Self>,
+    ) -> Result<()> {
+        tracing::debug!("java.util.zip.ZipEntry::<init>({:?}, {:?})", &this, &zip_entry,);
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        let name: ClassInstanceRef<String> = jvm.get_field(&zip_entry, "name", "Ljava/lang/String;").await?;
+        let size: i64 = jvm.get_field(&zip_entry, "size", "J").await?;
+
+        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
+        jvm.put_field(&mut this, "size", "J", size).await?;
 
         Ok(())
     }

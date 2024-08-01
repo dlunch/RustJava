@@ -10,6 +10,7 @@ use crate::{
         util::{
             jar::{JarEntry, Manifest},
             zip::ZipEntry,
+            Enumeration,
         },
     },
     RuntimeClassProto, RuntimeContext,
@@ -31,6 +32,7 @@ impl JarFile {
                     Self::get_jar_entry,
                     Default::default(),
                 ),
+                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
                 JavaMethodProto::new("getManifest", "()Ljava/util/jar/Manifest;", Self::get_manifest, Default::default()),
             ],
             fields: vec![],
@@ -56,16 +58,32 @@ impl JarFile {
         tracing::debug!("java.util.jar.JarFile::getJarEntry({:?}, {:?})", &this, &name);
 
         let zip_entry: ClassInstanceRef<ZipEntry> = jvm
-            .invoke_virtual(&this, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name.clone(),))
+            .invoke_virtual(&this, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name,))
             .await?;
 
         if zip_entry.is_null() {
             return Ok(None.into());
         }
 
-        let jar_entry = jvm.new_class("java/util/jar/JarEntry", "(Ljava/lang/String;)V", (name,)).await?;
+        let jar_entry = jvm
+            .new_class("java/util/jar/JarEntry", "(Ljava/util/zip/ZipEntry;)V", (zip_entry,))
+            .await?;
 
         Ok(jar_entry.into())
+    }
+
+    async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
+        tracing::debug!("java.util.jar.JarFile::entries({:?})", &this);
+
+        let zip_entries: ClassInstanceRef<Enumeration> = jvm
+            .invoke_special(&this, "java/util/zip/ZipFile", "entries", "()Ljava/util/Enumeration;", ())
+            .await?;
+
+        let entries = jvm
+            .new_class("java/util/jar/JarFile$Entries", "(Ljava/util/zip/ZipFile$Entries;)V", (zip_entries,))
+            .await?;
+
+        Ok(entries.into())
     }
 
     async fn get_manifest(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Manifest>> {
@@ -95,9 +113,9 @@ impl JarFile {
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, Result};
+    use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
-    use crate::test::test_jvm_filesystem;
+    use crate::{classes::java::util::jar::JarEntry, test::test_jvm_filesystem};
 
     #[tokio::test]
     async fn test_jar_manifest() -> Result<()> {
@@ -121,6 +139,43 @@ mod test {
             .await?;
 
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "JarTest");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_entries() -> Result<()> {
+        let jar = include_bytes!("../../../../../../test_data/test.jar");
+        let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
+        let jvm = test_jvm_filesystem(filesystem).await?;
+
+        let name = JavaLangString::from_rust_string(&jvm, "test.jar").await?;
+        let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
+        let jar = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
+
+        let entries = jvm.invoke_virtual(&jar, "entries", "()Ljava/util/Enumeration;", ()).await?;
+
+        assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+        let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
+        let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/");
+
+        assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+        let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
+        let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/MANIFEST.MF");
+
+        assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+        let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
+        let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "JarTest.class");
+
+        assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+        let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
+        let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "test.txt");
+
+        assert!(!jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
 
         Ok(())
     }
