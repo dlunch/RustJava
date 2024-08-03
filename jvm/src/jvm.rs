@@ -116,13 +116,6 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let stripped_element_type_name = element_type_name.trim_start_matches('[');
-        if stripped_element_type_name.starts_with('L') {
-            self.resolve_class(&stripped_element_type_name[1..stripped_element_type_name.len() - 1])
-                .await?;
-            // ensure element type is loaded
-        }
-
         let class_name = format!("[{}", element_type_name);
 
         let class = self.resolve_class(&class_name).await?.definition;
@@ -409,6 +402,14 @@ impl Jvm {
 
         if let Some(x) = class {
             return Ok(x);
+        }
+
+        if class_name.starts_with('[') {
+            let stripped_name = class_name.trim_start_matches('[');
+            if stripped_name.starts_with('L') {
+                self.resolve_class(&stripped_name[1..stripped_name.len() - 1]).await?;
+                // ensure element type is loaded
+            }
         }
 
         let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.inner.bootstrapping.load(Ordering::Relaxed) {
