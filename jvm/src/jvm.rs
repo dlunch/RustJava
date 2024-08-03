@@ -24,7 +24,7 @@ use crate::{
     invoke_arg::InvokeArg,
     method::Method,
     r#type::JavaType,
-    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString, JavaLangThread},
+    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::JvmThread,
     value::JavaValue,
     Result,
@@ -33,6 +33,7 @@ use crate::{
 struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
+    get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
     bootstrapping: AtomicBool,
 }
@@ -43,14 +44,16 @@ pub struct Jvm {
 }
 
 impl Jvm {
-    pub async fn new<C>(bootstrap_class_loader: C, properties: BTreeMap<&str, &str>) -> Result<Self>
+    pub async fn new<C, F>(bootstrap_class_loader: C, get_current_thread_id: F, properties: BTreeMap<&str, &str>) -> Result<Self>
     where
         C: BootstrapClassLoader + 'static,
+        F: Fn() -> u64 + 'static + Sync + Send,
     {
         let jvm = Self {
             inner: Arc::new(JvmInner {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
+                get_current_thread_id: Box::new(get_current_thread_id),
                 bootstrap_class_loader: Box::new(bootstrap_class_loader),
                 bootstrapping: AtomicBool::new(true),
             }),
@@ -442,7 +445,7 @@ impl Jvm {
     }
 
     async fn find_calling_class(&self) -> Result<Option<Class>> {
-        let thread_id = JavaLangThread::current_thread_id(self).await?;
+        let thread_id = (self.inner.get_current_thread_id)();
 
         let threads = self.inner.threads.read().await;
         let thread = threads.get(&thread_id).unwrap();
@@ -554,14 +557,14 @@ impl Jvm {
     }
 
     pub async fn attach_thread(&self) -> Result<()> {
-        let thread_id = JavaLangThread::current_thread_id(self).await?;
+        let thread_id = (self.inner.get_current_thread_id)();
         self.inner.threads.write().await.insert(thread_id, JvmThread::new());
 
         Ok(())
     }
 
     pub async fn detach_thread(&self) -> Result<()> {
-        let thread_id = JavaLangThread::current_thread_id(self).await?;
+        let thread_id = (self.inner.get_current_thread_id)();
         self.inner.threads.write().await.remove(&thread_id);
 
         Ok(())
@@ -604,18 +607,18 @@ impl Jvm {
     }
 
     async fn execute_method(&self, class: &Class, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
-        let current_thread_id = JavaLangThread::current_thread_id(self).await?;
+        let thread_id = (self.inner.get_current_thread_id)();
         self.inner
             .threads
             .write()
             .await
-            .get_mut(&current_thread_id)
+            .get_mut(&thread_id)
             .unwrap()
             .push_frame(class, &method.name());
 
         let result = method.run(self, args).await?;
 
-        self.inner.threads.write().await.get_mut(&current_thread_id).unwrap().pop_frame();
+        self.inner.threads.write().await.get_mut(&thread_id).unwrap().pop_frame();
 
         Ok(result)
     }

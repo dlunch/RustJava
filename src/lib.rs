@@ -30,7 +30,7 @@ where
 
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
-    let jvm = Jvm::new(bootstrap_class_loader, properties).await?;
+    let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?;
 
     let main_class_name = match start_type {
         StartType::Jar(x) => &get_jar_main_class(&jvm, x).await?,

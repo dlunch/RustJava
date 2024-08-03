@@ -33,10 +33,10 @@ pub mod test {
 
     pub async fn create_test_jvm<R>(runtime: R) -> Result<Jvm>
     where
-        R: Runtime + 'static,
+        R: Runtime + Clone + 'static,
     {
-        let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime));
+        let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
 
-        Jvm::new(bootstrap_class_loader, BTreeMap::new()).await
+        Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), BTreeMap::new()).await
     }
 }

@@ -32,7 +32,6 @@ impl Thread {
                 ),
                 // rustjava internal
                 JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
-                JavaMethodProto::new("currentThreadId", "()J", Self::current_thread_id, MethodAccessFlags::STATIC),
             ],
             fields: vec![
                 JavaFieldProto::new("id", "J", Default::default()),
@@ -142,14 +141,6 @@ impl Thread {
         tracing::debug!("Thread::getCurrentThread()");
 
         Ok(None.into()) // TODO
-    }
-
-    async fn current_thread_id(_jvm: &Jvm, context: &mut RuntimeContext) -> Result<i64> {
-        tracing::debug!("Thread::currentThreadId()");
-
-        let id = context.current_task_id();
-
-        Ok(id as _)
     }
 }
 
