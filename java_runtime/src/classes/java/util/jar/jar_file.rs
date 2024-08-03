@@ -26,6 +26,7 @@ impl JarFile {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, Default::default()),
                 JavaMethodProto::new(
                     "getJarEntry",
                     "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
@@ -44,6 +45,18 @@ impl JarFile {
 
         let _: () = jvm
             .invoke_special(&this, "java/util/zip/ZipFile", "<init>", "(Ljava/io/File;)V", (file,))
+            .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
+        tracing::debug!("java.util.jar.JarFile::<init>({:?}, {:?})", &this, &name,);
+
+        let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
+
+        let _: () = jvm
+            .invoke_special(&this, "java/util/jar/JarFile", "<init>", "(Ljava/io/File;)V", (file,))
             .await?;
 
         Ok(())
@@ -150,8 +163,7 @@ mod test {
         let jvm = test_jvm_filesystem(filesystem).await?;
 
         let name = JavaLangString::from_rust_string(&jvm, "test.jar").await?;
-        let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
-        let jar = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
+        let jar = jvm.new_class("java/util/jar/JarFile", "(Ljava/lang/String;)V", (name,)).await?;
 
         let entries = jvm.invoke_virtual(&jar, "entries", "()Ljava/util/Enumeration;", ()).await?;
 
