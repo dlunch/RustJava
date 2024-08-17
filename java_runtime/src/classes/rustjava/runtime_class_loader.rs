@@ -15,6 +15,7 @@ pub struct RuntimeClassLoader {}
 impl RuntimeClassLoader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "rustjava/RuntimeClassLoader",
             parent_class: Some("java/lang/ClassLoader"),
             interfaces: vec![],
             methods: vec![

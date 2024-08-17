@@ -12,6 +12,7 @@ pub struct FileDescriptor {}
 impl FileDescriptor {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/FileDescriptor",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

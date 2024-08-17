@@ -16,6 +16,7 @@ pub struct BufferedReader {}
 impl BufferedReader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/BufferedReader",
             parent_class: Some("java/io/Reader"),
             interfaces: vec![],
             methods: vec![

@@ -14,6 +14,7 @@ pub struct JarURLConnection {}
 impl JarURLConnection {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "rustjava/net/JarURLConnection",
             parent_class: Some("java/net/JarURLConnection"),
             interfaces: vec![],
             methods: vec![

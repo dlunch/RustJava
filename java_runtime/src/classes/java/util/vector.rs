@@ -18,6 +18,7 @@ pub struct Vector {}
 impl Vector {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Vector",
             parent_class: Some("java/util/AbstractList"),
             interfaces: vec![],
             methods: vec![

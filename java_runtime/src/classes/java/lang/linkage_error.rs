@@ -11,6 +11,7 @@ pub struct LinkageError {}
 impl LinkageError {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/LinkageError",
             parent_class: Some("java/lang/Error"),
             interfaces: vec![],
             methods: vec![

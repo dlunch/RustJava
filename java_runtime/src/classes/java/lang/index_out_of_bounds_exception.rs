@@ -11,6 +11,7 @@ pub struct IndexOutOfBoundsException {}
 impl IndexOutOfBoundsException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/IndexOutOfBoundsException",
             parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
             methods: vec![

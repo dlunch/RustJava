@@ -12,6 +12,7 @@ pub struct Calendar {}
 impl Calendar {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Calendar",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new(

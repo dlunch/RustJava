@@ -11,6 +11,7 @@ pub struct Dictionary {}
 impl Dictionary {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Dictionary",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],

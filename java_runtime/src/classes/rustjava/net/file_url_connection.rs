@@ -17,6 +17,7 @@ pub struct FileURLConnection {}
 impl FileURLConnection {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "rustjava/net/FileURLConnection",
             parent_class: Some("java/net/URLConnection"),
             interfaces: vec![],
             methods: vec![

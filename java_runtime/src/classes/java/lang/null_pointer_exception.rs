@@ -11,6 +11,7 @@ pub struct NullPointerException {}
 impl NullPointerException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/NullPointerException",
             parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
             methods: vec![

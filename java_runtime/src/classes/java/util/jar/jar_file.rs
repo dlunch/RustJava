@@ -22,6 +22,7 @@ pub struct JarFile {}
 impl JarFile {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/jar/JarFile",
             parent_class: Some("java/util/zip/ZipFile"),
             interfaces: vec![],
             methods: vec![

@@ -11,6 +11,7 @@ pub struct Throwable {}
 impl Throwable {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Throwable",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

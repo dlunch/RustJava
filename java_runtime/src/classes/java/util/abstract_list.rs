@@ -11,6 +11,7 @@ pub struct AbstractList {}
 impl AbstractList {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/AbstractList",
             parent_class: Some("java/util/AbstractCollection"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],

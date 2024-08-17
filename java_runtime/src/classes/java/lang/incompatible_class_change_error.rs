@@ -11,6 +11,7 @@ pub struct IncompatibleClassChangeError {}
 impl IncompatibleClassChangeError {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/IncompatibleClassChangeError",
             parent_class: Some("java/lang/LinkageError"),
             interfaces: vec![],
             methods: vec![

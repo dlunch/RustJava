@@ -10,6 +10,7 @@ pub struct Enumeration {}
 impl Enumeration {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Enumeration",
             parent_class: None,
             interfaces: vec![],
             methods: vec![

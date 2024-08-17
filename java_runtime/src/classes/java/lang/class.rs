@@ -14,6 +14,7 @@ pub struct Class {}
 impl Class {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Class",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

@@ -11,6 +11,7 @@ pub struct UnknownServiceException {}
 impl UnknownServiceException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/UnknownServiceException",
             parent_class: Some("java/io/IOException"),
             interfaces: vec![],
             methods: vec![

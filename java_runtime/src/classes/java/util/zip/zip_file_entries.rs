@@ -17,6 +17,7 @@ pub struct ZipFileEntries {}
 impl ZipFileEntries {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/zip/ZipFile$Entries",
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Enumeration"],
             methods: vec![

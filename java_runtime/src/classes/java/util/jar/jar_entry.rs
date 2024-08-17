@@ -11,6 +11,7 @@ pub struct JarEntry {}
 impl JarEntry {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/jar/JarEntry",
             parent_class: Some("java/util/zip/ZipEntry"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new(

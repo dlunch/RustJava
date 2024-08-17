@@ -11,6 +11,7 @@ pub struct Error {}
 impl Error {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Error",
             parent_class: Some("java/lang/Throwable"),
             interfaces: vec![],
             methods: vec![

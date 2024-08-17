@@ -9,6 +9,7 @@ pub struct JavaClassProto<C>
 where
     C: ?Sized + Send,
 {
+    pub name: &'static str,
     pub parent_class: Option<&'static str>,
     pub interfaces: Vec<&'static str>,
     pub methods: Vec<JavaMethodProto<C>>,

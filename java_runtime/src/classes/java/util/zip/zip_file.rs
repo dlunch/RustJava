@@ -22,6 +22,7 @@ pub struct ZipFile {}
 impl ZipFile {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/zip/ZipFile",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

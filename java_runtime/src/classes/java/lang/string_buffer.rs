@@ -15,6 +15,7 @@ pub struct StringBuffer {}
 impl StringBuffer {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/StringBuffer",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

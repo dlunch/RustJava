@@ -15,6 +15,7 @@ pub struct Thread {}
 impl Thread {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Thread",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
@@ -157,6 +158,7 @@ mod test {
     impl TestClass {
         pub fn as_proto() -> RuntimeClassProto {
             RuntimeClassProto {
+                name: "TestClass",
                 parent_class: Some("java/lang/Runnable"),
                 interfaces: vec![],
                 methods: vec![

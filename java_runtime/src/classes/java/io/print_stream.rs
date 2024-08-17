@@ -16,6 +16,7 @@ pub struct PrintStream {}
 impl PrintStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/PrintStream",
             parent_class: Some("java/io/FilterOutputStream"),
             interfaces: vec![],
             methods: vec![

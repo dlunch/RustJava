@@ -11,6 +11,7 @@ pub struct GregorianCalendar {}
 impl GregorianCalendar {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/GregorianCalendar",
             parent_class: Some("java/util/Calendar"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],

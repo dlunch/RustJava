@@ -11,6 +11,7 @@ pub struct SecurityException {}
 impl SecurityException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/SecurityException",
             parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
             methods: vec![

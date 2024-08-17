@@ -14,6 +14,7 @@ pub struct Manifest {}
 impl Manifest {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/jar/Manifest",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

@@ -20,6 +20,7 @@ pub struct ClassLoader {}
 impl ClassLoader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/ClassLoader",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

@@ -11,6 +11,7 @@ pub struct OutputStream {}
 impl OutputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/OutputStream",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

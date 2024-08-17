@@ -11,6 +11,7 @@ impl Runnable {
     // TODO Create JavaInterfaceProto
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Runnable",
             parent_class: None,
             interfaces: vec![],
             methods: vec![JavaMethodProto::new_abstract("run", "()V", Default::default())],

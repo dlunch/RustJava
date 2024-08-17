@@ -16,6 +16,7 @@ pub struct URLStreamHandler {}
 impl URLStreamHandler {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/net/URLStreamHandler",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

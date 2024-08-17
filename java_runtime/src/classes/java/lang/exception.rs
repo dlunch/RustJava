@@ -11,6 +11,7 @@ pub struct Exception {}
 impl Exception {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Exception",
             parent_class: Some("java/lang/Throwable"),
             interfaces: vec![],
             methods: vec![

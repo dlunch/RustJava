@@ -11,6 +11,7 @@ pub struct Attributes {}
 impl Attributes {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/jar/Attributes",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

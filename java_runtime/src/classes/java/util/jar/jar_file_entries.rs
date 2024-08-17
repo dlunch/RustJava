@@ -17,6 +17,7 @@ pub struct JarFileEntries {}
 impl JarFileEntries {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/jar/JarFile$Entries",
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Enumeration"],
             methods: vec![

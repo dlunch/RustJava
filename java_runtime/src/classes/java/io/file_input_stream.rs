@@ -15,6 +15,7 @@ pub struct FileInputStream {}
 impl FileInputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/FileInputStream",
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![

@@ -22,6 +22,7 @@ pub struct InputStreamReader {}
 impl InputStreamReader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/InputStreamReader",
             parent_class: Some("java/io/Reader"),
             interfaces: vec![],
             methods: vec![

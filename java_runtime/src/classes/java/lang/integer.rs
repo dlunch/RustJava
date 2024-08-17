@@ -12,6 +12,7 @@ pub struct Integer {}
 impl Integer {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/Integer",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![JavaMethodProto::new(

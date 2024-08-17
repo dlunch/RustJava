@@ -11,6 +11,7 @@ pub struct ByteArrayInputStream {}
 impl ByteArrayInputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/ByteArrayInputStream",
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![

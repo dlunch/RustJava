@@ -11,6 +11,7 @@ pub struct InterruptedException {}
 impl InterruptedException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/InterruptedException",
             parent_class: Some("java/lang/Exception"),
             interfaces: vec![],
             methods: vec![

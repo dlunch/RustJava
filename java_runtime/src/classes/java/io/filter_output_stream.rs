@@ -12,6 +12,7 @@ pub struct FilterOutputStream {}
 impl FilterOutputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/FilterOutputStream",
             parent_class: Some("java/io/OutputStream"),
             interfaces: vec![],
             methods: vec![

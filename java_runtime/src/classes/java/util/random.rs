@@ -11,6 +11,7 @@ pub struct Random {}
 impl Random {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Random",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

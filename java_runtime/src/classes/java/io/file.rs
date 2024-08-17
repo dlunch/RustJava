@@ -11,6 +11,7 @@ pub struct File {}
 impl File {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/File",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

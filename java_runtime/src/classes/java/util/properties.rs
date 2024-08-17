@@ -14,6 +14,7 @@ pub struct Properties {}
 impl Properties {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Properties",
             parent_class: Some("java/util/Hashtable"),
             interfaces: vec![],
             methods: vec![

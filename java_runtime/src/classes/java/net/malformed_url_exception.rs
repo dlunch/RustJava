@@ -11,6 +11,7 @@ pub struct MalformedURLException {}
 impl MalformedURLException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/net/MalformedURLException",
             parent_class: Some("java/io/IOException"),
             interfaces: vec![],
             methods: vec![

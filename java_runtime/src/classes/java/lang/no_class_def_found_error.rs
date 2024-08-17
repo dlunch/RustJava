@@ -11,6 +11,7 @@ pub struct NoClassDefFoundError {}
 impl NoClassDefFoundError {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/NoClassDefFoundError",
             parent_class: Some("java/lang/LinkageError"),
             interfaces: vec![],
             methods: vec![

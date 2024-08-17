@@ -11,6 +11,7 @@ pub struct NoSuchMethodError {}
 impl NoSuchMethodError {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/NoSuchMethodError",
             parent_class: Some("java/lang/IncompatibleClassChangeError"),
             interfaces: vec![],
             methods: vec![

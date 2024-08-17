@@ -11,6 +11,7 @@ pub struct IOException {}
 impl IOException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/IOException",
             parent_class: Some("java/lang/Exception"),
             interfaces: vec![],
             methods: vec![

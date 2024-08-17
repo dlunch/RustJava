@@ -18,6 +18,7 @@ pub struct URLClassLoader {}
 impl URLClassLoader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/net/URLClassLoader",
             parent_class: Some("java/lang/ClassLoader"), // TODO java.security.SecureClassLoader
             interfaces: vec![],
             methods: vec![

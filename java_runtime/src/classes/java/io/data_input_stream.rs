@@ -11,6 +11,7 @@ pub struct DataInputStream {}
 impl DataInputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/DataInputStream",
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![

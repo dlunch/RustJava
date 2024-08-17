@@ -19,6 +19,7 @@ pub struct Hashtable {}
 impl Hashtable {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/util/Hashtable",
             parent_class: Some("java/util/Dictionary"),
             interfaces: vec![],
             methods: vec![

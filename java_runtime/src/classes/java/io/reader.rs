@@ -11,6 +11,7 @@ pub struct Reader {}
 impl Reader {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/io/Reader",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![

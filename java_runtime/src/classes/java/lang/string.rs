@@ -22,6 +22,7 @@ pub struct String {}
 impl String {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
+            name: "java/lang/String",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
