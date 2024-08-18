@@ -32,7 +32,7 @@ pub trait Runtime: Sync + Send + DynClone {
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
     async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
 
-    async fn define_class_rust(&self, jvm: &Jvm, name: &str, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>>;
+    async fn define_class_rust(&self, jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>>;
     async fn define_class_java(&self, jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>>;
     async fn define_array_class(&self, jvm: &Jvm, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>>;
 }
@@ -137,12 +137,8 @@ pub mod test {
             }
         }
 
-        async fn define_class_rust(&self, _jvm: &Jvm, name: &str, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
-            Ok(Box::new(ClassDefinitionImpl::from_class_proto(
-                name,
-                proto,
-                Box::new(self.clone()) as Box<_>,
-            )))
+        async fn define_class_rust(&self, _jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
+            Ok(Box::new(ClassDefinitionImpl::from_class_proto(proto, Box::new(self.clone()) as Box<_>)))
         }
 
         async fn define_class_java(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {

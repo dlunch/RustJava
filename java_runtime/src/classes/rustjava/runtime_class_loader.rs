@@ -51,7 +51,7 @@ impl RuntimeClassLoader {
             return Ok(None.into());
         }
 
-        let class = runtime.define_class_rust(jvm, &name, proto.unwrap()).await?;
+        let class = runtime.define_class_rust(jvm, proto.unwrap()).await?;
         let java_class = jvm.register_class(class, Some(this.into())).await?;
 
         Ok(java_class.into())

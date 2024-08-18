@@ -187,7 +187,7 @@ mod test {
         let runtime = DummyRuntime::new(BTreeMap::new());
         let jvm = create_test_jvm(runtime.clone()).await?;
 
-        let class = runtime.define_class_rust(&jvm, "TestClass", TestClass::as_proto()).await?;
+        let class = runtime.define_class_rust(&jvm, TestClass::as_proto()).await?;
         jvm.register_class(class, None).await?;
 
         let test_class = jvm.new_class("TestClass", "()V", ()).await?;

@@ -45,7 +45,7 @@ impl ClassDefinitionImpl {
         }
     }
 
-    pub fn from_class_proto<C, Context>(name: &str, proto: JavaClassProto<C>, context: Context) -> Self
+    pub fn from_class_proto<C, Context>(proto: JavaClassProto<C>, context: Context) -> Self
     where
         C: ?Sized + 'static + Send,
         Context: Sync + Send + DerefMut + Deref<Target = C> + Clone + 'static,
@@ -58,7 +58,7 @@ impl ClassDefinitionImpl {
 
         let fields = proto.fields.into_iter().map(FieldImpl::from_field_proto).collect::<Vec<_>>();
 
-        Self::new(name, proto.parent_class.map(|x| x.to_string()), methods, fields)
+        Self::new(proto.name, proto.parent_class.map(|x| x.to_string()), methods, fields)
     }
 
     pub fn from_classfile(data: &[u8]) -> Result<Self> {
