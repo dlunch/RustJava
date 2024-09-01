@@ -415,24 +415,7 @@ impl Jvm {
         let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.inner.bootstrapping.load(Ordering::Relaxed) {
             &BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)
         } else {
-            let calling_class = self.find_calling_class().await?;
-
-            if let Some(x) = calling_class {
-                // called in java
-
-                let calling_class_class_loader = JavaLangClass::class_loader(self, &x.java_class(self).await?).await?;
-                if let Some(x) = calling_class_class_loader {
-                    &JavaClassLoaderWrapper::new(x)
-                } else {
-                    let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
-                    &JavaClassLoaderWrapper::new(system_class_loader)
-                }
-            } else {
-                // called outside of java
-
-                let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
-                &JavaClassLoaderWrapper::new(system_class_loader)
-            }
+            &JavaClassLoaderWrapper::new(self.current_class_loader().await?)
         };
 
         let class = class_loader_wrapper.load_class(self, class_name).await?;
@@ -576,6 +559,27 @@ impl Jvm {
         self.inner.threads.write().await.remove(&thread_id);
 
         Ok(())
+    }
+
+    pub async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
+        let calling_class = self.find_calling_class().await?;
+
+        if let Some(x) = calling_class {
+            // called in java
+
+            let calling_class_class_loader = JavaLangClass::class_loader(self, &x.java_class(self).await?).await?;
+            if let Some(x) = calling_class_class_loader {
+                Ok(x)
+            } else {
+                let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
+                Ok(system_class_loader)
+            }
+        } else {
+            // called outside of java
+
+            let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
+            Ok(system_class_loader)
+        }
     }
 
     #[async_recursion::async_recursion]
