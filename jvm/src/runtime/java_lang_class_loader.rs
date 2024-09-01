@@ -25,4 +25,15 @@ impl JavaLangClassLoader {
 
         Ok(java_class)
     }
+
+    #[allow(clippy::borrowed_box)]
+    pub async fn get_resource_as_stream(jvm: &Jvm, this: &Box<dyn ClassInstance>, name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
+        let java_name = JavaLangString::from_rust_string(jvm, name).await?;
+
+        let java_resource: Option<Box<dyn ClassInstance>> = jvm
+            .invoke_virtual(this, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (java_name,))
+            .await?;
+
+        Ok(java_resource)
+    }
 }

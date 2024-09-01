@@ -1,7 +1,12 @@
 use alloc::{format, vec, vec::Vec};
 
+use bytemuck::cast_vec;
+
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
+use jvm::{
+    runtime::{JavaIoInputStream, JavaLangString},
+    Array, ClassInstanceRef, Jvm, Result,
+};
 
 use crate::{
     classes::java::{
@@ -73,45 +78,22 @@ impl URLClassLoader {
         }
 
         let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+        let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await?;
 
-        // TODO can we use ByteArrayOutputStream?
-        let mut buf = jvm.instantiate_array("B", 1024).await?;
-        let mut read = 0;
-        loop {
-            let temp = jvm.instantiate_array("B", 1024).await?;
-            let cur: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (temp.clone(),)).await?;
-            if cur == -1 {
-                break;
-            }
-
-            if (jvm.array_length(&buf).await? as i32) < read + cur {
-                let new_buf = jvm.instantiate_array("B", (read + cur) as _).await?;
-                let _: () = jvm
-                    .invoke_static(
-                        "java/lang/System",
-                        "arraycopy",
-                        "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                        (buf.clone(), 0, new_buf.clone(), 0, read),
-                    )
-                    .await?;
-                buf = new_buf;
-            }
-
-            let _: () = jvm
-                .invoke_static(
-                    "java/lang/System",
-                    "arraycopy",
-                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                    (temp, 0, buf.clone(), read, cur),
-                )
-                .await?;
-
-            read += cur;
-        }
+        let length = bytes.len() as i32;
+        let mut bytes_java = jvm.instantiate_array("B", bytes.len()).await?;
+        jvm.store_byte_array(&mut bytes_java, 0, cast_vec(bytes)).await?;
 
         let class = jvm
-            .invoke_virtual(&this, "defineClass", "(Ljava/lang/String;[BII)Ljava/lang/Class;", (name, buf, 0, read))
+            .invoke_virtual(
+                &this,
+                "defineClass",
+                "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                (name, bytes_java.clone(), 0, length),
+            )
             .await?;
+
+        jvm.destroy(bytes_java)?; // TODO: this should be done by the GC
 
         Ok(class)
     }
