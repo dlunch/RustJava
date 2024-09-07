@@ -32,6 +32,7 @@ impl Vector {
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
                 JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
+                JavaMethodProto::new("removeElementAt", "(I)V", Self::remove_element_at, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
         }
@@ -141,6 +142,15 @@ impl Vector {
         Ok(removed)
     }
 
+    async fn remove_element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
+        tracing::debug!("java.util.Vector::removeElementAt({:?}, {:?})", &this, index);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        rust_vector.lock().await.remove(index as usize);
+
+        Ok(())
+    }
+
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
         jvm.get_rust_object_field(this, "raw").await
     }
@@ -181,6 +191,11 @@ mod test {
 
         let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
         assert_eq!(size, 1);
+
+        let _: () = jvm.invoke_virtual(&vector, "removeElementAt", "(I)V", (0,)).await?;
+
+        let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+        assert_eq!(size, 0);
 
         Ok(())
     }
