@@ -30,6 +30,7 @@ impl Vector {
                 JavaMethodProto::new("elementAt", "(I)Ljava/lang/Object;", Self::element_at, Default::default()),
                 JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
+                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
         }
@@ -121,6 +122,15 @@ impl Vector {
         Ok(size as _)
     }
 
+    async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::isEmpty({:?})", &this);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        let is_empty = rust_vector.lock().await.is_empty();
+
+        Ok(is_empty)
+    }
+
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
         jvm.get_rust_object_field(this, "raw").await
     }
@@ -138,6 +148,9 @@ mod test {
 
         let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
 
+        let is_empty: bool = jvm.invoke_virtual(&vector, "isEmpty", "()Z", ()).await?;
+        assert!(is_empty);
+
         let element1 = JavaLangString::from_rust_string(&jvm, "testValue1").await?;
         let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
 
@@ -149,6 +162,9 @@ mod test {
 
         let element_at1: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,)).await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &element_at1).await?, "testValue1");
+
+        let is_empty: bool = jvm.invoke_virtual(&vector, "isEmpty", "()Z", ()).await?;
+        assert!(!is_empty);
 
         Ok(())
     }
