@@ -398,6 +398,7 @@ impl Jvm {
 
     #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
+        tracing::trace!("Resolving class {}", class_name);
         let class = self.inner.classes.read().await.get(class_name).cloned();
 
         if let Some(x) = class {
@@ -412,6 +413,7 @@ impl Jvm {
             }
         }
 
+        tracing::debug!("Loading class {}", class_name);
         let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.inner.bootstrapping.load(Ordering::Relaxed) {
             &BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)
         } else {
