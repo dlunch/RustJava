@@ -92,6 +92,7 @@ impl Jvm {
         Ok(jvm)
     }
 
+    #[async_recursion::async_recursion]
     pub async fn instantiate_class(&self, class_name: &str) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
@@ -113,6 +114,7 @@ impl Jvm {
         Ok(instance)
     }
 
+    #[async_recursion::async_recursion]
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
@@ -398,6 +400,11 @@ impl Jvm {
 
     #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
+        self.resolve_class_internal(class_name, None).await
+    }
+
+    #[async_recursion::async_recursion]
+    async fn resolve_class_internal(&self, class_name: &str, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<Class> {
         tracing::trace!("Resolving class {}", class_name);
         let class = self.inner.classes.read().await.get(class_name).cloned();
 
@@ -413,12 +420,19 @@ impl Jvm {
             }
         }
 
-        tracing::debug!("Loading class {}", class_name);
-        let class_loader_wrapper: &dyn ClassLoaderWrapper = if self.inner.bootstrapping.load(Ordering::Relaxed) {
+        let class_loader_wrapper: &dyn ClassLoaderWrapper = if let Some(x) = class_loader_wrapper {
+            x
+        } else if self.inner.bootstrapping.load(Ordering::Relaxed) {
             &BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)
         } else {
             &JavaClassLoaderWrapper::new(self.current_class_loader().await?)
         };
+
+        self.load_class(class_name, class_loader_wrapper).await
+    }
+
+    async fn load_class(&self, class_name: &str, class_loader_wrapper: &dyn ClassLoaderWrapper) -> Result<Class> {
+        tracing::debug!("Loading class {}", class_name);
 
         let class = class_loader_wrapper.load_class(self, class_name).await?;
 
@@ -430,11 +444,11 @@ impl Jvm {
 
         tracing::debug!("Loaded class {}", class_name);
 
-        self.register_class_internal(class.unwrap()).await?;
+        self.register_class_internal(class.unwrap(), Some(class_loader_wrapper)).await?;
 
         let class = self.inner.classes.read().await.get(class_name).unwrap().clone();
 
-        return Ok(class);
+        Ok(class)
     }
 
     async fn find_calling_class(&self) -> Result<Option<Class>> {
@@ -455,14 +469,14 @@ impl Jvm {
 
         // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
         let java_class = if self.has_class("java/lang/Class").await {
-            Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader).await?)
+            Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader.clone()).await?)
         } else {
             None
         };
 
         let class = Class::new(class, java_class.clone());
 
-        self.register_class_internal(class).await?;
+        self.register_class_internal(class, None).await?;
 
         Ok(java_class)
     }
@@ -497,12 +511,12 @@ impl Jvm {
         Ok(false)
     }
 
-    async fn register_class_internal(&self, class: Class) -> Result<()> {
+    async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
         if !class.definition.name().starts_with('[') {
             if let Some(super_class) = class.definition.super_class_name() {
                 if !self.has_class(&super_class).await {
                     // ensure superclass is loaded
-                    self.resolve_class(&super_class).await?;
+                    self.resolve_class_internal(&super_class, class_loader_wrapper).await?;
                 }
             }
         }

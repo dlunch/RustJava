@@ -21,6 +21,7 @@ impl Class {
         }
     }
 
+    #[async_recursion::async_recursion]
     pub async fn java_class(&self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
         let java_class = self.java_class.read().await;
         if let Some(x) = &*java_class {
