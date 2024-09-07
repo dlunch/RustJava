@@ -106,8 +106,6 @@ impl URLClassLoader {
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.URLClassLoader::findResource({:?}, {:?})", &this, name);
 
-        // TODO cache
-
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
         let urls = jvm.get_field(&this, "urls", "[Ljava/net/URL;").await?;

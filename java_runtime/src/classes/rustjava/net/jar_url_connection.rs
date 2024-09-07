@@ -1,10 +1,16 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{io::InputStream, lang::String, net::URL, util::jar::JarFile},
+    classes::java::{
+        io::InputStream,
+        lang::{Object, String},
+        net::URL,
+        util::jar::JarFile,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -18,12 +24,23 @@ impl JarURLConnection {
             parent_class: Some("java/net/JarURLConnection"),
             interfaces: vec![],
             methods: vec![
+                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, Default::default()),
                 JavaMethodProto::new("getJarFile", "()Ljava/util/jar/JarFile;", Self::get_jar_file, Default::default()),
                 JavaMethodProto::new("getInputStream", "()Ljava/io/InputStream;", Self::get_input_stream, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("file", "Ljava/io/File;", Default::default())],
+            fields: vec![JavaFieldProto::new("openedFiles", "Ljava/util/Hashtable;", FieldAccessFlags::STATIC)],
         }
+    }
+
+    async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
+        tracing::debug!("rustjava.net.JarURLConnection::<clinit>()");
+
+        let map = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
+        jvm.put_static_field("rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;", map)
+            .await?;
+
+        Ok(())
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
@@ -45,10 +62,31 @@ impl JarURLConnection {
 
         if protocol == "file" {
             let name: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
-            let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
-            let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
-            Ok(jar_file.into())
+            let opened_files = jvm
+                .get_static_field("rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;")
+                .await?;
+            let cache: ClassInstanceRef<JarFile> = jvm
+                .invoke_virtual(&opened_files, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name.clone(),))
+                .await?;
+
+            if !cache.is_null() {
+                Ok(cache)
+            } else {
+                let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name.clone(),)).await?;
+                let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
+
+                let _: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(
+                        &opened_files,
+                        "put",
+                        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                        (name, jar_file.clone()),
+                    )
+                    .await?;
+
+                Ok(jar_file.into())
+            }
         } else {
             Err(jvm.exception("java/net/MalformedURLException", "unsupported protocol").await)
         }
@@ -85,9 +123,9 @@ impl JarURLConnection {
 mod test {
     use bytemuck::cast_vec;
 
-    use jvm::{runtime::JavaLangString, Result};
+    use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
-    use crate::test::test_jvm_filesystem;
+    use crate::{classes::java::util::jar::JarFile, test::test_jvm_filesystem};
 
     #[tokio::test]
     async fn test_jar_entry() -> Result<()> {
@@ -133,6 +171,27 @@ mod test {
             .await?;
 
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "JarTest");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_jar_cache() -> Result<()> {
+        let jar = include_bytes!("../../../../../test_data/test.jar");
+        let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
+        let jvm = test_jvm_filesystem(filesystem).await?;
+
+        let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/").await?;
+        let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
+
+        let connection = jvm.invoke_virtual(&url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+
+        let jar_file = jvm.invoke_virtual(&connection, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
+        let jar_file2: ClassInstanceRef<JarFile> = jvm.invoke_virtual(&connection, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
+
+        let equals: bool = jvm.invoke_virtual(&jar_file, "equals", "(Ljava/lang/Object;)Z", (jar_file2,)).await?;
+
+        assert!(equals);
 
         Ok(())
     }
