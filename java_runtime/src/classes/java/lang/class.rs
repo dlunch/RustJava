@@ -1,10 +1,16 @@
 use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassDefinition, ClassInstanceRef, Jvm, Result};
+use jvm::{
+    runtime::{JavaLangClassLoader, JavaLangString},
+    ClassDefinition, ClassInstanceRef, Jvm, Result,
+};
 
 use crate::{
-    classes::java::{io::InputStream, lang::String},
+    classes::java::{
+        io::InputStream,
+        lang::{ClassLoader, String},
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -57,7 +63,14 @@ impl Class {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {:?})", &this, &name);
 
-        let class_loader = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
+        let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
+
+        let class_loader = if class_loader.is_null() {
+            // TODO ClassLoader.getSystemResourceAsStream?
+            JavaLangClassLoader::get_system_class_loader(jvm).await?
+        } else {
+            class_loader.into()
+        };
 
         jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
             .await
