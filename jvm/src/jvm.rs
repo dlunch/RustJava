@@ -476,7 +476,11 @@ impl Jvm {
 
         let class = Class::new(class, java_class.clone());
 
-        self.register_class_internal(class, None).await?;
+        if let Some(x) = class_loader {
+            self.register_class_internal(class, Some(&JavaClassLoaderWrapper::new(x))).await?;
+        } else {
+            self.register_class_internal(class, None).await?;
+        };
 
         Ok(java_class)
     }
