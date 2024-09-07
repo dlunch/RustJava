@@ -21,6 +21,7 @@ impl InputStream {
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
                 JavaMethodProto::new_abstract("read", "()I", Default::default()),
                 JavaMethodProto::new_abstract("close", "()V", Default::default()),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
             ],
             fields: vec![],
         }
@@ -38,5 +39,16 @@ impl InputStream {
         let array_length = jvm.array_length(&b).await? as i32;
 
         jvm.invoke_virtual(&this, "read", "([BII)I", (b, 0, array_length)).await
+    }
+
+    async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
+        tracing::debug!("java.lang.InputStream::skip({:?}, {:?})", &this, n);
+
+        let scratch = jvm.instantiate_array("B", n as _).await?;
+        let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, n as i32)).await?;
+
+        jvm.destroy(scratch)?;
+
+        Ok(n)
     }
 }
