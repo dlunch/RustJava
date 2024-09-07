@@ -31,6 +31,7 @@ impl Vector {
                 JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
+                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
         }
@@ -131,6 +132,15 @@ impl Vector {
         Ok(is_empty)
     }
 
+    async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
+        tracing::debug!("java.util.Vector::remove({:?}, {:?})", &this, index);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        let removed = rust_vector.lock().await.remove(index as usize);
+
+        Ok(removed)
+    }
+
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
         jvm.get_rust_object_field(this, "raw").await
     }
@@ -165,6 +175,12 @@ mod test {
 
         let is_empty: bool = jvm.invoke_virtual(&vector, "isEmpty", "()Z", ()).await?;
         assert!(!is_empty);
+
+        let removed: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "remove", "(I)Ljava/lang/Object;", (0,)).await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "testValue1");
+
+        let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+        assert_eq!(size, 1);
 
         Ok(())
     }
