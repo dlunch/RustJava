@@ -20,6 +20,7 @@ impl ByteArrayInputStream {
                 JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("buf", "[B", Default::default()),
@@ -103,5 +104,20 @@ impl ByteArrayInputStream {
         tracing::debug!("java.lang.ByteArrayInputStream::close({:?})", &this);
 
         Ok(())
+    }
+
+    async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
+        tracing::debug!("java.lang.ByteArrayInputStream::skip({:?}, {:?})", &this, n);
+
+        let buf = jvm.get_field(&this, "buf", "[B").await?;
+        let buf_length = jvm.array_length(&buf).await?;
+        let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
+
+        let available = (buf_length as i32 - pos) as i64;
+        let len_to_skip = if n > available { available } else { n };
+
+        jvm.put_field(&mut this, "pos", "I", pos + len_to_skip as i32).await?;
+
+        Ok(len_to_skip)
     }
 }
