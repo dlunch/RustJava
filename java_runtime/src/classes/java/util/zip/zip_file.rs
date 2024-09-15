@@ -1,11 +1,16 @@
+use alloc::{string::ToString, sync::Arc, vec, vec::Vec};
 use core::iter;
 
-use alloc::{string::ToString, vec, vec::Vec};
+// XXX for zip..
+extern crate std;
+use std::io::{Cursor, Read};
 
+use async_lock::Mutex;
 use bytemuck::cast_vec;
+use zip::ZipArchive;
+
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
-use zip::ZipArchive;
 
 use crate::{
     classes::java::{
@@ -15,6 +20,8 @@ use crate::{
     },
     RuntimeClassProto, RuntimeContext,
 };
+
+type JavaZipArchive = Arc<Mutex<ZipArchive<Cursor<Vec<u8>>>>>;
 
 // class java.util.zip.ZipFile
 pub struct ZipFile {}
@@ -41,7 +48,7 @@ impl ZipFile {
                 ),
                 JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("buf", "[B", Default::default())],
+            fields: vec![JavaFieldProto::new("zip", "[B", Default::default())],
         }
     }
 
@@ -56,7 +63,9 @@ impl ZipFile {
         let buf = jvm.instantiate_array("B", length as _).await?;
         let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
 
-        jvm.put_field(&mut this, "buf", "[B", buf).await?;
+        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
+        let zip = Arc::new(Mutex::new(ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap()));
+        jvm.put_rust_object_field(&mut this, "zip", zip).await?;
 
         Ok(())
     }
@@ -69,22 +78,11 @@ impl ZipFile {
     ) -> Result<ClassInstanceRef<ZipEntry>> {
         tracing::debug!("java.util.zip.ZipFile::getEntry({:?}, {:?})", &this, &name);
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
-
         let entry = jvm.new_class("java/util/zip/ZipEntry", "(Ljava/lang/String;)V", (name.clone(),)).await?;
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let file_size = {
-            // XXX
-            extern crate std;
-            use std::io::Cursor;
-
-            let mut zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
-            let file = zip.by_name(&name);
-
-            file.map(|x| x.size())
-        };
+        let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
+        let file_size = zip.lock().await.by_name(&name).map(|x| x.size());
 
         if let Ok(x) = file_size {
             let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (x as i64,)).await?;
@@ -98,17 +96,8 @@ impl ZipFile {
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
         tracing::debug!("java.util.zip.ZipFile::entries({:?})", &this);
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
-
-        let names = {
-            // XXX
-            extern crate std;
-            use std::io::Cursor;
-
-            let zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
-            zip.file_names().map(|x| x.to_string()).collect::<Vec<_>>()
-        };
+        let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
+        let names = zip.lock().await.file_names().map(|x| x.to_string()).collect::<Vec<_>>();
 
         let mut name_array = jvm.instantiate_array("Ljava/lang/String;", names.len() as _).await?;
         for (i, name) in names.iter().enumerate() {
@@ -135,18 +124,13 @@ impl ZipFile {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.util.zip.ZipFile::getInputStream({:?}, {:?})", &this, &entry);
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
-
         let entry_name = jvm.invoke_virtual(&entry, "getName", "()Ljava/lang/String;", ()).await?;
         let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;
 
         let data = {
-            // XXX
-            extern crate std;
-            use std::io::{Cursor, Read};
+            let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
 
-            let mut zip = ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap();
+            let mut zip = zip.lock().await;
             let mut file = zip.by_name(&entry_name).unwrap();
 
             let mut buf = Vec::new();
@@ -154,8 +138,8 @@ impl ZipFile {
 
             buf
         };
-        // TODO do we have to use InflaterInputStream?
 
+        // TODO do we have to use InflaterInputStream?
         let mut java_buf = jvm.instantiate_array("B", data.len() as _).await?;
         jvm.store_byte_array(&mut java_buf, 0, cast_vec(data)).await?;
 
