@@ -5,7 +5,7 @@ use core::time::Duration;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
-use jvm::{ClassDefinition, Jvm};
+use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 
 use crate::RuntimeClassProto;
 
@@ -13,7 +13,7 @@ pub use io::{File, FileSize, FileStat, IOError};
 
 #[async_trait::async_trait]
 pub trait SpawnCallback: Sync + Send {
-    async fn call(&self);
+    async fn call(&self) -> JvmResult<()>;
 }
 
 #[async_trait::async_trait]
@@ -32,9 +32,9 @@ pub trait Runtime: Sync + Send + DynClone {
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
     async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
 
-    async fn define_class_rust(&self, jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>>;
-    async fn define_class_java(&self, jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>>;
-    async fn define_array_class(&self, jvm: &Jvm, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>>;
+    async fn define_class_rust(&self, jvm: &Jvm, proto: RuntimeClassProto) -> JvmResult<Box<dyn ClassDefinition>>;
+    async fn define_class_java(&self, jvm: &Jvm, data: &[u8]) -> JvmResult<Box<dyn ClassDefinition>>;
+    async fn define_array_class(&self, jvm: &Jvm, element_type_name: &str) -> JvmResult<Box<dyn ClassDefinition>>;
 }
 
 clone_trait_object!(Runtime);
@@ -91,7 +91,7 @@ pub mod test {
             tokio::spawn(async move {
                 TASK_ID
                     .scope(task_id, async move {
-                        callback.call().await;
+                        callback.call().await.unwrap();
                     })
                     .await;
             });

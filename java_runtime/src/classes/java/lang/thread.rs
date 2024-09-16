@@ -72,16 +72,18 @@ impl Thread {
         #[async_trait::async_trait]
         impl SpawnCallback for ThreadStartProxy {
             #[tracing::instrument(name = "thread", fields(thread = self.thread_id), skip_all)]
-            async fn call(&self) {
+            async fn call(&self) -> Result<()> {
                 tracing::trace!("Thread start");
 
-                self.jvm.attach_thread().await.unwrap();
+                self.jvm.attach_thread().await?;
 
-                let _: () = self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await.unwrap();
+                let _: () = self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await?;
 
-                self.jvm.detach_thread().await.unwrap();
+                self.jvm.detach_thread().await?;
 
                 self.join_event.notify(usize::MAX);
+
+                Ok(())
             }
         }
 

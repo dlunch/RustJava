@@ -90,7 +90,7 @@ where
         tokio::spawn(async move {
             TASK_ID
                 .scope(task_id, async move {
-                    callback.call().await;
+                    callback.call().await.unwrap();
                 })
                 .await;
         });
