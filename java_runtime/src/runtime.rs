@@ -20,7 +20,7 @@ pub trait SpawnCallback: Sync + Send {
 pub trait Runtime: Sync + Send + DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
-    fn spawn(&self, callback: Box<dyn SpawnCallback>);
+    fn spawn(&self, jvm: &Jvm, callback: Box<dyn SpawnCallback>);
 
     fn now(&self) -> u64; // unix time in millis
     fn current_task_id(&self) -> u64;
@@ -86,7 +86,7 @@ pub mod test {
             todo!()
         }
 
-        fn spawn(&self, callback: Box<dyn SpawnCallback>) {
+        fn spawn(&self, _jvm: &Jvm, callback: Box<dyn SpawnCallback>) {
             let task_id = LAST_TASK_ID.fetch_add(1, Ordering::SeqCst);
             tokio::spawn(async move {
                 TASK_ID

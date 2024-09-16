@@ -85,7 +85,7 @@ where
         todo!()
     }
 
-    fn spawn(&self, callback: Box<dyn SpawnCallback>) {
+    fn spawn(&self, _jvm: &Jvm, callback: Box<dyn SpawnCallback>) {
         let task_id = LAST_TASK_ID.fetch_add(1, Ordering::SeqCst) + 1;
         tokio::spawn(async move {
             TASK_ID

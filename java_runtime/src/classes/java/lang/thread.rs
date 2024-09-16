@@ -92,12 +92,15 @@ impl Thread {
 
         let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
 
-        context.spawn(Box::new(ThreadStartProxy {
-            jvm: jvm.clone(),
-            thread_id: format!("{:?}", &runnable),
-            join_event,
-            runnable,
-        }));
+        context.spawn(
+            jvm,
+            Box::new(ThreadStartProxy {
+                jvm: jvm.clone(),
+                thread_id: format!("{:?}", &runnable),
+                join_event,
+                runnable,
+            }),
+        );
 
         Ok(())
     }
