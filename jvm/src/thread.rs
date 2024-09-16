@@ -1,4 +1,3 @@
-#![allow(dead_code)] // TODO
 use alloc::{
     string::{String, ToString},
     vec::Vec,
@@ -33,5 +32,6 @@ impl JvmThread {
 
 pub struct JvmStackFrame {
     pub class: Class,
+    #[allow(dead_code)] // TODO for debug
     pub method_name: String,
 }
