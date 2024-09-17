@@ -498,7 +498,7 @@ impl Jvm {
         }
 
         if let Some(super_class) = class.definition.super_class_name() {
-            self.is_a(&self.inner.classes.read().await.get(&super_class).unwrap(), class_name).await
+            self.is_a(self.inner.classes.read().await.get(&super_class).unwrap(), class_name).await
         } else {
             false
         }
