@@ -34,6 +34,7 @@ impl String {
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
                 JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
+                JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
                 JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
                 JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
@@ -185,6 +186,14 @@ impl String {
         jvm.store_byte_array(&mut byte_array, 0, bytes).await?;
 
         Ok(byte_array.into())
+    }
+
+    async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
+        tracing::debug!("java.lang.String::toCharArray({:?})", &this);
+
+        let value = jvm.get_field(&this, "value", "[C").await?;
+
+        Ok(value)
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {

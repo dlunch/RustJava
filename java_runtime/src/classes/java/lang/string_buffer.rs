@@ -30,6 +30,7 @@ impl StringBuffer {
                 JavaMethodProto::new("append", "(I)Ljava/lang/StringBuffer;", Self::append_integer, Default::default()),
                 JavaMethodProto::new("append", "(J)Ljava/lang/StringBuffer;", Self::append_long, Default::default()),
                 JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, Default::default()),
+                JavaMethodProto::new("append", "([CII)Ljava/lang/StringBuffer;", Self::append_char_array, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
             ],
             fields: vec![
@@ -102,6 +103,24 @@ impl StringBuffer {
         let value = RustString::from_utf16(&[value]).unwrap();
 
         Self::append(jvm, &mut this, &value).await?;
+
+        Ok(this)
+    }
+
+    async fn append_char_array(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        array: ClassInstanceRef<Array<JavaChar>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?}, {:?}, {:?})", &this, &array, offset, length);
+
+        let value: Vec<JavaChar> = jvm.load_array(&array, offset as _, length as _).await?;
+        let string = RustString::from_utf16(&value).unwrap();
+
+        Self::append(jvm, &mut this, &string).await?;
 
         Ok(this)
     }
