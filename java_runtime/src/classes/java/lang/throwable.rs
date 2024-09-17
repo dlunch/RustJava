@@ -213,9 +213,9 @@ mod test {
             result,
             "\
                 java/net/MalformedURLException: unknown protocol: invalid\n\
-                    \tat java/net/URL.<init>(Ljava/lang/String;)V\n\
-                    \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;)V\n\
                     \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V\n\
+                    \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;)V\n\
+                    \tat java/net/URL.<init>(Ljava/lang/String;)V\n\
             "
         );
 

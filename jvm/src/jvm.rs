@@ -522,7 +522,7 @@ impl Jvm {
 
         let mut result = Vec::with_capacity(thread.stack.len());
 
-        for item in thread.stack.iter() {
+        for item in thread.stack.iter().rev() {
             // skip exception classes
             if self.is_a(&item.class, "java/lang/Throwable").await {
                 continue;
