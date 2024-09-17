@@ -86,8 +86,8 @@ impl ClassDefinition for ClassDefinitionImpl {
         self.inner.super_class_name.as_ref().map(|x| x.to_string())
     }
 
-    fn instantiate(&self) -> Box<dyn ClassInstance> {
-        Box::new(ClassInstanceImpl::new(self))
+    fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
+        Ok(Box::new(ClassInstanceImpl::new(self)))
     }
 
     fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>> {

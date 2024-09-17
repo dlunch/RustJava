@@ -98,7 +98,7 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        let instance = class.definition.instantiate();
+        let instance = class.definition.instantiate()?;
 
         Ok(instance)
     }
@@ -123,7 +123,7 @@ impl Jvm {
         let class = self.resolve_class(&class_name).await?.definition;
         let array_class = class.as_array_class_definition().unwrap();
 
-        let instance = array_class.instantiate_array(length);
+        let instance = array_class.instantiate_array(length)?;
         Ok(instance)
     }
 

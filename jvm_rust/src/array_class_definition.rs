@@ -5,7 +5,7 @@ use alloc::{
 };
 use core::fmt::{self, Debug, Formatter};
 
-use jvm::{ArrayClassDefinition, ClassInstance};
+use jvm::{ArrayClassDefinition, ClassInstance, Result};
 
 use crate::array_class_instance::ArrayClassInstanceImpl;
 
@@ -33,8 +33,8 @@ impl ArrayClassDefinition for ArrayClassDefinitionImpl {
         self.inner.element_type_name.clone()
     }
 
-    fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance> {
-        Box::new(ArrayClassInstanceImpl::new(self, length))
+    fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>> {
+        Ok(Box::new(ArrayClassInstanceImpl::new(self, length)))
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, fi
 
 pub trait ArrayClassDefinition: ClassDefinition {
     fn element_type_name(&self) -> String;
-    fn instantiate_array(&self, length: usize) -> Box<dyn ClassInstance>;
+    fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>>;
 }
 
 clone_trait_object!(ArrayClassDefinition);
@@ -24,7 +24,7 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         Some("java/lang/Object".to_string())
     }
 
-    fn instantiate(&self) -> Box<dyn ClassInstance> {
+    fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
         panic!("Cannot instantiate array class")
     }
 
