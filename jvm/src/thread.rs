@@ -14,10 +14,10 @@ impl JvmThread {
         Self { stack: Vec::new() }
     }
 
-    pub fn push_frame(&mut self, class: &Class, method_name: &str) {
+    pub fn push_frame(&mut self, class: &Class, method: &str) {
         self.stack.push(JvmStackFrame {
             class: class.clone(),
-            method_name: method_name.to_string(),
+            method: method.to_string(),
         });
     }
 
@@ -32,5 +32,5 @@ impl JvmThread {
 
 pub struct JvmStackFrame {
     pub class: Class,
-    pub method_name: String,
+    pub method: String,
 }

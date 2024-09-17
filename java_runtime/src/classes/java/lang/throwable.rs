@@ -1,7 +1,7 @@
-use alloc::{format, string::String as RustString, sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, format, string::String as RustString, sync::Arc, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     classes::java::{
@@ -101,12 +101,7 @@ impl Throwable {
     ) -> Result<()> {
         tracing::debug!("java.lang.Throwable::printStackTrace({:?}, {:?})", &this, &stream);
 
-        let stack_trace: Arc<Vec<RustString>> = jvm.get_rust_object_field(&this, "stackTrace").await?;
-
-        for line in stack_trace.iter() {
-            let line = JavaLangString::from_rust_string(jvm, line).await?;
-            let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (line,)).await?;
-        }
+        Self::do_print_stack_trace(jvm, this, stream.into()).await?;
 
         Ok(())
     }
@@ -119,12 +114,7 @@ impl Throwable {
     ) -> Result<()> {
         tracing::debug!("java.lang.Throwable::printStackTrace({:?}, {:?})", &this, &writer);
 
-        let stack_trace: Arc<Vec<RustString>> = jvm.get_rust_object_field(&this, "stackTrace").await?;
-
-        for line in stack_trace.iter() {
-            let line = JavaLangString::from_rust_string(jvm, line).await?;
-            let _: () = jvm.invoke_virtual(&writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
-        }
+        Self::do_print_stack_trace(jvm, this, writer.into()).await?;
 
         Ok(())
     }
@@ -150,13 +140,32 @@ impl Throwable {
 
         Ok(message.into())
     }
+
+    async fn do_print_stack_trace(jvm: &Jvm, this: ClassInstanceRef<Self>, stream_or_writer: Box<dyn ClassInstance>) -> Result<()> {
+        let stack_trace: Arc<Vec<RustString>> = jvm.get_rust_object_field(&this, "stackTrace").await?;
+
+        // TODO we can call println(Ljava/lang/Object;)V
+        let string: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "toString", "()Ljava/lang/String;", ()).await?;
+        let _: () = jvm
+            .invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (string,))
+            .await?;
+
+        for line in stack_trace.iter() {
+            let line = format!("\tat {}", line);
+            let line = JavaLangString::from_rust_string(jvm, &line).await?;
+            let _: () = jvm.invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, Result};
+    use alloc::boxed::Box;
+    use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, JavaError, Result};
 
-    use crate::test::test_jvm;
+    use crate::{classes::java::lang::String, test::test_jvm};
 
     #[tokio::test]
     async fn test_to_string() -> Result<()> {
@@ -170,6 +179,45 @@ mod test {
         let result = JavaLangString::to_rust_string(&jvm, &to_string).await?;
 
         assert_eq!(result, "java/lang/Throwable: test message");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_stacktrace() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        // get exception by creating invalid url
+        let url_string = JavaLangString::from_rust_string(&jvm, "invalid://invalid").await?;
+        let url: Result<Box<dyn ClassInstance>> = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_string,)).await;
+
+        let exception = if let JavaError::JavaException(exception) = url.err().unwrap() {
+            exception
+        } else {
+            panic!("expected JavaException");
+        };
+
+        let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await?;
+        let print_writer = jvm
+            .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
+            .await?;
+
+        let _: () = jvm
+            .invoke_virtual(&exception, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+            .await?;
+
+        let result: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+        let result = JavaLangString::to_rust_string(&jvm, &result).await?;
+
+        assert_eq!(
+            result,
+            "\
+                java/net/MalformedURLException: unknown protocol: invalid\n\
+                    \tat java/net/URL.<init>(Ljava/lang/String;)V\n\
+                    \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;)V\n\
+                    \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V\n\
+            "
+        );
 
         Ok(())
     }

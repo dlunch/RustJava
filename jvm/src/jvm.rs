@@ -491,6 +491,19 @@ impl Jvm {
         self.is_instance_by_name(&instance_class.name(), class_name).await
     }
 
+    #[async_recursion::async_recursion]
+    async fn is_a(&self, class: &Class, class_name: &str) -> bool {
+        if class.definition.name() == class_name {
+            return true;
+        }
+
+        if let Some(super_class) = class.definition.super_class_name() {
+            self.is_a(&self.inner.classes.read().await.get(&super_class).unwrap(), class_name).await
+        } else {
+            false
+        }
+    }
+
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         tracing::info!("throwing java exception: {} {}", r#type, message);
 
@@ -507,11 +520,18 @@ impl Jvm {
         let threads = self.inner.threads.read().await;
         let thread = threads.get(&thread_id).unwrap();
 
-        thread
-            .stack
-            .iter()
-            .map(|x| format!("{}.{}", x.class.definition.name(), x.method_name))
-            .collect()
+        let mut result = Vec::with_capacity(thread.stack.len());
+
+        for item in thread.stack.iter() {
+            // skip exception classes
+            if self.is_a(&item.class, "java/lang/Throwable").await {
+                continue;
+            }
+
+            result.push(format!("{}.{}", item.class.definition.name(), item.method));
+        }
+
+        result
     }
 
     #[async_recursion::async_recursion]
@@ -654,13 +674,15 @@ impl Jvm {
 
     async fn execute_method(&self, class: &Class, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
         let thread_id = (self.inner.get_current_thread_id)();
+        let method_str = format!("{}{}", method.name(), method.descriptor());
+
         self.inner
             .threads
             .write()
             .await
             .get_mut(&thread_id)
             .unwrap()
-            .push_frame(class, &method.name());
+            .push_frame(class, &method_str);
 
         let result = method.run(self, args).await?;
 
