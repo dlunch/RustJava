@@ -4,7 +4,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{io::PrintStream, lang::String},
+    classes::java::{
+        io::{PrintStream, PrintWriter},
+        lang::String,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -32,6 +35,12 @@ impl Throwable {
                     "printStackTrace",
                     "(Ljava/io/PrintStream;)V",
                     Self::print_stack_trace_to_print_stream,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "printStackTrace",
+                    "(Ljava/io/PrintWriter;)V",
+                    Self::print_stack_trace_to_print_writer,
                     Default::default(),
                 ),
             ],
@@ -97,6 +106,24 @@ impl Throwable {
         for line in stack_trace.iter() {
             let line = JavaLangString::from_rust_string(jvm, line).await?;
             let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (line,)).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn print_stack_trace_to_print_writer(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        writer: ClassInstanceRef<PrintWriter>,
+    ) -> Result<()> {
+        tracing::debug!("java.lang.Throwable::printStackTrace({:?}, {:?})", &this, &writer);
+
+        let stack_trace: Arc<Vec<RustString>> = jvm.get_rust_object_field(&this, "stackTrace").await?;
+
+        for line in stack_trace.iter() {
+            let line = JavaLangString::from_rust_string(jvm, line).await?;
+            let _: () = jvm.invoke_virtual(&writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
         }
 
         Ok(())
