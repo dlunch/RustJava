@@ -6,7 +6,7 @@ use alloc::{
 use crate::class_loader::Class;
 
 pub struct JvmThread {
-    stack: Vec<JvmStackFrame>,
+    pub stack: Vec<JvmStackFrame>,
 }
 
 impl JvmThread {
@@ -32,6 +32,5 @@ impl JvmThread {
 
 pub struct JvmStackFrame {
     pub class: Class,
-    #[allow(dead_code)] // TODO for debug
     pub method_name: String,
 }

@@ -500,6 +500,20 @@ impl Jvm {
         JavaError::JavaException(instance)
     }
 
+    pub async fn stack_trace(&self) -> Vec<String> {
+        // TODO we should return in another format
+
+        let thread_id = (self.inner.get_current_thread_id)();
+        let threads = self.inner.threads.read().await;
+        let thread = threads.get(&thread_id).unwrap();
+
+        thread
+            .stack
+            .iter()
+            .map(|x| format!("{}.{}", x.class.definition.name(), x.method_name))
+            .collect()
+    }
+
     #[async_recursion::async_recursion]
     async fn is_instance_by_name(&self, instance_class_name: &str, class_name: &str) -> Result<bool> {
         let instance_class = self.resolve_class(instance_class_name).await?.definition;
