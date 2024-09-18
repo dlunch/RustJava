@@ -77,7 +77,7 @@ impl URLClassLoader {
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
 
             if file.ends_with(".rustjar") {
-                let class = context.find_rustjar_class(&file, &name_str).await?;
+                let class = context.find_rustjar_class(jvm, &file, &name_str).await?;
                 if let Some(class) = class {
                     let java_class = jvm.register_class(class, Some(this.into())).await?.unwrap();
 

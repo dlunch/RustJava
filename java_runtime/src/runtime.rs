@@ -30,7 +30,7 @@ pub trait Runtime: Sync + Send + DynClone {
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
     async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
 
-    async fn find_rustjar_class(&self, classpath: &str, class: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>>;
+    async fn find_rustjar_class(&self, jvm: &Jvm, classpath: &str, class: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>>;
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> JvmResult<Box<dyn ClassDefinition>>;
     async fn define_array_class(&self, jvm: &Jvm, element_type_name: &str) -> JvmResult<Box<dyn ClassDefinition>>;
 }
@@ -136,7 +136,7 @@ pub mod test {
             }
         }
 
-        async fn find_rustjar_class(&self, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
+        async fn find_rustjar_class(&self, _jvm: &Jvm, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
             if classpath == RT_RUSTJAR {
                 let proto = get_runtime_class_proto(class);
                 if let Some(proto) = proto {

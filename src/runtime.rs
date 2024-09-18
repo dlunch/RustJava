@@ -129,7 +129,7 @@ where
         }
     }
 
-    async fn find_rustjar_class(&self, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
+    async fn find_rustjar_class(&self, _jvm: &Jvm, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
         if classpath == RT_RUSTJAR {
             let proto = get_runtime_class_proto(class);
             if let Some(proto) = proto {

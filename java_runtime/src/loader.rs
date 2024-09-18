@@ -98,7 +98,7 @@ impl BootstrapClassLoader for JavaRuntimeClassLoader {
             return Ok(Some(self.runtime.define_array_class(jvm, element_type_name).await?));
         }
 
-        self.runtime.find_rustjar_class(RT_RUSTJAR, name).await
+        self.runtime.find_rustjar_class(jvm, RT_RUSTJAR, name).await
     }
 }
 
