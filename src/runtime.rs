@@ -129,11 +129,15 @@ where
         }
     }
 
-    async fn define_class_rust(&self, _jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
+    async fn find_rustjar_class(&self, _classpath: &str, _class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
+        Ok(None)
+    }
+
+    async fn define_runtime_class(&self, _jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
         Ok(Box::new(ClassDefinitionImpl::from_class_proto(proto, Box::new(self.clone()) as Box<_>)))
     }
 
-    async fn define_class_java(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
+    async fn define_class(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
         ClassDefinitionImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
     }
 

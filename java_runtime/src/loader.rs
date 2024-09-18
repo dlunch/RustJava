@@ -101,7 +101,7 @@ impl BootstrapClassLoader for JavaRuntimeClassLoader {
 
         let proto = get_proto(name);
         if let Some(proto) = proto {
-            Ok(Some(self.runtime.define_class_rust(jvm, proto).await?))
+            Ok(Some(self.runtime.define_runtime_class(jvm, proto).await?))
         } else {
             Ok(None)
         }

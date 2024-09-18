@@ -298,7 +298,7 @@ impl ClassLoader {
 
         let data: Vec<i8> = jvm.load_byte_array(&bytes, 0, length as _).await?;
 
-        let class = runtime.define_class_java(jvm, cast_slice(&data)).await?;
+        let class = runtime.define_class(jvm, cast_slice(&data)).await?;
         let java_class = jvm.register_class(class, Some(this.into())).await?;
 
         Ok(java_class.into())
