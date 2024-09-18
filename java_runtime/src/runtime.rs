@@ -59,11 +59,11 @@ pub mod test {
     };
 
     #[derive(Clone)]
-    pub struct DummyRuntime {
+    pub struct TestRuntime {
         filesystem: BTreeMap<String, Vec<u8>>,
     }
 
-    impl DummyRuntime {
+    impl TestRuntime {
         pub fn new(filesystem: BTreeMap<String, Vec<u8>>) -> Self {
             Self { filesystem }
         }
@@ -76,7 +76,7 @@ pub mod test {
     static LAST_TASK_ID: AtomicU64 = AtomicU64::new(1);
 
     #[async_trait::async_trait]
-    impl Runtime for DummyRuntime {
+    impl Runtime for TestRuntime {
         async fn sleep(&self, _duration: Duration) {
             todo!()
         }

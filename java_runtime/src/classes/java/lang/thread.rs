@@ -158,7 +158,7 @@ mod test {
     use jvm::{ClassInstanceRef, Jvm, Result};
     use jvm_rust::ClassDefinitionImpl;
 
-    use crate::{runtime::test::DummyRuntime, test::create_test_jvm, RuntimeClassProto, RuntimeContext};
+    use crate::{runtime::test::TestRuntime, test::create_test_jvm, RuntimeClassProto, RuntimeContext};
 
     struct TestClass {}
     impl TestClass {
@@ -190,7 +190,7 @@ mod test {
 
     #[tokio::test]
     async fn test_thread() -> Result<()> {
-        let runtime = DummyRuntime::new(BTreeMap::new());
+        let runtime = TestRuntime::new(BTreeMap::new());
         let jvm = create_test_jvm(runtime.clone()).await?;
 
         let class = Box::new(ClassDefinitionImpl::from_class_proto(

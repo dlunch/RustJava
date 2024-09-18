@@ -21,15 +21,15 @@ pub mod test {
 
     use jvm::{Jvm, Result};
 
-    use crate::{get_bootstrap_class_loader, runtime::test::DummyRuntime, Runtime, RT_RUSTJAR};
+    use crate::{get_bootstrap_class_loader, runtime::test::TestRuntime, Runtime, RT_RUSTJAR};
 
     pub async fn test_jvm() -> Result<Jvm> {
-        let runtime = DummyRuntime::new(BTreeMap::new());
+        let runtime = TestRuntime::new(BTreeMap::new());
         create_test_jvm(runtime).await
     }
 
     pub async fn test_jvm_filesystem(filesystem: BTreeMap<String, Vec<u8>>) -> Result<Jvm> {
-        let runtime = DummyRuntime::new(filesystem);
+        let runtime = TestRuntime::new(filesystem);
         create_test_jvm(runtime).await
     }
 
