@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 async-recursion = { workspace = true }
 async-trait = { workspace = true }
+bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 async-lock = { workspace = true }
 tracing = { workspace = true }

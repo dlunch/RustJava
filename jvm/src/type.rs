@@ -31,7 +31,7 @@ pub enum JavaType {
 }
 
 impl JavaType {
-    pub fn default(self) -> JavaValue {
+    pub fn default(&self) -> JavaValue {
         match self {
             Self::Void => panic!("Cannot create default value for void"),
             Self::Boolean => JavaValue::Boolean(false),

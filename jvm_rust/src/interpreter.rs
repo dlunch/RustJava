@@ -84,7 +84,11 @@ impl Interpreter {
 
                 let element_type = jvm.array_element_type(&array).await?;
 
-                let value = if element_type == JavaType::Char || element_type == JavaType::Boolean {
+                let value = if element_type == JavaType::Char
+                    || element_type == JavaType::Boolean
+                    || element_type == JavaType::Byte
+                    || element_type == JavaType::Short
+                {
                     Self::integer_to_type(value, element_type)
                 } else {
                     value
@@ -805,8 +809,23 @@ impl Interpreter {
         let method_type = JavaType::parse(descriptor);
         let (param_type, _) = method_type.as_method();
 
-        let mut values = (0..param_type.len())
-            .map(|_| stack_frame.operand_stack.pop().unwrap())
+        let mut values = param_type
+            .iter()
+            .map(|x| {
+                let value = stack_frame.operand_stack.pop().unwrap();
+                if matches!(x, JavaType::Int) {
+                    match value {
+                        JavaValue::Boolean(x) => JavaValue::Int(x as _),
+                        JavaValue::Byte(x) => JavaValue::Int(x as _),
+                        JavaValue::Char(x) => JavaValue::Int(x as _),
+                        JavaValue::Short(x) => JavaValue::Int(x as _),
+                        JavaValue::Int(x) => JavaValue::Int(x),
+                        _ => panic!("Expected integer, got {:?}", value),
+                    }
+                } else {
+                    value
+                }
+            })
             .collect::<Vec<_>>();
 
         values.reverse();
