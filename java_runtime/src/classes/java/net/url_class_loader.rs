@@ -156,6 +156,8 @@ impl URLClassLoader {
 
                     return Ok(new_url.into());
                 }
+            } else if file.ends_with(".rustjar") {
+                // TODO rustjar resource
             } else {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');

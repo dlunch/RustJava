@@ -4,7 +4,7 @@ mod runtime;
 
 use std::{io::Write, path::Path};
 
-use java_runtime::{get_bootstrap_class_loader, Runtime};
+use java_runtime::{get_bootstrap_class_loader, Runtime, RT_RUSTJAR};
 use jvm::{runtime::JavaLangString, JavaValue, Jvm, Result};
 
 use runtime::RuntimeImpl;
@@ -28,6 +28,9 @@ where
         class_path_str = format!("{}:{}", x.to_str().unwrap(), class_path_str);
     }
 
+    // add rt.rustjar
+    // TODO do we need boot class path?
+    let class_path_str = format!("{}:{}", RT_RUSTJAR, class_path_str);
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
     let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?;

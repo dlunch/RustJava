@@ -11,7 +11,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileStat, IOError, Runtime, RuntimeClassProto, SpawnCallback};
+use java_runtime::{get_runtime_class_proto, File, FileStat, IOError, Runtime, SpawnCallback, RT_RUSTJAR};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
@@ -129,12 +129,18 @@ where
         }
     }
 
-    async fn find_rustjar_class(&self, _classpath: &str, _class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
-        Ok(None)
-    }
+    async fn find_rustjar_class(&self, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
+        if classpath == RT_RUSTJAR {
+            let proto = get_runtime_class_proto(class);
+            if let Some(proto) = proto {
+                return Ok(Some(Box::new(ClassDefinitionImpl::from_class_proto(
+                    proto,
+                    Box::new(self.clone()) as Box<_>,
+                ))));
+            }
+        }
 
-    async fn define_runtime_class(&self, _jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
-        Ok(Box::new(ClassDefinitionImpl::from_class_proto(proto, Box::new(self.clone()) as Box<_>)))
+        Ok(None)
     }
 
     async fn define_class(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {

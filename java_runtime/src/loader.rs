@@ -2,9 +2,9 @@ use alloc::boxed::Box;
 
 use jvm::{BootstrapClassLoader, ClassDefinition, Jvm, Result};
 
-use crate::{Runtime, RuntimeClassProto};
+use crate::{Runtime, RuntimeClassProto, RT_RUSTJAR};
 
-pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
+pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
     let protos = [
         crate::classes::java::io::BufferedReader::as_proto(),
         crate::classes::java::io::ByteArrayInputStream::as_proto(),
@@ -78,7 +78,6 @@ pub fn get_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::zip::ZipEntry::as_proto(),
         crate::classes::java::util::zip::ZipFile::as_proto(),
         crate::classes::java::util::zip::ZipFileEntries::as_proto(),
-        crate::classes::rustjava::RuntimeClassLoader::as_proto(),
         crate::classes::rustjava::net::FileURLConnection::as_proto(),
         crate::classes::rustjava::net::FileURLHandler::as_proto(),
         crate::classes::rustjava::net::JarURLConnection::as_proto(),
@@ -99,12 +98,7 @@ impl BootstrapClassLoader for JavaRuntimeClassLoader {
             return Ok(Some(self.runtime.define_array_class(jvm, element_type_name).await?));
         }
 
-        let proto = get_proto(name);
-        if let Some(proto) = proto {
-            Ok(Some(self.runtime.define_runtime_class(jvm, proto).await?))
-        } else {
-            Ok(None)
-        }
+        self.runtime.find_rustjar_class(RT_RUSTJAR, name).await
     }
 }
 

@@ -152,12 +152,13 @@ impl Thread {
 
 #[cfg(test)]
 mod test {
-    use alloc::{collections::BTreeMap, vec};
+    use alloc::{boxed::Box, collections::BTreeMap, vec};
 
     use java_class_proto::{JavaFieldProto, JavaMethodProto};
     use jvm::{ClassInstanceRef, Jvm, Result};
+    use jvm_rust::ClassDefinitionImpl;
 
-    use crate::{runtime::test::DummyRuntime, test::create_test_jvm, Runtime, RuntimeClassProto, RuntimeContext};
+    use crate::{runtime::test::DummyRuntime, test::create_test_jvm, RuntimeClassProto, RuntimeContext};
 
     struct TestClass {}
     impl TestClass {
@@ -192,7 +193,10 @@ mod test {
         let runtime = DummyRuntime::new(BTreeMap::new());
         let jvm = create_test_jvm(runtime.clone()).await?;
 
-        let class = runtime.define_runtime_class(&jvm, TestClass::as_proto()).await?;
+        let class = Box::new(ClassDefinitionImpl::from_class_proto(
+            TestClass::as_proto(),
+            Box::new(runtime.clone()) as Box<_>,
+        ));
         jvm.register_class(class, None).await?;
 
         let test_class = jvm.new_class("TestClass", "()V", ()).await?;

@@ -7,8 +7,6 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 
-use crate::RuntimeClassProto;
-
 pub use io::{File, FileSize, FileStat, IOError};
 
 #[async_trait::async_trait]
@@ -33,7 +31,6 @@ pub trait Runtime: Sync + Send + DynClone {
     async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
 
     async fn find_rustjar_class(&self, classpath: &str, class: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>>;
-    async fn define_runtime_class(&self, jvm: &Jvm, proto: RuntimeClassProto) -> JvmResult<Box<dyn ClassDefinition>>;
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> JvmResult<Box<dyn ClassDefinition>>;
     async fn define_array_class(&self, jvm: &Jvm, element_type_name: &str) -> JvmResult<Box<dyn ClassDefinition>>;
 }
@@ -56,8 +53,9 @@ pub mod test {
     use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
     use crate::{
+        loader::get_runtime_class_proto,
         runtime::{File, IOError, Runtime, SpawnCallback},
-        FileSize, FileStat, RuntimeClassProto,
+        FileSize, FileStat, RT_RUSTJAR,
     };
 
     #[derive(Clone)]
@@ -138,12 +136,18 @@ pub mod test {
             }
         }
 
-        async fn find_rustjar_class(&self, _classpath: &str, _class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
-            Ok(None)
-        }
+        async fn find_rustjar_class(&self, classpath: &str, class: &str) -> jvm::Result<Option<Box<dyn ClassDefinition>>> {
+            if classpath == RT_RUSTJAR {
+                let proto = get_runtime_class_proto(class);
+                if let Some(proto) = proto {
+                    return Ok(Some(Box::new(ClassDefinitionImpl::from_class_proto(
+                        proto,
+                        Box::new(self.clone()) as Box<_>,
+                    ))));
+                }
+            }
 
-        async fn define_runtime_class(&self, _jvm: &Jvm, proto: RuntimeClassProto) -> jvm::Result<Box<dyn ClassDefinition>> {
-            Ok(Box::new(ClassDefinitionImpl::from_class_proto(proto, Box::new(self.clone()) as Box<_>)))
+            Ok(None)
         }
 
         async fn define_class(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {

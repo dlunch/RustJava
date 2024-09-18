@@ -87,10 +87,6 @@ impl ClassLoader {
             .await?;
 
         if system_class_loader.is_null() {
-            let runtime_class_loader = jvm
-                .new_class("rustjava/RuntimeClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
-                .await?;
-
             let class_path: ClassInstanceRef<String> = jvm
                 .invoke_static(
                     "java/lang/System",
@@ -121,11 +117,7 @@ impl ClassLoader {
             };
 
             let url_class_loader = jvm
-                .new_class(
-                    "java/net/URLClassLoader",
-                    "([Ljava/net/URL;Ljava/lang/ClassLoader;)V",
-                    (url_array, runtime_class_loader),
-                )
+                .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (url_array, None))
                 .await?;
 
             jvm.put_static_field(
