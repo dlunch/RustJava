@@ -621,6 +621,10 @@ impl Jvm {
         if let Some(x) = calling_class {
             // called in java
 
+            if self.is_a(&x, "java/lang/ClassLoader").await {
+                return x.java_class(self).await;
+            }
+
             let calling_class_class_loader = JavaLangClass::class_loader(self, &x.java_class(self).await?).await?;
             if let Some(x) = calling_class_class_loader {
                 Ok(x)
