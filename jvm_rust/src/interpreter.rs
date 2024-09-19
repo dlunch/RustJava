@@ -321,11 +321,13 @@ impl Interpreter {
 
                 let value = jvm.get_field(&instance.into(), &x.name, &x.descriptor).await?;
 
-                stack_frame.operand_stack.push(value);
+                stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
             }
-            Opcode::Getstatic(x) => stack_frame
-                .operand_stack
-                .push(jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?),
+            Opcode::Getstatic(x) => {
+                let value = jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?;
+
+                stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
+            }
             Opcode::Goto(x) => return Ok(ExecuteNext::Jump((current_offset as i32 + *x as i32) as u32)),
             Opcode::GotoW(x) => return Ok(ExecuteNext::Jump((current_offset as i32 + *x) as u32)),
             Opcode::I2b => {
