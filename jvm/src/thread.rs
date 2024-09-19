@@ -1,9 +1,10 @@
 use alloc::{
+    boxed::Box,
     string::{String, ToString},
     vec::Vec,
 };
 
-use crate::class_loader::Class;
+use crate::{class_loader::Class, ClassInstance};
 
 pub struct JvmThread {
     pub stack: Vec<JvmStackFrame>,
@@ -14,9 +15,10 @@ impl JvmThread {
         Self { stack: Vec::new() }
     }
 
-    pub fn push_frame(&mut self, class: &Class, method: &str) {
+    pub fn push_frame(&mut self, class: &Class, class_instance: Option<Box<dyn ClassInstance>>, method: &str) {
         self.stack.push(JvmStackFrame {
             class: class.clone(),
+            class_instance,
             method: method.to_string(),
         });
     }
@@ -32,5 +34,6 @@ impl JvmThread {
 
 pub struct JvmStackFrame {
     pub class: Class,
+    pub class_instance: Option<Box<dyn ClassInstance>>,
     pub method: String,
 }

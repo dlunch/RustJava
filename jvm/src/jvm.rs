@@ -225,7 +225,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(self.execute_method(&class, &method, args.into_arg()).await?.into())
+            Ok(self.execute_method(&class, None, &method, args.into_arg()).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
@@ -250,7 +250,10 @@ impl Jvm {
                 .collect::<Vec<_>>();
 
             let class = self.resolve_class(&class.name()).await?; // TODO we're resolving class twice
-            Ok(self.execute_method(&class, &x, args.into_boxed_slice()).await?.into())
+            Ok(self
+                .execute_method(&class, Some(instance.clone()), &x, args.into_boxed_slice())
+                .await?
+                .into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
 
@@ -286,7 +289,10 @@ impl Jvm {
                     .await);
             }
 
-            Ok(self.execute_method(&class, &method, args.into_boxed_slice()).await?.into())
+            Ok(self
+                .execute_method(&class, Some(instance.clone()), &method, args.into_boxed_slice())
+                .await?
+                .into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -451,13 +457,13 @@ impl Jvm {
         Ok(class)
     }
 
-    async fn find_calling_class(&self) -> Result<Option<Class>> {
+    async fn find_calling_class(&self) -> Result<Option<(Class, Option<Box<dyn ClassInstance>>)>> {
         let thread_id = (self.inner.get_current_thread_id)();
 
         let threads = self.inner.threads.read().await;
         let thread = threads.get(&thread_id).unwrap();
 
-        Ok(thread.top_frame().map(|x| x.class.clone()))
+        Ok(thread.top_frame().map(|x| (x.class.clone(), x.class_instance.clone())))
     }
 
     pub async fn register_class(
@@ -618,14 +624,14 @@ impl Jvm {
     pub async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
         let calling_class = self.find_calling_class().await?;
 
-        if let Some(x) = calling_class {
+        if let Some((class, class_instance)) = calling_class {
             // called in java
 
-            if self.is_a(&x, "java/lang/ClassLoader").await {
-                return x.java_class(self).await;
+            if self.is_a(&class, "java/lang/ClassLoader").await {
+                return Ok(class_instance.unwrap());
             }
 
-            let calling_class_class_loader = JavaLangClass::class_loader(self, &x.java_class(self).await?).await?;
+            let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class(self).await?).await?;
             if let Some(x) = calling_class_class_loader {
                 Ok(x)
             } else {
@@ -676,7 +682,13 @@ impl Jvm {
         Ok(None)
     }
 
-    async fn execute_method(&self, class: &Class, method: &Box<dyn Method>, args: Box<[JavaValue]>) -> Result<JavaValue> {
+    async fn execute_method(
+        &self,
+        class: &Class,
+        class_instance: Option<Box<dyn ClassInstance>>,
+        method: &Box<dyn Method>,
+        args: Box<[JavaValue]>,
+    ) -> Result<JavaValue> {
         let thread_id = (self.inner.get_current_thread_id)();
         let method_str = format!("{}{}", method.name(), method.descriptor());
 
@@ -686,7 +698,7 @@ impl Jvm {
             .await
             .get_mut(&thread_id)
             .unwrap()
-            .push_frame(class, &method_str);
+            .push_frame(class, class_instance, &method_str);
 
         let result = method.run(self, args).await?;
 
