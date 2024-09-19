@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-use jvm::{runtime::JavaLangString, ClassInstance, JavaError, JavaType, JavaValue, Jvm, Result};
+use jvm::{runtime::JavaLangString, ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result};
 
 use crate::stack_frame::StackFrame;
 
@@ -18,7 +18,8 @@ impl Interpreter {
     pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>, return_type: &JavaType) -> Result<JavaValue> {
         let mut stack_frame = StackFrame::new();
 
-        stack_frame.local_variables = args.into_vec();
+        stack_frame.local_variables = args.into_vec().into_iter().map(Self::to_stack_frame_type).collect();
+
         stack_frame
             .local_variables
             .extend(iter::repeat(JavaValue::Void).take(code_attribute.max_locals as usize));
@@ -62,12 +63,12 @@ impl Interpreter {
         match opcode {
             Opcode::Aaload | Opcode::Baload | Opcode::Caload | Opcode::Daload | Opcode::Faload | Opcode::Iaload | Opcode::Laload | Opcode::Saload => {
                 // TODO type checking
-                let index = Self::pop_integer(stack_frame);
+                let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let array = stack_frame.operand_stack.pop().unwrap();
 
                 let value = jvm.load_array(&array.into(), index as usize, 1).await?.pop().unwrap();
 
-                stack_frame.operand_stack.push(value);
+                stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
             }
             Opcode::Aastore
             | Opcode::Bastore
@@ -79,19 +80,19 @@ impl Interpreter {
             | Opcode::Sastore => {
                 // TODO type checking
                 let value = stack_frame.operand_stack.pop().unwrap();
-                let index = Self::pop_integer(stack_frame);
+                let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let mut array = stack_frame.operand_stack.pop().unwrap().into();
 
                 let element_type = jvm.array_element_type(&array).await?;
 
-                let value = if element_type == JavaType::Char
-                    || element_type == JavaType::Boolean
-                    || element_type == JavaType::Byte
-                    || element_type == JavaType::Short
-                {
-                    Self::integer_to_type(value, element_type)
-                } else {
-                    value
+                // operand stack has only integer, so convert it to the correct type
+                let value = match element_type {
+                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) == 1),
+                    JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
+                    JavaType::Char => JavaValue::Char(i32::from(value) as _),
+                    JavaType::Short => JavaValue::Short(i32::from(value) as _),
+                    JavaType::Int => JavaValue::Int(i32::from(value)),
+                    _ => value,
                 };
 
                 jvm.store_array(&mut array, index as usize, [value]).await?;
@@ -328,45 +329,45 @@ impl Interpreter {
             Opcode::Goto(x) => return Ok(ExecuteNext::Jump((current_offset as i32 + *x as i32) as u32)),
             Opcode::GotoW(x) => return Ok(ExecuteNext::Jump((current_offset as i32 + *x) as u32)),
             Opcode::I2b => {
-                let value = Self::pop_integer(stack_frame);
-                stack_frame.operand_stack.push(JavaValue::Byte(value as _));
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                stack_frame.operand_stack.push(JavaValue::Int(value as u8 as _));
             }
             Opcode::I2c => {
-                let value = Self::pop_integer(stack_frame);
-                stack_frame.operand_stack.push(JavaValue::Char(value as _));
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                stack_frame.operand_stack.push(JavaValue::Int(value as JavaChar as _));
             }
             Opcode::I2d => {
-                let value = Self::pop_integer(stack_frame);
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 stack_frame.operand_stack.push(JavaValue::Double(value as _));
             }
             Opcode::I2f => {
-                let value = Self::pop_integer(stack_frame);
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 stack_frame.operand_stack.push(JavaValue::Float(value as _));
             }
             Opcode::I2l => {
-                let value = Self::pop_integer(stack_frame);
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 stack_frame.operand_stack.push(JavaValue::Long(value as _));
             }
             Opcode::I2s => {
-                let value = Self::pop_integer(stack_frame);
-                stack_frame.operand_stack.push(JavaValue::Short(value as _));
+                let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                stack_frame.operand_stack.push(JavaValue::Int(value as u16 as _));
             }
             Opcode::Iadd => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 + value2));
             }
             Opcode::Iand => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 & value2));
             }
             Opcode::Iconst(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
             Opcode::Idiv => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
             }
@@ -467,8 +468,8 @@ impl Interpreter {
                 stack_frame.local_variables[*x as usize] = JavaValue::Int(value + *y as i32);
             }
             Opcode::Imul => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 * value2));
             }
@@ -481,7 +482,7 @@ impl Interpreter {
                 let instance: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
 
                 let result = jvm.is_instance(&*instance, x.as_class()).await?;
-                stack_frame.operand_stack.push(JavaValue::Boolean(result));
+                stack_frame.operand_stack.push(JavaValue::Int(result as _));
             }
             Opcode::Invokedynamic(_) => {
                 todo!()
@@ -512,44 +513,44 @@ impl Interpreter {
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Ior => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 | value2));
             }
             Opcode::Irem => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
             }
             Opcode::Ishl => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 << value2));
             }
             Opcode::Ishr => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 >> value2));
             }
             Opcode::Isub => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 - value2));
             }
             Opcode::Iushr => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(((value1 as u32) >> (value2 as u32)) as _));
             }
             Opcode::Ixor => {
-                let value2 = Self::pop_integer(stack_frame);
-                let value1 = Self::pop_integer(stack_frame);
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 ^ value2));
             }
@@ -652,7 +653,7 @@ impl Interpreter {
                 stack_frame.operand_stack.push(JavaValue::Long(value1 ^ value2));
             }
             Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
-                let key = Self::pop_integer(stack_frame);
+                let key = stack_frame.operand_stack.pop().unwrap().into();
 
                 for (k, offset) in pairs {
                     if *k == key {
@@ -759,8 +760,8 @@ impl Interpreter {
     where
         T: Fn(i32, i32) -> bool,
     {
-        let value2 = Self::pop_integer(stack_frame);
-        let value1 = Self::pop_integer(stack_frame);
+        let value2 = stack_frame.operand_stack.pop().unwrap().into();
+        let value1 = stack_frame.operand_stack.pop().unwrap().into();
 
         pred(value1, value2)
     }
@@ -769,40 +770,9 @@ impl Interpreter {
     where
         T: Fn(i32) -> bool,
     {
-        let value = Self::pop_integer(stack_frame);
+        let value = stack_frame.operand_stack.pop().unwrap().into();
 
         pred(value)
-    }
-
-    fn pop_integer(stack_frame: &mut StackFrame) -> i32 {
-        let value = stack_frame.operand_stack.pop().unwrap();
-
-        match value {
-            JavaValue::Boolean(x) => {
-                if x {
-                    1
-                } else {
-                    0
-                }
-            }
-            JavaValue::Byte(x) => x as _,
-            JavaValue::Char(x) => x as _,
-            JavaValue::Short(x) => x as _,
-            JavaValue::Int(x) => x,
-            _ => panic!("Expected integer, got {:?}", value),
-        }
-    }
-
-    fn integer_to_type(value: JavaValue, r#type: JavaType) -> JavaValue {
-        let value: i32 = value.into();
-        match r#type {
-            JavaType::Boolean => JavaValue::Boolean(value != 0),
-            JavaType::Byte => JavaValue::Byte(value as _),
-            JavaType::Char => JavaValue::Char(value as _),
-            JavaType::Short => JavaValue::Short(value as _),
-            JavaType::Int => JavaValue::Int(value),
-            _ => panic!("Expected integer type, got {:?}", r#type),
-        }
     }
 
     fn extract_invoke_params(stack_frame: &mut StackFrame, descriptor: &str) -> Vec<JavaValue> {
@@ -811,19 +781,15 @@ impl Interpreter {
 
         let mut values = param_type
             .iter()
+            .rev()
             .map(|x| {
                 let value = stack_frame.operand_stack.pop().unwrap();
-                if matches!(x, JavaType::Int) {
-                    match value {
-                        JavaValue::Boolean(x) => JavaValue::Int(x as _),
-                        JavaValue::Byte(x) => JavaValue::Int(x as _),
-                        JavaValue::Char(x) => JavaValue::Int(x as _),
-                        JavaValue::Short(x) => JavaValue::Int(x as _),
-                        JavaValue::Int(x) => JavaValue::Int(x),
-                        _ => panic!("Expected integer, got {:?}", value),
-                    }
-                } else {
-                    value
+                match x {
+                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) == 1),
+                    JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
+                    JavaType::Char => JavaValue::Char(i32::from(value) as _),
+                    JavaType::Short => JavaValue::Short(i32::from(value) as _),
+                    _ => value,
                 }
             })
             .collect::<Vec<_>>();
@@ -836,7 +802,18 @@ impl Interpreter {
     fn push_invoke_result(stack_frame: &mut StackFrame, value: JavaValue) {
         match value {
             JavaValue::Void => {}
-            _ => stack_frame.operand_stack.push(value),
+            _ => stack_frame.operand_stack.push(Self::to_stack_frame_type(value)),
+        }
+    }
+
+    // convert into stack frame type, which is always integer for number types
+    fn to_stack_frame_type(value: JavaValue) -> JavaValue {
+        match value {
+            JavaValue::Boolean(x) => JavaValue::Int(x as _),
+            JavaValue::Byte(x) => JavaValue::Int(x as _),
+            JavaValue::Char(x) => JavaValue::Int(x as _),
+            JavaValue::Short(x) => JavaValue::Int(x as _),
+            _ => value,
         }
     }
 
