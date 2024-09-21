@@ -125,6 +125,6 @@ impl Object {
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::finalize({:?})", &this);
 
-        Ok(())g
+        Ok(())
     }
 }
