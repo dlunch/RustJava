@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::FieldAccessFlags;
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{File, RuntimeClassProto, RuntimeContext};
@@ -17,7 +17,7 @@ impl FileDescriptor {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, Default::default()),
+                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, MethodAccessFlags::STATIC),
             ],
             fields: vec![
                 JavaFieldProto::new("raw", "[B", Default::default()),

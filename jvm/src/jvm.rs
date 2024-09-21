@@ -664,7 +664,7 @@ impl Jvm {
         descriptor: &str,
         is_static: bool,
     ) -> Result<Option<Box<dyn Method>>> {
-        let method = class.method(name, descriptor, true);
+        let method = class.method(name, descriptor, false);
 
         if let Some(x) = method {
             if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
