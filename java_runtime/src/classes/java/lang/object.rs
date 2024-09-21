@@ -24,7 +24,7 @@ impl Object {
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("notify", "()V", Self::notify, MethodAccessFlags::NATIVE),
                 JavaMethodProto::new("notifyAll", "()V", Self::notify_all, MethodAccessFlags::NATIVE),
-                JavaMethodProto::new("wait", "(J)V", Self::wait_long, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("wait", "(J)V", Self::wait_long, Default::default()),
                 JavaMethodProto::new("wait", "(JI)V", Self::wait_long_int, Default::default()),
                 JavaMethodProto::new("wait", "()V", Self::wait, Default::default()),
                 JavaMethodProto::new("finalize", "()V", Self::finalize, Default::default()),
