@@ -32,6 +32,7 @@ impl String {
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
                 JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
                 JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, Default::default()),
@@ -148,6 +149,12 @@ impl String {
         let hash = chars.iter().fold(0i32, |acc, &c| acc.wrapping_mul(31).wrapping_add(c as i32));
 
         Ok(hash)
+    }
+
+    async fn to_string(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::toString({:?})", &this);
+
+        Ok(this)
     }
 
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<u16> {
