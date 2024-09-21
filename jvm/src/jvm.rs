@@ -60,7 +60,7 @@ impl Jvm {
         };
 
         // load bootstrap classes
-        let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "java/lang/Class"];
+        let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "[B", "java/lang/Class"];
         for class_name in bootstrap_classes.iter() {
             let class = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
             jvm.register_class(class, None).await?;
@@ -450,11 +450,7 @@ impl Jvm {
 
         tracing::debug!("Loaded class {}", class_name);
 
-        self.register_class_internal(class.unwrap(), Some(class_loader_wrapper)).await?;
-
-        let class = self.inner.classes.read().await.get(class_name).unwrap().clone();
-
-        Ok(class)
+        Ok(class.unwrap())
     }
 
     async fn find_calling_class(&self) -> Result<Option<(Class, Option<Box<dyn ClassInstance>>)>> {

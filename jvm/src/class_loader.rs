@@ -64,9 +64,11 @@ impl<'a> ClassLoaderWrapper for BootstrapClassLoaderWrapper<'a> {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>> {
         let definition = self.bootstrap_class_loader.load_class(jvm, name).await?;
         if let Some(definition) = definition {
+            let java_class = jvm.register_class(definition.clone(), None).await?;
+
             Ok(Some(Class {
                 definition,
-                java_class: Arc::new(RwLock::new(None)),
+                java_class: Arc::new(RwLock::new(java_class)),
             }))
         } else {
             Ok(None)
