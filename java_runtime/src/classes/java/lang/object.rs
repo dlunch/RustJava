@@ -71,7 +71,7 @@ impl Object {
     async fn java_clone(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::warn!("stub java.lang.Object::clone({:?})", &this);
 
-        todo!()
+        Ok(None.into())
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
@@ -91,13 +91,13 @@ impl Object {
     async fn notify(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::notify({:?})", &this);
 
-        todo!()
+        Ok(())
     }
 
     async fn notify_all(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::notifyAll({:?})", &this);
 
-        todo!()
+        Ok(())
     }
 
     async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
@@ -111,7 +111,7 @@ impl Object {
     async fn wait_long_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
         tracing::warn!("stub java.lang.Object::wait({:?}, {:?}, {:?})", &this, millis, nanos);
 
-        todo!()
+        Ok(())
     }
 
     async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
@@ -125,6 +125,6 @@ impl Object {
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::finalize({:?})", &this);
 
-        todo!()
+        Ok(())g
     }
 }
