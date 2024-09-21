@@ -14,7 +14,7 @@ use async_lock::RwLock;
 
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
-use java_constants::FieldAccessFlags;
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Method, Result};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
@@ -90,11 +90,13 @@ impl ClassDefinition for ClassDefinitionImpl {
         Ok(Box::new(ClassInstanceImpl::new(self)))
     }
 
-    fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>> {
+    fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>> {
         self.inner
             .methods
             .iter()
-            .find(|&method| method.name() == name && method.descriptor() == descriptor)
+            .find(|&method| {
+                method.name() == name && method.descriptor() == descriptor && method.access_flags().contains(MethodAccessFlags::STATIC) == is_static
+            })
             .map(|x| Box::new(x.clone()) as Box<dyn Method>)
     }
 

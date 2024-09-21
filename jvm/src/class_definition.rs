@@ -10,7 +10,7 @@ pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
     fn instantiate(&self) -> Result<Box<dyn ClassInstance>>;
-    fn method(&self, name: &str, descriptor: &str) -> Option<Box<dyn Method>>;
+    fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>>;
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>>;
     async fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue>; // TODO do we need to split class? or rename classdefinition?
     async fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()>;

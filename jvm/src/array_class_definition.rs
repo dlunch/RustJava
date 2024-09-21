@@ -28,7 +28,7 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         panic!("Cannot instantiate array class")
     }
 
-    fn method(&self, _name: &str, _descriptor: &str) -> Option<Box<dyn Method>> {
+    fn method(&self, _name: &str, _descriptor: &str, _is_static: bool) -> Option<Box<dyn Method>> {
         None
     }
 

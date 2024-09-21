@@ -213,7 +213,7 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        let method = class.definition.method(name, descriptor);
+        let method = class.definition.method(name, descriptor, true);
 
         if let Some(method) = method {
             if !method.access_flags().contains(MethodAccessFlags::STATIC) {
@@ -273,7 +273,7 @@ impl Jvm {
         tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
 
         let class = self.resolve_class(class_name).await?;
-        let method = class.definition.method(name, descriptor);
+        let method = class.definition.method(name, descriptor, false);
 
         if let Some(method) = method {
             let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
@@ -563,7 +563,7 @@ impl Jvm {
 
         self.inner.classes.write().await.insert(class.definition.name().to_owned(), class.clone());
 
-        let clinit = class.definition.method("<clinit>", "()V");
+        let clinit = class.definition.method("<clinit>", "()V", true);
 
         if let Some(x) = clinit {
             tracing::debug!("Calling <clinit> for {}", class.definition.name());
@@ -664,7 +664,7 @@ impl Jvm {
         descriptor: &str,
         is_static: bool,
     ) -> Result<Option<Box<dyn Method>>> {
-        let method = class.method(name, descriptor);
+        let method = class.method(name, descriptor, true);
 
         if let Some(x) = method {
             if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
