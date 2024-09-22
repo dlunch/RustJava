@@ -62,6 +62,10 @@ impl Object {
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Object::equals({:?}, {:?})", &this, &other);
 
+        if other.is_null() {
+            return Ok(false);
+        }
+
         let rust_this: Box<dyn ClassInstance> = this.into();
         let rust_other: Box<dyn ClassInstance> = other.into();
 
