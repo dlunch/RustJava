@@ -16,6 +16,7 @@ impl Random {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, Default::default()),
                 JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
             ],
             fields: vec![],
@@ -24,6 +25,12 @@ impl Random {
 
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.util.Random::<init>({:?})", &this);
+
+        Ok(())
+    }
+
+    async fn init_with_seed(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
+        tracing::warn!("stub java.util.Random::<init>({:?}, {:?})", &this, seed);
 
         Ok(())
     }
