@@ -1,3 +1,5 @@
+use core::cmp::Ordering;
+
 use alloc::{
     str,
     string::{String as RustString, ToString},
@@ -31,6 +33,7 @@ impl String {
                 JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("compareTo", "(Ljava/lang/String;)I", Self::compare_to, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
@@ -141,6 +144,21 @@ impl String {
             Ok(true)
         } else {
             Ok(false)
+        }
+    }
+
+    async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.lang.String::compareTo({:?}, {:?})", &this, &other);
+
+        let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
+        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
+
+        let compare_result = this_string.cmp(&other_string);
+
+        match compare_result {
+            Ordering::Less => Ok(-1),
+            Ordering::Equal => Ok(0),
+            Ordering::Greater => Ok(1),
         }
     }
 
