@@ -27,6 +27,7 @@ impl Vector {
                 JavaMethodProto::new("<init>", "(II)V", Self::init_with_capacity_increment, Default::default()),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
                 JavaMethodProto::new("addElement", "(Ljava/lang/Object;)V", Self::add_element, Default::default()),
+                JavaMethodProto::new("insertElementAt", "(Ljava/lang/Object;I)V", Self::insert_element_at, Default::default()),
                 JavaMethodProto::new("elementAt", "(I)Ljava/lang/Object;", Self::element_at, Default::default()),
                 JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
@@ -87,6 +88,21 @@ impl Vector {
         // do we need to call add() instead?
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         rust_vector.lock().await.push(element);
+
+        Ok(())
+    }
+
+    async fn insert_element_at(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        element: ClassInstanceRef<Object>,
+        index: i32,
+    ) -> Result<()> {
+        tracing::debug!("java.util.Vector::insertElementAt({:?}, {:?}, {:?})", &this, &element, index);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        rust_vector.lock().await.insert(index as usize, element);
 
         Ok(())
     }
