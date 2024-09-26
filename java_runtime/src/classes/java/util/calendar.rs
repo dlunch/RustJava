@@ -4,7 +4,7 @@ use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::util::Date, RuntimeClassProto, RuntimeContext};
 
 // class java.util.Calendar
 pub struct Calendar {}
@@ -15,12 +15,10 @@ impl Calendar {
             name: "java/util/Calendar",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new(
-                "getInstance",
-                "()Ljava/util/Calendar;",
-                Self::get_instance,
-                MethodAccessFlags::STATIC,
-            )],
+            methods: vec![
+                JavaMethodProto::new("getInstance", "()Ljava/util/Calendar;", Self::get_instance, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("setTime", "(Ljava/util/Date;)V", Self::set_time, Default::default()),
+            ],
             fields: vec![],
         }
     }
@@ -31,5 +29,11 @@ impl Calendar {
         let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;
 
         Ok(instance.into())
+    }
+
+    async fn set_time(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _date: ClassInstanceRef<Date>) -> Result<()> {
+        tracing::warn!("stub java.util.Calendar::setTime()");
+
+        Ok(())
     }
 }
