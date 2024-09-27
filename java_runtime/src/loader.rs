@@ -8,6 +8,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
     let protos = [
         crate::classes::java::io::BufferedReader::as_proto(),
         crate::classes::java::io::ByteArrayInputStream::as_proto(),
+        crate::classes::java::io::ByteArrayOutputStream::as_proto(),
         crate::classes::java::io::DataInputStream::as_proto(),
         crate::classes::java::io::EOFException::as_proto(),
         crate::classes::java::io::File::as_proto(),

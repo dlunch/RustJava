@@ -1,5 +1,6 @@
 mod buffered_reader;
 mod byte_array_input_stream;
+mod byte_array_output_stream;
 mod data_input_stream;
 mod eof_exception;
 mod file;
@@ -19,9 +20,9 @@ mod string_writer;
 mod writer;
 
 pub use self::{
-    buffered_reader::BufferedReader, byte_array_input_stream::ByteArrayInputStream, data_input_stream::DataInputStream, eof_exception::EOFException,
-    file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_not_found_exception::FileNotFoundException,
-    file_output_stream::FileOutputStream, filter_output_stream::FilterOutputStream, input_stream::InputStream,
-    input_stream_reader::InputStreamReader, io_exception::IOException, output_stream::OutputStream, print_stream::PrintStream,
-    print_writer::PrintWriter, reader::Reader, string_writer::StringWriter, writer::Writer,
+    buffered_reader::BufferedReader, byte_array_input_stream::ByteArrayInputStream, byte_array_output_stream::ByteArrayOutputStream,
+    data_input_stream::DataInputStream, eof_exception::EOFException, file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream,
+    file_not_found_exception::FileNotFoundException, file_output_stream::FileOutputStream, filter_output_stream::FilterOutputStream,
+    input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException, output_stream::OutputStream,
+    print_stream::PrintStream, print_writer::PrintWriter, reader::Reader, string_writer::StringWriter, writer::Writer,
 };
