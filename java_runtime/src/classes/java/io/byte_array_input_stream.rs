@@ -83,7 +83,7 @@ impl ByteArrayInputStream {
     }
 
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.ByteArrayInputStream::readByte({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::readByte({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let buf_length = jvm.array_length(&buf).await?;
@@ -101,13 +101,13 @@ impl ByteArrayInputStream {
     }
 
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> Result<()> {
-        tracing::debug!("java.lang.ByteArrayInputStream::close({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::close({:?})", &this);
 
         Ok(())
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
-        tracing::debug!("java.lang.ByteArrayInputStream::skip({:?}, {:?})", &this, n);
+        tracing::debug!("java.io.ByteArrayInputStream::skip({:?}, {:?})", &this, n);
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let buf_length = jvm.array_length(&buf).await?;
