@@ -17,7 +17,7 @@ use crate::{
 const BUF_SIZE: usize = 10;
 
 // class java.io.InputStreamReader
-pub struct InputStreamReader {}
+pub struct InputStreamReader;
 
 impl InputStreamReader {
     pub fn as_proto() -> RuntimeClassProto {

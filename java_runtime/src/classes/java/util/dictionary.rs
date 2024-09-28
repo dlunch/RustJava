@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.Dictionary
-pub struct Dictionary {}
+pub struct Dictionary;
 
 impl Dictionary {
     pub fn as_proto() -> RuntimeClassProto {

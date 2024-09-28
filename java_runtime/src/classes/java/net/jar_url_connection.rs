@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.net.JarURLConnection
-pub struct JarURLConnection {}
+pub struct JarURLConnection;
 
 impl JarURLConnection {
     pub fn as_proto() -> RuntimeClassProto {

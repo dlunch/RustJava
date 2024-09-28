@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.io.PrintWriter
-pub struct PrintWriter {}
+pub struct PrintWriter;
 
 impl PrintWriter {
     pub fn as_proto() -> RuntimeClassProto {

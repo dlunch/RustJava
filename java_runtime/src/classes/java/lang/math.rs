@@ -7,7 +7,7 @@ use jvm::{Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Math
-pub struct Math {}
+pub struct Math;
 
 impl Math {
     pub fn as_proto() -> RuntimeClassProto {

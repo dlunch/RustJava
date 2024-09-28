@@ -5,7 +5,7 @@ use java_class_proto::JavaMethodProto;
 use crate::RuntimeClassProto;
 
 // interface java.lang.Runnable
-pub struct Runnable {}
+pub struct Runnable;
 
 impl Runnable {
     // TODO Create JavaInterfaceProto

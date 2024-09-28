@@ -15,7 +15,7 @@ use crate::{
 };
 
 // class java.lang.ClassLoader
-pub struct ClassLoader {}
+pub struct ClassLoader;
 
 impl ClassLoader {
     pub fn as_proto() -> RuntimeClassProto {

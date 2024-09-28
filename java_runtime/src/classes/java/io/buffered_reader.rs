@@ -11,7 +11,7 @@ use crate::{
 // class java.io.BufferedReader
 
 const BUF_SIZE: usize = 1024;
-pub struct BufferedReader {}
+pub struct BufferedReader;
 
 impl BufferedReader {
     pub fn as_proto() -> RuntimeClassProto {

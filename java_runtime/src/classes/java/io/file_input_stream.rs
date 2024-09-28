@@ -10,7 +10,7 @@ use crate::{
 };
 
 // class java.io.FileInputStream
-pub struct FileInputStream {}
+pub struct FileInputStream;
 
 impl FileInputStream {
     pub fn as_proto() -> RuntimeClassProto {

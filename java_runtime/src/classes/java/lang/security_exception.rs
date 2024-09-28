@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.SecurityException
-pub struct SecurityException {}
+pub struct SecurityException;
 
 impl SecurityException {
     pub fn as_proto() -> RuntimeClassProto {

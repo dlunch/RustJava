@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.util.jar.Attributes
-pub struct Attributes {}
+pub struct Attributes;
 
 impl Attributes {
     pub fn as_proto() -> RuntimeClassProto {

@@ -10,7 +10,7 @@ use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext, SpawnCallback};
 
 // class java.lang.Thread
-pub struct Thread {}
+pub struct Thread;
 
 impl Thread {
     pub fn as_proto() -> RuntimeClassProto {
@@ -162,7 +162,7 @@ mod test {
 
     use crate::{runtime::test::TestRuntime, test::create_test_jvm, RuntimeClassProto, RuntimeContext};
 
-    struct TestClass {}
+    struct TestClass;
     impl TestClass {
         pub fn as_proto() -> RuntimeClassProto {
             RuntimeClassProto {

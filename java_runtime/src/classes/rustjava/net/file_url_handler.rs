@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class rustjava.net.FileURLHandler
-pub struct FileURLHandler {}
+pub struct FileURLHandler;
 
 impl FileURLHandler {
     pub fn as_proto() -> RuntimeClassProto {

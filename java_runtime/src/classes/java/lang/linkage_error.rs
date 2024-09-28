@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.LinkageError
-pub struct LinkageError {}
+pub struct LinkageError;
 
 impl LinkageError {
     pub fn as_proto() -> RuntimeClassProto {

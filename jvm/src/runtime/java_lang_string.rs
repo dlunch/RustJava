@@ -2,7 +2,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, Result};
 
-pub struct JavaLangString {}
+pub struct JavaLangString;
 
 impl JavaLangString {
     #[allow(clippy::borrowed_box)]

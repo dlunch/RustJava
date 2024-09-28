@@ -7,7 +7,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::util::Date, RuntimeClassProto, RuntimeContext};
 
 // class java.util.Calendar
-pub struct Calendar {}
+pub struct Calendar;
 
 impl Calendar {
     pub fn as_proto() -> RuntimeClassProto {

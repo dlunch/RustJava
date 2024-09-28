@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.lang.Throwable
-pub struct Throwable {}
+pub struct Throwable;
 
 impl Throwable {
     pub fn as_proto() -> RuntimeClassProto {

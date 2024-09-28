@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.util.jar.Manifest
-pub struct Manifest {}
+pub struct Manifest;
 
 impl Manifest {
     pub fn as_proto() -> RuntimeClassProto {

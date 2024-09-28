@@ -3,7 +3,7 @@ use alloc::vec;
 use crate::RuntimeClassProto;
 
 // class java.io.FileNotFoundException
-pub struct FileNotFoundException {}
+pub struct FileNotFoundException;
 
 impl FileNotFoundException {
     pub fn as_proto() -> RuntimeClassProto {

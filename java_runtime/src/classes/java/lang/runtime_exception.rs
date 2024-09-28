@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.RuntimeException
-pub struct RuntimeException {}
+pub struct RuntimeException;
 
 impl RuntimeException {
     pub fn as_proto() -> RuntimeClassProto {

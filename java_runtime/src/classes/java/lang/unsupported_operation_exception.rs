@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.UnsupportedOperationException
-pub struct UnsupportedOperationException {}
+pub struct UnsupportedOperationException;
 
 impl UnsupportedOperationException {
     pub fn as_proto() -> RuntimeClassProto {

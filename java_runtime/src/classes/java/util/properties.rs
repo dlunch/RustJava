@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.util.Properties
-pub struct Properties {}
+pub struct Properties;
 
 impl Properties {
     pub fn as_proto() -> RuntimeClassProto {

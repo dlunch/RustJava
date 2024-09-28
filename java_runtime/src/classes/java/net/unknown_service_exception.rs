@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.io.UnknownServiceException
-pub struct UnknownServiceException {}
+pub struct UnknownServiceException;
 
 impl UnknownServiceException {
     pub fn as_proto() -> RuntimeClassProto {

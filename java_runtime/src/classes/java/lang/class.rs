@@ -15,7 +15,7 @@ use crate::{
 };
 
 // class java.lang.Class
-pub struct Class {}
+pub struct Class;
 
 impl Class {
     pub fn as_proto() -> RuntimeClassProto {

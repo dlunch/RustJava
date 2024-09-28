@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.IncompatibleClassChangeError
-pub struct IncompatibleClassChangeError {}
+pub struct IncompatibleClassChangeError;
 
 impl IncompatibleClassChangeError {
     pub fn as_proto() -> RuntimeClassProto {

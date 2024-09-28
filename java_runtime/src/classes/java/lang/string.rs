@@ -19,7 +19,7 @@ use crate::{
 };
 
 // class java.lang.String
-pub struct String {}
+pub struct String;
 
 impl String {
     pub fn as_proto() -> RuntimeClassProto {

@@ -14,7 +14,7 @@ use crate::{
 };
 
 // class java.io.PrintStream
-pub struct PrintStream {}
+pub struct PrintStream;
 
 impl PrintStream {
     pub fn as_proto() -> RuntimeClassProto {

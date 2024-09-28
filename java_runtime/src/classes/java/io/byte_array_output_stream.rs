@@ -6,7 +6,7 @@ use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.io.ByteArrayOutputStream
-pub struct ByteArrayOutputStream {}
+pub struct ByteArrayOutputStream;
 
 impl ByteArrayOutputStream {
     pub fn as_proto() -> RuntimeClassProto {

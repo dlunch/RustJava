@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.io.StringWriter
-pub struct StringWriter {}
+pub struct StringWriter;
 
 impl StringWriter {
     pub fn as_proto() -> RuntimeClassProto {

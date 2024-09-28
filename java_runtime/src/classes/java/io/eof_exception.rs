@@ -3,7 +3,7 @@ use alloc::vec;
 use crate::RuntimeClassProto;
 
 // class java.io.EOFException
-pub struct EOFException {}
+pub struct EOFException;
 
 impl EOFException {
     pub fn as_proto() -> RuntimeClassProto {

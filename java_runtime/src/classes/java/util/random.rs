@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.Random
-pub struct Random {}
+pub struct Random;
 
 impl Random {
     pub fn as_proto() -> RuntimeClassProto {

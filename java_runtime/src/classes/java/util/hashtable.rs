@@ -14,7 +14,7 @@ use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 type RustHashMap = Arc<Mutex<HashMap<i32, Vec<(ClassInstanceRef<Object>, ClassInstanceRef<Object>)>>>>;
 
 // class java.util.Hashtable
-pub struct Hashtable {}
+pub struct Hashtable;
 
 impl Hashtable {
     pub fn as_proto() -> RuntimeClassProto {

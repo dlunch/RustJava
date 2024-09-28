@@ -5,7 +5,7 @@ use java_class_proto::JavaMethodProto;
 use crate::RuntimeClassProto;
 
 // interface java.util.Enumeration
-pub struct Enumeration {}
+pub struct Enumeration;
 
 impl Enumeration {
     pub fn as_proto() -> RuntimeClassProto {

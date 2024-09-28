@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.IllegalArgumentException
-pub struct IllegalArgumentException {}
+pub struct IllegalArgumentException;
 
 impl IllegalArgumentException {
     pub fn as_proto() -> RuntimeClassProto {

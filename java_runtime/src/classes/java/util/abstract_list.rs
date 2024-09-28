@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.AbstractList
-pub struct AbstractList {}
+pub struct AbstractList;
 
 impl AbstractList {
     pub fn as_proto() -> RuntimeClassProto {

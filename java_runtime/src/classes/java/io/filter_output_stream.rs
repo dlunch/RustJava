@@ -7,7 +7,7 @@ use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::io::OutputStream, RuntimeClassProto, RuntimeContext};
 
 // class java.io.FilterOutputStream
-pub struct FilterOutputStream {}
+pub struct FilterOutputStream;
 
 impl FilterOutputStream {
     pub fn as_proto() -> RuntimeClassProto {

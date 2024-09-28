@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.AbstractCollection
-pub struct AbstractCollection {}
+pub struct AbstractCollection;
 
 impl AbstractCollection {
     pub fn as_proto() -> RuntimeClassProto {

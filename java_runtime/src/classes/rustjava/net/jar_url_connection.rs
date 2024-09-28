@@ -15,7 +15,7 @@ use crate::{
 };
 
 // class rustjava.net.JarURLConnection
-pub struct JarURLConnection {}
+pub struct JarURLConnection;
 
 impl JarURLConnection {
     pub fn as_proto() -> RuntimeClassProto {

@@ -7,7 +7,7 @@ use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, Result}
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Object
-pub struct Object {}
+pub struct Object;
 
 impl Object {
     pub fn as_proto() -> RuntimeClassProto {

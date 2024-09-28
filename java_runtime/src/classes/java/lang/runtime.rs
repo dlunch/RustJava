@@ -7,7 +7,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.lang.Runtime
-pub struct Runtime {}
+pub struct Runtime;
 
 impl Runtime {
     pub fn as_proto() -> RuntimeClassProto {

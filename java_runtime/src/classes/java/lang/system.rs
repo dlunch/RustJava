@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.lang.System
-pub struct System {}
+pub struct System;
 
 impl System {
     pub fn as_proto() -> RuntimeClassProto {

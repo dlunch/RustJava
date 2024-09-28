@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.IndexOutOfBoundsException
-pub struct IndexOutOfBoundsException {}
+pub struct IndexOutOfBoundsException;
 
 impl IndexOutOfBoundsException {
     pub fn as_proto() -> RuntimeClassProto {

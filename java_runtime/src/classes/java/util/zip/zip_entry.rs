@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.util.zip.ZipEntry
-pub struct ZipEntry {}
+pub struct ZipEntry;
 
 impl ZipEntry {
     pub fn as_proto() -> RuntimeClassProto {

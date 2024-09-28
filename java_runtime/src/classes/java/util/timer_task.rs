@@ -3,7 +3,7 @@ use alloc::vec;
 use crate::RuntimeClassProto;
 
 // class java.util.TimerTask
-pub struct TimerTask {}
+pub struct TimerTask;
 
 impl TimerTask {
     pub fn as_proto() -> RuntimeClassProto {

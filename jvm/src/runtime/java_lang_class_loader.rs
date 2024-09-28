@@ -4,7 +4,7 @@ use crate::{class_instance::ClassInstance, jvm::Jvm, Result};
 
 use super::JavaLangString;
 
-pub struct JavaLangClassLoader {}
+pub struct JavaLangClassLoader;
 
 impl JavaLangClassLoader {
     pub async fn get_system_class_loader(jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {

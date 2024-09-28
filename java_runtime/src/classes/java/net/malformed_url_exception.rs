@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.net.MalformedURLException
-pub struct MalformedURLException {}
+pub struct MalformedURLException;
 
 impl MalformedURLException {
     pub fn as_proto() -> RuntimeClassProto {

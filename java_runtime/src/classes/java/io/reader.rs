@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.io.Reader
-pub struct Reader {}
+pub struct Reader;
 
 impl Reader {
     pub fn as_proto() -> RuntimeClassProto {

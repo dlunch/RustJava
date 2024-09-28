@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.util.zip.ZipFile$Entries
-pub struct ZipFileEntries {}
+pub struct ZipFileEntries;
 
 impl ZipFileEntries {
     pub fn as_proto() -> RuntimeClassProto {

@@ -13,7 +13,7 @@ use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 type RustVector = Arc<Mutex<Vec<ClassInstanceRef<Object>>>>;
 
 // class java.util.Vector
-pub struct Vector {}
+pub struct Vector;
 
 impl Vector {
     pub fn as_proto() -> RuntimeClassProto {

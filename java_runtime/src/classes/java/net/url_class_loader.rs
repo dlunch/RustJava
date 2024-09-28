@@ -18,7 +18,7 @@ use crate::{
 };
 
 // class java.net.URLClassLoader
-pub struct URLClassLoader {}
+pub struct URLClassLoader;
 
 impl URLClassLoader {
     pub fn as_proto() -> RuntimeClassProto {

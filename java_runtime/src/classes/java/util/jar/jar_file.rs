@@ -17,7 +17,7 @@ use crate::{
 };
 
 // class java.util.jar.JarFile
-pub struct JarFile {}
+pub struct JarFile;
 
 impl JarFile {
     pub fn as_proto() -> RuntimeClassProto {

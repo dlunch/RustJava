@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class rustjava.net.JarURLHandler
-pub struct JarURLHandler {}
+pub struct JarURLHandler;
 
 impl JarURLHandler {
     pub fn as_proto() -> RuntimeClassProto {

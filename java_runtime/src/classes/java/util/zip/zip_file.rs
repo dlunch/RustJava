@@ -24,7 +24,7 @@ use crate::{
 type JavaZipArchive = Arc<Mutex<ZipArchive<Cursor<Vec<u8>>>>>;
 
 // class java.util.zip.ZipFile
-pub struct ZipFile {}
+pub struct ZipFile;
 
 impl ZipFile {
     pub fn as_proto() -> RuntimeClassProto {

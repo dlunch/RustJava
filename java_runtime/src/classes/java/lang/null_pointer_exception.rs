@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.NullPointerException
-pub struct NullPointerException {}
+pub struct NullPointerException;
 
 impl NullPointerException {
     pub fn as_proto() -> RuntimeClassProto {

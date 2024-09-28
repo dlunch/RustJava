@@ -11,7 +11,7 @@ use crate::{
 };
 
 // class java.net.URLStreamHandler
-pub struct URLStreamHandler {}
+pub struct URLStreamHandler;
 
 impl URLStreamHandler {
     pub fn as_proto() -> RuntimeClassProto {

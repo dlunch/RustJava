@@ -6,7 +6,7 @@ use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.io.Writer
-pub struct Writer {}
+pub struct Writer;
 
 impl Writer {
     pub fn as_proto() -> RuntimeClassProto {

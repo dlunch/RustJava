@@ -6,7 +6,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.util.GregorianCalendar
-pub struct GregorianCalendar {}
+pub struct GregorianCalendar;
 
 impl GregorianCalendar {
     pub fn as_proto() -> RuntimeClassProto {

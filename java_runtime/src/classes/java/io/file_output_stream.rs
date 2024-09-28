@@ -11,7 +11,7 @@ use crate::{
 };
 
 // class java.io.FileOutputStream
-pub struct FileOutputStream {}
+pub struct FileOutputStream;
 
 impl FileOutputStream {
     pub fn as_proto() -> RuntimeClassProto {

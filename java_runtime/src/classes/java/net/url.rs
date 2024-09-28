@@ -13,7 +13,7 @@ use crate::{
 };
 
 // class java.net.URL
-pub struct URL {}
+pub struct URL;
 
 impl URL {
     pub fn as_proto() -> RuntimeClassProto {

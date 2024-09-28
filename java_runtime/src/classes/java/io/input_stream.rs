@@ -6,7 +6,7 @@ use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use crate::{RuntimeClassProto, RuntimeContext};
 
 // class java.io.InputStream
-pub struct InputStream {}
+pub struct InputStream;
 
 impl InputStream {
     pub fn as_proto() -> RuntimeClassProto {

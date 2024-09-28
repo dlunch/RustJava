@@ -10,7 +10,7 @@ use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Resul
 use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
 
 // class java.lang.StringBuffer
-pub struct StringBuffer {}
+pub struct StringBuffer;
 
 impl StringBuffer {
     pub fn as_proto() -> RuntimeClassProto {

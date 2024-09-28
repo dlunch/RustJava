@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.util.jar.JarFile$Entries
-pub struct JarFileEntries {}
+pub struct JarFileEntries;
 
 impl JarFileEntries {
     pub fn as_proto() -> RuntimeClassProto {

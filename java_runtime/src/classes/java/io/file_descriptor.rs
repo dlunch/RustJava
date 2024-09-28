@@ -7,7 +7,7 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 use crate::{File, RuntimeClassProto, RuntimeContext};
 
 // class java.io.FileDescriptor
-pub struct FileDescriptor {}
+pub struct FileDescriptor;
 
 impl FileDescriptor {
     pub fn as_proto() -> RuntimeClassProto {

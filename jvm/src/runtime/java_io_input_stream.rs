@@ -4,7 +4,7 @@ use bytemuck::cast_vec;
 
 use crate::{class_instance::ClassInstance, jvm::Jvm, Result};
 
-pub struct JavaIoInputStream {}
+pub struct JavaIoInputStream;
 
 impl JavaIoInputStream {
     #[allow(clippy::borrowed_box)]
