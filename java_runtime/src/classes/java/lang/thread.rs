@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, format, string::String, sync::Arc, vec};
+use alloc::{boxed::Box, sync::Arc, vec};
 use core::time::Duration;
 
 use event_listener::Event;
@@ -19,9 +19,11 @@ impl Thread {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
+                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init_with_runnable, Default::default()),
                 JavaMethodProto::new("start", "()V", Self::start, Default::default()),
                 JavaMethodProto::new("join", "()V", Self::join, Default::default()),
+                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
@@ -35,6 +37,14 @@ impl Thread {
                 JavaFieldProto::new("joinEvent", "[B", Default::default()),
             ],
         }
+    }
+
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("Thread::<init>({:?})", &this);
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        Ok(())
     }
 
     async fn init_with_runnable(
@@ -66,9 +76,9 @@ impl Thread {
 
         struct ThreadStartProxy {
             jvm: Jvm,
-            thread_id: String,
+            thread_id: i64,
             join_event: Arc<Event>,
-            runnable: ClassInstanceRef<Runnable>,
+            this: ClassInstanceRef<Thread>,
         }
 
         #[async_trait::async_trait]
@@ -79,7 +89,7 @@ impl Thread {
 
                 self.jvm.attach_thread().await?;
 
-                let _: () = self.jvm.invoke_virtual(&self.runnable, "run", "()V", []).await?;
+                let _: () = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await?;
 
                 self.jvm.detach_thread().await?;
 
@@ -92,17 +102,28 @@ impl Thread {
         let join_event = Arc::new(Event::new());
         jvm.put_rust_object_field(&mut this, "joinEvent", join_event.clone()).await?;
 
-        let runnable = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
+        let id = jvm.get_field(&this, "id", "J").await?;
 
         context.spawn(
             jvm,
             Box::new(ThreadStartProxy {
                 jvm: jvm.clone(),
-                thread_id: format!("{:?}", &runnable),
+                thread_id: id,
                 join_event,
-                runnable,
+                this: this.clone(),
             }),
         );
+
+        Ok(())
+    }
+
+    async fn run(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("Thread::run({:?})", &this);
+
+        let target: ClassInstanceRef<Runnable> = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
+        if !target.is_null() {
+            let _: () = jvm.invoke_virtual(&target, "run", "()V", ()).await?;
+        }
 
         Ok(())
     }
