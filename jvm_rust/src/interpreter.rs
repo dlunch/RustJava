@@ -509,17 +509,33 @@ impl Interpreter {
             Opcode::Invokeinterface(x, _count, _zero) => {
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
-                let instance = stack_frame.operand_stack.pop().unwrap();
+                let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if instance.is_none() {
+                    return Err(jvm
+                        .exception(
+                            "java/lang/NullPointerException",
+                            &format!("Method {}::{}:{} is called on null", x.class, x.name, x.descriptor),
+                        )
+                        .await);
+                }
 
-                let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
+                let result = jvm.invoke_virtual(&instance.unwrap(), &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokespecial(x) => {
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
-                let instance = stack_frame.operand_stack.pop().unwrap();
+                let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if instance.is_none() {
+                    return Err(jvm
+                        .exception(
+                            "java/lang/NullPointerException",
+                            &format!("Method {}::{}:{} is called on null", x.class, x.name, x.descriptor),
+                        )
+                        .await);
+                }
 
-                let result = jvm.invoke_special(&instance.into(), &x.class, &x.name, &x.descriptor, params).await?;
+                let result = jvm.invoke_special(&instance.unwrap(), &x.class, &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokestatic(x) => {
@@ -531,9 +547,17 @@ impl Interpreter {
             Opcode::Invokevirtual(x) => {
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
-                let instance = stack_frame.operand_stack.pop().unwrap();
+                let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if instance.is_none() {
+                    return Err(jvm
+                        .exception(
+                            "java/lang/NullPointerException",
+                            &format!("Method {}::{}:{} is called on null", x.class, x.name, x.descriptor),
+                        )
+                        .await);
+                }
 
-                let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
+                let result = jvm.invoke_virtual(&instance.unwrap(), &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Ior => {
