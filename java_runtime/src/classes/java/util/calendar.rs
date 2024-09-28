@@ -18,6 +18,7 @@ impl Calendar {
             methods: vec![
                 JavaMethodProto::new("getInstance", "()Ljava/util/Calendar;", Self::get_instance, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setTime", "(Ljava/util/Date;)V", Self::set_time, Default::default()),
+                JavaMethodProto::new("getTime", "()Ljava/util/Date;", Self::get_time, Default::default()),
                 JavaMethodProto::new("set", "(II)V", Self::set, Default::default()),
             ],
             fields: vec![],
@@ -36,6 +37,14 @@ impl Calendar {
         tracing::warn!("stub java.util.Calendar::setTime({:?}, {:?})", &this, &date);
 
         Ok(())
+    }
+
+    async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Date>> {
+        tracing::warn!("stub java.util.Calendar::getTime({:?})", &this);
+
+        let date = jvm.new_class("java/util/Date", "()V", ()).await?;
+
+        Ok(date.into())
     }
 
     async fn set(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32, value: i32) -> Result<()> {
