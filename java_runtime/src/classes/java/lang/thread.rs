@@ -24,6 +24,7 @@ impl Thread {
                 JavaMethodProto::new("start", "()V", Self::start, Default::default()),
                 JavaMethodProto::new("join", "()V", Self::join, Default::default()),
                 JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("isAlive", "()Z", Self::is_alive, Default::default()),
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
@@ -143,6 +144,12 @@ impl Thread {
         jvm.put_field(&mut this, "joinEvent", "[B", None).await?;
 
         Ok(())
+    }
+
+    async fn is_alive(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::warn!("stub Thread::isAlive({:?})", &this);
+
+        Ok(true)
     }
 
     async fn sleep(_: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<i32> {
