@@ -40,7 +40,7 @@ impl Debug for MethodBody {
 struct MethodInner {
     name: String,
     descriptor: String,
-    body: MethodBody,
+    body: Option<MethodBody>,
     access_flags: MethodAccessFlags,
 }
 
@@ -55,7 +55,7 @@ impl MethodImpl {
             inner: Arc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
-                body,
+                body: Some(body),
                 access_flags,
             }),
         }
@@ -101,7 +101,7 @@ impl MethodImpl {
             inner: Arc::new(MethodInner {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
-                body: MethodBody::ByteCode(Self::extract_body(method_info.attributes).unwrap()),
+                body: Self::extract_body(method_info.attributes).map(MethodBody::ByteCode),
                 access_flags: method_info.access_flags,
             }),
         }
@@ -133,7 +133,7 @@ impl Method for MethodImpl {
     }
 
     async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
-        Ok(match &self.inner.body {
+        Ok(match &self.inner.body.as_ref().unwrap() {
             MethodBody::ByteCode(x) => {
                 let r#type = JavaType::parse(&self.inner.descriptor);
                 Interpreter::run(jvm, x, args, r#type.as_method().1).await?
