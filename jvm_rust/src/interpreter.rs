@@ -730,10 +730,7 @@ impl Interpreter {
                 stack_frame.operand_stack.pop().unwrap();
             }
             Opcode::Pop2 => {
-                let value = stack_frame.operand_stack.pop().unwrap();
-                if matches!(value, JavaValue::Long(_) | JavaValue::Double(_)) {
-                    stack_frame.operand_stack.pop().unwrap();
-                }
+                stack_frame.operand_stack.pop().unwrap();
             }
             Opcode::Putfield(x) => {
                 let value = stack_frame.operand_stack.pop().unwrap();

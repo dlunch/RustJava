@@ -32,6 +32,7 @@ impl PrintStream {
                 JavaMethodProto::new("println", "(B)V", Self::println_byte, Default::default()),
                 JavaMethodProto::new("println", "(S)V", Self::println_short, Default::default()),
                 JavaMethodProto::new("println", "(Z)V", Self::println_bool, Default::default()),
+                JavaMethodProto::new("println", "(D)V", Self::println_double, Default::default()),
             ],
             fields: vec![],
         }
@@ -143,6 +144,18 @@ impl PrintStream {
         tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &bool);
 
         let java_string = JavaLangString::from_rust_string(jvm, &bool.to_string()).await?;
+
+        let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
+
+        Ok(())
+    }
+
+    async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, double: f64) -> Result<()> {
+        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &double);
+
+        let string = format!("{:.1}", double);
+
+        let java_string = JavaLangString::from_rust_string(jvm, &string).await?;
 
         let _: () = jvm.invoke_virtual(&this, "println", "(Ljava/lang/String;)V", (java_string,)).await?;
 
