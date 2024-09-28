@@ -66,7 +66,7 @@ impl StringBuffer {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let value_array = jvm.get_field(&string, "value", "[C").await?;
+        let value_array = jvm.invoke_virtual(&string, "toCharArray", "()[C", ()).await?;
         let length = jvm.array_length(&value_array).await? as i32;
 
         jvm.put_field(&mut this, "value", "[C", value_array).await?;
@@ -160,7 +160,8 @@ impl StringBuffer {
             let mut java_new_value_array = jvm.instantiate_array("C", new_capacity).await?;
             jvm.put_field(this, "value", "[C", java_new_value_array.clone()).await?;
             jvm.store_array(&mut java_new_value_array, 0, old_values).await?;
-            jvm.destroy(java_value_array)?;
+
+            // jvm.destroy(java_value_array)?; // We shouldn't destroy this, this might be referenced by other objects
         }
 
         Ok(())
