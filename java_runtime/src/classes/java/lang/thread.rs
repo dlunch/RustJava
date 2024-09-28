@@ -28,7 +28,12 @@ impl Thread {
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
-                JavaMethodProto::new("currentThread", "()Ljava/lang/Thread;", Self::current_thread, MethodAccessFlags::STATIC),
+                JavaMethodProto::new(
+                    "currentThread",
+                    "()Ljava/lang/Thread;",
+                    Self::current_thread,
+                    MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
+                ),
                 // rustjava internal
                 JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
             ],
