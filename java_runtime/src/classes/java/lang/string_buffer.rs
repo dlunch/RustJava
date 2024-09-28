@@ -20,6 +20,7 @@ impl StringBuffer {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_buffer_length, Default::default()),
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, Default::default()),
                 JavaMethodProto::new(
                     "append",
@@ -40,10 +41,20 @@ impl StringBuffer {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.StringBuffer::<init>({:?})", &this);
 
-        let array = jvm.instantiate_array("C", 16).await?;
+        let _: () = jvm.invoke_special(&this, "java/lang/StringBuffer", "<init>", "(I)V", (16,)).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_buffer_length(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, length: i32) -> Result<()> {
+        tracing::debug!("java.lang.StringBuffer::<init>({:?}, {:?})", &this, length);
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        let array = jvm.instantiate_array("C", length as _).await?;
         jvm.put_field(&mut this, "value", "[C", array).await?;
         jvm.put_field(&mut this, "count", "I", 0).await?;
 
@@ -52,6 +63,8 @@ impl StringBuffer {
 
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.StringBuffer::<init>({:?}, {:?})", &this, &string,);
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let value_array = jvm.get_field(&string, "value", "[C").await?;
         let length = jvm.array_length(&value_array).await? as i32;
