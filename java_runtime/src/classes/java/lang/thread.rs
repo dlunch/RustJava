@@ -19,18 +19,13 @@ impl Thread {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init_with_runnable, Default::default()),
                 JavaMethodProto::new("start", "()V", Self::start, Default::default()),
                 JavaMethodProto::new("join", "()V", Self::join, Default::default()),
                 JavaMethodProto::new("sleep", "(J)V", Self::sleep, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("yield", "()V", Self::r#yield, MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC),
                 JavaMethodProto::new("setPriority", "(I)V", Self::set_priority, Default::default()),
-                JavaMethodProto::new(
-                    "getCurrentThread",
-                    "()Ljava/lang/Thread;",
-                    Self::get_current_thread,
-                    MethodAccessFlags::STATIC,
-                ),
+                JavaMethodProto::new("currentThread", "()Ljava/lang/Thread;", Self::current_thread, MethodAccessFlags::STATIC),
                 // rustjava internal
                 JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
             ],
@@ -42,7 +37,12 @@ impl Thread {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, target: ClassInstanceRef<Runnable>) -> Result<()> {
+    async fn init_with_runnable(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        target: ClassInstanceRef<Runnable>,
+    ) -> Result<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, &target);
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
@@ -145,10 +145,12 @@ impl Thread {
         Ok(())
     }
 
-    async fn get_current_thread(_jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Thread>> {
-        tracing::debug!("Thread::getCurrentThread()");
+    async fn current_thread(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
+        tracing::warn!("stub Thread::currentThread()");
 
-        Ok(None.into()) // TODO
+        let thread = jvm.new_class("java/lang/Thread", "(Z)V", (true,)).await?;
+
+        Ok(thread.into())
     }
 }
 
