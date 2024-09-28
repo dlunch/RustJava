@@ -506,8 +506,13 @@ impl Interpreter {
             Opcode::Invokedynamic(_) => {
                 todo!()
             }
-            Opcode::Invokeinterface(_, _, _) => {
-                todo!()
+            Opcode::Invokeinterface(x, _count, _zero) => {
+                let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
+
+                let instance = stack_frame.operand_stack.pop().unwrap();
+
+                let result = jvm.invoke_virtual(&instance.into(), &x.name, &x.descriptor, params).await?;
+                Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokespecial(x) => {
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);

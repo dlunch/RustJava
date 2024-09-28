@@ -173,6 +173,10 @@ impl ReferenceConstant {
                 class_index,
                 name_and_type_index,
             } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
+            ConstantPoolItem::InstanceMethodref {
+                class_index,
+                name_and_type_index,
+            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
             _ => panic!("Invalid constant pool item {:?}", constant_pool.get(&index).unwrap()),
         }
     }
