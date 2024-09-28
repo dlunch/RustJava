@@ -10,6 +10,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::io::ByteArrayInputStream::as_proto(),
         crate::classes::java::io::ByteArrayOutputStream::as_proto(),
         crate::classes::java::io::DataInputStream::as_proto(),
+        crate::classes::java::io::DataOutputStream::as_proto(),
         crate::classes::java::io::EOFException::as_proto(),
         crate::classes::java::io::File::as_proto(),
         crate::classes::java::io::FileDescriptor::as_proto(),
