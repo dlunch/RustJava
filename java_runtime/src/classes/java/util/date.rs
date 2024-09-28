@@ -52,10 +52,10 @@ impl Date {
         Ok(time)
     }
 
-    async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
+    async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Date::setTime({:?}, {:?})", &this, time);
 
-        jvm.put_field(&this, "value", "J", time).await?;
+        jvm.put_field(&mut this, "value", "J", time).await?;
 
         Ok(())
     }
