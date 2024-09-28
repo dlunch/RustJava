@@ -19,6 +19,7 @@ impl DataOutputStream {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
+                JavaMethodProto::new("writeByte", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("writeInt", "(I)V", Self::write_int, Default::default()),
                 JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
                 JavaMethodProto::new("writeChars", "(Ljava/lang/String;)V", Self::write_chars, Default::default()),
