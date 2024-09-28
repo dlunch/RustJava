@@ -20,6 +20,7 @@ impl Calendar {
                 JavaMethodProto::new("setTime", "(Ljava/util/Date;)V", Self::set_time, Default::default()),
                 JavaMethodProto::new("getTime", "()Ljava/util/Date;", Self::get_time, Default::default()),
                 JavaMethodProto::new("set", "(II)V", Self::set, Default::default()),
+                JavaMethodProto::new("get", "(I)I", Self::get, Default::default()),
             ],
             fields: vec![],
         }
@@ -51,5 +52,11 @@ impl Calendar {
         tracing::warn!("stub java.util.Calendar::set({:?}, {:?}, {:?})", &this, field, value);
 
         Ok(())
+    }
+
+    async fn get(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32) -> Result<i32> {
+        tracing::warn!("stub java.util.Calendar::get({:?}, {:?})", &this, field);
+
+        Ok(0)
     }
 }
