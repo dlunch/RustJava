@@ -52,11 +52,11 @@ impl Thread {
         Ok(())
     }
 
-    async fn init_internal(jvm: &Jvm, _context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
+    async fn init_internal(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, internal);
 
-        let id: i64 = jvm.invoke_static("java/lang/Thread", "currentThreadId", "()J", []).await?;
-        jvm.put_field(&mut this, "id", "J", id).await?;
+        let id = context.current_task_id();
+        jvm.put_field(&mut this, "id", "J", id as i64).await?;
 
         Ok(())
     }
