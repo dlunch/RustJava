@@ -166,7 +166,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
 
     async fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
         if let ArrayElements::Primitive(x) = &mut *self.inner.elements.write().await {
-            x.splice(offset..offset + values.len(), cast_vec(values.into_vec()));
+            x[offset..offset + values.len()].copy_from_slice(&cast_vec(values.into_vec()));
         } else {
             panic!("Expected primitive array");
         }
