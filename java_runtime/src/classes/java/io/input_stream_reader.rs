@@ -28,6 +28,7 @@ impl InputStreamReader {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "([CII)I", Self::read, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("in", "Ljava/io/InputStream;", Default::default()),
@@ -165,6 +166,15 @@ impl InputStreamReader {
         jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size - to_copy).await?;
 
         Ok(to_copy)
+    }
+
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.InputStreamReader::close({:?})", &this);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;
+
+        Ok(())
     }
 }
 

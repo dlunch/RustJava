@@ -18,6 +18,7 @@ impl Reader {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "([C)I", Self::read, Default::default()),
                 JavaMethodProto::new_abstract("read", "([CII)I", Default::default()),
+                JavaMethodProto::new_abstract("close", "()V", Default::default()),
             ],
             fields: vec![],
         }
