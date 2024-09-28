@@ -32,14 +32,14 @@ impl Calendar {
         Ok(instance.into())
     }
 
-    async fn set_time(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _date: ClassInstanceRef<Date>) -> Result<()> {
-        tracing::warn!("stub java.util.Calendar::setTime()");
+    async fn set_time(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, date: ClassInstanceRef<Date>) -> Result<()> {
+        tracing::warn!("stub java.util.Calendar::setTime({:?}, {:?})", &this, &date);
 
         Ok(())
     }
 
-    async fn set(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _field: i32, _value: i32) -> Result<()> {
-        tracing::warn!("stub java.util.Calendar::set()");
+    async fn set(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32, value: i32) -> Result<()> {
+        tracing::warn!("stub java.util.Calendar::set({:?}, {:?}, {:?})", &this, field, value);
 
         Ok(())
     }
