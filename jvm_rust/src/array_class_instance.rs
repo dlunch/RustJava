@@ -4,7 +4,7 @@ use core::fmt::{self, Debug, Formatter};
 use async_lock::RwLock;
 use bytemuck::cast_vec;
 
-use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaError, JavaType, JavaValue, Result};
+use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, Result};
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
@@ -127,11 +127,6 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     async fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
-        if offset + values.len() > self.inner.length {
-            // TODO real exception
-            return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
-        }
-
         match &mut *self.inner.elements.write().await {
             ArrayElements::Primitive(x) => {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);
@@ -148,11 +143,6 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     }
 
     async fn load(&self, offset: usize, length: usize) -> Result<Vec<JavaValue>> {
-        if offset + length > self.inner.length {
-            // TODO real exception
-            return Err(JavaError::FatalError("ArrayIndexOutOfBoundsException".into()));
-        }
-
         Ok(match &*self.inner.elements.read().await {
             ArrayElements::Primitive(x) => {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);

@@ -308,10 +308,21 @@ impl Jvm {
     {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
+        let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
+
+        let array_size = self.array_length(array).await?;
+        if offset + values.len() > array_size {
+            return Err(self
+                .exception(
+                    "java/lang/ArrayIndexOutOfBoundsException",
+                    &format!("{} > {}", offset + values.len(), array_size),
+                )
+                .await);
+        }
+
         let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
-            let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
             array.store(offset, values.into_boxed_slice()).await?;
 
             Ok(())
@@ -325,6 +336,16 @@ impl Jvm {
         T: From<JavaValue>,
     {
         tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
+
+        let array_size = self.array_length(array).await?;
+        if offset + count > array_size {
+            return Err(self
+                .exception(
+                    "java/lang/ArrayIndexOutOfBoundsException",
+                    &format!("{} > {}", offset + count, array_size),
+                )
+                .await);
+        }
 
         let array = array.as_array_instance();
 
@@ -340,6 +361,16 @@ impl Jvm {
     pub async fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> Result<()> {
         tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
 
+        let array_size = self.array_length(array).await?;
+        if offset + values.len() > array_size {
+            return Err(self
+                .exception(
+                    "java/lang/ArrayIndexOutOfBoundsException",
+                    &format!("{} > {}", offset + values.len(), array_size),
+                )
+                .await);
+        }
+
         let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
@@ -351,6 +382,16 @@ impl Jvm {
 
     pub async fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<i8>> {
         tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
+
+        let array_size = self.array_length(array).await?;
+        if offset + count > array_size {
+            return Err(self
+                .exception(
+                    "java/lang/ArrayIndexOutOfBoundsException",
+                    &format!("{} > {}", offset + count, array_size),
+                )
+                .await);
+        }
 
         let array = array.as_array_instance();
 
