@@ -63,6 +63,7 @@ impl ClassDefinitionImpl {
 
     pub fn from_classfile(data: &[u8]) -> Result<Self> {
         let class = ClassInfo::parse(data).unwrap(); // TODO ClassFormatError
+        assert_eq!(class.magic, 0xCAFEBABE);
 
         let fields = class.fields.into_iter().map(FieldImpl::from_field_info).collect::<Vec<_>>();
 
