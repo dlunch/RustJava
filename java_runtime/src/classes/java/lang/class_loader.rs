@@ -74,6 +74,8 @@ impl ClassLoader {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
 
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
         jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent).await?;
 
         Ok(())

@@ -45,6 +45,8 @@ impl Thread {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, target: ClassInstanceRef<Runnable>) -> Result<()> {
         tracing::debug!("Thread::<init>({:?}, {:?})", &this, &target);
 
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
         jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target).await?;
 
         Ok(())

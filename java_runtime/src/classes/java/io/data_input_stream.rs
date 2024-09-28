@@ -35,6 +35,8 @@ impl DataInputStream {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::<init>({:?}, {:?})", &this, &r#in);
 
+        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
+
         jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in).await?;
 
         Ok(())

@@ -26,6 +26,8 @@ impl File {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pathname: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.File::<init>({:?}, {:?})", &this, &pathname);
 
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
         jvm.put_field(&mut this, "path", "Ljava/lang/String;", pathname).await?;
 
         Ok(())

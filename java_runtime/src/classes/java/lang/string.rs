@@ -96,6 +96,8 @@ impl String {
     ) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
 
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
         let mut array = jvm.instantiate_array("C", count as _).await?;
         jvm.put_field(&mut this, "value", "[C", array.clone()).await?;
 
