@@ -33,6 +33,7 @@ impl Vector {
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
                 JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
+                JavaMethodProto::new("removeAllElements", "()V", Self::remove_all_elements, Default::default()),
                 JavaMethodProto::new("removeElementAt", "(I)V", Self::remove_element_at, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
@@ -156,6 +157,15 @@ impl Vector {
         let removed = rust_vector.lock().await.remove(index as usize);
 
         Ok(removed)
+    }
+
+    async fn remove_all_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.util.Vector::removeAllElements({:?})", &this);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        rust_vector.lock().await.clear();
+
+        Ok(())
     }
 
     async fn remove_element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
