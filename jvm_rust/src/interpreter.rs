@@ -64,9 +64,12 @@ impl Interpreter {
             Opcode::Aaload | Opcode::Baload | Opcode::Caload | Opcode::Daload | Opcode::Faload | Opcode::Iaload | Opcode::Laload | Opcode::Saload => {
                 // TODO type checking
                 let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                let array = stack_frame.operand_stack.pop().unwrap();
+                let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if array.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
+                }
 
-                let value = jvm.load_array(&array.into(), index as usize, 1).await?.pop().unwrap();
+                let value = jvm.load_array(&array.unwrap(), index as usize, 1).await?.pop().unwrap();
 
                 stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
             }
@@ -81,9 +84,12 @@ impl Interpreter {
                 // TODO type checking
                 let value = stack_frame.operand_stack.pop().unwrap();
                 let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                let mut array = stack_frame.operand_stack.pop().unwrap().into();
+                let mut array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if array.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
+                }
 
-                let element_type = jvm.array_element_type(&array).await?;
+                let element_type = jvm.array_element_type(array.as_ref().unwrap()).await?;
 
                 // operand stack has only integer, so convert it to the correct type
                 let value = match element_type {
@@ -95,7 +101,7 @@ impl Interpreter {
                     _ => value,
                 };
 
-                jvm.store_array(&mut array, index as usize, [value]).await?;
+                jvm.store_array(array.as_mut().unwrap(), index as usize, [value]).await?;
             }
             Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
             Opcode::Aload(x) | Opcode::Dload(x) | Opcode::Fload(x) | Opcode::Iload(x) | Opcode::Lload(x) => {
@@ -133,9 +139,12 @@ impl Interpreter {
                 return Ok(ExecuteNext::Return(return_value));
             }
             Opcode::Arraylength => {
-                let array = stack_frame.operand_stack.pop().unwrap();
+                let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                if array.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
+                }
 
-                let length = jvm.array_length(&array.into()).await?;
+                let length = jvm.array_length(&array.unwrap()).await?;
                 stack_frame.operand_stack.push(JavaValue::Int(length as _));
             }
             Opcode::Astore(x) | Opcode::Dstore(x) | Opcode::Fstore(x) | Opcode::Istore(x) | Opcode::Lstore(x) => {
