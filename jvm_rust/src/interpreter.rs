@@ -672,7 +672,9 @@ impl Interpreter {
                 todo!()
             }
             Opcode::Multianewarray(x, d) => {
-                let dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).rev().collect();
+                let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
+                dimensions.reverse();
+
                 let element_type_name = format!("L{};", x.as_class());
                 let array = Self::new_multi_array(jvm, &element_type_name, &dimensions).await?;
 
