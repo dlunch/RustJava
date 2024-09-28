@@ -4,7 +4,7 @@ use alloc::{sync::Arc, vec};
 
 use async_lock::Mutex;
 use bytemuck::{cast_slice, cast_vec};
-use encoding_rs::{Decoder, UTF_8};
+use encoding_rs::{Decoder, EUC_KR, UTF_8};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
@@ -49,6 +49,8 @@ impl InputStreamReader {
 
         let decoder = if charset == "UTF-8" {
             UTF_8.new_decoder()
+        } else if charset == "EUC-KR" {
+            EUC_KR.new_decoder()
         } else {
             unimplemented!("unsupported charset: {}", charset)
         };
