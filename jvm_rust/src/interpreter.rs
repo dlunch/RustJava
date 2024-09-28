@@ -229,10 +229,27 @@ impl Interpreter {
                 todo!()
             }
             Opcode::DupX1 => {
-                todo!()
+                let value1 = stack_frame.operand_stack.pop().unwrap();
+                let value2 = stack_frame.operand_stack.pop().unwrap();
+
+                stack_frame.operand_stack.push(value1.clone());
+                stack_frame.operand_stack.push(value2.clone());
+                stack_frame.operand_stack.push(value1);
             }
             Opcode::DupX2 => {
-                todo!()
+                let value1 = stack_frame.operand_stack.pop().unwrap();
+                let value2 = stack_frame.operand_stack.pop().unwrap();
+                if matches!(value2, JavaValue::Long(_) | JavaValue::Double(_)) {
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value2.clone());
+                    stack_frame.operand_stack.push(value1);
+                } else {
+                    let value3 = stack_frame.operand_stack.pop().unwrap();
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value3.clone());
+                    stack_frame.operand_stack.push(value2.clone());
+                    stack_frame.operand_stack.push(value1);
+                }
             }
             Opcode::Drem => {
                 let value2: f64 = stack_frame.operand_stack.pop().unwrap().into();
