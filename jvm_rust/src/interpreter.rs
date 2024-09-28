@@ -144,7 +144,7 @@ impl Interpreter {
             }
             Opcode::Bipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
             Opcode::Checkcast(_) => {
-                todo!()
+                // TODO
             }
             Opcode::D2f => {
                 let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
