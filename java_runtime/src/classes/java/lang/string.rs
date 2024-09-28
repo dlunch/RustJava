@@ -18,6 +18,8 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
 };
 
+use super::StringBuffer;
+
 // class java.lang.String
 pub struct String;
 
@@ -32,6 +34,8 @@ impl String {
                 JavaMethodProto::new("<init>", "([C)V", Self::init_with_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/StringBuffer;)V", Self::init_with_string_buffer, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
                 JavaMethodProto::new("compareTo", "(Ljava/lang/String;)I", Self::compare_to, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
@@ -128,6 +132,33 @@ impl String {
         jvm.store_array(&mut array, 0, utf16).await?;
 
         let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&value, "toCharArray", "()[C", ()).await?;
+
+        let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", (chars,)).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_string_buffer(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        value: ClassInstanceRef<StringBuffer>,
+    ) -> Result<()> {
+        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+
+        let string: ClassInstanceRef<Self> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
+
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "(Ljava/lang/String;)V", (string,))
+            .await?;
 
         Ok(())
     }
