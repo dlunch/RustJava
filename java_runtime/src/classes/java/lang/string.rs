@@ -54,6 +54,7 @@ impl String {
                     Self::value_of_object,
                     MethodAccessFlags::STATIC,
                 ),
+                JavaMethodProto::new("indexOf", "(I)I", Self::index_of, Default::default()),
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_with_from, Default::default()),
                 JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
             ],
@@ -312,6 +313,16 @@ impl String {
         } else {
             jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?
         })
+    }
+
+    async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
+        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, ch);
+
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+
+        let index = this_string.find(char::from_u32(ch as _).unwrap()).map(|x| x as i32);
+
+        Ok(index.unwrap_or(-1))
     }
 
     async fn index_of_with_from(

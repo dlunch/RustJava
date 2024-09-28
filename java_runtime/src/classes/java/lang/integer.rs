@@ -21,6 +21,7 @@ impl Integer {
                 JavaMethodProto::new("valueOf", "(I)Ljava/lang/Integer;", Self::value_of, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("intValue", "()I", Self::int_value, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new("toString", "(I)Ljava/lang/String;", Self::to_string_static, MethodAccessFlags::STATIC),
             ],
             fields: vec![JavaFieldProto::new("value", "I", Default::default())],
         }
@@ -54,6 +55,14 @@ impl Integer {
         tracing::debug!("java.lang.Integer::toString({:?})", &this);
 
         let value: i32 = jvm.get_field(&this, "value", "I").await?;
+
+        let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
+
+        Ok(string.into())
+    }
+
+    async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Integer::toString({:?})", value);
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
 
