@@ -65,6 +65,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::Calendar::as_proto(),
         crate::classes::java::util::Date::as_proto(),
         crate::classes::java::util::Dictionary::as_proto(),
+        crate::classes::java::util::EmptyStackException::as_proto(),
         crate::classes::java::util::Enumeration::as_proto(),
         crate::classes::java::util::GregorianCalendar::as_proto(),
         crate::classes::java::util::Hashtable::as_proto(),
