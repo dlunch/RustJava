@@ -230,7 +230,7 @@ impl Vector {
             }
         }
 
-        return Ok(-1);
+        Ok(-1)
     }
 
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
