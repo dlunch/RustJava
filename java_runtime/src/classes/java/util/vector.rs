@@ -203,7 +203,8 @@ impl Vector {
         tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?}, {:?})", &this, &element, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let size = rust_vector.lock().await.len();
+        let vector = rust_vector.lock().await;
+        let size = vector.len();
 
         if index as usize >= size {
             return Err(jvm
@@ -211,22 +212,14 @@ impl Vector {
                 .await);
         }
 
-        if element.is_null() {
-            for i in (0..=index as usize).rev() {
-                let e: ClassInstanceRef<Object> = rust_vector.lock().await.get(i).unwrap().clone();
-                if e.is_null() {
-                    return Ok(i as i32);
-                }
+        for (i, item) in vector[..=index as usize].iter().enumerate().rev() {
+            if item.is_null() && element.is_null() {
+                return Ok(i as i32);
             }
-        } else {
-            let element: Box<dyn ClassInstance> = element.into();
 
-            for i in (0..=index as usize).rev() {
-                let e: Box<dyn ClassInstance> = rust_vector.lock().await.get(i).unwrap().clone().into();
-
-                if e.equals(&*element)? {
-                    return Ok(i as i32);
-                }
+            let value: Box<dyn ClassInstance> = element.clone().into();
+            if item.equals(&*value)? {
+                return Ok(i as i32);
             }
         }
 
