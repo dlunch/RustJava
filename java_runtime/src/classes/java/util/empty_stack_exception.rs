@@ -34,13 +34,7 @@ impl EmptyStackException {
         tracing::debug!("java.lang.EmptyStackException::<init>({:?}, {:?})", &this, &message);
 
         let _: () = jvm
-            .invoke_special(
-                &this,
-                "java/lang/RuntimeException",
-                "<init>",
-                "(Ljava/lang/String;)V",
-                (message,),
-            )
+            .invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))
             .await?;
 
         Ok(())

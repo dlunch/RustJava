@@ -109,8 +109,12 @@ mod test {
         let element1 = JavaLangString::from_rust_string(&jvm, "testValue1").await?;
         let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
 
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),)).await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),)).await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),))
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),))
+            .await?;
 
         let size: i32 = jvm.invoke_virtual(&stack, "size", "()I", ()).await?;
         assert_eq!(size, 2);
@@ -133,8 +137,12 @@ mod test {
         let element1 = JavaLangString::from_rust_string(&jvm, "testValue1").await?;
         let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
 
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),)).await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),)).await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),))
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),))
+            .await?;
 
         let size: i32 = jvm.invoke_virtual(&stack, "size", "()I", ()).await?;
         assert_eq!(size, 2);
@@ -159,11 +167,19 @@ mod test {
         let element3 = JavaLangString::from_rust_string(&jvm, "testValue3").await?;
         let element4 = JavaLangString::from_rust_string(&jvm, "testValue3").await?;
 
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),)).await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),)).await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element3.clone(),)).await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),)).await?;
-        
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),))
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element2.clone(),))
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element3.clone(),))
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),))
+            .await?;
+
         let size: i32 = jvm.invoke_virtual(&stack, "size", "()I", ()).await?;
         assert_eq!(size, 4);
 
@@ -175,7 +191,7 @@ mod test {
 
         let peek: i32 = jvm.invoke_virtual(&stack, "search", "(Ljava/lang/Object;)I", (element4.clone(),)).await?;
         assert_eq!(peek, -1);
-        
+
         Ok(())
     }
 }
