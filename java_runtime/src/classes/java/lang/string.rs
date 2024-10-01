@@ -43,6 +43,7 @@ impl String {
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
                 JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
                 JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, Default::default()),
+                JavaMethodProto::new("toUpperCase", "()Ljava/lang/String;", Self::to_upper_case, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
                 JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
                 JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
@@ -55,7 +56,8 @@ impl String {
                     MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new("indexOf", "(I)I", Self::index_of, Default::default()),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_with_from, Default::default()),
+                JavaMethodProto::new("indexOf", "(II)I", Self::index_of_from, Default::default()),
+                JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_string_from, Default::default()),
                 JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
@@ -316,16 +318,24 @@ impl String {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
+        tracing::debug!("java.lang.String::indexOf({:?})", &this);
+
+        jvm.invoke_virtual(&this, "indexOf", "(II)I", (ch, 0)).await
+    }
+
+    async fn index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, ch);
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let index = this_string.find(char::from_u32(ch as _).unwrap()).map(|x| x as i32);
+        let index = this_string[(from_index as usize)..]
+            .find(char::from_u32(ch as _).unwrap())
+            .map(|x| x as i32);
 
         Ok(index.unwrap_or(-1))
     }
 
-    async fn index_of_with_from(
+    async fn index_of_string_from(
         jvm: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
@@ -350,6 +360,16 @@ impl String {
         let trimmed = string.trim().to_string();
 
         Ok(JavaLangString::from_rust_string(jvm, &trimmed).await?.into()) // TODO buffer sharing
+    }
+
+    async fn to_upper_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::toUpperCase({:?})", &this);
+
+        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+
+        let upper = string.to_uppercase().to_string();
+
+        Ok(JavaLangString::from_rust_string(jvm, &upper).await?.into())
     }
 
     fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
