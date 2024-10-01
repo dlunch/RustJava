@@ -152,8 +152,10 @@ impl Interpreter {
                 stack_frame.local_variables[*x as usize] = value.unwrap();
             }
             Opcode::Bipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
-            Opcode::Checkcast(_) => {
-                // TODO
+            Opcode::Checkcast(x) => {
+                let top_stack = stack_frame.operand_stack.last().unwrap();
+
+                tracing::warn!("Unimplemented checkcast: {:?} {:?}", top_stack, x);
             }
             Opcode::D2f => {
                 let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -721,10 +723,10 @@ impl Interpreter {
                 return Ok(ExecuteNext::Jump((current_offset as i32 + *default) as u32));
             }
             Opcode::Monitorenter => {
-                todo!()
+                tracing::warn!("Unimplemented monitorenter");
             }
             Opcode::Monitorexit => {
-                todo!()
+                tracing::warn!("Unimplemented monitorexit");
             }
             Opcode::Multianewarray(x, d) => {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
