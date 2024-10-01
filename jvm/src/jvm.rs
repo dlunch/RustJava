@@ -737,10 +737,10 @@ impl Jvm {
             .unwrap()
             .push_frame(class, class_instance, &method_str);
 
-        let result = method.run(self, args).await?;
+        let result = method.run(self, args).await;
 
         self.inner.threads.write().await.get_mut(&thread_id).unwrap().pop_frame();
 
-        Ok(result)
+        result
     }
 }
