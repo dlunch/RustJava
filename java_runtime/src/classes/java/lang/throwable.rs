@@ -125,15 +125,18 @@ impl Throwable {
         let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
         let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;
 
-        let message = jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await?;
+        let message: ClassInstanceRef<String> = jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await?;
 
         let class_name = JavaLangString::to_rust_string(jvm, &class_name).await?;
-        let message = JavaLangString::to_rust_string(jvm, &message).await?;
-
-        let message = if message.is_empty() {
+        let message = if message.is_null() {
             class_name
         } else {
-            format!("{}: {}", class_name, message)
+            let message = JavaLangString::to_rust_string(jvm, &message).await?;
+            if message.is_empty() {
+                class_name
+            } else {
+                format!("{}: {}", class_name, message)
+            }
         };
 
         let message = JavaLangString::from_rust_string(jvm, &message).await?;
