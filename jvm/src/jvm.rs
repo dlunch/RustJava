@@ -209,7 +209,9 @@ impl Jvm {
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        tracing::trace!("Invoke static {}.{}:{}", class_name, name, descriptor);
+        let args = args.into_arg();
+
+        tracing::trace!("Invoke static {}.{}:{}({:?})", class_name, name, descriptor, args);
 
         let class = self.resolve_class(class_name).await?;
 
@@ -225,7 +227,7 @@ impl Jvm {
                     .await);
             }
 
-            Ok(self.execute_method(&class, None, &method, args.into_arg()).await?.into())
+            Ok(self.execute_method(&class, None, &method, args).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
@@ -240,13 +242,20 @@ impl Jvm {
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        tracing::trace!("Invoke virtual {}.{}:{}", instance.class_definition().name(), name, descriptor);
+        let args = args.into_arg();
+        tracing::trace!(
+            "Invoke virtual {}.{}:{}({:?})",
+            instance.class_definition().name(),
+            name,
+            descriptor,
+            args
+        );
 
         let class = instance.class_definition();
         let method = self.find_virtual_method(&*class, name, descriptor, false).await?;
         if let Some(x) = method {
             let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-                .chain(args.into_iter())
+                .chain(args.into_vec())
                 .collect::<Vec<_>>();
 
             let class = self.resolve_class(&class.name()).await?; // TODO we're resolving class twice
@@ -270,14 +279,15 @@ impl Jvm {
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        tracing::trace!("Invoke special {}.{}:{}", class_name, name, descriptor);
+        let args = args.into_arg();
+        tracing::trace!("Invoke special {}.{}:{}({:?})", class_name, name, descriptor, args);
 
         let class = self.resolve_class(class_name).await?;
         let method = class.definition.method(name, descriptor, false);
 
         if let Some(method) = method {
             let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-                .chain(args.into_iter())
+                .chain(args.into_vec())
                 .collect::<Vec<_>>();
 
             if method.access_flags().contains(MethodAccessFlags::STATIC) {
