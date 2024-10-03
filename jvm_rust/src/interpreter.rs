@@ -732,7 +732,7 @@ impl Interpreter {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
                 dimensions.reverse();
 
-                let array = Self::new_multi_array(jvm, &x.as_class(), &dimensions).await?;
+                let array = Self::new_multi_array(jvm, x.as_class(), &dimensions).await?;
 
                 stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
             }
