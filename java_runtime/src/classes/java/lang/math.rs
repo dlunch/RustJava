@@ -15,7 +15,11 @@ impl Math {
             name: "java/lang/Math",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("abs", "(I)I", Self::abs, MethodAccessFlags::STATIC)],
+            methods: vec![
+                JavaMethodProto::new("abs", "(I)I", Self::abs, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("max", "(II)I", Self::max, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("min", "(II)I", Self::min, MethodAccessFlags::STATIC),
+            ],
             fields: vec![],
         }
     }
@@ -24,6 +28,18 @@ impl Math {
         tracing::debug!("java.lang.Math::abs({:?})", x);
 
         Ok(x.abs())
+    }
+
+    async fn max(_: &Jvm, _: &mut RuntimeContext, x: i32, y: i32) -> Result<i32> {
+        tracing::debug!("java.lang.Math::max({:?}, {:?})", x, y);
+
+        Ok(x.max(y))
+    }
+
+    async fn min(_: &Jvm, _: &mut RuntimeContext, x: i32, y: i32) -> Result<i32> {
+        tracing::debug!("java.lang.Math::min({:?}, {:?})", x, y);
+
+        Ok(x.min(y))
     }
 }
 
