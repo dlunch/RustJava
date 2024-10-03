@@ -1,9 +1,9 @@
-use alloc::{boxed::Box, vec};
+use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{
-    runtime::{JavaLangClassLoader, JavaLangString},
-    ClassDefinition, ClassInstanceRef, Jvm, Result,
+    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
+    ClassInstanceRef, Jvm, Result,
 };
 
 use crate::{
@@ -26,6 +26,7 @@ impl Class {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
+                JavaMethodProto::new("isAssignableFrom", "(Ljava/lang/Class;)Z", Self::is_assignable_from, Default::default()),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
@@ -51,10 +52,19 @@ impl Class {
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Class::getName({:?})", &this);
 
-        let rust_class: Box<dyn ClassDefinition> = jvm.get_rust_object_field(&this, "raw").await?;
+        let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
         let result = JavaLangString::from_rust_string(jvm, &rust_class.name()).await?;
 
         Ok(result.into())
+    }
+
+    async fn is_assignable_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.lang.Class::isAssignableFrom({:?}, {:?})", &this, &other);
+
+        let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
+        let other_rust_class = JavaLangClass::to_rust_class(jvm, &other).await?;
+
+        Ok(jvm.is_inherited_from(&*other_rust_class, &rust_class.name()).await)
     }
 
     async fn get_resource_as_stream(
@@ -97,6 +107,28 @@ mod test {
         // try call to_rust_class twice to test if box is not dropped
         let rust_class = JavaLangClass::to_rust_class(&jvm, &java_class).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_assignable_from() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        let string_class = jvm.resolve_class("java/lang/String").await?.java_class(&jvm).await?;
+        let object_class = jvm.resolve_class("java/lang/Object").await?.java_class(&jvm).await?;
+
+        let result: bool = jvm
+            .invoke_virtual(&object_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_class.clone(),))
+            .await?;
+        assert!(result);
+
+        let thread_class = jvm.resolve_class("java/lang/Thread").await?.java_class(&jvm).await?;
+
+        let result: bool = jvm
+            .invoke_virtual(&string_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (thread_class,))
+            .await?;
+        assert!(!result);
 
         Ok(())
     }

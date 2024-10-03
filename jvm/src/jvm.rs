@@ -535,13 +535,14 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion]
-    async fn is_a(&self, class: &Class, class_name: &str) -> bool {
-        if class.definition.name() == class_name {
+    pub async fn is_inherited_from(&self, class: &dyn ClassDefinition, class_name: &str) -> bool {
+        if class.name() == class_name {
             return true;
         }
 
-        if let Some(super_class) = class.definition.super_class_name() {
-            self.is_a(self.inner.classes.read().await.get(&super_class).unwrap(), class_name).await
+        if let Some(super_class) = class.super_class_name() {
+            self.is_inherited_from(&*self.inner.classes.read().await.get(&super_class).unwrap().definition, class_name)
+                .await
         } else {
             false
         }
@@ -567,7 +568,7 @@ impl Jvm {
 
         for item in thread.stack.iter().rev() {
             // skip exception classes
-            if self.is_a(&item.class, "java/lang/Throwable").await {
+            if self.is_inherited_from(&*item.class.definition, "java/lang/Throwable").await {
                 continue;
             }
 
@@ -664,7 +665,7 @@ impl Jvm {
         if let Some((class, class_instance)) = calling_class {
             // called in java
 
-            if self.is_a(&class, "java/lang/ClassLoader").await {
+            if self.is_inherited_from(&*class.definition, "java/lang/ClassLoader").await {
                 return Ok(class_instance.unwrap());
             }
 
