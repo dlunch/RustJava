@@ -750,6 +750,8 @@ impl Jvm {
 
         let result = method.run(self, args).await;
 
+        tracing::trace!("Execute result: {:?}", result);
+
         self.inner.threads.write().await.get_mut(&thread_id).unwrap().pop_frame();
 
         result
