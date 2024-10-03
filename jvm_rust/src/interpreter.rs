@@ -732,8 +732,7 @@ impl Interpreter {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
                 dimensions.reverse();
 
-                let element_type_name = format!("L{};", x.as_class());
-                let array = Self::new_multi_array(jvm, &element_type_name, &dimensions).await?;
+                let array = Self::new_multi_array(jvm, &x.as_class(), &dimensions).await?;
 
                 stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
             }
@@ -888,13 +887,12 @@ impl Interpreter {
     }
 
     #[async_recursion::async_recursion]
-    async fn new_multi_array(jvm: &Jvm, element_type_name: &str, dimensions: &[i32]) -> Result<Box<dyn ClassInstance>> {
-        let element_type_name = "[".repeat(dimensions.len() - 1) + element_type_name;
-        let mut array = jvm.instantiate_array(&element_type_name, dimensions[0] as _).await?;
+    async fn new_multi_array(jvm: &Jvm, array_class: &str, dimensions: &[i32]) -> Result<Box<dyn ClassInstance>> {
+        let mut array = jvm.instantiate_array(&array_class[1..], dimensions[0] as _).await?;
 
         if dimensions.len() > 1 {
             for i in 0..dimensions[0] {
-                let element = Self::new_multi_array(jvm, &element_type_name[1..], &dimensions[1..]).await?;
+                let element = Self::new_multi_array(jvm, &array_class[1..], &dimensions[1..]).await?;
                 jvm.store_array(&mut array, i as _, [element]).await?;
             }
         }
