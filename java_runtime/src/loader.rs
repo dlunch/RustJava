@@ -83,10 +83,10 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::zip::ZipEntry::as_proto(),
         crate::classes::java::util::zip::ZipFile::as_proto(),
         crate::classes::java::util::zip::ZipFileEntries::as_proto(),
-        crate::classes::rustjava::net::FileURLConnection::as_proto(),
-        crate::classes::rustjava::net::FileURLHandler::as_proto(),
-        crate::classes::rustjava::net::JarURLConnection::as_proto(),
-        crate::classes::rustjava::net::JarURLHandler::as_proto(),
+        crate::classes::org::rustjava::net::FileURLConnection::as_proto(),
+        crate::classes::org::rustjava::net::FileURLHandler::as_proto(),
+        crate::classes::org::rustjava::net::JarURLConnection::as_proto(),
+        crate::classes::org::rustjava::net::JarURLHandler::as_proto(),
     ];
 
     protos.into_iter().find(|proto| proto.name == name)

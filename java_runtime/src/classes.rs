@@ -1,2 +1,2 @@
 pub mod java;
-pub mod rustjava;
+pub mod org;

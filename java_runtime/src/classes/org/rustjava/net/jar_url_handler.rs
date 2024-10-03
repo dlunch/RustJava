@@ -4,20 +4,17 @@ use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{
-        lang::String,
-        net::{URLConnection, URL},
-    },
+    classes::java::net::{URLConnection, URL},
     RuntimeClassProto, RuntimeContext,
 };
 
-// class rustjava.net.FileURLHandler
-pub struct FileURLHandler;
+// class rustjava.net.JarURLHandler
+pub struct JarURLHandler;
 
-impl FileURLHandler {
+impl JarURLHandler {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "rustjava/net/FileURLHandler",
+            name: "org/rustjava/net/JarURLHandler",
             parent_class: Some("java/net/URLStreamHandler"),
             interfaces: vec![],
             methods: vec![
@@ -34,7 +31,7 @@ impl FileURLHandler {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("rustjava.net.FileURLHandler::<init>({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLHandler::<init>({:?})", &this);
 
         let _: () = jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
 
@@ -47,14 +44,9 @@ impl FileURLHandler {
         this: ClassInstanceRef<Self>,
         url: ClassInstanceRef<URL>,
     ) -> Result<ClassInstanceRef<URLConnection>> {
-        tracing::debug!("rustjava.net.FileURLHandler::openConnection({:?}, {:?})", &this, &url);
+        tracing::debug!("org.rustjava.net.JarURLHandler::openConnection({:?}, {:?})", &this, &url);
 
-        let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
-        let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
-
-        let connection = jvm
-            .new_class("rustjava/net/FileURLConnection", "(Ljava/net/URL;Ljava/io/File;)V", (url, file))
-            .await?;
+        let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 
         Ok(connection.into())
     }

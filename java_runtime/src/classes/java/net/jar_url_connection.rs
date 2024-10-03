@@ -113,7 +113,7 @@ mod test {
         let url = JavaLangString::from_rust_string(&jvm, "jar:file:path/to/file.jar!/path/to/entry").await?;
         let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url,)).await?;
 
-        let connection = jvm.new_class("rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
+        let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 
         let jar_file_url = jvm.invoke_virtual(&connection, "getJarFileURL", "()Ljava/net/URL;", ()).await?;
         let file = jvm.invoke_virtual(&jar_file_url, "getFile", "()Ljava/lang/String;", ()).await?;

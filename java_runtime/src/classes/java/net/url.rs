@@ -287,9 +287,9 @@ impl URL {
 
     async fn get_handler(jvm: &Jvm, protocol: &str) -> Result<ClassInstanceRef<URLStreamHandler>> {
         if protocol == "file" {
-            Ok(jvm.new_class("rustjava/net/FileURLHandler", "()V", ()).await?.into())
+            Ok(jvm.new_class("org/rustjava/net/FileURLHandler", "()V", ()).await?.into())
         } else if protocol == "jar" {
-            Ok(jvm.new_class("rustjava/net/JarURLHandler", "()V", ()).await?.into())
+            Ok(jvm.new_class("org/rustjava/net/JarURLHandler", "()V", ()).await?.into())
         } else {
             Err(jvm
                 .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))

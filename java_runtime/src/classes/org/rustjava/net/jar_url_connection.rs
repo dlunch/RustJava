@@ -20,7 +20,7 @@ pub struct JarURLConnection;
 impl JarURLConnection {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "rustjava/net/JarURLConnection",
+            name: "org/rustjava/net/JarURLConnection",
             parent_class: Some("java/net/JarURLConnection"),
             interfaces: vec![],
             methods: vec![
@@ -34,17 +34,17 @@ impl JarURLConnection {
     }
 
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
-        tracing::debug!("rustjava.net.JarURLConnection::<clinit>()");
+        tracing::debug!("org.rustjava.net.JarURLConnection::<clinit>()");
 
         let map = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
-        jvm.put_static_field("rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;", map)
+        jvm.put_static_field("org/rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;", map)
             .await?;
 
         Ok(())
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
-        tracing::debug!("rustjava.net.JarURLConnection::<init>({:?}, {:?})", &this, &url);
+        tracing::debug!("org.rustjava.net.JarURLConnection::<init>({:?}, {:?})", &this, &url);
 
         let _: () = jvm
             .invoke_special(&this, "java/net/JarURLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
@@ -54,7 +54,7 @@ impl JarURLConnection {
     }
 
     async fn get_jar_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<JarFile>> {
-        tracing::debug!("rustjava.net.JarURLConnection::getJarFile({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLConnection::getJarFile({:?})", &this);
 
         let url = jvm.invoke_virtual(&this, "getJarFileURL", "()Ljava/net/URL;", ()).await?;
         let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
@@ -64,7 +64,7 @@ impl JarURLConnection {
             let name: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
 
             let opened_files = jvm
-                .get_static_field("rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;")
+                .get_static_field("org/rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;")
                 .await?;
             let cache: ClassInstanceRef<JarFile> = jvm
                 .invoke_virtual(&opened_files, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name.clone(),))
@@ -93,7 +93,7 @@ impl JarURLConnection {
     }
 
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("rustjava.net.JarURLConnection::getInputStream({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLConnection::getInputStream({:?})", &this);
 
         let entry: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getEntryName", "()Ljava/lang/String;", ()).await?;
         let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
@@ -129,7 +129,7 @@ mod test {
 
     #[tokio::test]
     async fn test_jar_entry() -> Result<()> {
-        let jar = include_bytes!("../../../../../test_data/test.jar");
+        let jar = include_bytes!("../../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
 
@@ -152,7 +152,7 @@ mod test {
 
     #[tokio::test]
     async fn test_jar_file() -> Result<()> {
-        let jar = include_bytes!("../../../../../test_data/test.jar");
+        let jar = include_bytes!("../../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
 
@@ -177,7 +177,7 @@ mod test {
 
     #[tokio::test]
     async fn test_jar_cache() -> Result<()> {
-        let jar = include_bytes!("../../../../../test_data/test.jar");
+        let jar = include_bytes!("../../../../../../test_data/test.jar");
         let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
         let jvm = test_jvm_filesystem(filesystem).await?;
 
