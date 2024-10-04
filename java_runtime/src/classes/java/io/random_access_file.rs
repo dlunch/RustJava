@@ -22,7 +22,9 @@ impl RandomAccessFile {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, Default::default()),
                 JavaMethodProto::new("write", "([B)V", Self::write, Default::default()),
+                JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, Default::default()),
                 JavaMethodProto::new("seek", "(J)V", Self::seek, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
@@ -49,16 +51,38 @@ impl RandomAccessFile {
         Ok(())
     }
 
-    async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, mut buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
+    async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.RandomAccessFile::read({:?}, {:?})", &this, &buf);
+
+        let length = jvm.array_length(&buf).await?;
+        let read = jvm.invoke_virtual(&this, "read", "([BII)I", (buf, 0, length as i32)).await?;
+
+        Ok(read)
+    }
+
+    async fn read_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        mut buf: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<i32> {
+        tracing::debug!(
+            "java.io.RandomAccessFile::read_offset_length({:?}, {:?}, {:?}, {:?})",
+            &this,
+            &buf,
+            &offset,
+            &length
+        );
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
-        let mut rust_buf = vec![0; jvm.array_length(&buf).await?];
+        let mut rust_buf = vec![0; length as usize];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
 
-        jvm.store_byte_array(&mut buf, 0, cast_vec(rust_buf)).await?;
+        jvm.store_byte_array(&mut buf, offset as _, cast_vec(rust_buf)).await?;
 
         Ok(read as i32)
     }
@@ -66,11 +90,32 @@ impl RandomAccessFile {
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::write({:?}, {:?})", &this, &buf);
 
+        let length = jvm.array_length(&buf).await?;
+        let _: () = jvm.invoke_virtual(&this, "write", "([BII)V", (buf, 0, length as i32)).await?;
+
+        Ok(())
+    }
+
+    async fn write_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        buf: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<()> {
+        tracing::debug!(
+            "java.io.RandomAccessFile::write_offset_length({:?}, {:?}, {:?}, {:?})",
+            &this,
+            &buf,
+            &offset,
+            &length
+        );
+
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
-        let buf_len = jvm.array_length(&buf).await?;
-        let rust_buf = jvm.load_byte_array(&buf, 0, buf_len).await?;
+        let rust_buf = jvm.load_byte_array(&buf, offset as _, length as _).await?;
         rust_file.write(&cast_vec(rust_buf)).await.unwrap();
 
         Ok(())
