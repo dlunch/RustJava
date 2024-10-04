@@ -60,7 +60,7 @@ impl<'a> BootstrapClassLoaderWrapper<'a> {
 }
 
 #[async_trait::async_trait]
-impl<'a> ClassLoaderWrapper for BootstrapClassLoaderWrapper<'a> {
+impl ClassLoaderWrapper for BootstrapClassLoaderWrapper<'_> {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>> {
         let definition = self.bootstrap_class_loader.load_class(jvm, name).await?;
         if let Some(definition) = definition {
