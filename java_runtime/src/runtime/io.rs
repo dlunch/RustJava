@@ -19,6 +19,7 @@ pub trait File: Send + DynClone {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError>;
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError>;
     async fn seek(&mut self, pos: FileSize) -> Result<(), IOError>;
+    async fn set_len(&mut self, len: FileSize) -> Result<(), IOError>;
 }
 
 clone_trait_object!(File);

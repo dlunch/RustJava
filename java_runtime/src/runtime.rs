@@ -187,5 +187,9 @@ pub mod test {
         async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
             Err(IOError::Unsupported)
         }
+
+        async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
+            Err(IOError::Unsupported)
+        }
     }
 }

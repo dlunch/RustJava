@@ -26,6 +26,8 @@ impl RandomAccessFile {
                 JavaMethodProto::new("write", "([B)V", Self::write, Default::default()),
                 JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, Default::default()),
                 JavaMethodProto::new("seek", "(J)V", Self::seek, Default::default()),
+                JavaMethodProto::new("setLength", "(J)V", Self::set_length, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
         }
@@ -128,6 +130,23 @@ impl RandomAccessFile {
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
         rust_file.seek(pos as _).await.unwrap();
+
+        Ok(())
+    }
+
+    async fn set_length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, new_length: i64) -> Result<()> {
+        tracing::debug!("java.io.RandomAccessFile::set_length({:?}, {:?})", &this, &new_length);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let mut rust_file = FileDescriptor::file(jvm, fd).await?;
+
+        rust_file.set_len(new_length as _).await.unwrap();
+
+        Ok(())
+    }
+
+    async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::warn!("stub java.io.RandomAccessFile::close({:?})", &this);
 
         Ok(())
     }

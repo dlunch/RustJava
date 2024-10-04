@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, IOError};
+use java_runtime::{File, FileSize, IOError};
 
 pub struct WriteOnlyFile<W>
 where
@@ -40,7 +40,11 @@ where
         Ok(written)
     }
 
-    async fn seek(&mut self, _pos: u64) -> Result<(), IOError> {
+    async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
         Err(IOError::Unsupported)
     }
 }
@@ -87,7 +91,11 @@ where
         Err(IOError::Unsupported)
     }
 
-    async fn seek(&mut self, _pos: u64) -> Result<(), IOError> {
+    async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
         Err(IOError::Unsupported)
     }
 }
@@ -130,8 +138,14 @@ impl File for FileImpl {
         Ok(write)
     }
 
-    async fn seek(&mut self, pos: u64) -> Result<(), IOError> {
+    async fn seek(&mut self, pos: FileSize) -> Result<(), IOError> {
         self.file.lock().unwrap().seek(io::SeekFrom::Start(pos)).unwrap();
+
+        Ok(())
+    }
+
+    async fn set_len(&mut self, len: FileSize) -> Result<(), IOError> {
+        self.file.lock().unwrap().set_len(len).unwrap();
 
         Ok(())
     }
