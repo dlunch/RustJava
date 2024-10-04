@@ -23,6 +23,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::io::OutputStream::as_proto(),
         crate::classes::java::io::PrintStream::as_proto(),
         crate::classes::java::io::PrintWriter::as_proto(),
+        crate::classes::java::io::RandomAccessFile::as_proto(),
         crate::classes::java::io::Reader::as_proto(),
         crate::classes::java::io::StringWriter::as_proto(),
         crate::classes::java::io::Writer::as_proto(),

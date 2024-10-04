@@ -15,7 +15,7 @@ use java_runtime::{get_runtime_class_proto, File, FileStat, IOError, Runtime, Sp
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
-use self::io::FileImpl;
+use self::io::{FileImpl, ReadOnlyFile, WriteOnlyFile};
 
 tokio::task_local! {
     static TASK_ID: u64;
@@ -105,19 +105,19 @@ where
     }
 
     fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(FileImpl::from_read(stdin())))
+        Ok(Box::new(ReadOnlyFile::new(stdin())))
     }
 
     fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(FileImpl::from_write(self.stdout.clone())))
+        Ok(Box::new(WriteOnlyFile::new(self.stdout.clone())))
     }
 
     fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(FileImpl::from_write(stderr())))
+        Ok(Box::new(WriteOnlyFile::new(stderr())))
     }
 
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(FileImpl::from_path(path).unwrap()))
+        Ok(Box::new(FileImpl::new(path)))
     }
 
     async fn stat(&self, path: &str) -> Result<FileStat, IOError> {

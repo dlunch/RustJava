@@ -183,5 +183,9 @@ pub mod test {
         async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
             Err(IOError::Unsupported)
         }
+
+        async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+            Err(IOError::Unsupported)
+        }
     }
 }

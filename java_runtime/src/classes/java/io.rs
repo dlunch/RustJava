@@ -16,6 +16,7 @@ mod io_exception;
 mod output_stream;
 mod print_stream;
 mod print_writer;
+mod random_access_file;
 mod reader;
 mod string_writer;
 mod writer;
@@ -26,5 +27,5 @@ pub use self::{
     file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_not_found_exception::FileNotFoundException,
     file_output_stream::FileOutputStream, filter_output_stream::FilterOutputStream, input_stream::InputStream,
     input_stream_reader::InputStreamReader, io_exception::IOException, output_stream::OutputStream, print_stream::PrintStream,
-    print_writer::PrintWriter, reader::Reader, string_writer::StringWriter, writer::Writer,
+    print_writer::PrintWriter, random_access_file::RandomAccessFile, reader::Reader, string_writer::StringWriter, writer::Writer,
 };
