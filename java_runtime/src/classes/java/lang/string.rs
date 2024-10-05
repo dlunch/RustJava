@@ -354,6 +354,9 @@ impl String {
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
         let str_string = JavaLangString::to_rust_string(jvm, &str.clone()).await?;
 
+        tracing::trace!("this_string: {:?}", this_string);
+        tracing::trace!("str_string: {:?}", str_string);
+
         let chars = this_string.chars().skip(from_index as usize).collect::<Vec<_>>();
         let str_chars = str_string.chars().collect::<Vec<_>>();
         let index = chars.windows(str_chars.len()).position(|x| x == str_chars).map(|x| x as i32);
