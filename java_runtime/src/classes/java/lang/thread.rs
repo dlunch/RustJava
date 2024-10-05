@@ -82,7 +82,7 @@ impl Thread {
 
         struct ThreadStartProxy {
             jvm: Jvm,
-            thread_id: i64,
+            thread_id: i32,
             join_event: Arc<Event>,
             this: ClassInstanceRef<Thread>,
         }
@@ -108,7 +108,7 @@ impl Thread {
         let join_event = Arc::new(Event::new());
         jvm.put_rust_object_field(&mut this, "joinEvent", join_event.clone()).await?;
 
-        let id = jvm.get_field(&this, "id", "J").await?;
+        let id: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
 
         context.spawn(
             jvm,
