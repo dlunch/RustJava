@@ -1,4 +1,4 @@
-use alloc::{string::ToString, vec};
+use alloc::{format, string::ToString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
@@ -22,6 +22,7 @@ impl Integer {
                 JavaMethodProto::new("intValue", "()I", Self::int_value, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("toString", "(I)Ljava/lang/String;", Self::to_string_static, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("toHexString", "(I)Ljava/lang/String;", Self::to_hex_string, MethodAccessFlags::STATIC),
             ],
             fields: vec![JavaFieldProto::new("value", "I", Default::default())],
         }
@@ -75,6 +76,14 @@ impl Integer {
         let s = JavaLangString::to_rust_string(jvm, &s).await?;
 
         Ok(s.parse().unwrap())
+    }
+
+    async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Integer::toHexString({:?})", value);
+
+        let string = JavaLangString::from_rust_string(jvm, &format!("{:x}", value)).await?;
+
+        Ok(string.into())
     }
 }
 
