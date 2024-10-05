@@ -216,9 +216,7 @@ impl DataInputStream {
 
         let length: i32 = jvm.invoke_virtual(&this, "readUnsignedShort", "()I", ()).await?;
         let java_array = jvm.instantiate_array("B", length as _).await?;
-        let _: i32 = jvm
-            .invoke_virtual(&this, "read", "([BII)I", (java_array.clone(), 0, length as i32))
-            .await?;
+        let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (java_array.clone(), 0, length)).await?;
 
         let bytes = jvm.load_byte_array(&java_array, 0, length as _).await?;
 
