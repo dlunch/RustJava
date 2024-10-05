@@ -1,6 +1,6 @@
 use alloc::sync::Arc;
 use std::{
-    fs,
+    fs::{self, OpenOptions},
     io::{self, Read, Seek, Write},
     sync::Mutex,
 };
@@ -131,8 +131,9 @@ pub struct FileImpl {
 }
 
 impl FileImpl {
-    pub fn new(path: &str) -> Self {
-        let file = fs::File::open(path).unwrap();
+    pub fn new(path: &str, write: bool, create: bool) -> Self {
+        let mut options = OpenOptions::new();
+        let file = options.read(true).write(write).create(create).open(path).unwrap();
 
         Self {
             file: Arc::new(Mutex::new(file)),

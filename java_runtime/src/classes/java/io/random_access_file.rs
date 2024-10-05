@@ -51,8 +51,11 @@ impl RandomAccessFile {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
+        let mode = JavaLangString::to_rust_string(jvm, &mode).await?;
 
-        let rust_file = context.open(&name).await.unwrap();
+        let create = mode.contains('w');
+
+        let rust_file = context.open(&name, create, create).await.unwrap();
         let fd = FileDescriptor::from_file(jvm, rust_file).await?;
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
 

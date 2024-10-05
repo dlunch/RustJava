@@ -116,8 +116,8 @@ where
         Ok(Box::new(WriteStreamFile::new(stderr())))
     }
 
-    async fn open(&self, path: &str) -> IOResult<Box<dyn File>> {
-        Ok(Box::new(FileImpl::new(path)))
+    async fn open(&self, path: &str, write: bool, create: bool) -> IOResult<Box<dyn File>> {
+        Ok(Box::new(FileImpl::new(path, write, create)))
     }
 
     async fn unlink(&self, path: &str) -> IOResult<()> {
