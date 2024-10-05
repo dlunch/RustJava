@@ -6,7 +6,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{io::FileDescriptor, lang::String},
+    classes::java::{
+        io::{File, FileDescriptor},
+        lang::String,
+    },
     RuntimeClassProto, RuntimeContext,
 };
 
@@ -21,6 +24,7 @@ impl RandomAccessFile {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;Ljava/lang/String;)V", Self::init_with_file, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
                 JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, Default::default()),
                 JavaMethodProto::new("write", "([B)V", Self::write, Default::default()),
@@ -51,6 +55,30 @@ impl RandomAccessFile {
         let rust_file = context.open(&name).await.unwrap();
         let fd = FileDescriptor::from_file(jvm, rust_file).await?;
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_file(
+        jvm: &Jvm,
+        _context: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        file: ClassInstanceRef<File>,
+        mode: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        tracing::debug!("java.io.RandomAccessFile::<init>({:?}, {:?}, {:?})", &this, &file, &mode);
+
+        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
+
+        let _: () = jvm
+            .invoke_special(
+                &this,
+                "java/io/RandomAccessFile",
+                "<init>",
+                "(Ljava/lang/String;Ljava/lang/String;)V",
+                (name, mode),
+            )
+            .await?;
 
         Ok(())
     }
