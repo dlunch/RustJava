@@ -48,6 +48,7 @@ impl String {
                 JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
                 JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
                 JavaMethodProto::new("substring", "(II)Ljava/lang/String;", Self::substring_with_end, Default::default()),
+                JavaMethodProto::new("valueOf", "(C)Ljava/lang/String;", Self::value_of_char, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("valueOf", "(I)Ljava/lang/String;", Self::value_of_integer, MethodAccessFlags::STATIC),
                 JavaMethodProto::new(
                     "valueOf",
@@ -298,6 +299,14 @@ impl String {
             .collect::<RustString>(); // TODO buffer sharing
 
         Ok(JavaLangString::from_rust_string(jvm, &substr).await?.into())
+    }
+
+    async fn value_of_char(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::valueOf({})", value);
+
+        let string = RustString::from_utf16(&[value]).unwrap();
+
+        Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
     }
 
     async fn value_of_integer(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
