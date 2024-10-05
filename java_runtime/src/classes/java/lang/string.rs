@@ -360,7 +360,7 @@ impl String {
         str: ClassInstanceRef<Self>,
         from_index: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, &str);
+        tracing::debug!("java.lang.String::indexOf({:?}, {:?}, {})", &this, &str, from_index);
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
         let str_string = JavaLangString::to_rust_string(jvm, &str.clone()).await?;
@@ -370,7 +370,7 @@ impl String {
 
         let chars = this_string.chars().skip(from_index as usize).collect::<Vec<_>>();
         let str_chars = str_string.chars().collect::<Vec<_>>();
-        let index = chars.windows(str_chars.len()).position(|x| x == str_chars).map(|x| x as i32);
+        let index = chars.windows(str_chars.len()).position(|x| x == str_chars).map(|x| x as i32 + from_index);
 
         Ok(index.unwrap_or(-1))
     }
@@ -487,7 +487,7 @@ mod test {
         let index: i32 = jvm
             .invoke_virtual(&string, "indexOf", "(Ljava/lang/String;I)I", (pattern.clone(), 5))
             .await?;
-        assert_eq!(index, 3);
+        assert_eq!(index, 8);
 
         let pattern = JavaLangString::from_rust_string(&jvm, "123").await?;
         let index: i32 = jvm
