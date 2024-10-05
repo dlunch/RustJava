@@ -700,7 +700,7 @@ impl Interpreter {
                 stack_frame.operand_stack.push(JavaValue::Long(value1 - value2));
             }
             Opcode::Lushr => {
-                let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
+                let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
                 stack_frame.operand_stack.push(JavaValue::Long(((value1 as u64) >> (value2 as u64)) as _));
