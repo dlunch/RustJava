@@ -11,7 +11,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{get_runtime_class_proto, File, FileStat, IOError, IOResult, Runtime, SpawnCallback, RT_RUSTJAR};
+use java_runtime::{get_runtime_class_proto, File, FileStat, FileType, IOError, IOResult, Runtime, SpawnCallback, RT_RUSTJAR};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
@@ -120,10 +120,19 @@ where
         Ok(Box::new(FileImpl::new(path)))
     }
 
+    async fn unlink(&self, path: &str) -> IOResult<()> {
+        fs::remove_file(path).map_err(|_| IOError::NotFound) // TODO error conversion
+    }
+
     async fn metadata(&self, path: &str) -> IOResult<FileStat> {
         let metadata = fs::metadata(path);
         if let Ok(metadata) = metadata {
-            Ok(FileStat { size: metadata.len() })
+            let file_type = if metadata.is_dir() { FileType::Directory } else { FileType::File };
+
+            Ok(FileStat {
+                size: metadata.len(),
+                r#type: file_type,
+            })
         } else {
             Err(IOError::NotFound) // TODO error conversion
         }

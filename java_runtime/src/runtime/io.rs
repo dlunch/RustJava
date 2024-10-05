@@ -11,9 +11,15 @@ pub enum IOError {
 pub type IOResult<T> = Result<T, IOError>;
 pub type FileSize = u64;
 
+#[derive(Eq, PartialEq)]
+pub enum FileType {
+    File,
+    Directory,
+}
+
 pub struct FileStat {
     pub size: FileSize,
-    // TODO more..
+    pub r#type: FileType,
 }
 
 #[async_trait::async_trait]

@@ -7,7 +7,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 
-pub use io::{File, FileSize, FileStat, IOError, IOResult};
+pub use io::{File, FileSize, FileStat, FileType, IOError, IOResult};
 
 #[async_trait::async_trait]
 pub trait SpawnCallback: Sync + Send {
@@ -23,12 +23,13 @@ pub trait Runtime: Sync + Send + DynClone {
     fn now(&self) -> u64; // unix time in millis
     fn current_task_id(&self) -> u64;
 
-    fn stdin(&self) -> Result<Box<dyn File>, IOError>;
-    fn stdout(&self) -> Result<Box<dyn File>, IOError>;
-    fn stderr(&self) -> Result<Box<dyn File>, IOError>;
+    fn stdin(&self) -> IOResult<Box<dyn File>>;
+    fn stdout(&self) -> IOResult<Box<dyn File>>;
+    fn stderr(&self) -> IOResult<Box<dyn File>>;
 
-    async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
-    async fn metadata(&self, path: &str) -> Result<FileStat, IOError>;
+    async fn open(&self, path: &str) -> IOResult<Box<dyn File>>;
+    async fn unlink(&self, path: &str) -> IOResult<()>;
+    async fn metadata(&self, path: &str) -> IOResult<FileStat>;
 
     async fn find_rustjar_class(&self, jvm: &Jvm, classpath: &str, class: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>>;
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> JvmResult<Box<dyn ClassDefinition>>;
@@ -55,7 +56,7 @@ pub mod test {
     use crate::{
         loader::get_runtime_class_proto,
         runtime::{File, IOError, IOResult, Runtime, SpawnCallback},
-        FileSize, FileStat, RT_RUSTJAR,
+        FileSize, FileStat, FileType, RT_RUSTJAR,
     };
 
     #[derive(Clone)]
@@ -125,11 +126,16 @@ pub mod test {
             }
         }
 
+        async fn unlink(&self, _path: &str) -> IOResult<()> {
+            Err(IOError::NotFound)
+        }
+
         async fn metadata(&self, path: &str) -> IOResult<FileStat> {
             let entry = self.filesystem.get(path);
             if let Some(data) = entry {
                 Ok(FileStat {
                     size: data.len() as FileSize,
+                    r#type: FileType::File,
                 })
             } else {
                 Err(IOError::NotFound)

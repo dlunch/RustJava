@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileSize, FileStat, IOError, IOResult};
+use java_runtime::{File, FileSize, FileStat, FileType, IOError, IOResult};
 
 pub struct WriteStreamFile<W>
 where
@@ -176,6 +176,9 @@ impl File for FileImpl {
         let metadata = self.file.lock().unwrap().metadata().unwrap();
         let size = metadata.len();
 
-        Ok(FileStat { size })
+        Ok(FileStat {
+            size,
+            r#type: FileType::File,
+        })
     }
 }
