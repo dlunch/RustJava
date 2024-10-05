@@ -329,8 +329,10 @@ impl String {
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let index = this_string[(from_index as usize)..]
-            .find(char::from_u32(ch as _).unwrap())
+        let index = this_string
+            .chars()
+            .skip(from_index as usize)
+            .position(|x| x as u32 == ch as u32)
             .map(|x| x as i32);
 
         Ok(index.unwrap_or(-1))
