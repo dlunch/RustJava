@@ -45,7 +45,7 @@ impl File {
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let stat = context.stat(&path).await.unwrap();
+        let stat = context.metadata(&path).await.unwrap();
 
         Ok(stat.size as _)
     }

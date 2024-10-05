@@ -5,16 +5,16 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileSize, IOError};
+use java_runtime::{File, FileSize, FileStat, IOError, IOResult};
 
-pub struct WriteOnlyFile<W>
+pub struct WriteStreamFile<W>
 where
     W: Write + Send + Sync + 'static,
 {
     write: Arc<Mutex<W>>,
 }
 
-impl<W> WriteOnlyFile<W>
+impl<W> WriteStreamFile<W>
 where
     W: Write + Send + Sync + 'static,
 {
@@ -26,30 +26,38 @@ where
 }
 
 #[async_trait::async_trait]
-impl<W> File for WriteOnlyFile<W>
+impl<W> File for WriteStreamFile<W>
 where
     W: Write + Send + Sync + 'static,
 {
-    async fn read(&mut self, _buf: &mut [u8]) -> Result<usize, IOError> {
+    async fn read(&mut self, _buf: &mut [u8]) -> IOResult<usize> {
         Err(IOError::Unsupported)
     }
 
-    async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError> {
+    async fn write(&mut self, buf: &[u8]) -> IOResult<usize> {
         let written = self.write.lock().unwrap().write(buf).unwrap();
 
         Ok(written)
     }
 
-    async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+    async fn seek(&mut self, _pos: FileSize) -> IOResult<()> {
         Err(IOError::Unsupported)
     }
 
-    async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
+    async fn tell(&self) -> IOResult<FileSize> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn set_len(&mut self, _len: FileSize) -> IOResult<()> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn metadata(&self) -> IOResult<FileStat> {
         Err(IOError::Unsupported)
     }
 }
 
-impl<W> Clone for WriteOnlyFile<W>
+impl<W> Clone for WriteStreamFile<W>
 where
     W: Write + Send + Sync + 'static,
 {
@@ -58,14 +66,14 @@ where
     }
 }
 
-pub struct ReadOnlyFile<R>
+pub struct InputStreamFile<R>
 where
     R: Read + Send + Sync + 'static,
 {
     read: Arc<Mutex<R>>,
 }
 
-impl<R> ReadOnlyFile<R>
+impl<R> InputStreamFile<R>
 where
     R: Read + Send + Sync + 'static,
 {
@@ -77,30 +85,38 @@ where
 }
 
 #[async_trait::async_trait]
-impl<R> File for ReadOnlyFile<R>
+impl<R> File for InputStreamFile<R>
 where
     R: Read + Send + Sync + 'static,
 {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
+    async fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
         let read = self.read.lock().unwrap().read(buf).unwrap();
 
         Ok(read)
     }
 
-    async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
+    async fn write(&mut self, _buf: &[u8]) -> IOResult<usize> {
         Err(IOError::Unsupported)
     }
 
-    async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+    async fn seek(&mut self, _pos: FileSize) -> IOResult<()> {
         Err(IOError::Unsupported)
     }
 
-    async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
+    async fn tell(&self) -> IOResult<FileSize> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn set_len(&mut self, _len: FileSize) -> IOResult<()> {
+        Err(IOError::Unsupported)
+    }
+
+    async fn metadata(&self) -> IOResult<FileStat> {
         Err(IOError::Unsupported)
     }
 }
 
-impl<R> Clone for ReadOnlyFile<R>
+impl<R> Clone for InputStreamFile<R>
 where
     R: Read + Send + Sync + 'static,
 {
@@ -144,9 +160,22 @@ impl File for FileImpl {
         Ok(())
     }
 
+    async fn tell(&self) -> Result<FileSize, IOError> {
+        let pos = self.file.lock().unwrap().seek(io::SeekFrom::Current(0)).unwrap();
+
+        Ok(pos as FileSize)
+    }
+
     async fn set_len(&mut self, len: FileSize) -> Result<(), IOError> {
         self.file.lock().unwrap().set_len(len).unwrap();
 
         Ok(())
+    }
+
+    async fn metadata(&self) -> Result<FileStat, IOError> {
+        let metadata = self.file.lock().unwrap().metadata().unwrap();
+        let size = metadata.len();
+
+        Ok(FileStat { size })
     }
 }

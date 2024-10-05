@@ -141,7 +141,7 @@ impl URLClassLoader {
                     name_str.clone()
                 };
 
-                if runtime.stat(&final_path).await.is_ok() {
+                if runtime.metadata(&final_path).await.is_ok() {
                     let new_url = jvm
                         .new_class(
                             "java/net/URL",

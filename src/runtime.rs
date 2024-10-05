@@ -11,11 +11,11 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{get_runtime_class_proto, File, FileStat, IOError, Runtime, SpawnCallback, RT_RUSTJAR};
+use java_runtime::{get_runtime_class_proto, File, FileStat, IOError, IOResult, Runtime, SpawnCallback, RT_RUSTJAR};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
-use self::io::{FileImpl, ReadOnlyFile, WriteOnlyFile};
+use self::io::{FileImpl, InputStreamFile, WriteStreamFile};
 
 tokio::task_local! {
     static TASK_ID: u64;
@@ -104,23 +104,23 @@ where
         TASK_ID.try_with(|x| *x).unwrap_or(0)
     }
 
-    fn stdin(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(ReadOnlyFile::new(stdin())))
+    fn stdin(&self) -> IOResult<Box<dyn File>> {
+        Ok(Box::new(InputStreamFile::new(stdin())))
     }
 
-    fn stdout(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(WriteOnlyFile::new(self.stdout.clone())))
+    fn stdout(&self) -> IOResult<Box<dyn File>> {
+        Ok(Box::new(WriteStreamFile::new(self.stdout.clone())))
     }
 
-    fn stderr(&self) -> Result<Box<dyn File>, IOError> {
-        Ok(Box::new(WriteOnlyFile::new(stderr())))
+    fn stderr(&self) -> IOResult<Box<dyn File>> {
+        Ok(Box::new(WriteStreamFile::new(stderr())))
     }
 
-    async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
+    async fn open(&self, path: &str) -> IOResult<Box<dyn File>> {
         Ok(Box::new(FileImpl::new(path)))
     }
 
-    async fn stat(&self, path: &str) -> Result<FileStat, IOError> {
+    async fn metadata(&self, path: &str) -> IOResult<FileStat> {
         let metadata = fs::metadata(path);
         if let Ok(metadata) = metadata {
             Ok(FileStat { size: metadata.len() })

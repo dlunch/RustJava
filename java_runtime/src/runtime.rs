@@ -7,7 +7,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 
-pub use io::{File, FileSize, FileStat, IOError};
+pub use io::{File, FileSize, FileStat, IOError, IOResult};
 
 #[async_trait::async_trait]
 pub trait SpawnCallback: Sync + Send {
@@ -28,7 +28,7 @@ pub trait Runtime: Sync + Send + DynClone {
     fn stderr(&self) -> Result<Box<dyn File>, IOError>;
 
     async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError>;
-    async fn stat(&self, path: &str) -> Result<FileStat, IOError>;
+    async fn metadata(&self, path: &str) -> Result<FileStat, IOError>;
 
     async fn find_rustjar_class(&self, jvm: &Jvm, classpath: &str, class: &str) -> JvmResult<Option<Box<dyn ClassDefinition>>>;
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> JvmResult<Box<dyn ClassDefinition>>;
@@ -54,7 +54,7 @@ pub mod test {
 
     use crate::{
         loader::get_runtime_class_proto,
-        runtime::{File, IOError, Runtime, SpawnCallback},
+        runtime::{File, IOError, IOResult, Runtime, SpawnCallback},
         FileSize, FileStat, RT_RUSTJAR,
     };
 
@@ -104,19 +104,19 @@ pub mod test {
             TASK_ID.try_with(|x| *x).unwrap_or(0)
         }
 
-        fn stdin(&self) -> Result<Box<dyn File>, IOError> {
+        fn stdin(&self) -> IOResult<Box<dyn File>> {
             Err(IOError::NotFound)
         }
 
-        fn stdout(&self) -> Result<Box<dyn File>, IOError> {
+        fn stdout(&self) -> IOResult<Box<dyn File>> {
             Err(IOError::NotFound)
         }
 
-        fn stderr(&self) -> Result<Box<dyn File>, IOError> {
+        fn stderr(&self) -> IOResult<Box<dyn File>> {
             Err(IOError::NotFound)
         }
 
-        async fn open(&self, path: &str) -> Result<Box<dyn File>, IOError> {
+        async fn open(&self, path: &str) -> IOResult<Box<dyn File>> {
             let entry = self.filesystem.get(path);
             if let Some(data) = entry {
                 Ok(Box::new(DummyFile::new(data.clone())) as Box<_>)
@@ -125,7 +125,7 @@ pub mod test {
             }
         }
 
-        async fn stat(&self, path: &str) -> Result<FileStat, IOError> {
+        async fn metadata(&self, path: &str) -> IOResult<FileStat> {
             let entry = self.filesystem.get(path);
             if let Some(data) = entry {
                 Ok(FileStat {
@@ -172,7 +172,7 @@ pub mod test {
 
     #[async_trait::async_trait]
     impl File for DummyFile {
-        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
+        async fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
             let len = min(buf.len(), self.data.len());
             buf[..len].copy_from_slice(&self.data[..len]);
             self.data = self.data[len..].to_vec();
@@ -180,15 +180,23 @@ pub mod test {
             Ok(len)
         }
 
-        async fn write(&mut self, _buf: &[u8]) -> Result<usize, IOError> {
+        async fn write(&mut self, _buf: &[u8]) -> IOResult<usize> {
             Err(IOError::Unsupported)
         }
 
-        async fn seek(&mut self, _pos: FileSize) -> Result<(), IOError> {
+        async fn seek(&mut self, _pos: FileSize) -> IOResult<()> {
             Err(IOError::Unsupported)
         }
 
-        async fn set_len(&mut self, _len: FileSize) -> Result<(), IOError> {
+        async fn tell(&self) -> IOResult<FileSize> {
+            Err(IOError::Unsupported)
+        }
+
+        async fn set_len(&mut self, _len: FileSize) -> IOResult<()> {
+            Err(IOError::Unsupported)
+        }
+
+        async fn metadata(&self) -> IOResult<FileStat> {
             Err(IOError::Unsupported)
         }
     }
