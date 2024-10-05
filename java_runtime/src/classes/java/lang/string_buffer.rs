@@ -7,7 +7,10 @@ use alloc::{
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::lang::{Object, String},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.lang.StringBuffer
 pub struct StringBuffer;
@@ -26,6 +29,12 @@ impl StringBuffer {
                     "append",
                     "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
                     Self::append_string,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/Object;)Ljava/lang/StringBuffer;",
+                    Self::append_object,
                     Default::default(),
                 ),
                 JavaMethodProto::new("append", "(I)Ljava/lang/StringBuffer;", Self::append_integer, Default::default()),
@@ -86,6 +95,26 @@ impl StringBuffer {
         let string = if string.is_null() {
             "null".into()
         } else {
+            JavaLangString::to_rust_string(jvm, &string).await?
+        };
+
+        Self::append(jvm, &mut this, &string).await?;
+
+        Ok(this)
+    }
+
+    async fn append_object(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        object: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, &object,);
+
+        let string = if object.is_null() {
+            "null".into()
+        } else {
+            let string = jvm.invoke_virtual(&object, "toString", "()Ljava/lang/String;", ()).await?;
             JavaLangString::to_rust_string(jvm, &string).await?
         };
 
