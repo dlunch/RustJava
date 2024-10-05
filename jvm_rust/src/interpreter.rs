@@ -386,7 +386,7 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(value1 + value2));
+                stack_frame.operand_stack.push(JavaValue::Int(value1.wrapping_add(value2)));
             }
             Opcode::Iand => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -501,7 +501,7 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(value1 * value2));
+                stack_frame.operand_stack.push(JavaValue::Int(value1.wrapping_mul(value2)));
             }
             Opcode::Ineg => {
                 let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -599,7 +599,7 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(value1 - value2));
+                stack_frame.operand_stack.push(JavaValue::Int(value1.wrapping_sub(value2)));
             }
             Opcode::Iushr => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
