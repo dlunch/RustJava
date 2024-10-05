@@ -1,9 +1,14 @@
-use alloc::vec;
+use alloc::{string::String as RustString, vec};
+
+use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{classes::java::io::InputStream, RuntimeClassProto, RuntimeContext};
+use crate::{
+    classes::java::{io::InputStream, lang::String},
+    RuntimeClassProto, RuntimeContext,
+};
 
 // class java.io.DataInputStream
 pub struct DataInputStream;
@@ -27,6 +32,8 @@ impl DataInputStream {
                 JavaMethodProto::new("readInt", "()I", Self::read_int, Default::default()),
                 JavaMethodProto::new("readLong", "()J", Self::read_long, Default::default()),
                 JavaMethodProto::new("readShort", "()S", Self::read_short, Default::default()),
+                JavaMethodProto::new("readUnsignedShort", "()I", Self::read_unsigned_short, Default::default()),
+                JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", Default::default())],
@@ -117,6 +124,17 @@ impl DataInputStream {
         Ok((byte1 as i16) << 8 | (byte2 as i16))
     }
 
+    async fn read_unsigned_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.DataInputStream::readUnsignedShort({:?})", &this);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+
+        let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
+        let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
+
+        Ok((byte1 << 8 | byte2) & 0xffff)
+    }
+
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::readInt({:?})", &this);
 
@@ -191,6 +209,23 @@ impl DataInputStream {
             byte7 as u8,
             byte8 as u8,
         ]))
+    }
+
+    async fn read_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.io.DataInputStream::readUTF({:?})", &this);
+
+        let length: i32 = jvm.invoke_virtual(&this, "readUnsignedShort", "()I", ()).await?;
+        let java_array = jvm.instantiate_array("B", length as _).await?;
+        let _: i32 = jvm
+            .invoke_virtual(&this, "read", "([BII)I", (java_array.clone(), 0, length as i32))
+            .await?;
+
+        let bytes = jvm.load_byte_array(&java_array, 0, length as _).await?;
+
+        // TODO handle modified utf-8
+        let string = RustString::from_utf8(cast_vec(bytes)).unwrap();
+
+        Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
