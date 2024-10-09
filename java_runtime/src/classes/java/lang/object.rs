@@ -1,10 +1,14 @@
-use alloc::{boxed::Box, format, vec};
+use core::time::Duration;
 
-use java_class_proto::JavaMethodProto;
+use alloc::{boxed::Box, format, sync::Arc, vec};
+
+use dyn_clone::clone_box;
+use event_listener::Event;
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, Result};
+use jvm::{runtime::JavaLangString, Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{classes::java::lang::String, Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback};
 
 // class java.lang.Object
 pub struct Object;
@@ -29,7 +33,7 @@ impl Object {
                 JavaMethodProto::new("wait", "()V", Self::wait, Default::default()),
                 JavaMethodProto::new("finalize", "()V", Self::finalize, Default::default()),
             ],
-            fields: vec![],
+            fields: vec![JavaFieldProto::new("waitEvent", "[B", Default::default())],
         }
     }
 
@@ -92,14 +96,30 @@ impl Object {
         Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }
 
-    async fn notify(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.lang.Object::notify({:?})", &this);
+    async fn notify(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.lang.Object::notify({:?})", &this);
+
+        let wait_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "waitEvent", "[B").await?;
+        if wait_event.is_null() {
+            return Ok(());
+        }
+
+        let wait_event: Arc<Event> = jvm.get_rust_object_field(&this, "waitEvent").await?;
+        wait_event.notify(1);
 
         Ok(())
     }
 
-    async fn notify_all(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.lang.Object::notifyAll({:?})", &this);
+    async fn notify_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.lang.Object::notifyAll({:?})", &this);
+
+        let wait_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "waitEvent", "[B").await?;
+        if wait_event.is_null() {
+            return Ok(());
+        }
+
+        let wait_event: Arc<Event> = jvm.get_rust_object_field(&this, "waitEvent").await?;
+        wait_event.notify(usize::MAX);
 
         Ok(())
     }
@@ -112,8 +132,41 @@ impl Object {
         Ok(())
     }
 
-    async fn wait_long_int(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
-        tracing::warn!("stub java.lang.Object::wait({:?}, {:?}, {:?})", &this, millis, nanos);
+    async fn wait_long_int(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
+        tracing::debug!("java.lang.Object::wait({:?}, {:?}, {:?})", &this, millis, nanos);
+
+        let wait_event = Arc::new(Event::new());
+        jvm.put_rust_object_field(&mut this, "waitEvent", wait_event.clone()).await?;
+
+        struct Waiter {
+            timeout: i64,
+            wait_event: Arc<Event>,
+            context: Box<dyn Runtime>,
+        }
+
+        #[async_trait::async_trait]
+        impl SpawnCallback for Waiter {
+            async fn call(&self) -> Result<()> {
+                self.context.sleep(Duration::from_millis(self.timeout as _)).await;
+
+                self.wait_event.notify(1); // TODO this would notify other waiter
+                Ok(())
+            }
+        }
+
+        let timeout = millis; // TODO nanos
+        if timeout != 0 {
+            context.spawn(
+                jvm,
+                Box::new(Waiter {
+                    timeout,
+                    wait_event: wait_event.clone(),
+                    context: clone_box(context),
+                }),
+            );
+        }
+
+        wait_event.listen().await;
 
         Ok(())
     }
@@ -128,6 +181,115 @@ impl Object {
 
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::finalize({:?})", &this);
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use core::{
+        sync::atomic::{AtomicBool, Ordering},
+        time::Duration,
+    };
+
+    use alloc::{boxed::Box, collections::btree_map::BTreeMap, sync::Arc};
+
+    use jvm::{ClassInstanceRef, Jvm, Result};
+
+    use crate::{classes::java::lang::Object, runtime::test::TestRuntime, test::create_test_jvm, Runtime, SpawnCallback};
+
+    #[tokio::test]
+    async fn test_wait() -> Result<()> {
+        let runtime = TestRuntime::new(BTreeMap::new());
+        let jvm = create_test_jvm(runtime.clone()).await?;
+
+        let notified = Arc::new(AtomicBool::new(false));
+
+        let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+
+        struct Notifier {
+            jvm: Jvm,
+            notified: Arc<AtomicBool>,
+            runtime: TestRuntime,
+            target: ClassInstanceRef<Object>,
+        }
+
+        #[async_trait::async_trait]
+        impl SpawnCallback for Notifier {
+            async fn call(&self) -> Result<()> {
+                self.jvm.attach_thread().await?;
+
+                self.runtime.sleep(Duration::from_millis(100)).await;
+                self.notified.store(true, Ordering::Relaxed);
+                let _: () = self.jvm.invoke_virtual(&self.target, "notify", "()V", ()).await?;
+
+                self.jvm.detach_thread().await?;
+
+                Ok(())
+            }
+        }
+
+        runtime.spawn(
+            &jvm,
+            Box::new(Notifier {
+                jvm: jvm.clone(),
+                notified: notified.clone(),
+                runtime: runtime.clone(),
+                target: object.clone().into(),
+            }),
+        );
+
+        assert!(!notified.load(Ordering::Relaxed));
+        let _: () = jvm.invoke_virtual(&object, "wait", "()V", ()).await?;
+        assert!(notified.load(Ordering::Relaxed));
+
+        Ok(())
+    }
+    #[tokio::test]
+    async fn test_wait_timeout() -> Result<()> {
+        let runtime = TestRuntime::new(BTreeMap::new());
+        let jvm = create_test_jvm(runtime.clone()).await?;
+
+        let notified = Arc::new(AtomicBool::new(false));
+
+        let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+
+        struct Notifier {
+            jvm: Jvm,
+            notified: Arc<AtomicBool>,
+            runtime: TestRuntime,
+            target: ClassInstanceRef<Object>,
+        }
+
+        #[async_trait::async_trait]
+        impl SpawnCallback for Notifier {
+            async fn call(&self) -> Result<()> {
+                self.jvm.attach_thread().await?;
+
+                self.runtime.sleep(Duration::from_millis(1000)).await;
+                self.notified.store(true, Ordering::Relaxed);
+                let _: () = self.jvm.invoke_virtual(&self.target, "notify", "()V", ()).await?;
+
+                self.jvm.detach_thread().await?;
+
+                Ok(())
+            }
+        }
+
+        runtime.spawn(
+            &jvm,
+            Box::new(Notifier {
+                jvm: jvm.clone(),
+                notified: notified.clone(),
+                runtime: runtime.clone(),
+                target: object.clone().into(),
+            }),
+        );
+
+        assert!(!notified.load(Ordering::Relaxed));
+        let _: () = jvm.invoke_virtual(&object, "wait", "(J)V", (100i64,)).await?;
+        assert!(!notified.load(Ordering::Relaxed));
 
         Ok(())
     }

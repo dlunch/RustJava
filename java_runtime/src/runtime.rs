@@ -78,8 +78,8 @@ pub mod test {
 
     #[async_trait::async_trait]
     impl Runtime for TestRuntime {
-        async fn sleep(&self, _duration: Duration) {
-            todo!()
+        async fn sleep(&self, duration: Duration) {
+            tokio::time::sleep(duration).await;
         }
 
         async fn r#yield(&self) {
