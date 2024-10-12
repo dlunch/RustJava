@@ -234,10 +234,61 @@ impl Interpreter {
                 }
             }
             Opcode::Dup2X1 => {
-                todo!()
+                let value1 = stack_frame.operand_stack.pop().unwrap();
+                let value2 = stack_frame.operand_stack.pop().unwrap();
+
+                if matches!(value1, JavaValue::Long(_) | JavaValue::Double(_)) {
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value2);
+                    stack_frame.operand_stack.push(value1);
+                } else {
+                    let value3 = stack_frame.operand_stack.pop().unwrap();
+                    stack_frame.operand_stack.push(value2.clone());
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value3);
+                    stack_frame.operand_stack.push(value2);
+                    stack_frame.operand_stack.push(value1);
+                }
             }
             Opcode::Dup2X2 => {
-                todo!()
+                let value1 = stack_frame.operand_stack.pop().unwrap();
+                let value2 = stack_frame.operand_stack.pop().unwrap();
+
+                if matches!(value1, JavaValue::Long(_) | JavaValue::Double(_)) && matches!(value2, JavaValue::Long(_) | JavaValue::Double(_)) {
+                    // form4
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value2);
+                    stack_frame.operand_stack.push(value1);
+                } else if matches!(value1, JavaValue::Long(_) | JavaValue::Double(_)) {
+                    // form2
+                    let value3 = stack_frame.operand_stack.pop().unwrap();
+
+                    stack_frame.operand_stack.push(value1.clone());
+                    stack_frame.operand_stack.push(value3);
+                    stack_frame.operand_stack.push(value2);
+                    stack_frame.operand_stack.push(value1);
+                } else {
+                    let value3 = stack_frame.operand_stack.pop().unwrap();
+
+                    if matches!(value3, JavaValue::Long(_) | JavaValue::Double(_)) {
+                        // form3
+                        stack_frame.operand_stack.push(value2.clone());
+                        stack_frame.operand_stack.push(value1.clone());
+                        stack_frame.operand_stack.push(value3);
+                        stack_frame.operand_stack.push(value2);
+                        stack_frame.operand_stack.push(value1);
+                    } else {
+                        // form1
+                        let value4 = stack_frame.operand_stack.pop().unwrap();
+
+                        stack_frame.operand_stack.push(value2.clone());
+                        stack_frame.operand_stack.push(value1.clone());
+                        stack_frame.operand_stack.push(value4);
+                        stack_frame.operand_stack.push(value3);
+                        stack_frame.operand_stack.push(value2);
+                        stack_frame.operand_stack.push(value1);
+                    }
+                }
             }
             Opcode::DupX1 => {
                 let value1 = stack_frame.operand_stack.pop().unwrap();
