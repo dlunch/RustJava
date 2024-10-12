@@ -328,13 +328,13 @@ impl String {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?})", &this);
+        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, ch);
 
         jvm.invoke_virtual(&this, "indexOf", "(II)I", (ch, 0)).await
     }
 
     async fn index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, ch);
+        tracing::debug!("java.lang.String::indexOf({:?}, {:?}, {:?})", &this, ch, from_index);
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -342,7 +342,7 @@ impl String {
             .chars()
             .skip(from_index as usize)
             .position(|x| x as u32 == ch as u32)
-            .map(|x| x as i32);
+            .map(|x| x as i32 + from_index);
 
         Ok(index.unwrap_or(-1))
     }
@@ -500,6 +500,15 @@ mod test {
 
         let pattern = JavaLangString::from_rust_string(&jvm, "789").await?;
         let index: i32 = jvm.invoke_virtual(&string, "indexOf", "(Ljava/lang/String;)I", (pattern,)).await?;
+        assert_eq!(index, -1);
+
+        let index: i32 = jvm.invoke_virtual(&string, "indexOf", "(I)I", (52,)).await?;
+        assert_eq!(index, 8);
+
+        let index: i32 = jvm.invoke_virtual(&string, "indexOf", "(II)I", (52, 8)).await?;
+        assert_eq!(index, 8);
+
+        let index: i32 = jvm.invoke_virtual(&string, "indexOf", "(II)I", (52, 9)).await?;
         assert_eq!(index, -1);
 
         Ok(())
