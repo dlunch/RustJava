@@ -664,11 +664,15 @@ impl Interpreter {
 
                 stack_frame.operand_stack.push(JavaValue::Int(value1 ^ value2));
             }
-            Opcode::Jsr(_) => {
-                todo!()
+            Opcode::Jsr(x) => {
+                stack_frame.operand_stack.push(JavaValue::Int(current_offset as i32 + 3));
+
+                return Ok(ExecuteNext::Jump((current_offset as i32 + *x as i32) as u32));
             }
-            Opcode::JsrW(_) => {
-                todo!()
+            Opcode::JsrW(x) => {
+                stack_frame.operand_stack.push(JavaValue::Int(current_offset as i32 + 5));
+
+                return Ok(ExecuteNext::Jump((current_offset as i32 + *x) as u32));
             }
             Opcode::L2d => {
                 let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -827,8 +831,11 @@ impl Interpreter {
                 jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
                     .await?
             }
-            Opcode::Ret(_) => {
-                todo!()
+            Opcode::Ret(x) => {
+                let value = stack_frame.local_variables[*x as usize].clone();
+                let value: i32 = value.into();
+
+                return Ok(ExecuteNext::Jump(value as u32));
             }
             Opcode::Return => return Ok(ExecuteNext::Return(JavaValue::Void)),
             Opcode::Sipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
