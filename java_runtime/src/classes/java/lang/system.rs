@@ -50,6 +50,7 @@ impl System {
             ],
             fields: vec![
                 JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
+                JavaFieldProto::new("err", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
                 JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::STATIC),
             ],
         }
@@ -60,14 +61,24 @@ impl System {
 
         let out_descriptor: ClassInstanceRef<FileDescriptor> =
             jvm.get_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;").await?;
-        let file_output_stream = jvm
+        let out_file_output_stream = jvm
             .new_class("java/io/FileOutputStream", "(Ljava/io/FileDescriptor;)V", (out_descriptor,))
             .await?;
         let out = jvm
-            .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (file_output_stream,))
+            .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (out_file_output_stream,))
+            .await?;
+
+        let err_descriptor: ClassInstanceRef<FileDescriptor> =
+            jvm.get_static_field("java/io/FileDescriptor", "err", "Ljava/io/FileDescriptor;").await?;
+        let err_file_output_stream = jvm
+            .new_class("java/io/FileOutputStream", "(Ljava/io/FileDescriptor;)V", (err_descriptor,))
+            .await?;
+        let err = jvm
+            .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (err_file_output_stream,))
             .await?;
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", out).await?;
+        jvm.put_static_field("java/lang/System", "err", "Ljava/io/PrintStream;", err).await?;
 
         let props = jvm.new_class("java/util/Properties", "()V", ()).await?;
         jvm.put_static_field("java/lang/System", "props", "Ljava/util/Properties;", props).await?;
