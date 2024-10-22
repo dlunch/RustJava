@@ -16,7 +16,7 @@ nom = { version = "^7.1", default-features = false, features = ["alloc"] }
 async-lock = { version = "^3.3", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
-tokio = { version = "^1.40", features = ["macros"] }
+tokio = { version = "^1.41", features = ["macros"] }
 
 classfile = { path = "classfile" }
 java_class_proto = { path = "java_class_proto" }
