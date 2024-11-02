@@ -14,7 +14,7 @@ pub enum StartType<'a> {
     Class(&'a Path),
 }
 
-pub async fn run<'a, T, S>(stdout: T, start_type: StartType<'a>, args: &[S], class_path: &[&Path]) -> Result<()>
+pub async fn run<T, S>(stdout: T, start_type: StartType<'_>, args: &[S], class_path: &[&Path]) -> Result<()>
 where
     T: Sync + Send + Write + 'static,
     S: AsRef<str>,
