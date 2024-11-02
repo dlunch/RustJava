@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, sync::Arc};
 
-use async_lock::RwLock;
+use parking_lot::RwLock;
 
 use crate::{
     runtime::{JavaLangClass, JavaLangClassLoader},
@@ -21,21 +21,12 @@ impl Class {
         }
     }
 
-    #[async_recursion::async_recursion]
-    pub async fn java_class(&self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>> {
-        let java_class = self.java_class.read().await;
-        if let Some(x) = &*java_class {
-            Ok(x.clone())
-        } else {
-            drop(java_class);
+    pub fn set_java_class(&self, java_class: Box<dyn ClassInstance>) {
+        *self.java_class.write() = Some(java_class);
+    }
 
-            // class registered while bootstrapping might not have java/lang/Class, so instantiate it lazily
-            let java_class = JavaLangClass::from_rust_class(jvm, self.definition.clone(), None).await?;
-
-            self.java_class.write().await.replace(java_class.clone());
-
-            Ok(java_class)
-        }
+    pub fn java_class(&self) -> Result<Box<dyn ClassInstance>> {
+        Ok(self.java_class.read().clone().unwrap())
     }
 }
 
@@ -66,10 +57,7 @@ impl ClassLoaderWrapper for BootstrapClassLoaderWrapper<'_> {
         if let Some(definition) = definition {
             let java_class = jvm.register_class(definition.clone(), None).await?;
 
-            Ok(Some(Class {
-                definition,
-                java_class: Arc::new(RwLock::new(java_class)),
-            }))
+            Ok(Some(Class::new(definition, java_class)))
         } else {
             Ok(None)
         }

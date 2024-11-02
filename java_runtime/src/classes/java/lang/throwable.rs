@@ -76,7 +76,7 @@ impl Throwable {
     async fn fill_in_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::fillInStackTrace({:?})", &this);
 
-        let stack_trace = Arc::new(jvm.stack_trace().await);
+        let stack_trace = Arc::new(jvm.stack_trace());
 
         jvm.put_rust_object_field(&mut this, "stackTrace", stack_trace).await?;
 

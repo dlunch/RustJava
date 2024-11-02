@@ -5,8 +5,8 @@ use core::iter;
 extern crate std;
 use std::io::{Cursor, Read};
 
-use async_lock::Mutex;
 use bytemuck::cast_vec;
+use parking_lot::Mutex;
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -82,7 +82,7 @@ impl ZipFile {
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
 
         let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
-        let file_size = zip.lock().await.by_name(&name).map(|x| x.size());
+        let file_size = zip.lock().by_name(&name).map(|x| x.size());
 
         if let Ok(x) = file_size {
             let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (x as i64,)).await?;
@@ -97,7 +97,7 @@ impl ZipFile {
         tracing::debug!("java.util.zip.ZipFile::entries({:?})", &this);
 
         let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
-        let names = zip.lock().await.file_names().map(|x| x.to_string()).collect::<Vec<_>>();
+        let names = zip.lock().file_names().map(|x| x.to_string()).collect::<Vec<_>>();
 
         let mut name_array = jvm.instantiate_array("Ljava/lang/String;", names.len() as _).await?;
         for (i, name) in names.iter().enumerate() {
@@ -130,7 +130,7 @@ impl ZipFile {
         let data = {
             let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
 
-            let mut zip = zip.lock().await;
+            let mut zip = zip.lock();
             let mut file = zip.by_name(&entry_name).unwrap();
 
             let mut buf = Vec::new();

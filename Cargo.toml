@@ -13,7 +13,7 @@ async-trait = { version = "^0.1", default-features = false }
 bytemuck = { version = "^1.19", default-features = false, features = ["extern_crate_alloc"] }
 dyn-clone = { version = "^1.0", default-features = false }
 nom = { version = "^7.1", default-features = false, features = ["alloc"] }
-async-lock = { version = "^3.3", default-features = false }
+parking_lot = { version = "^0.12", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
 tokio = { version = "^1.41", features = ["macros"] }

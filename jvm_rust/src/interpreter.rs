@@ -562,7 +562,7 @@ impl Interpreter {
             Opcode::Instanceof(x) => {
                 let instance: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
 
-                let result = jvm.is_instance(&*instance, x.as_class()).await?;
+                let result = jvm.is_instance(&*instance, x.as_class());
                 stack_frame.operand_stack.push(JavaValue::Int(result as _));
             }
             Opcode::Invokedynamic(_) => {
@@ -862,7 +862,7 @@ impl Interpreter {
                 }
 
                 let catch_type = exception_table.catch_type.as_ref().unwrap();
-                if jvm.is_instance(exception, catch_type).await.unwrap() {
+                if jvm.is_instance(exception, catch_type) {
                     return Some(exception_table.handler_pc as _);
                 }
             }
@@ -939,7 +939,7 @@ impl Interpreter {
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
             ValueConstant::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
-            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class(jvm).await?)),
+            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class()?)),
             _ => unimplemented!(),
         })
     }

@@ -8,9 +8,9 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use async_lock::RwLock;
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
+use parking_lot::RwLock;
 
 use java_constants::MethodAccessFlags;
 
@@ -62,12 +62,21 @@ impl Jvm {
         // load bootstrap classes
         let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "[B", "java/lang/Class"];
         for class_name in bootstrap_classes.iter() {
-            let class = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
-            jvm.register_class(class, None).await?;
+            let class_definition = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
+            let class = Class::new(class_definition, None);
+
+            jvm.register_class_internal(class, None).await?;
         }
 
         // init startup thread
-        jvm.attach_thread().await?;
+        jvm.attach_thread()?;
+
+        // set java class for bootstrap classes
+        let classes = jvm.inner.classes.read().values().cloned().collect::<Vec<_>>();
+        for class in classes {
+            let java_class = JavaLangClass::from_rust_class(&jvm, class.definition.clone(), None).await?;
+            class.set_java_class(java_class);
+        }
 
         // init properties
         for (key, value) in properties {
@@ -92,7 +101,6 @@ impl Jvm {
         Ok(jvm)
     }
 
-    #[async_recursion::async_recursion]
     pub async fn instantiate_class(&self, class_name: &str) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
@@ -114,7 +122,6 @@ impl Jvm {
         Ok(instance)
     }
 
-    #[async_recursion::async_recursion]
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
@@ -137,7 +144,7 @@ impl Jvm {
 
         let field = class.definition.field(name, descriptor, true);
         if let Some(field) = field {
-            Ok(class.definition.get_static_field(&*field).await?.into())
+            Ok(class.definition.get_static_field(&*field)?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -156,7 +163,7 @@ impl Jvm {
         let field = class.definition.field(name, descriptor, true);
 
         if let Some(field) = field {
-            class.definition.put_static_field(&*field, value.into()).await
+            class.definition.put_static_field(&*field, value.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
@@ -170,10 +177,10 @@ impl Jvm {
     {
         tracing::trace!("Get field {}.{}:{}", instance.class_definition().name(), name, descriptor);
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor).await?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
 
         if let Some(field) = field {
-            Ok(instance.get_field(&*field).await?.into())
+            Ok(instance.get_field(&*field)?.into())
         } else {
             Err(self
                 .exception(
@@ -190,10 +197,10 @@ impl Jvm {
     {
         tracing::trace!("Put field {}.{}:{} = {:?}", instance.class_definition().name(), name, descriptor, value);
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor).await?;
+        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
 
         if let Some(field) = field {
-            instance.put_field(&*field, value.into()).await
+            instance.put_field(&*field, value.into())
         } else {
             Err(self
                 .exception(
@@ -252,7 +259,7 @@ impl Jvm {
         );
 
         let class = instance.class_definition();
-        let method = self.find_virtual_method(&*class, name, descriptor, false).await?;
+        let method = self.find_virtual_method(&*class, name, descriptor, false)?;
         if let Some(x) = method {
             let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
                 .chain(args.into_vec())
@@ -333,7 +340,7 @@ impl Jvm {
         let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
-            array.store(offset, values.into_boxed_slice()).await?;
+            array.store(offset, values.into_boxed_slice())?;
 
             Ok(())
         } else {
@@ -360,7 +367,7 @@ impl Jvm {
         let array = array.as_array_instance();
 
         if let Some(array) = array {
-            let values = array.load(offset, count).await?;
+            let values = array.load(offset, count)?;
 
             Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
         } else {
@@ -384,7 +391,7 @@ impl Jvm {
         let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
-            array.store_bytes(offset, values.into_boxed_slice()).await
+            array.store_bytes(offset, values.into_boxed_slice())
         } else {
             Err(self.exception("java/lang/IllegalArgumentException", "Not an array").await)
         }
@@ -406,7 +413,7 @@ impl Jvm {
         let array = array.as_array_instance();
 
         if let Some(array) = array {
-            let values = array.load_bytes(offset, count).await?;
+            let values = array.load_bytes(offset, count)?;
 
             Ok(values)
         } else {
@@ -451,8 +458,12 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn has_class(&self, class_name: &str) -> bool {
-        self.inner.classes.read().await.contains_key(class_name)
+    pub fn has_class(&self, class_name: &str) -> bool {
+        self.inner.classes.read().contains_key(class_name)
+    }
+
+    pub fn get_class(&self, class_name: &str) -> Option<Class> {
+        self.inner.classes.read().get(class_name).cloned()
     }
 
     #[async_recursion::async_recursion]
@@ -463,7 +474,7 @@ impl Jvm {
     #[async_recursion::async_recursion]
     async fn resolve_class_internal(&self, class_name: &str, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<Class> {
         tracing::trace!("Resolving class {}", class_name);
-        let class = self.inner.classes.read().await.get(class_name).cloned();
+        let class = self.inner.classes.read().get(class_name).cloned();
 
         if let Some(x) = class {
             return Ok(x);
@@ -504,10 +515,11 @@ impl Jvm {
         Ok(class.unwrap())
     }
 
-    async fn find_calling_class(&self) -> Result<Option<(Class, Option<Box<dyn ClassInstance>>)>> {
+    #[allow(clippy::type_complexity)]
+    fn find_calling_class(&self) -> Result<Option<(Class, Option<Box<dyn ClassInstance>>)>> {
         let thread_id = (self.inner.get_current_thread_id)();
 
-        let threads = self.inner.threads.read().await;
+        let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
         Ok(thread.top_frame().map(|x| (x.class.clone(), x.class_instance.clone())))
@@ -520,12 +532,7 @@ impl Jvm {
     ) -> Result<Option<Box<dyn ClassInstance>>> {
         tracing::debug!("Register class {}", class.name());
 
-        // delay java/lang/Class construction on bootstrap, as we won't have java/lang/Class yet
-        let java_class = if self.has_class("java/lang/Class").await {
-            Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader.clone()).await?)
-        } else {
-            None
-        };
+        let java_class = Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader.clone()).await?);
 
         let class = Class::new(class, java_class.clone());
 
@@ -538,21 +545,19 @@ impl Jvm {
         Ok(java_class)
     }
 
-    pub async fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> Result<bool> {
-        let instance_class = instance.class_definition();
+    pub fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> bool {
+        let class = instance.class_definition();
 
-        self.is_instance_by_name(&instance_class.name(), class_name).await
+        self.is_inherited_from(&*class, class_name)
     }
 
-    #[async_recursion::async_recursion]
-    pub async fn is_inherited_from(&self, class: &dyn ClassDefinition, class_name: &str) -> bool {
+    pub fn is_inherited_from(&self, class: &dyn ClassDefinition, class_name: &str) -> bool {
         if class.name() == class_name {
             return true;
         }
 
         if let Some(super_class) = class.super_class_name() {
-            self.is_inherited_from(&*self.inner.classes.read().await.get(&super_class).unwrap().definition, class_name)
-                .await
+            self.is_inherited_from(&*self.inner.classes.read().get(&super_class).unwrap().definition, class_name)
         } else {
             false
         }
@@ -567,18 +572,18 @@ impl Jvm {
         JavaError::JavaException(instance)
     }
 
-    pub async fn stack_trace(&self) -> Vec<String> {
+    pub fn stack_trace(&self) -> Vec<String> {
         // TODO we should return in another format
 
         let thread_id = (self.inner.get_current_thread_id)();
-        let threads = self.inner.threads.read().await;
+        let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
         let mut result = Vec::with_capacity(thread.stack.len());
 
         for item in thread.stack.iter().rev() {
             // skip exception classes
-            if self.is_inherited_from(&*item.class.definition, "java/lang/Throwable").await {
+            if self.is_inherited_from(&*item.class.definition, "java/lang/Throwable") {
                 continue;
             }
 
@@ -588,32 +593,17 @@ impl Jvm {
         result
     }
 
-    #[async_recursion::async_recursion]
-    async fn is_instance_by_name(&self, instance_class_name: &str, class_name: &str) -> Result<bool> {
-        let instance_class = self.resolve_class(instance_class_name).await?.definition;
-
-        if instance_class.name() == class_name {
-            return Ok(true);
-        }
-
-        if let Some(super_class) = instance_class.super_class_name() {
-            return self.is_instance_by_name(&super_class, class_name).await;
-        }
-
-        Ok(false)
-    }
-
     async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
         if !class.definition.name().starts_with('[') {
             if let Some(super_class) = class.definition.super_class_name() {
-                if !self.has_class(&super_class).await {
+                if !self.has_class(&super_class) {
                     // ensure superclass is loaded
                     self.resolve_class_internal(&super_class, class_loader_wrapper).await?;
                 }
             }
         }
 
-        self.inner.classes.write().await.insert(class.definition.name().to_owned(), class.clone());
+        self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());
 
         let clinit = class.definition.method("<clinit>", "()V", true);
 
@@ -655,31 +645,31 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn attach_thread(&self) -> Result<()> {
+    pub fn attach_thread(&self) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().await.insert(thread_id, JvmThread::new());
+        self.inner.threads.write().insert(thread_id, JvmThread::new());
 
         Ok(())
     }
 
-    pub async fn detach_thread(&self) -> Result<()> {
+    pub fn detach_thread(&self) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().await.remove(&thread_id);
+        self.inner.threads.write().remove(&thread_id);
 
         Ok(())
     }
 
     pub async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
-        let calling_class = self.find_calling_class().await?;
+        let calling_class = self.find_calling_class()?;
 
         if let Some((class, class_instance)) = calling_class {
             // called in java
 
-            if self.is_inherited_from(&*class.definition, "java/lang/ClassLoader").await {
+            if self.is_inherited_from(&*class.definition, "java/lang/ClassLoader") {
                 return Ok(class_instance.unwrap());
             }
 
-            let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class(self).await?).await?;
+            let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class()?).await?;
             if let Some(x) = calling_class_class_loader {
                 Ok(x)
             } else {
@@ -694,28 +684,20 @@ impl Jvm {
         }
     }
 
-    #[async_recursion::async_recursion]
-    async fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
+    fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
         let field = class.field(name, descriptor, false);
 
         if let Some(x) = field {
             Ok(Some(x))
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.inner.classes.read().await.get(&x).unwrap().definition.clone();
-            self.find_field(&*super_class, name, descriptor).await
+            let super_class = self.inner.classes.read().get(&x).unwrap().definition.clone();
+            self.find_field(&*super_class, name, descriptor)
         } else {
             Ok(None)
         }
     }
 
-    #[async_recursion::async_recursion]
-    async fn find_virtual_method(
-        &self,
-        class: &dyn ClassDefinition,
-        name: &str,
-        descriptor: &str,
-        is_static: bool,
-    ) -> Result<Option<Box<dyn Method>>> {
+    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> Result<Option<Box<dyn Method>>> {
         let method = class.method(name, descriptor, false);
 
         if let Some(x) = method {
@@ -723,8 +705,8 @@ impl Jvm {
                 return Ok(Some(x));
             }
         } else if let Some(x) = class.super_class_name() {
-            let super_class = self.inner.classes.read().await.get(&x).unwrap().definition.clone();
-            return self.find_virtual_method(&*super_class, name, descriptor, is_static).await;
+            let super_class = self.inner.classes.read().get(&x).unwrap().definition.clone();
+            return self.find_virtual_method(&*super_class, name, descriptor, is_static);
         }
 
         Ok(None)
@@ -743,7 +725,6 @@ impl Jvm {
         self.inner
             .threads
             .write()
-            .await
             .get_mut(&thread_id)
             .unwrap()
             .push_frame(class, class_instance, &method_str);
@@ -752,8 +733,16 @@ impl Jvm {
 
         tracing::trace!("Execute result: {:?}", result);
 
-        self.inner.threads.write().await.get_mut(&thread_id).unwrap().pop_frame();
+        self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
 
         result
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_is_instance() {
+        // TODO
     }
 }

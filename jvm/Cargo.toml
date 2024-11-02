@@ -11,7 +11,7 @@ async-trait = { workspace = true }
 bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 nom = { workspace = true }
-async-lock = { workspace = true }
+parking_lot = { workspace = true }
 tracing = { workspace = true }
 
 java_constants = { workspace = true }

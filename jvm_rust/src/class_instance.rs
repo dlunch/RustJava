@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, sync::Arc};
 use core::fmt::{self, Debug, Formatter};
 
-use async_lock::RwLock;
+use parking_lot::RwLock;
 
 use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Result};
 
@@ -46,10 +46,10 @@ impl ClassInstance for ClassInstanceImpl {
         Arc::as_ptr(&self.inner) as i32
     }
 
-    async fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
+    fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.read().await;
+        let storage = self.inner.storage.read();
         let value = storage.get(field);
 
         if let Some(x) = value {
@@ -59,10 +59,10 @@ impl ClassInstance for ClassInstanceImpl {
         }
     }
 
-    async fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
+    fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.write().await.insert(field.clone(), value);
+        self.inner.storage.write().insert(field.clone(), value);
 
         Ok(())
     }

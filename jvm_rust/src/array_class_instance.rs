@@ -1,8 +1,8 @@
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use core::fmt::{self, Debug, Formatter};
 
-use async_lock::RwLock;
 use bytemuck::cast_vec;
+use parking_lot::RwLock;
 
 use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, Result};
 
@@ -126,8 +126,8 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Arc::as_ptr(&self.inner) as i32
     }
 
-    async fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
-        match &mut *self.inner.elements.write().await {
+    fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
+        match &mut *self.inner.elements.write() {
             ArrayElements::Primitive(x) => {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);
                 let values_raw = self.convert_values_to_primitive(values);
@@ -142,8 +142,8 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(())
     }
 
-    async fn load(&self, offset: usize, length: usize) -> Result<Vec<JavaValue>> {
-        Ok(match &*self.inner.elements.read().await {
+    fn load(&self, offset: usize, length: usize) -> Result<Vec<JavaValue>> {
+        Ok(match &*self.inner.elements.read() {
             ArrayElements::Primitive(x) => {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);
                 let values_raw = &x[offset * element_size..offset * element_size + length * element_size];
@@ -154,8 +154,8 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         })
     }
 
-    async fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
-        if let ArrayElements::Primitive(x) = &mut *self.inner.elements.write().await {
+    fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
+        if let ArrayElements::Primitive(x) = &mut *self.inner.elements.write() {
             x[offset..offset + values.len()].copy_from_slice(&cast_vec(values.into_vec()));
         } else {
             panic!("Expected primitive array");
@@ -164,8 +164,8 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(())
     }
 
-    async fn load_bytes(&self, offset: usize, length: usize) -> Result<Vec<i8>> {
-        if let ArrayElements::Primitive(x) = &*self.inner.elements.read().await {
+    fn load_bytes(&self, offset: usize, length: usize) -> Result<Vec<i8>> {
+        if let ArrayElements::Primitive(x) = &*self.inner.elements.read() {
             Ok(cast_vec(x[offset..offset + length].to_vec()))
         } else {
             panic!("Expected primitive array");

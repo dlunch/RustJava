@@ -2,9 +2,9 @@ use core::cmp::min;
 
 use alloc::{sync::Arc, vec};
 
-use async_lock::Mutex;
 use bytemuck::{cast_slice, cast_vec};
 use encoding_rs::{Decoder, EUC_KR, UTF_8};
+use parking_lot::Mutex;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
@@ -115,7 +115,7 @@ impl InputStreamReader {
             let decoder: Arc<Mutex<Decoder>> = jvm.get_rust_object_field(&this, "decoder").await?;
 
             let mut decoded = vec![0; BUF_SIZE * 3];
-            let (_, read, wrote, _) = decoder.lock().await.decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
+            let (_, read, wrote, _) = decoder.lock().decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
 
             // advance readBuf
             let _: () = jvm

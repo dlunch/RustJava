@@ -64,7 +64,7 @@ impl Class {
         let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
         let other_rust_class = JavaLangClass::to_rust_class(jvm, &other).await?;
 
-        Ok(jvm.is_inherited_from(&*other_rust_class, &rust_class.name()).await)
+        Ok(jvm.is_inherited_from(&*other_rust_class, &rust_class.name()))
     }
 
     async fn get_resource_as_stream(
@@ -99,7 +99,7 @@ mod test {
     async fn test_class() -> Result<()> {
         let jvm = test_jvm().await?;
 
-        let java_class = jvm.resolve_class("java/lang/String").await?.java_class(&jvm).await?;
+        let java_class = jvm.resolve_class("java/lang/String").await?.java_class()?;
 
         let rust_class = JavaLangClass::to_rust_class(&jvm, &java_class).await?;
         assert_eq!(rust_class.name(), "java/lang/String");
@@ -115,15 +115,15 @@ mod test {
     async fn test_is_assignable_from() -> Result<()> {
         let jvm = test_jvm().await?;
 
-        let string_class = jvm.resolve_class("java/lang/String").await?.java_class(&jvm).await?;
-        let object_class = jvm.resolve_class("java/lang/Object").await?.java_class(&jvm).await?;
+        let string_class = jvm.resolve_class("java/lang/String").await?.java_class()?;
+        let object_class = jvm.resolve_class("java/lang/Object").await?.java_class()?;
 
         let result: bool = jvm
             .invoke_virtual(&object_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_class.clone(),))
             .await?;
         assert!(result);
 
-        let thread_class = jvm.resolve_class("java/lang/Thread").await?.java_class(&jvm).await?;
+        let thread_class = jvm.resolve_class("java/lang/Thread").await?.java_class()?;
 
         let result: bool = jvm
             .invoke_virtual(&string_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (thread_class,))

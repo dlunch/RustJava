@@ -36,11 +36,11 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         None
     }
 
-    async fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {
+    fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {
         panic!("Array classes do not have static fields")
     }
 
-    async fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
+    fn put_static_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
         panic!("Array classes do not have static fields")
     }
 

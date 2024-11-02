@@ -50,7 +50,7 @@ impl Object {
         let this: Box<dyn ClassInstance> = this.into();
         let class_name = this.class_definition().name();
 
-        let class = jvm.resolve_class(&class_name).await?.java_class(jvm).await?;
+        let class = jvm.resolve_class(&class_name).await?.java_class()?;
 
         Ok(class.into())
     }
@@ -218,13 +218,13 @@ mod test {
         #[async_trait::async_trait]
         impl SpawnCallback for Notifier {
             async fn call(&self) -> Result<()> {
-                self.jvm.attach_thread().await?;
+                self.jvm.attach_thread()?;
 
                 self.runtime.sleep(Duration::from_millis(100)).await;
                 self.notified.store(true, Ordering::Relaxed);
                 let _: () = self.jvm.invoke_virtual(&self.target, "notify", "()V", ()).await?;
 
-                self.jvm.detach_thread().await?;
+                self.jvm.detach_thread()?;
 
                 Ok(())
             }
@@ -265,13 +265,13 @@ mod test {
         #[async_trait::async_trait]
         impl SpawnCallback for Notifier {
             async fn call(&self) -> Result<()> {
-                self.jvm.attach_thread().await?;
+                self.jvm.attach_thread()?;
 
                 self.runtime.sleep(Duration::from_millis(1000)).await;
                 self.notified.store(true, Ordering::Relaxed);
                 let _: () = self.jvm.invoke_virtual(&self.target, "notify", "()V", ()).await?;
 
-                self.jvm.detach_thread().await?;
+                self.jvm.detach_thread()?;
 
                 Ok(())
             }

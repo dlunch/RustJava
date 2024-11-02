@@ -93,11 +93,11 @@ impl Thread {
             async fn call(&self) -> Result<()> {
                 tracing::trace!("Thread start");
 
-                self.jvm.attach_thread().await?;
+                self.jvm.attach_thread()?;
 
                 let _: () = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await?;
 
-                self.jvm.detach_thread().await?;
+                self.jvm.detach_thread()?;
 
                 self.join_event.notify(usize::MAX);
 
