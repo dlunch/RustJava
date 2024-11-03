@@ -84,7 +84,8 @@ impl FileOutputStream {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, fd).await?;
 
-        let buf = jvm.load_byte_array(&buffer, offset as _, length as _).await?;
+        let mut buf = vec![0; length as _];
+        jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut buf).unwrap();
 
         file.write(cast_slice(&buf)).await.unwrap();
 

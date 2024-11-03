@@ -20,9 +20,9 @@ impl JavaIoInputStream {
                 break;
             }
 
-            let bytes = jvm.load_byte_array(&java_buffer, 0, bytes_read as _).await?;
-
-            buffer.extend_from_slice(&bytes);
+            buffer.resize(buffer.len() + bytes_read as usize, 0);
+            let buffer_offset = buffer.len() - bytes_read as usize;
+            jvm.array_raw_buffer(&java_buffer).await?.read(0, &mut buffer[buffer_offset..])?;
         }
 
         jvm.destroy(java_buffer)?; // TODO: this should be done automatically

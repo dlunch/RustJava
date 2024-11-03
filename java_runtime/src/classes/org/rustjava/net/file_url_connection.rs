@@ -58,7 +58,7 @@ impl FileURLConnection {
 
 #[cfg(test)]
 mod test {
-    use bytemuck::cast_vec;
+    use alloc::vec;
 
     use jvm::{runtime::JavaLangString, Result};
 
@@ -77,9 +77,10 @@ mod test {
         let buf = jvm.instantiate_array("B", 17).await?;
         let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
 
-        let data = jvm.load_byte_array(&buf, 0, len as _).await?;
+        let mut data = vec![0; len as usize];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut data).unwrap();
 
-        assert_eq!(cast_vec::<i8, u8>(data), b"test file content");
+        assert_eq!(data, b"test file content");
 
         Ok(())
     }

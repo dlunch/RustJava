@@ -10,8 +10,8 @@ pub trait ArrayClassInstance: ClassInstance {
     fn hash_code(&self) -> i32;
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()>;
     fn load(&self, offset: usize, count: usize) -> Result<Vec<JavaValue>>;
-    fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()>;
-    fn load_bytes(&self, offset: usize, count: usize) -> Result<Vec<i8>>;
+    fn raw_buffer(&self) -> Result<Box<dyn ArrayRawBuffer>>;
+    fn raw_buffer_mut(&mut self) -> Result<Box<dyn ArrayRawBufferMut>>;
     fn length(&self) -> usize;
 }
 
@@ -48,4 +48,12 @@ impl<T: ArrayClassInstance> ClassInstance for T {
     fn put_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
         panic!("Array classes do not have fields")
     }
+}
+
+pub trait ArrayRawBuffer {
+    fn read(&self, offset: usize, buffer: &mut [u8]) -> Result<()>;
+}
+
+pub trait ArrayRawBufferMut: ArrayRawBuffer {
+    fn write(&mut self, offset: usize, buffer: &[u8]) -> Result<()>;
 }

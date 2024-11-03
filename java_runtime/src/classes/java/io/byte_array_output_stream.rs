@@ -1,4 +1,4 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
@@ -57,7 +57,7 @@ impl ByteArrayOutputStream {
         Self::ensure_capacity(jvm, &mut this, (pos + 1) as _).await?;
 
         let mut buf = jvm.get_field(&this, "buf", "[B").await?;
-        jvm.store_byte_array(&mut buf, pos as _, vec![b as i8]).await?;
+        jvm.store_array(&mut buf, pos as _, vec![b as i8]).await?;
 
         jvm.put_field(&mut this, "pos", "I", pos + 1).await?;
 
@@ -67,14 +67,20 @@ impl ByteArrayOutputStream {
     async fn to_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
         tracing::debug!("java.io.ByteArrayOutputStream::to_byte_array({:?})", &this);
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
+        let buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
-        let bytes = jvm.load_byte_array(&buf, 0, pos as _).await?;
-        let mut array = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_byte_array(&mut array, 0, bytes).await?;
+        let dest = jvm.instantiate_array("B", pos as _).await?;
+        let _: () = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                (buf.clone(), 0, dest.clone(), 0, pos),
+            )
+            .await?;
 
-        Ok(array.into())
+        Ok(dest.into())
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, capacity: usize) -> Result<()> {
@@ -82,13 +88,20 @@ impl ByteArrayOutputStream {
         let current_capacity = jvm.array_length(&old_buf).await?;
 
         if current_capacity < capacity {
-            let old_values: Vec<i8> = jvm.load_byte_array(&old_buf, 0, current_capacity).await?;
             let new_capacity = capacity * 2;
+            let new_buf = jvm.instantiate_array("B", new_capacity).await?;
 
-            let mut new_buf = jvm.instantiate_array("B", new_capacity).await?;
+            let _: () = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "arraycopy",
+                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                    (old_buf.clone(), 0, new_buf.clone(), 0, current_capacity as i32),
+                )
+                .await?;
+
             jvm.put_field(this, "buf", "[B", new_buf.clone()).await?;
-            jvm.store_byte_array(&mut new_buf, 0, old_values).await?;
-            jvm.destroy(old_buf)?;
+            jvm.destroy(old_buf)?; // temporary before GC
         }
 
         Ok(())
@@ -97,6 +110,7 @@ impl ByteArrayOutputStream {
 
 #[cfg(test)]
 mod test {
+    use alloc::vec;
 
     use bytemuck::cast_vec;
 
@@ -117,7 +131,9 @@ mod test {
 
         let buf = jvm.invoke_virtual(&stream, "toByteArray", "()[B", ()).await?;
 
-        let bytes = jvm.load_byte_array(&buf, 0, 5).await?;
+        let mut bytes = vec![0; 5];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut bytes)?;
+
         assert_eq!(bytes, cast_vec(b"Hello".to_vec()));
 
         Ok(())

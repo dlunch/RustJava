@@ -93,11 +93,11 @@ impl ByteArrayInputStream {
             return Ok(-1);
         }
 
-        let result = jvm.load_byte_array(&buf, pos as _, 1).await?[0] as u8;
+        let result: i8 = jvm.load_array(&buf, pos as _, 1).await?[0];
 
         jvm.put_field(&mut this, "pos", "I", pos + 1).await?;
 
-        Ok(result as _)
+        Ok(result as u8 as _)
     }
 
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> Result<()> {

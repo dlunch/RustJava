@@ -117,7 +117,7 @@ impl RandomAccessFile {
         let mut rust_buf = vec![0; length as usize];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
 
-        jvm.store_byte_array(&mut buf, offset as _, cast_vec(rust_buf)).await?;
+        jvm.array_raw_buffer_mut(&mut buf).await?.write(offset as _, &rust_buf)?;
 
         Ok(read as i32)
     }
@@ -150,7 +150,8 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
-        let rust_buf = jvm.load_byte_array(&buf, offset as _, length as _).await?;
+        let mut rust_buf = vec![0; length as usize];
+        jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf).unwrap();
         rust_file.write(&cast_vec(rust_buf)).await.unwrap();
 
         Ok(())
@@ -231,8 +232,9 @@ mod test {
         let read: i32 = jvm.invoke_virtual(&raf, "read", "([B)I", (buf.clone(),)).await?;
         assert_eq!(read, 11);
 
-        let buf = jvm.load_byte_array(&buf, 0, 11).await?;
-        assert_eq!(buf, vec![104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
+        let mut rust_buf = vec![0; 11];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut rust_buf).unwrap();
+        assert_eq!(rust_buf, vec![104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
 
         Ok(())
     }

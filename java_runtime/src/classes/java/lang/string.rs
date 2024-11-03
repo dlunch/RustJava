@@ -250,7 +250,7 @@ impl String {
         let bytes = cast_vec(Self::encode_str(&charset, &string));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_byte_array(&mut byte_array, 0, bytes).await?;
+        jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
 
         Ok(byte_array.into())
     }

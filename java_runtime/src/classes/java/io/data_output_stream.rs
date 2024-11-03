@@ -53,7 +53,7 @@ impl DataOutputStream {
 
         let bytes = i.to_be_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
-        jvm.store_byte_array(&mut byte_array, 0, cast_vec(bytes.to_vec())).await?;
+        jvm.store_array(&mut byte_array, 0, cast_vec::<u8, i8>(bytes.to_vec())).await?;
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (byte_array,)).await?;
@@ -66,7 +66,7 @@ impl DataOutputStream {
 
         let bytes = l.to_be_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
-        jvm.store_byte_array(&mut byte_array, 0, cast_vec(bytes.to_vec())).await?;
+        jvm.store_array(&mut byte_array, 0, cast_vec::<u8, i8>(bytes.to_vec())).await?;
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (byte_array,)).await?;
@@ -99,7 +99,6 @@ impl DataOutputStream {
 mod test {
     use alloc::vec;
 
-    use bytemuck::cast_vec;
     use jvm::{runtime::JavaLangString, Result};
 
     use crate::test::test_jvm;
@@ -122,10 +121,13 @@ mod test {
         let _: () = jvm.invoke_virtual(&data_output_stream, "writeLong", "(J)V", (123412341324i64,)).await?;
 
         let bytes = jvm.invoke_virtual(&stream, "toByteArray", "()[B", ()).await?;
-        let bytes = jvm.load_byte_array(&bytes, 0, jvm.array_length(&bytes).await? as _).await?;
+
+        let length = jvm.array_length(&bytes).await?;
+        let mut buf = vec![0; length];
+        jvm.array_raw_buffer(&bytes).await?.read(0, &mut buf)?;
 
         assert_eq!(
-            cast_vec::<i8, u8>(bytes),
+            buf,
             vec![
                 1, b'h', b'e', b'l', b'l', b'o', b',', b' ', b'w', b'o', b'r', b'l', b'd', 0, 0xbc, 0x4f, 0xf2, 0, 0, 0, 0x1c, 0xbb, 0xf2, 0xe2, 0x4c
             ]

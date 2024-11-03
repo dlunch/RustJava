@@ -1,10 +1,9 @@
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use core::fmt::{self, Debug, Formatter};
 
-use bytemuck::cast_vec;
 use parking_lot::RwLock;
 
-use jvm::{ArrayClassDefinition, ArrayClassInstance, ClassDefinition, ClassInstance, JavaType, JavaValue, Result};
+use jvm::{ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut, ClassDefinition, ClassInstance, JavaType, JavaValue, Result};
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
@@ -154,22 +153,12 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         })
     }
 
-    fn store_bytes(&mut self, offset: usize, values: Box<[i8]>) -> Result<()> {
-        if let ArrayElements::Primitive(x) = &mut *self.inner.elements.write() {
-            x[offset..offset + values.len()].copy_from_slice(&cast_vec(values.into_vec()));
-        } else {
-            panic!("Expected primitive array");
-        }
-
-        Ok(())
+    fn raw_buffer(&self) -> Result<Box<dyn ArrayRawBuffer>> {
+        Ok(Box::new(ArrayRawBufferImpl { inner: self.inner.clone() }))
     }
 
-    fn load_bytes(&self, offset: usize, length: usize) -> Result<Vec<i8>> {
-        if let ArrayElements::Primitive(x) = &*self.inner.elements.read() {
-            Ok(cast_vec(x[offset..offset + length].to_vec()))
-        } else {
-            panic!("Expected primitive array");
-        }
+    fn raw_buffer_mut(&mut self) -> Result<Box<dyn ArrayRawBufferMut>> {
+        Ok(Box::new(ArrayRawBufferImpl { inner: self.inner.clone() }))
     }
 
     fn length(&self) -> usize {
@@ -180,5 +169,41 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
 impl Debug for ArrayClassInstanceImpl {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "ArrayClassInstance({})", self.inner.class.name())
+    }
+}
+
+struct ArrayRawBufferImpl {
+    inner: Arc<ArrayClassInstanceInner>,
+}
+
+impl ArrayRawBuffer for ArrayRawBufferImpl {
+    fn read(&self, offset: usize, buffer: &mut [u8]) -> Result<()> {
+        match &*self.inner.elements.read() {
+            ArrayElements::Primitive(x) => {
+                let element_size = ArrayClassInstanceImpl::primitive_element_size(&self.inner.element_type);
+                let values_raw = &x[offset * element_size..offset * element_size + buffer.len() * element_size];
+
+                buffer.copy_from_slice(values_raw);
+            }
+            ArrayElements::NonPrimitive(_) => {
+                panic!("Expected primitive array");
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl ArrayRawBufferMut for ArrayRawBufferImpl {
+    fn write(&mut self, offset: usize, buffer: &[u8]) -> Result<()> {
+        if let ArrayElements::Primitive(x) = &mut *self.inner.elements.write() {
+            let element_size = ArrayClassInstanceImpl::primitive_element_size(&self.inner.element_type);
+
+            x[offset * element_size..offset * element_size + buffer.len() * element_size].copy_from_slice(buffer);
+        } else {
+            panic!("Expected primitive array");
+        }
+
+        Ok(())
     }
 }

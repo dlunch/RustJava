@@ -1,7 +1,5 @@
 use alloc::{format, vec, vec::Vec};
 
-use bytemuck::cast_vec;
-
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{
     runtime::{JavaIoInputStream, JavaLangString},
@@ -101,7 +99,7 @@ impl URLClassLoader {
 
         let length = bytes.len() as i32;
         let mut bytes_java = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_byte_array(&mut bytes_java, 0, cast_vec(bytes)).await?;
+        jvm.array_raw_buffer_mut(&mut bytes_java).await?.write(0, &bytes)?;
 
         let class = jvm
             .invoke_virtual(
@@ -184,8 +182,6 @@ impl URLClassLoader {
 mod test {
     use alloc::vec;
 
-    use bytemuck::cast_vec;
-
     use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
     use crate::{classes::java::net::URL, test::test_jvm_filesystem};
@@ -215,9 +211,10 @@ mod test {
         let buf = jvm.instantiate_array("B", 17).await?;
         let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
 
-        let data = jvm.load_byte_array(&buf, 0, len as _).await?;
+        let mut data = vec![0; len as _];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
 
-        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n");
+        assert_eq!(data, b"test content\n");
 
         Ok(())
     }
@@ -250,9 +247,10 @@ mod test {
         let buf = jvm.instantiate_array("B", 17).await?;
         let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
 
-        let data = jvm.load_byte_array(&buf, 0, len as _).await?;
+        let mut data = vec![0; len as _];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
 
-        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n");
+        assert_eq!(data, b"test content\n");
 
         Ok(())
     }
@@ -281,9 +279,10 @@ mod test {
         let buf = jvm.instantiate_array("B", 17).await?;
         let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
 
-        let data = jvm.load_byte_array(&buf, 0, len as _).await?;
+        let mut data = vec![0; len as _];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
 
-        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n");
+        assert_eq!(data, b"test content\n");
 
         Ok(())
     }

@@ -5,7 +5,6 @@ use core::iter;
 extern crate std;
 use std::io::{Cursor, Read};
 
-use bytemuck::cast_vec;
 use parking_lot::Mutex;
 use zip::ZipArchive;
 
@@ -63,8 +62,9 @@ impl ZipFile {
         let buf = jvm.instantiate_array("B", length as _).await?;
         let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
 
-        let buf = jvm.load_byte_array(&buf, 0, jvm.array_length(&buf).await?).await?;
-        let zip = Arc::new(Mutex::new(ZipArchive::new(Cursor::new(cast_vec(buf))).unwrap()));
+        let mut rust_buf = vec![0; length as _];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut rust_buf).unwrap();
+        let zip = Arc::new(Mutex::new(ZipArchive::new(Cursor::new(rust_buf)).unwrap()));
         jvm.put_rust_object_field(&mut this, "zip", zip).await?;
 
         Ok(())
@@ -141,7 +141,7 @@ impl ZipFile {
 
         // TODO do we have to use InflaterInputStream?
         let mut java_buf = jvm.instantiate_array("B", data.len() as _).await?;
-        jvm.store_byte_array(&mut java_buf, 0, cast_vec(data)).await?;
+        jvm.array_raw_buffer_mut(&mut java_buf).await?.write(0, &data).unwrap();
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (java_buf,)).await?;
 
@@ -151,7 +151,7 @@ impl ZipFile {
 
 #[cfg(test)]
 mod test {
-    use bytemuck::cast_vec;
+    use alloc::vec;
 
     use jvm::{runtime::JavaLangString, Result};
 
@@ -181,8 +181,9 @@ mod test {
         let buf = jvm.instantiate_array("B", size as _).await?;
         let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
 
-        let data = jvm.load_byte_array(&buf, 0, size as _).await?;
-        assert_eq!(cast_vec::<i8, u8>(data), b"test content\n".to_vec());
+        let mut data = vec![0; size as _];
+        jvm.array_raw_buffer(&buf).await?.read(0, &mut data).unwrap();
+        assert_eq!(data, b"test content\n".to_vec());
 
         Ok(())
     }

@@ -30,7 +30,7 @@ pub trait JvmCallback: Sync + Send {
 
 pub use self::{
     array_class_definition::ArrayClassDefinition,
-    array_class_instance::ArrayClassInstance,
+    array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::{Array, ClassInstance, ClassInstanceRef},
     class_loader::BootstrapClassLoader,

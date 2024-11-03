@@ -110,7 +110,8 @@ impl InputStreamReader {
             }
 
             let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
-            let read_buf_data = jvm.load_byte_array(&read_buf, 0, read_buf_size as _).await?;
+            let mut read_buf_data = vec![0; read_buf_size as _];
+            jvm.array_raw_buffer(&read_buf).await?.read(0, &mut read_buf_data).unwrap();
 
             let decoder: Arc<Mutex<Decoder>> = jvm.get_rust_object_field(&this, "decoder").await?;
 
@@ -182,8 +183,6 @@ impl InputStreamReader {
 mod test {
     use alloc::{vec, vec::Vec};
 
-    use bytemuck::cast_vec;
-
     use jvm::{JavaChar, Result};
 
     use crate::test::test_jvm;
@@ -193,7 +192,7 @@ mod test {
         let jvm = test_jvm().await?;
 
         let mut buffer = jvm.instantiate_array("B", 11).await?;
-        jvm.store_byte_array(&mut buffer, 0, cast_vec(b"Hello\nWorld".to_vec())).await?;
+        jvm.array_raw_buffer_mut(&mut buffer).await?.write(0, b"Hello\nWorld")?;
 
         let is = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (buffer,)).await?;
         let isr = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (is,)).await?;

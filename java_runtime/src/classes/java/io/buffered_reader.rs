@@ -103,8 +103,6 @@ impl BufferedReader {
 
 #[cfg(test)]
 mod test {
-    use bytemuck::cast_vec;
-
     use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
 
     use crate::{classes::java::lang::String, test::test_jvm};
@@ -114,7 +112,7 @@ mod test {
         let jvm = test_jvm().await?;
 
         let mut buffer = jvm.instantiate_array("B", 11).await?;
-        jvm.store_byte_array(&mut buffer, 0, cast_vec(b"Hello\nWorld".to_vec())).await?;
+        jvm.array_raw_buffer_mut(&mut buffer).await?.write(0, b"Hello\nWorld")?;
 
         let is = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (buffer,)).await?;
         let isr = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (is,)).await?;

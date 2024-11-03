@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use bytemuck::cast_vec;
+
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
 
@@ -58,7 +59,7 @@ impl FileInputStream {
             return Ok(-1);
         }
 
-        jvm.store_byte_array(&mut buf, 0, cast_vec(rust_buf)).await?;
+        jvm.store_array(&mut buf, 0, cast_vec::<u8, i8>(rust_buf)).await?;
 
         Ok(read as _)
     }

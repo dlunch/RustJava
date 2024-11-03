@@ -92,8 +92,6 @@ impl Manifest {
 
 #[cfg(test)]
 mod test {
-    use bytemuck::cast_vec;
-
     use jvm::{runtime::JavaLangString, Result};
 
     use crate::test::test_jvm;
@@ -104,7 +102,7 @@ mod test {
 
         let data = b"Main-Class: test";
         let mut bytes = jvm.instantiate_array("B", data.len() as _).await?;
-        jvm.store_byte_array(&mut bytes, 0, cast_vec(data.to_vec())).await?;
+        jvm.array_raw_buffer_mut(&mut bytes).await?.write(0, data).unwrap();
 
         let byte_array_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?;
         let manifest = jvm

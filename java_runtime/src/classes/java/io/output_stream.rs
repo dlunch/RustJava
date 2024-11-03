@@ -52,7 +52,8 @@ impl OutputStream {
     ) -> Result<()> {
         tracing::debug!("java.io.OutputStream::write({:?}, {:?}, {:?}, {:?})", &this, &buffer, &offset, &length);
 
-        let bytes = jvm.load_byte_array(&buffer, offset as _, length as _).await?;
+        let mut bytes = vec![0; length as usize];
+        jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut bytes)?;
         for byte in bytes {
             let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (byte as i32,)).await?;
         }

@@ -1,7 +1,5 @@
 use alloc::{string::String as RustString, vec};
 
-use bytemuck::cast_vec;
-
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
@@ -218,10 +216,11 @@ impl DataInputStream {
         let java_array = jvm.instantiate_array("B", length as _).await?;
         let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (java_array.clone(), 0, length)).await?;
 
-        let bytes = jvm.load_byte_array(&java_array, 0, length as _).await?;
+        let mut buf = vec![0; length as _];
+        jvm.array_raw_buffer(&java_array).await?.read(0, &mut buf)?;
 
         // TODO handle modified utf-8
-        let string = RustString::from_utf8(cast_vec(bytes)).unwrap();
+        let string = RustString::from_utf8(buf).unwrap();
 
         Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
     }
@@ -257,7 +256,7 @@ mod test {
         let data_len = data.len();
 
         let mut data_array = jvm.instantiate_array("B", data_len).await?;
-        jvm.store_byte_array(&mut data_array, 0, data).await?;
+        jvm.array_raw_buffer_mut(&mut data_array).await?.write(0, &data)?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data_array,)).await?;
         let data_input_stream = jvm
@@ -299,7 +298,7 @@ mod test {
         let data_len = data.len();
 
         let mut data_array = jvm.instantiate_array("B", data_len).await?;
-        jvm.store_byte_array(&mut data_array, 0, data).await?;
+        jvm.array_raw_buffer_mut(&mut data_array).await?.write(0, &data)?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data_array,)).await?;
         let data_input_stream = jvm

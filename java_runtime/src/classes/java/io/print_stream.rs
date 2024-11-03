@@ -1,7 +1,5 @@
 use alloc::{format, string::ToString, vec};
 
-use bytemuck::cast_vec;
-
 use java_class_proto::JavaMethodProto;
 use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Jvm, Result};
 
@@ -62,7 +60,7 @@ impl PrintStream {
         let bytes = result.into_bytes();
 
         let mut string_bytes = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_byte_array(&mut string_bytes, 0, cast_vec(bytes)).await?;
+        jvm.array_raw_buffer_mut(&mut string_bytes).await?.write(0, &bytes)?;
 
         let _: () = jvm.invoke_virtual(&this, "write", "([B)V", (string_bytes,)).await?;
 
@@ -81,7 +79,7 @@ impl PrintStream {
         let bytes = result.into_bytes();
 
         let mut string_bytes = jvm.instantiate_array("B", bytes.len()).await?;
-        jvm.store_byte_array(&mut string_bytes, 0, cast_vec(bytes)).await?;
+        jvm.array_raw_buffer_mut(&mut string_bytes).await?.write(0, &bytes)?;
 
         let _: () = jvm.invoke_virtual(&this, "write", "([B)V", (string_bytes,)).await?;
 

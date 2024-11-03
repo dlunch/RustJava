@@ -1,7 +1,5 @@
 use alloc::{format, vec, vec::Vec};
 
-use bytemuck::cast_slice;
-
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
@@ -290,9 +288,10 @@ impl ClassLoader {
             length
         );
 
-        let data: Vec<i8> = jvm.load_byte_array(&bytes, 0, length as _).await?;
+        let mut data = vec![0; length as usize];
+        jvm.array_raw_buffer(&bytes).await?.read(offset as _, &mut data)?;
 
-        let class = runtime.define_class(jvm, cast_slice(&data)).await?;
+        let class = runtime.define_class(jvm, &data).await?;
         let java_class = jvm.register_class(class, Some(this.into())).await?;
 
         Ok(java_class.into())

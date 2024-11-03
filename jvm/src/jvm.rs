@@ -15,7 +15,7 @@ use parking_lot::RwLock;
 use java_constants::MethodAccessFlags;
 
 use crate::{
-    array_class_instance::ArrayClassInstance,
+    array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
     class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, JavaClassLoaderWrapper},
@@ -375,47 +375,21 @@ impl Jvm {
         }
     }
 
-    pub async fn store_byte_array(&self, array: &mut Box<dyn ClassInstance>, offset: usize, values: Vec<i8>) -> Result<()> {
-        tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
-
-        let array_size = self.array_length(array).await?;
-        if offset + values.len() > array_size {
-            return Err(self
-                .exception(
-                    "java/lang/ArrayIndexOutOfBoundsException",
-                    &format!("{} > {}", offset + values.len(), array_size),
-                )
-                .await);
-        }
-
-        let array = array.as_array_instance_mut();
+    pub async fn array_raw_buffer(&self, array: &Box<dyn ClassInstance>) -> Result<Box<dyn ArrayRawBuffer>> {
+        let array = array.as_array_instance();
 
         if let Some(array) = array {
-            array.store_bytes(offset, values.into_boxed_slice())
+            array.raw_buffer()
         } else {
             Err(self.exception("java/lang/IllegalArgumentException", "Not an array").await)
         }
     }
 
-    pub async fn load_byte_array(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<i8>> {
-        tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
-
-        let array_size = self.array_length(array).await?;
-        if offset + count > array_size {
-            return Err(self
-                .exception(
-                    "java/lang/ArrayIndexOutOfBoundsException",
-                    &format!("{} > {}", offset + count, array_size),
-                )
-                .await);
-        }
-
-        let array = array.as_array_instance();
+    pub async fn array_raw_buffer_mut(&self, array: &mut Box<dyn ClassInstance>) -> Result<Box<dyn ArrayRawBufferMut>> {
+        let array = array.as_array_instance_mut();
 
         if let Some(array) = array {
-            let values = array.load_bytes(offset, count)?;
-
-            Ok(values)
+            array.raw_buffer_mut()
         } else {
             Err(self.exception("java/lang/IllegalArgumentException", "Not an array").await)
         }
@@ -621,9 +595,10 @@ impl Jvm {
         T: Clone,
     {
         let raw_storage = self.get_field(instance, name, "[B").await?;
-        let raw = self.load_byte_array(&raw_storage, 0, self.array_length(&raw_storage).await?).await?;
+        let length = self.array_length(&raw_storage).await?;
+        let buf: Vec<i8> = self.load_array(&raw_storage, 0, length).await?;
 
-        let rust_raw = usize::from_le_bytes(cast_slice(&raw).try_into().unwrap());
+        let rust_raw = usize::from_le_bytes(cast_slice(&buf).try_into().unwrap());
 
         let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
         let result = (*rust).clone();
@@ -634,10 +609,11 @@ impl Jvm {
     }
 
     pub async fn put_rust_object_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, value: T) -> Result<()> {
-        let rust_class_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
+        let rust_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
 
-        let mut raw_storage = self.instantiate_array("B", size_of_val(&rust_class_raw)).await?;
-        self.store_byte_array(&mut raw_storage, 0, cast_slice(&rust_class_raw.to_le_bytes()).to_vec())
+        let length = size_of_val(&rust_raw);
+        let mut raw_storage = self.instantiate_array("B", length).await?;
+        self.store_array(&mut raw_storage, 0, cast_slice::<u8, i8>(&rust_raw.to_le_bytes()).to_vec())
             .await?;
 
         self.put_field(instance, name, "[B", raw_storage).await?;
