@@ -50,7 +50,7 @@ impl<T: ArrayClassInstance> ClassInstance for T {
     }
 }
 
-pub trait ArrayRawBuffer {
+pub trait ArrayRawBuffer: Send {
     fn read(&self, offset: usize, buffer: &mut [u8]) -> Result<()>;
 }
 
