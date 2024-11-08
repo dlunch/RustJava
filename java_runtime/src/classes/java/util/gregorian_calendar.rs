@@ -65,7 +65,7 @@ impl GregorianCalendar {
         let timestamp = tz
             .with_ymd_and_hms(year, (month + 1) as _, date as _, hour_of_day as _, minute as _, second as _)
             .unwrap()
-            .timestamp_millis() as i64;
+            .timestamp_millis();
 
         let calculated_time = timestamp + millisecond as i64;
 
