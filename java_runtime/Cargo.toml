@@ -12,6 +12,7 @@ parking_lot = { workspace = true }
 tracing = { workspace = true }
 
 async-lock = { version = "^3.4", default-features = false }
+chrono = { version = "^0.4", default-features = false }
 encoding_rs = { version = "^0.8", features = ["alloc"], default-features = false }
 event-listener = { version = "^5.3", default-features = false }
 hashbrown = { version = "^0.14", features = ["ahash"], default-features = false }
