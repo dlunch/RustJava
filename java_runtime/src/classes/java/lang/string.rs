@@ -61,6 +61,8 @@ impl String {
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;)I", Self::index_of_string, Default::default()),
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_string_from, Default::default()),
                 JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
+                JavaMethodProto::new("startsWith", "(Ljava/lang/String;)Z", Self::starts_with, Default::default()),
+                JavaMethodProto::new("startsWith", "(Ljava/lang/String;I)Z", Self::starts_with_offset, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
         }
@@ -395,6 +397,31 @@ impl String {
         Ok(JavaLangString::from_rust_string(jvm, &upper).await?.into())
     }
 
+    async fn starts_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, prefix: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.lang.String::startsWith({:?}, {:?})", &this, &prefix);
+
+        jvm.invoke_virtual(&this, "startsWith", "(Ljava/lang/String;I)Z", (prefix, 0)).await
+    }
+
+    async fn starts_with_offset(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        prefix: ClassInstanceRef<Self>,
+        offset: i32,
+    ) -> Result<bool> {
+        tracing::debug!("java.lang.String::startsWith({:?}, {:?}, {})", &this, &prefix, offset);
+
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone())
+            .await?
+            .chars()
+            .skip(offset as usize)
+            .collect::<RustString>();
+        let prefix_string = JavaLangString::to_rust_string(jvm, &prefix.clone()).await?;
+
+        Ok(this_string.starts_with(&prefix_string))
+    }
+
     fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
         match charset {
             "UTF-8" => str::from_utf8(bytes).unwrap().to_string(),
@@ -510,6 +537,39 @@ mod test {
 
         let index: i32 = jvm.invoke_virtual(&string, "indexOf", "(II)I", (52, 9)).await?;
         assert_eq!(index, -1);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_starts_with() -> Result<()> {
+        let jvm = test_jvm().await?;
+
+        let string = JavaLangString::from_rust_string(&jvm, "123 테스트 456").await?;
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "123").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;)Z", (pattern,)).await?;
+        assert!(result);
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "456").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;)Z", (pattern,)).await?;
+        assert!(!result);
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "123 테스트").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;)Z", (pattern,)).await?;
+        assert!(result);
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "테스트").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;)Z", (pattern,)).await?;
+        assert!(!result);
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "테스트").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;I)Z", (pattern, 4)).await?;
+        assert!(result);
+
+        let pattern = JavaLangString::from_rust_string(&jvm, "테스트").await?;
+        let result: bool = jvm.invoke_virtual(&string, "startsWith", "(Ljava/lang/String;I)Z", (pattern, 5)).await?;
+        assert!(!result);
 
         Ok(())
     }
