@@ -42,6 +42,7 @@ impl StringBuffer {
                 JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, Default::default()),
                 JavaMethodProto::new("append", "([CII)Ljava/lang/StringBuffer;", Self::append_char_array, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new("setLength", "(I)V", Self::set_length, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("value", "[C", Default::default()),
@@ -211,6 +212,14 @@ impl StringBuffer {
         let mut java_value_array = jvm.get_field(this, "value", "[C").await?;
         jvm.store_array(&mut java_value_array, current_count as _, value_to_add).await?;
         jvm.put_field(this, "count", "I", current_count + count_to_add).await?;
+
+        Ok(())
+    }
+
+    async fn set_length(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, length: i32) -> Result<()> {
+        tracing::debug!("java.lang.StringBuffer::setLength({:?}, {:?})", &this, length);
+
+        jvm.put_field(&mut this, "count", "I", length).await?;
 
         Ok(())
     }
