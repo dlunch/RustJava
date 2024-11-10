@@ -38,6 +38,7 @@ impl Vector {
                 JavaMethodProto::new("removeElementAt", "(I)V", Self::remove_element_at, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;I)I", Self::last_index_of_index, Default::default()),
+                JavaMethodProto::new("firstElement", "()Ljava/lang/Object;", Self::first_element, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
         }
@@ -224,6 +225,20 @@ impl Vector {
         }
 
         Ok(-1)
+    }
+
+    async fn first_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        tracing::debug!("java.util.Vector::firstElement({:?})", &this);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+
+        if rust_vector.lock().await.len() == 0 {
+            return Ok(None.into());
+        }
+
+        let element = rust_vector.lock().await.first().cloned().unwrap();
+
+        Ok(element)
     }
 
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
