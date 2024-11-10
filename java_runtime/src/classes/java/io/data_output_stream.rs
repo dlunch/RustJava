@@ -24,6 +24,7 @@ impl DataOutputStream {
                 JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
                 JavaMethodProto::new("writeChars", "(Ljava/lang/String;)V", Self::write_chars, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", Default::default())],
         }
@@ -90,6 +91,15 @@ impl DataOutputStream {
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "close", "()V", []).await?;
+
+        Ok(())
+    }
+
+    async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.DataInputStream::flush({:?})", &this);
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let _: () = jvm.invoke_virtual(&out, "flush", "()V", []).await?;
 
         Ok(())
     }

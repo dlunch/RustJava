@@ -19,6 +19,7 @@ impl OutputStream {
                 JavaMethodProto::new("write", "([B)V", Self::write_bytes, Default::default()),
                 JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
                 JavaMethodProto::new_abstract("write", "(I)V", Default::default()),
+                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
             ],
             fields: vec![],
         }
@@ -57,6 +58,12 @@ impl OutputStream {
         for byte in bytes {
             let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (byte as i32,)).await?;
         }
+
+        Ok(())
+    }
+
+    async fn flush(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.OutputStream::flush({:?})", &this);
 
         Ok(())
     }
