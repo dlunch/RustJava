@@ -55,8 +55,12 @@ impl RandomAccessFile {
 
         let write = mode.contains('w');
 
-        let rust_file = context.open(&name, write).await.unwrap();
-        let fd = FileDescriptor::from_file(jvm, rust_file).await?;
+        let rust_file = context.open(&name, write).await;
+        if rust_file.is_err() {
+            // TODO correct error handling
+            return Err(jvm.exception("java/io/FileNotFoundException", "File not found").await);
+        }
+        let fd = FileDescriptor::from_file(jvm, rust_file.unwrap()).await?;
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
 
         Ok(())
