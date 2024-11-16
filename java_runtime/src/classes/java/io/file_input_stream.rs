@@ -36,7 +36,7 @@ impl FileInputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let rust_file = context.open(&path, false, false).await.unwrap();
+        let rust_file = context.open(&path, false).await.unwrap();
 
         let fd = FileDescriptor::from_file(jvm, rust_file).await?;
 

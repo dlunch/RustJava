@@ -131,9 +131,9 @@ pub struct FileImpl {
 }
 
 impl FileImpl {
-    pub fn new(path: &str, write: bool, create: bool) -> Self {
+    pub fn new(path: &str, write: bool) -> Self {
         let mut options = OpenOptions::new();
-        let file = options.read(true).write(write).create(create).open(path).unwrap();
+        let file = options.read(true).write(write).create(write).open(path).unwrap();
 
         Self {
             file: Arc::new(Mutex::new(file)),

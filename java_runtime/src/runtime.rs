@@ -27,7 +27,7 @@ pub trait Runtime: Sync + Send + DynClone {
     fn stdout(&self) -> IOResult<Box<dyn File>>;
     fn stderr(&self) -> IOResult<Box<dyn File>>;
 
-    async fn open(&self, path: &str, write: bool, create: bool) -> IOResult<Box<dyn File>>;
+    async fn open(&self, path: &str, write: bool) -> IOResult<Box<dyn File>>;
     async fn unlink(&self, path: &str) -> IOResult<()>;
     async fn metadata(&self, path: &str) -> IOResult<FileStat>;
 
@@ -117,7 +117,7 @@ pub mod test {
             Err(IOError::NotFound)
         }
 
-        async fn open(&self, path: &str, _write: bool, _create: bool) -> IOResult<Box<dyn File>> {
+        async fn open(&self, path: &str, _write: bool) -> IOResult<Box<dyn File>> {
             let entry = self.filesystem.get(path);
             if let Some(data) = entry {
                 Ok(Box::new(DummyFile::new(data.clone())) as Box<_>)

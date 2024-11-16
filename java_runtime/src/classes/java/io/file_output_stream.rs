@@ -42,7 +42,7 @@ impl FileOutputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let file = context.open(&path, true, true).await.unwrap();
+        let file = context.open(&path, true).await.unwrap();
         let fd = FileDescriptor::from_file(jvm, file).await?;
 
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
