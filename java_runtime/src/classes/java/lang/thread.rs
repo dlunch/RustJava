@@ -157,19 +157,19 @@ impl Thread {
         Ok(true)
     }
 
-    async fn sleep(_: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<i32> {
+    async fn sleep(_: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<()> {
         tracing::debug!("Thread::sleep({:?})", duration);
 
         context.sleep(Duration::from_millis(duration as _)).await;
 
-        Ok(0)
+        Ok(())
     }
 
-    async fn r#yield(_: &Jvm, context: &mut RuntimeContext) -> Result<i32> {
+    async fn r#yield(_: &Jvm, context: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("Thread::yield()");
         context.r#yield().await;
 
-        Ok(0)
+        Ok(())
     }
 
     async fn set_priority(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Thread>, new_priority: i32) -> Result<()> {
