@@ -202,8 +202,8 @@ mod test {
         pub fn as_proto() -> RuntimeClassProto {
             RuntimeClassProto {
                 name: "TestClass",
-                parent_class: Some("java/lang/Runnable"),
-                interfaces: vec![],
+                parent_class: Some("java/lang/Object"),
+                interfaces: vec!["java/lang/Runnable"],
                 methods: vec![
                     JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                     JavaMethodProto::new("run", "()V", Self::run, Default::default()),
