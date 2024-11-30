@@ -7,7 +7,6 @@ pub trait ArrayClassInstance: ClassInstance {
     fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn destroy(self: Box<Self>);
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool>;
-    fn hash_code(&self) -> i32;
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()>;
     fn load(&self, offset: usize, count: usize) -> Result<Vec<JavaValue>>;
     fn raw_buffer(&self) -> Result<Box<dyn ArrayRawBuffer>>;
@@ -28,11 +27,6 @@ impl<T: ArrayClassInstance> ClassInstance for T {
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
         ArrayClassInstance::equals(self, other)
     }
-
-    fn hash_code(&self) -> i32 {
-        ArrayClassInstance::hash_code(self)
-    }
-
     fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
         Some(self)
     }

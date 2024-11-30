@@ -1,9 +1,10 @@
-use core::time::Duration;
+use core::{hash::BuildHasher, time::Duration};
 
 use alloc::{boxed::Box, format, sync::Arc, vec};
 
 use dyn_clone::clone_box;
 use event_listener::Event;
+use hashbrown::DefaultHashBuilder;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
 use jvm::{runtime::JavaLangString, Array, ClassInstance, ClassInstanceRef, Jvm, Result};
@@ -60,7 +61,9 @@ impl Object {
 
         let rust_this: Box<dyn ClassInstance> = this.into();
 
-        Ok(rust_this.hash_code())
+        let hash = DefaultHashBuilder::default().hash_one(&rust_this);
+
+        Ok(hash as _)
     }
 
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {

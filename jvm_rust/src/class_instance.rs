@@ -1,5 +1,8 @@
 use alloc::{boxed::Box, collections::BTreeMap, sync::Arc};
-use core::fmt::{self, Debug, Formatter};
+use core::{
+    fmt::{self, Debug, Formatter},
+    hash::{Hash, Hasher},
+};
 
 use parking_lot::RwLock;
 
@@ -42,10 +45,6 @@ impl ClassInstance for ClassInstanceImpl {
         Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
 
-    fn hash_code(&self) -> i32 {
-        Arc::as_ptr(&self.inner) as i32
-    }
-
     fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
@@ -65,6 +64,12 @@ impl ClassInstance for ClassInstanceImpl {
         self.inner.storage.write().insert(field.clone(), value);
 
         Ok(())
+    }
+}
+
+impl Hash for ClassInstanceImpl {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Arc::as_ptr(&self.inner).hash(state);
     }
 }
 

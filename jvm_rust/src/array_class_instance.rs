@@ -1,5 +1,8 @@
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
-use core::fmt::{self, Debug, Formatter};
+use core::{
+    fmt::{self, Debug, Formatter},
+    hash::{Hash, Hasher},
+};
 
 use parking_lot::RwLock;
 
@@ -121,10 +124,6 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
 
-    fn hash_code(&self) -> i32 {
-        Arc::as_ptr(&self.inner) as i32
-    }
-
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
         match &mut *self.inner.elements.write() {
             ArrayElements::Primitive(x) => {
@@ -163,6 +162,12 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
 
     fn length(&self) -> usize {
         self.inner.length
+    }
+}
+
+impl Hash for ArrayClassInstanceImpl {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Arc::as_ptr(&self.inner).hash(state);
     }
 }
 

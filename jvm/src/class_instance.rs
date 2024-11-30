@@ -6,13 +6,13 @@ use core::{
 };
 
 use dyn_clone::{clone_trait_object, DynClone};
+use dyn_hash::{hash_trait_object, DynHash};
 
 use crate::{as_any::AsAny, value::JavaValue, ArrayClassInstance, ClassDefinition, Field, Result};
 
 #[async_trait::async_trait]
-pub trait ClassInstance: Sync + Send + AsAny + Debug + DynClone + 'static {
+pub trait ClassInstance: Sync + Send + AsAny + Debug + DynHash + DynClone + 'static {
     fn destroy(self: Box<Self>);
-    fn hash_code(&self) -> i32;
     fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool>;
     fn get_field(&self, field: &dyn Field) -> Result<JavaValue>;
@@ -26,6 +26,7 @@ pub trait ClassInstance: Sync + Send + AsAny + Debug + DynClone + 'static {
 }
 
 clone_trait_object!(ClassInstance);
+hash_trait_object!(ClassInstance);
 
 // array wrapper for ClassInstanceRef
 pub struct Array<T>(PhantomData<T>);
