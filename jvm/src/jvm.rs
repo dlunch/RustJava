@@ -10,6 +10,7 @@ use core::{
 
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
+use hashbrown::HashSet;
 use parking_lot::RwLock;
 
 use java_constants::MethodAccessFlags;
@@ -33,6 +34,7 @@ use crate::{
 struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
+    all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
     bootstrapping: AtomicBool,
@@ -53,6 +55,7 @@ impl Jvm {
             inner: Arc::new(JvmInner {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
+                all_objects: RwLock::new(HashSet::new()),
                 get_current_thread_id: Box::new(get_current_thread_id),
                 bootstrap_class_loader: Box::new(bootstrap_class_loader),
                 bootstrapping: AtomicBool::new(true),
@@ -108,6 +111,13 @@ impl Jvm {
 
         let instance = class.definition.instantiate()?;
 
+        let thread_id = (self.inner.get_current_thread_id)();
+        let mut threads = self.inner.threads.write();
+        let thread = threads.get_mut(&thread_id).unwrap();
+
+        thread.top_frame_mut().local_variables().push(instance.clone());
+        self.inner.all_objects.write().insert(instance.clone());
+
         Ok(instance)
     }
 
@@ -131,6 +141,14 @@ impl Jvm {
         let array_class = class.as_array_class_definition().unwrap();
 
         let instance = array_class.instantiate_array(length)?;
+
+        let thread_id = (self.inner.get_current_thread_id)();
+        let mut threads = self.inner.threads.write();
+        let thread = threads.get_mut(&thread_id).unwrap();
+
+        thread.top_frame_mut().local_variables().push(instance.clone());
+        self.inner.all_objects.write().insert(instance.clone());
+
         Ok(instance)
     }
 
@@ -423,10 +441,10 @@ impl Jvm {
         }
     }
 
-    // temporary until we have working gc
     pub fn destroy(&self, instance: Box<dyn ClassInstance>) -> Result<()> {
         tracing::debug!("Destroy {}", instance.class_definition().name());
 
+        self.inner.all_objects.write().remove(&instance);
         instance.destroy();
 
         Ok(())
@@ -496,7 +514,7 @@ impl Jvm {
         let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
-        Ok(thread.top_frame().map(|x| (x.class.clone(), x.class_instance.clone())))
+        Ok(thread.top_java_frame().map(|x| (x.class.clone(), x.class_instance.clone())))
     }
 
     pub async fn register_class(
@@ -553,18 +571,18 @@ impl Jvm {
         let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
-        let mut result = Vec::with_capacity(thread.stack.len());
-
-        for item in thread.stack.iter().rev() {
-            // skip exception classes
-            if self.is_inherited_from(&*item.class.definition, "java/lang/Throwable") {
-                continue;
-            }
-
-            result.push(format!("{}.{}", item.class.definition.name(), item.method));
-        }
-
-        result
+        thread
+            .iter_java_frame()
+            .rev()
+            .filter_map(|x| {
+                // skip exception classes
+                if self.is_inherited_from(&*x.class.definition, "java/lang/Throwable") {
+                    None
+                } else {
+                    Some(format!("{}.{}", x.class.definition.name(), x.method))
+                }
+            })
+            .collect()
     }
 
     async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
@@ -624,6 +642,7 @@ impl Jvm {
     pub fn attach_thread(&self) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
         self.inner.threads.write().insert(thread_id, JvmThread::new());
+        self.push_native_frame();
 
         Ok(())
     }
@@ -633,6 +652,17 @@ impl Jvm {
         self.inner.threads.write().remove(&thread_id);
 
         Ok(())
+    }
+
+    // TODO we need safe, ergonomic api..
+    pub fn push_native_frame(&self) {
+        let thread_id = (self.inner.get_current_thread_id)();
+        self.inner.threads.write().get_mut(&thread_id).unwrap().push_native_frame();
+    }
+
+    pub fn pop_frame(&self) {
+        let thread_id = (self.inner.get_current_thread_id)();
+        self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
     }
 
     pub async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
@@ -703,7 +733,7 @@ impl Jvm {
             .write()
             .get_mut(&thread_id)
             .unwrap()
-            .push_frame(class, class_instance, &method_str);
+            .push_java_frame(class, class_instance, &method_str);
 
         let result = method.run(self, args).await;
 

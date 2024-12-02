@@ -567,6 +567,7 @@ dependencies = [
  "bytemuck",
  "dyn-clone",
  "dyn-hash",
+ "hashbrown",
  "java_constants",
  "nom",
  "parking_lot",

@@ -28,6 +28,13 @@ pub trait ClassInstance: Sync + Send + AsAny + Debug + DynHash + DynClone + 'sta
 clone_trait_object!(ClassInstance);
 hash_trait_object!(ClassInstance);
 
+impl Eq for dyn ClassInstance {}
+impl PartialEq for dyn ClassInstance {
+    fn eq(&self, other: &Self) -> bool {
+        self.equals(other).unwrap()
+    }
+}
+
 // array wrapper for ClassInstanceRef
 pub struct Array<T>(PhantomData<T>);
 

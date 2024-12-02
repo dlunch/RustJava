@@ -13,6 +13,7 @@ async-trait = { version = "^0.1", default-features = false }
 bytemuck = { version = "^1.20", default-features = false, features = ["extern_crate_alloc"] }
 dyn-clone = { version = "^1.0", default-features = false }
 dyn-hash = { version = "^0.2", default-features = false }
+hashbrown = { version = "^0.15", features = ["default-hasher"], default-features = false }
 nom = { version = "^7.1", default-features = false, features = ["alloc"] }
 parking_lot = { version = "^0.12", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }

@@ -11,6 +11,7 @@ async-trait = { workspace = true }
 bytemuck = { workspace = true }
 dyn-clone = { workspace = true }
 dyn-hash = { workspace = true }
+hashbrown = { workspace = true }
 nom = { workspace = true }
 parking_lot = { workspace = true }
 tracing = { workspace = true }

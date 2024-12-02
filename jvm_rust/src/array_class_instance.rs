@@ -119,7 +119,11 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
-        let other = other.as_any().downcast_ref::<ArrayClassInstanceImpl>().unwrap();
+        let other = other.as_any().downcast_ref::<ArrayClassInstanceImpl>();
+        if other.is_none() {
+            return Ok(false);
+        }
+        let other = other.unwrap();
 
         Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }

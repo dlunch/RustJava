@@ -40,7 +40,11 @@ impl ClassInstance for ClassInstanceImpl {
     }
 
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
-        let other = other.as_any().downcast_ref::<ClassInstanceImpl>().unwrap();
+        let other = other.as_any().downcast_ref::<ClassInstanceImpl>();
+        if other.is_none() {
+            return Ok(false);
+        }
+        let other = other.unwrap();
 
         Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
