@@ -11,7 +11,7 @@ use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
 // I'm too lazy to implement vector in java, so i'm leveraging rust vector here...
-type RustVector = Arc<Mutex<Vec<ClassInstanceRef<Object>>>>;
+type RustVector = Arc<Mutex<Vec<Option<Box<dyn ClassInstance>>>>>;
 
 // class java.util.Vector
 pub struct Vector;
@@ -82,7 +82,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.push(element);
+        rust_vector.lock().await.push(element.into());
 
         Ok(true)
     }
@@ -92,7 +92,7 @@ impl Vector {
 
         // do we need to call add() instead?
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.push(element);
+        rust_vector.lock().await.push(element.into());
 
         Ok(())
     }
@@ -107,7 +107,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::insertElementAt({:?}, {:?}, {:?})", &this, &element, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.insert(index as usize, element);
+        rust_vector.lock().await.insert(index as usize, element.into());
 
         Ok(())
     }
@@ -118,7 +118,7 @@ impl Vector {
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let element = rust_vector.lock().await.get(index as usize).unwrap().clone();
 
-        Ok(element)
+        Ok(element.into())
     }
 
     async fn set(
@@ -131,9 +131,9 @@ impl Vector {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let old_element = mem::replace(&mut rust_vector.lock().await[index as usize], element);
+        let old_element = mem::replace(&mut rust_vector.lock().await[index as usize], element.into());
 
-        Ok(old_element)
+        Ok(old_element.into())
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -160,7 +160,7 @@ impl Vector {
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
         let removed = rust_vector.lock().await.remove(index as usize);
 
-        Ok(removed)
+        Ok(removed.into())
     }
 
     async fn remove_all_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
@@ -214,12 +214,15 @@ impl Vector {
         }
 
         for (i, item) in vector[..=index as usize].iter().enumerate().rev() {
-            if item.is_null() && element.is_null() {
-                return Ok(i as i32);
+            if item.is_none() {
+                if element.is_null() {
+                    return Ok(i as i32);
+                }
+                continue;
             }
 
             let value: Box<dyn ClassInstance> = element.clone().into();
-            if item.equals(&*value)? {
+            if item.as_ref().unwrap().equals(&*value)? {
                 return Ok(i as i32);
             }
         }
@@ -238,7 +241,7 @@ impl Vector {
 
         let element = rust_vector.lock().await.first().cloned().unwrap();
 
-        Ok(element)
+        Ok(element.into())
     }
 
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {

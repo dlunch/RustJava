@@ -1,17 +1,17 @@
-use alloc::{sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use core::mem;
 
 use async_lock::Mutex;
 use hashbrown::HashMap;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 
 use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
 
 // I'm too lazy to implement hashmap in java, so i'm leveraging rust hashmap here...
 // We can't use java object as hashmap key as we need `await` to call `equals()`
-type RustHashMap = Arc<Mutex<HashMap<i32, Vec<(ClassInstanceRef<Object>, ClassInstanceRef<Object>)>>>>;
+type RustHashMap = Arc<Mutex<HashMap<i32, Vec<(Box<dyn ClassInstance>, Box<dyn ClassInstance>)>>>>;
 
 // class java.util.Hashtable
 pub struct Hashtable;
@@ -84,7 +84,7 @@ impl Hashtable {
             for (key, value) in vec.unwrap() {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
-                    return Ok(value.clone());
+                    return Ok(value.clone().into());
                 }
             }
         }
@@ -113,7 +113,7 @@ impl Hashtable {
                 if equals {
                     let (_, old_value) = vec.unwrap().remove(i);
 
-                    return Ok(old_value);
+                    return Ok(old_value.into());
                 }
             }
         }
@@ -140,13 +140,13 @@ impl Hashtable {
         for (i, (bucket_key, _)) in vec.iter().enumerate() {
             let equals = jvm.invoke_virtual(bucket_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
             if equals {
-                let (_, old_value) = mem::replace(&mut vec[i], (key, value));
+                let (_, old_value) = mem::replace(&mut vec[i], (key.into(), value.into()));
 
-                return Ok(old_value);
+                return Ok(old_value.into());
             }
         }
 
-        vec.push((key, value));
+        vec.push((key.into(), value.into()));
 
         Ok(None.into())
     }

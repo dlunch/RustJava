@@ -129,3 +129,9 @@ impl<T> From<ClassInstanceRef<T>> for Box<dyn ClassInstance> {
         value.instance.unwrap()
     }
 }
+
+impl<T> From<ClassInstanceRef<T>> for Option<Box<dyn ClassInstance>> {
+    fn from(value: ClassInstanceRef<T>) -> Self {
+        value.instance
+    }
+}
