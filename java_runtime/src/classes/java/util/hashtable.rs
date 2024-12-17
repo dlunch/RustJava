@@ -1,8 +1,8 @@
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 use core::mem;
 
-use async_lock::Mutex;
 use hashbrown::HashMap;
+use parking_lot::Mutex;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
@@ -56,11 +56,10 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let rust_hash_map = rust_hash_map.lock().await;
-        let vec = rust_hash_map.get(&key_hash);
+        let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
         if vec.is_some() {
-            for (key, _) in vec.unwrap() {
+            for (key, _) in &vec.unwrap() {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
                     return Ok(true);
@@ -77,11 +76,10 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let rust_hash_map = rust_hash_map.lock().await;
-        let vec = rust_hash_map.get(&key_hash);
+        let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
         if vec.is_some() {
-            for (key, value) in vec.unwrap() {
+            for (key, value) in &vec.unwrap() {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
                     return Ok(value.clone().into());
@@ -104,14 +102,13 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let mut rust_hash_map = rust_hash_map.lock().await;
-        let vec = rust_hash_map.get_mut(&key_hash);
+        let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
         if vec.is_some() {
-            for (i, (bucket_key, _)) in vec.as_ref().unwrap().iter().enumerate() {
+            for (i, (bucket_key, _)) in vec.unwrap().iter().enumerate() {
                 let equals = jvm.invoke_virtual(bucket_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
                 if equals {
-                    let (_, old_value) = vec.unwrap().remove(i);
+                    let (_, old_value) = rust_hash_map.lock().get_mut(&key_hash).unwrap().remove(i);
 
                     return Ok(old_value.into());
                 }
@@ -134,19 +131,28 @@ impl Hashtable {
         let rust_hash_map = Self::get_rust_hashmap(jvm, &this).await?;
         let key_hash: i32 = jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?;
 
-        let mut rust_hash_map = rust_hash_map.lock().await;
-        let vec = rust_hash_map.entry(key_hash).or_insert_with(Vec::new);
+        let vec = {
+            let mut rust_hash_map = rust_hash_map.lock();
+            if !rust_hash_map.contains_key(&key_hash) {
+                rust_hash_map.insert(key_hash, Vec::new());
+            }
+
+            rust_hash_map.get(&key_hash).cloned().unwrap()
+        };
 
         for (i, (bucket_key, _)) in vec.iter().enumerate() {
             let equals = jvm.invoke_virtual(bucket_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
             if equals {
+                let mut rust_hash_map = rust_hash_map.lock();
+                let vec = rust_hash_map.get_mut(&key_hash).unwrap();
+
                 let (_, old_value) = mem::replace(&mut vec[i], (key.into(), value.into()));
 
                 return Ok(old_value.into());
             }
         }
 
-        vec.push((key.into(), value.into()));
+        rust_hash_map.lock().get_mut(&key_hash).unwrap().push((key.into(), value.into()));
 
         Ok(None.into())
     }

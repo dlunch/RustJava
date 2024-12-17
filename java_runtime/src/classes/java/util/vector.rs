@@ -3,7 +3,7 @@ use core::mem;
 use alloc::vec;
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 
-use async_lock::Mutex;
+use parking_lot::Mutex;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
@@ -82,7 +82,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.push(element.into());
+        rust_vector.lock().push(element.into());
 
         Ok(true)
     }
@@ -92,7 +92,7 @@ impl Vector {
 
         // do we need to call add() instead?
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.push(element.into());
+        rust_vector.lock().push(element.into());
 
         Ok(())
     }
@@ -107,7 +107,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::insertElementAt({:?}, {:?}, {:?})", &this, &element, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.insert(index as usize, element.into());
+        rust_vector.lock().insert(index as usize, element.into());
 
         Ok(())
     }
@@ -116,7 +116,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let element = rust_vector.lock().await.get(index as usize).unwrap().clone();
+        let element = rust_vector.lock().get(index as usize).unwrap().clone();
 
         Ok(element.into())
     }
@@ -131,7 +131,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let old_element = mem::replace(&mut rust_vector.lock().await[index as usize], element.into());
+        let old_element = mem::replace(&mut rust_vector.lock()[index as usize], element.into());
 
         Ok(old_element.into())
     }
@@ -140,7 +140,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::size({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let size = rust_vector.lock().await.len();
+        let size = rust_vector.lock().len();
 
         Ok(size as _)
     }
@@ -149,7 +149,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::isEmpty({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let is_empty = rust_vector.lock().await.is_empty();
+        let is_empty = rust_vector.lock().is_empty();
 
         Ok(is_empty)
     }
@@ -158,7 +158,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::remove({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let removed = rust_vector.lock().await.remove(index as usize);
+        let removed = rust_vector.lock().remove(index as usize);
 
         Ok(removed.into())
     }
@@ -167,7 +167,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::removeAllElements({:?})", &this);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.clear();
+        rust_vector.lock().clear();
 
         Ok(())
     }
@@ -176,7 +176,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::removeElementAt({:?}, {:?})", &this, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        rust_vector.lock().await.remove(index as usize);
+        rust_vector.lock().remove(index as usize);
 
         Ok(())
     }
@@ -185,7 +185,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?})", &this, &element);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let index = rust_vector.lock().await.len() - 1;
+        let index = rust_vector.lock().len() - 1;
 
         let index: i32 = jvm
             .invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/Object;I)I", (element, index as i32))
@@ -204,14 +204,15 @@ impl Vector {
         tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?}, {:?})", &this, &element, index);
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
-        let vector = rust_vector.lock().await;
-        let size = vector.len();
+        let size = rust_vector.lock().len();
 
         if index as usize >= size {
             return Err(jvm
                 .exception("java/lang/IndexOutOfBoundsException", &format!("{} >= {}", index, size))
                 .await);
         }
+
+        let vector = rust_vector.lock();
 
         for (i, item) in vector[..=index as usize].iter().enumerate().rev() {
             if item.is_none() {
@@ -235,11 +236,11 @@ impl Vector {
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
 
-        if rust_vector.lock().await.len() == 0 {
+        if rust_vector.lock().len() == 0 {
             return Ok(None.into());
         }
 
-        let element = rust_vector.lock().await.first().cloned().unwrap();
+        let element = rust_vector.lock().first().cloned().unwrap();
 
         Ok(element.into())
     }
