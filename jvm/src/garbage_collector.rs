@@ -44,27 +44,26 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
     }
     entry.insert();
 
-    let fields = object.class_definition().fields();
+    // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
+    if jvm.is_instance(&**object, "java/util/Vector") {
+        let members = vector_members(jvm, &**object);
+        for member in members {
+            find_reachable_objects(jvm, &member, reachable_objects);
+        }
+    } else if jvm.is_instance(&**object, "java/util/Hashtable") {
+        let members = hashtable_members(jvm, &**object);
+        for member in members {
+            find_reachable_objects(jvm, &member, reachable_objects);
+        }
+    }
 
+    let fields = object.class_definition().fields();
     for field in fields {
         match field.r#type() {
             JavaType::Class(_) => {
                 let value = object.get_field(&*field).unwrap();
                 if let JavaValue::Object(Some(value)) = value {
                     find_reachable_objects(jvm, &value, reachable_objects);
-
-                    // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
-                    if jvm.is_instance(&*value, "java/util/Vector") {
-                        let members = vector_members(&*value);
-                        for member in members {
-                            find_reachable_objects(jvm, &member, reachable_objects);
-                        }
-                    } else if jvm.is_instance(&*value, "java/util/Hashtable") {
-                        let members = hashtable_members(&*value);
-                        for member in members {
-                            find_reachable_objects(jvm, &member, reachable_objects);
-                        }
-                    }
                 }
             }
             JavaType::Array(_) => {
@@ -88,8 +87,8 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
 }
 
 // Same as Jvm's one but without async
-fn get_rust_object_field<T: Clone>(object: &dyn ClassInstance, field_name: &str) -> T {
-    let field = object.class_definition().field(field_name, "Ljava/lang/Object;", true).unwrap();
+fn get_rust_object_field<T: Clone>(jvm: &Jvm, object: &dyn ClassInstance, field_name: &str) -> T {
+    let field = jvm.find_field(&*object.class_definition(), field_name, "[B").unwrap().unwrap();
     let value = object.get_field(&*field).unwrap();
     let buf: Vec<i8> = match value {
         JavaValue::Object(Some(value)) => {
@@ -110,15 +109,15 @@ fn get_rust_object_field<T: Clone>(object: &dyn ClassInstance, field_name: &str)
     result
 }
 
-fn vector_members(vector: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
-    let rust_vector: RustVector = get_rust_object_field(vector, "raw");
+fn vector_members(jvm: &Jvm, vector: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
+    let rust_vector: RustVector = get_rust_object_field(jvm, vector, "raw");
 
     let rust_vector = rust_vector.lock();
     rust_vector.iter().cloned().collect()
 }
 
-fn hashtable_members(hashtable: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
-    let rust_hashmap: RustHashMap = get_rust_object_field(hashtable, "raw");
+fn hashtable_members(jvm: &Jvm, hashtable: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
+    let rust_hashmap: RustHashMap = get_rust_object_field(jvm, hashtable, "raw");
 
     let rust_hashmap = rust_hashmap.lock();
     rust_hashmap.iter().flat_map(|(_, v)| v.iter().map(|x| x.1.clone())).collect()
