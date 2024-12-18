@@ -111,6 +111,10 @@ impl ClassDefinition for ClassDefinitionImpl {
             .map(|x| Box::new(x.clone()) as Box<dyn Field>)
     }
 
+    fn fields(&self) -> Vec<Box<dyn Field>> {
+        self.inner.fields.iter().map(|x| Box::new(x.clone()) as Box<dyn Field>).collect()
+    }
+
     fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 

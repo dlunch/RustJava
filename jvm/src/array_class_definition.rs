@@ -2,6 +2,7 @@ use alloc::{
     boxed::Box,
     format,
     string::{String, ToString},
+    vec::Vec,
 };
 use dyn_clone::clone_trait_object;
 
@@ -34,6 +35,10 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
 
     fn field(&self, _name: &str, _descriptor: &str, _is_static: bool) -> Option<Box<dyn Field>> {
         None
+    }
+
+    fn fields(&self) -> Vec<Box<dyn Field>> {
+        Vec::new()
     }
 
     fn get_static_field(&self, _field: &dyn Field) -> Result<JavaValue> {

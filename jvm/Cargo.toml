@@ -17,3 +17,9 @@ parking_lot = { workspace = true }
 tracing = { workspace = true }
 
 java_constants = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
+
+jvm_rust = { workspace = true }
+java_runtime = { workspace = true }

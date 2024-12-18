@@ -12,7 +12,14 @@ pub enum StackFrame {
 }
 
 impl StackFrame {
-    pub fn local_variables(&mut self) -> &mut Vec<Box<dyn ClassInstance>> {
+    pub fn local_variables(&self) -> &[Box<dyn ClassInstance>] {
+        match self {
+            StackFrame::Java(java_frame) => &java_frame.local_variables,
+            StackFrame::Native(native_frame) => &native_frame.local_variables,
+        }
+    }
+
+    pub fn local_variables_mut(&mut self) -> &mut Vec<Box<dyn ClassInstance>> {
         match self {
             StackFrame::Java(java_frame) => &mut java_frame.local_variables,
             StackFrame::Native(native_frame) => &mut native_frame.local_variables,
@@ -62,6 +69,10 @@ impl JvmThread {
             StackFrame::Java(java_frame) => Some(java_frame),
             _ => None,
         })
+    }
+
+    pub fn iter_frame(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
+        self.stack.iter()
     }
 }
 

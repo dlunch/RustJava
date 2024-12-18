@@ -22,6 +22,7 @@ use crate::{
     class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, JavaClassLoaderWrapper},
     error::JavaError,
     field::Field,
+    garbage_collector::determine_garbage,
     invoke_arg::InvokeArg,
     method::Method,
     r#type::JavaType,
@@ -115,7 +116,7 @@ impl Jvm {
         let mut threads = self.inner.threads.write();
         let thread = threads.get_mut(&thread_id).unwrap();
 
-        thread.top_frame_mut().local_variables().push(instance.clone());
+        thread.top_frame_mut().local_variables_mut().push(instance.clone());
         self.inner.all_objects.write().insert(instance.clone());
 
         Ok(instance)
@@ -146,7 +147,7 @@ impl Jvm {
         let mut threads = self.inner.threads.write();
         let thread = threads.get_mut(&thread_id).unwrap();
 
-        thread.top_frame_mut().local_variables().push(instance.clone());
+        thread.top_frame_mut().local_variables_mut().push(instance.clone());
         self.inner.all_objects.write().insert(instance.clone());
 
         Ok(instance)
@@ -585,6 +586,31 @@ impl Jvm {
             .collect()
     }
 
+    pub fn collect_garbage(&self) -> Result<usize> {
+        tracing::trace!("Collecting garbage");
+
+        let garbage = {
+            let threads = self.inner.threads.read();
+            let all_objects = self.inner.all_objects.read();
+            let classes = self.inner.classes.read().values().map(|x| x.java_class()).collect();
+
+            determine_garbage(self, &threads, &all_objects, classes)
+        };
+
+        let garbage_count = garbage.len();
+
+        tracing::trace!("Garbage count: {}", garbage_count);
+
+        for object in garbage {
+            let name = object.class_definition().name();
+            tracing::trace!("Destroying {:?}({})", object, name);
+
+            self.destroy(object).unwrap();
+        }
+
+        Ok(garbage_count)
+    }
+
     async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
         if !class.definition.name().starts_with('[') {
             if let Some(super_class) = class.definition.super_class_name() {
@@ -675,7 +701,7 @@ impl Jvm {
                 return Ok(class_instance.unwrap());
             }
 
-            let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class()?).await?;
+            let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class()).await?;
             if let Some(x) = calling_class_class_loader {
                 Ok(x)
             } else {
@@ -742,13 +768,5 @@ impl Jvm {
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
 
         result
-    }
-}
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test_is_instance() {
-        // TODO
     }
 }

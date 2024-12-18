@@ -207,7 +207,7 @@ impl ClassLoader {
 
         let class = jvm.resolve_class(&rust_name).await?;
 
-        Ok(class.java_class()?.into())
+        Ok(class.java_class().into())
     }
 
     async fn get_resource(

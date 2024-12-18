@@ -25,8 +25,8 @@ impl Class {
         *self.java_class.write() = Some(java_class);
     }
 
-    pub fn java_class(&self) -> Result<Box<dyn ClassInstance>> {
-        Ok(self.java_class.read().clone().unwrap())
+    pub fn java_class(&self) -> Box<dyn ClassInstance> {
+        self.java_class.read().clone().unwrap()
     }
 }
 

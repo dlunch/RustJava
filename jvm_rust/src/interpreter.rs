@@ -939,7 +939,7 @@ impl Interpreter {
             ValueConstant::Long(x) => JavaValue::Long(*x),
             ValueConstant::Double(x) => JavaValue::Double(*x),
             ValueConstant::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
-            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class()?)),
+            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
             _ => unimplemented!(),
         })
     }

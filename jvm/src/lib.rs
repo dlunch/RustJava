@@ -9,6 +9,7 @@ mod class_instance;
 mod class_loader;
 mod error;
 mod field;
+mod garbage_collector;
 mod invoke_arg;
 mod jvm;
 mod method;

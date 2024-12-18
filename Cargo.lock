@@ -547,8 +547,11 @@ dependencies = [
  "dyn-hash",
  "hashbrown",
  "java_constants",
+ "java_runtime",
+ "jvm_rust",
  "nom",
  "parking_lot",
+ "tokio",
  "tracing",
 ]
 
