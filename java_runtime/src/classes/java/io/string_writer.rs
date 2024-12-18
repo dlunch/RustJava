@@ -73,7 +73,7 @@ mod tests {
 
     use jvm::{runtime::JavaLangString, JavaChar, Result};
 
-    use crate::test::test_jvm;
+    use test_utils::test_jvm;
 
     #[tokio::test]
     async fn test_string_writer() -> Result<()> {

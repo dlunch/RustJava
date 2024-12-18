@@ -529,6 +529,7 @@ dependencies = [
  "jvm",
  "jvm_rust",
  "parking_lot",
+ "test_utils",
  "tokio",
  "tracing",
  "url",
@@ -547,10 +548,9 @@ dependencies = [
  "dyn-hash",
  "hashbrown",
  "java_constants",
- "java_runtime",
- "jvm_rust",
  "nom",
  "parking_lot",
+ "test_utils",
  "tokio",
  "tracing",
 ]
@@ -851,6 +851,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.87",
+]
+
+[[package]]
+name = "test_utils"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "java_runtime",
+ "jvm",
+ "jvm_rust",
+ "tokio",
 ]
 
 [[package]]

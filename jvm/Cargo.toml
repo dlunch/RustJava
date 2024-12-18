@@ -21,5 +21,4 @@ java_constants = { workspace = true }
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
 
-jvm_rust = { workspace = true }
-java_runtime = { workspace = true }
+test_utils = { workspace = true }

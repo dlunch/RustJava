@@ -302,7 +302,7 @@ impl URL {
 mod test {
     use jvm::{runtime::JavaLangString, Result};
 
-    use crate::test::test_jvm;
+    use test_utils::test_jvm;
 
     #[tokio::test]
     async fn test_file_url() -> Result<()> {

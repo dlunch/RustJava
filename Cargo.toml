@@ -1,5 +1,5 @@
 [workspace]
-members = ["classfile", "java_runtime", "jvm", "jvm_rust"]
+members = ["classfile", "java_runtime", "jvm", "jvm_rust", "test_utils"]
 
 [workspace.package]
 version = "0.0.1"
@@ -26,6 +26,7 @@ java_constants = { path = "java_constants" }
 java_runtime = { path = "java_runtime" }
 jvm = { path = "jvm" }
 jvm_rust = { path = "jvm_rust" }
+test_utils = { path = "test_utils" }
 
 [package]
 name = "rust_java"

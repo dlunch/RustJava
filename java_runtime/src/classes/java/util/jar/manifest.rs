@@ -94,7 +94,7 @@ impl Manifest {
 mod test {
     use jvm::{runtime::JavaLangString, Result};
 
-    use crate::test::test_jvm;
+    use test_utils::test_jvm;
 
     #[tokio::test]
     async fn test_manifest_parsing() -> Result<()> {

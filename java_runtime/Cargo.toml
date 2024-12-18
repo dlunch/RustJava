@@ -24,4 +24,6 @@ jvm = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
+
 jvm_rust = { workspace = true }
+test_utils = { workspace = true }

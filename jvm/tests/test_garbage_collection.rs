@@ -1,8 +1,6 @@
-mod test_helper;
-
 use jvm::{runtime::JavaLangString, Result as JvmResult};
 
-use test_helper::test_jvm;
+use test_utils::test_jvm;
 
 #[tokio::test]
 async fn test_garbage_collection() -> JvmResult<()> {
