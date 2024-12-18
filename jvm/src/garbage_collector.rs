@@ -56,7 +56,6 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
                     // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
                     if jvm.is_instance(&*value, "java/util/Vector") {
                         let members = vector_members(&*value);
-                        assert!(members.len() == 1);
                         for member in members {
                             find_reachable_objects(jvm, &member, reachable_objects);
                         }
