@@ -92,10 +92,12 @@ impl System {
         Ok(context.now() as _)
     }
 
-    async fn gc(_: &Jvm, _: &mut RuntimeContext) -> Result<i32> {
-        tracing::warn!("stub java.lang.System::gc()");
+    async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
+        tracing::debug!("java.lang.System::gc()");
 
-        Ok(0)
+        jvm.collect_garbage()?;
+
+        Ok(())
     }
 
     async fn arraycopy(
