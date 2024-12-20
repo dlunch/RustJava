@@ -194,8 +194,6 @@ impl StringBuffer {
             let mut java_new_value_array = jvm.instantiate_array("C", new_capacity).await?;
             jvm.put_field(this, "value", "[C", java_new_value_array.clone()).await?;
             jvm.store_array(&mut java_new_value_array, 0, old_values).await?;
-
-            // jvm.destroy(java_value_array)?; // We shouldn't destroy this, this might be referenced by other objects
         }
 
         Ok(())

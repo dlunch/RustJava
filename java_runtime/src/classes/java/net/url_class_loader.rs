@@ -110,8 +110,6 @@ impl URLClassLoader {
             )
             .await?;
 
-        jvm.destroy(bytes_java)?; // TODO: this should be done by the GC
-
         Ok(class)
     }
 

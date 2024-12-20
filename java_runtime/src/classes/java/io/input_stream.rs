@@ -47,8 +47,6 @@ impl InputStream {
         let scratch = jvm.instantiate_array("B", n as _).await?;
         let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, n as i32)).await?;
 
-        jvm.destroy(scratch)?;
-
         Ok(n)
     }
 }

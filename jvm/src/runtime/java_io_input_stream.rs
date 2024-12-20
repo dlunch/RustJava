@@ -25,8 +25,6 @@ impl JavaIoInputStream {
             jvm.array_raw_buffer(&java_buffer).await?.read(0, &mut buffer[buffer_offset..])?;
         }
 
-        jvm.destroy(java_buffer)?; // TODO: this should be done automatically
-
         Ok(cast_vec(buffer))
     }
 }

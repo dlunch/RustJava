@@ -101,7 +101,6 @@ impl ByteArrayOutputStream {
                 .await?;
 
             jvm.put_field(this, "buf", "[B", new_buf.clone()).await?;
-            jvm.destroy(old_buf)?; // temporary before GC
         }
 
         Ok(())
