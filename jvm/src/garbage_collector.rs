@@ -5,7 +5,7 @@ use bytemuck::cast_slice;
 use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use parking_lot::Mutex;
 
-use crate::{thread::JvmThread, ClassInstance, JavaType, JavaValue, Jvm};
+use crate::{thread::JvmThread, ClassInstance, JavaValue, Jvm};
 
 // XXX java/util/Vector, java/util/HashMap internal..
 type RustVector = Arc<Mutex<Vec<Box<dyn ClassInstance>>>>;
@@ -59,29 +59,27 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
 
     let fields = object.class_definition().fields();
     for field in fields {
-        match field.r#type() {
-            JavaType::Class(_) => {
-                let value = object.get_field(&*field).unwrap();
-                if let JavaValue::Object(Some(value)) = value {
-                    find_reachable_objects(jvm, &value, reachable_objects);
-                }
+        let descriptor = field.descriptor();
+
+        if descriptor.starts_with("L") && descriptor.ends_with(";") {
+            let value = object.get_field(&*field).unwrap();
+            if let JavaValue::Object(Some(value)) = value {
+                find_reachable_objects(jvm, &value, reachable_objects);
             }
-            JavaType::Array(_) => {
-                let value = object.get_field(&*field).unwrap();
-                if let JavaValue::Object(Some(value)) = value {
-                    reachable_objects.insert(value.clone());
+        } else if descriptor.starts_with("[") {
+            let value = object.get_field(&*field).unwrap();
+            if let JavaValue::Object(Some(value)) = value {
+                reachable_objects.insert(value.clone());
 
-                    let array = value.as_array_instance().unwrap();
-                    let values = array.load(0, array.length()).unwrap();
+                let array = value.as_array_instance().unwrap();
+                let values = array.load(0, array.length()).unwrap();
 
-                    for value in values {
-                        if let JavaValue::Object(Some(value)) = value {
-                            find_reachable_objects(jvm, &value, reachable_objects);
-                        }
+                for value in values {
+                    if let JavaValue::Object(Some(value)) = value {
+                        find_reachable_objects(jvm, &value, reachable_objects);
                     }
                 }
             }
-            _ => {}
         }
     }
 }

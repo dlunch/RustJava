@@ -6,7 +6,7 @@ use alloc::{
 use classfile::FieldInfo;
 use java_class_proto::JavaFieldProto;
 use java_constants::FieldAccessFlags;
-use jvm::{Field, JavaType};
+use jvm::Field;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct FieldInner {
@@ -57,9 +57,5 @@ impl Field for FieldImpl {
 
     fn access_flags(&self) -> FieldAccessFlags {
         self.inner.access_flags
-    }
-
-    fn r#type(&self) -> JavaType {
-        JavaType::parse(&self.inner.descriptor)
     }
 }

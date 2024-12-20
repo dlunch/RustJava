@@ -6,7 +6,7 @@ use core::{
 
 use parking_lot::RwLock;
 
-use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Result};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Result};
 
 use crate::{class_definition::ClassDefinitionImpl, FieldImpl};
 
@@ -58,7 +58,7 @@ impl ClassInstance for ClassInstanceImpl {
         if let Some(x) = value {
             Ok(x.clone())
         } else {
-            Ok(field.r#type().default())
+            Ok(JavaType::parse(&field.descriptor()).default())
         }
     }
 
