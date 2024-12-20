@@ -1,5 +1,6 @@
 use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, vec::Vec};
 use core::mem::forget;
+use java_constants::FieldAccessFlags;
 
 use bytemuck::cast_slice;
 use hashbrown::{hash_set::Entry, HashMap, HashSet};
@@ -61,13 +62,21 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
     for field in fields {
         let descriptor = field.descriptor();
 
+        if !descriptor.starts_with("L") && !descriptor.starts_with("[") {
+            continue;
+        }
+
+        let value = if field.access_flags().contains(FieldAccessFlags::STATIC) {
+            object.class_definition().get_static_field(&*field).unwrap()
+        } else {
+            object.get_field(&*field).unwrap()
+        };
+
         if descriptor.starts_with("L") && descriptor.ends_with(";") {
-            let value = object.get_field(&*field).unwrap();
             if let JavaValue::Object(Some(value)) = value {
                 find_reachable_objects(jvm, &value, reachable_objects);
             }
         } else if descriptor.starts_with("[") {
-            let value = object.get_field(&*field).unwrap();
             if let JavaValue::Object(Some(value)) = value {
                 reachable_objects.insert(value.clone());
 
