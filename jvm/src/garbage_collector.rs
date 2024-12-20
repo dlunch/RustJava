@@ -18,7 +18,11 @@ pub fn determine_garbage(
     all_class_instances: &HashSet<Box<dyn ClassInstance>>,
     classes: Vec<Box<dyn ClassInstance>>,
 ) -> Vec<Box<dyn ClassInstance>> {
-    let mut reachable_objects = classes.into_iter().collect::<HashSet<_>>();
+    let mut reachable_objects = HashSet::new();
+
+    classes.into_iter().for_each(|x| {
+        find_reachable_objects(jvm, &x, &mut reachable_objects);
+    });
 
     threads
         .iter()

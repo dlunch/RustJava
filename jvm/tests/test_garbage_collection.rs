@@ -26,8 +26,7 @@ async fn test_garbage_collection() -> JvmResult<()> {
     let _ = jvm.resolve_class("java/util/Random").await?;
     let garbage_count = jvm.collect_garbage()?;
 
-    // temporaries used in class loading should be garbage collected
-    assert_eq!(garbage_count, 1);
+    assert_eq!(garbage_count, 0);
 
     // use loaded class
     jvm.push_native_frame();
@@ -42,7 +41,7 @@ async fn test_garbage_collection() -> JvmResult<()> {
     let garbage_count = jvm.collect_garbage()?;
 
     // temporaries used in class loading should be garbage collected
-    assert_eq!(garbage_count, 9);
+    assert_eq!(garbage_count, 6);
 
     // use loaded class
     jvm.push_native_frame();
