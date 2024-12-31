@@ -108,7 +108,7 @@ impl DataInputStream {
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
 
-        Ok((byte1 as JavaChar) << 8 | (byte2 as JavaChar))
+        Ok(((byte1 as JavaChar) << 8) | (byte2 as JavaChar))
     }
 
     async fn read_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
@@ -119,7 +119,7 @@ impl DataInputStream {
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
 
-        Ok((byte1 as i16) << 8 | (byte2 as i16))
+        Ok(((byte1 as i16) << 8) | (byte2 as i16))
     }
 
     async fn read_unsigned_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -130,7 +130,7 @@ impl DataInputStream {
         let byte1: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
         let byte2: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
 
-        Ok((byte1 << 8 | byte2) & 0xffff)
+        Ok(((byte1 << 8) | byte2) & 0xffff)
     }
 
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -143,7 +143,7 @@ impl DataInputStream {
         let byte3: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
         let byte4: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
 
-        Ok(byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4)
+        Ok((byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4)
     }
 
     async fn read_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
@@ -160,13 +160,13 @@ impl DataInputStream {
         let byte7: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
         let byte8: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
 
-        Ok((byte1 as i64) << 56
-            | (byte2 as i64) << 48
-            | (byte3 as i64) << 40
-            | (byte4 as i64) << 32
-            | (byte5 as i64) << 24
-            | (byte6 as i64) << 16
-            | (byte7 as i64) << 8
+        Ok(((byte1 as i64) << 56)
+            | ((byte2 as i64) << 48)
+            | ((byte3 as i64) << 40)
+            | ((byte4 as i64) << 32)
+            | ((byte5 as i64) << 24)
+            | ((byte6 as i64) << 16)
+            | ((byte7 as i64) << 8)
             | (byte8 as i64))
     }
 
