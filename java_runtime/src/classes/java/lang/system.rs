@@ -95,7 +95,8 @@ impl System {
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::gc()");
 
-        jvm.collect_garbage()?;
+        // TODO gc experimental
+        // jvm.collect_garbage()?;
 
         Ok(())
     }
