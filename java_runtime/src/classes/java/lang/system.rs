@@ -92,7 +92,7 @@ impl System {
         Ok(context.now() as _)
     }
 
-    async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
+    async fn gc(_jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::gc()");
 
         // TODO gc experimental
