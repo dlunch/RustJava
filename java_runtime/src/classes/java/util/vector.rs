@@ -236,7 +236,7 @@ impl Vector {
 
         let rust_vector = Self::get_rust_vector(jvm, &this).await?;
 
-        if rust_vector.lock().len() == 0 {
+        if rust_vector.lock().is_empty() {
             return Ok(None.into());
         }
 
