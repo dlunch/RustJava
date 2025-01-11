@@ -592,9 +592,9 @@ impl Jvm {
         let garbage = {
             let threads = self.inner.threads.read();
             let all_objects = self.inner.all_objects.read();
-            let classes = self.inner.classes.read().values().map(|x| x.java_class()).collect();
+            let classes = self.inner.classes.read();
 
-            determine_garbage(self, &threads, &all_objects, classes)
+            determine_garbage(self, &threads, &all_objects, &classes)
         };
 
         let garbage_count = garbage.len();

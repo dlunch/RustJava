@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::mem::forget;
 use java_constants::FieldAccessFlags;
 
@@ -6,7 +6,7 @@ use bytemuck::cast_slice;
 use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use parking_lot::Mutex;
 
-use crate::{thread::JvmThread, ClassInstance, JavaValue, Jvm};
+use crate::{class_loader::Class, thread::JvmThread, ClassInstance, JavaValue, Jvm};
 
 // XXX java/util/Vector, java/util/HashMap internal..
 type RustVector = Arc<Mutex<Vec<Box<dyn ClassInstance>>>>;
@@ -16,12 +16,13 @@ pub fn determine_garbage(
     jvm: &Jvm,
     threads: &BTreeMap<u64, JvmThread>,
     all_class_instances: &HashSet<Box<dyn ClassInstance>>,
-    classes: Vec<Box<dyn ClassInstance>>,
+    classes: &BTreeMap<String, Class>,
 ) -> Vec<Box<dyn ClassInstance>> {
     let mut reachable_objects = HashSet::new();
 
-    classes.into_iter().for_each(|x| {
-        find_reachable_objects(jvm, &x, &mut reachable_objects);
+    classes.values().for_each(|x| {
+        find_reachable_objects(jvm, &x.java_class(), &mut reachable_objects);
+        find_static_reachable_objects(jvm, x, &mut reachable_objects);
     });
 
     threads
@@ -39,6 +40,37 @@ pub fn determine_garbage(
     }
 
     all_class_instances.difference(&reachable_objects).cloned().collect()
+}
+
+fn find_static_reachable_objects(jvm: &Jvm, class: &Class, reachable_objects: &mut HashSet<Box<dyn ClassInstance>>) {
+    let fields = class.definition.fields();
+    for field in fields {
+        if !field.access_flags().contains(FieldAccessFlags::STATIC) {
+            continue;
+        }
+
+        let descriptor = field.descriptor();
+        let value = class.definition.get_static_field(&*field).unwrap();
+
+        if descriptor.starts_with("L") && descriptor.ends_with(";") {
+            if let JavaValue::Object(Some(value)) = value {
+                find_reachable_objects(jvm, &value, reachable_objects);
+            }
+        } else if descriptor.starts_with("[") {
+            if let JavaValue::Object(Some(value)) = value {
+                reachable_objects.insert(value.clone());
+
+                let array = value.as_array_instance().unwrap();
+                let values = array.load(0, array.length()).unwrap();
+
+                for value in values {
+                    if let JavaValue::Object(Some(value)) = value {
+                        find_reachable_objects(jvm, &value, reachable_objects);
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[allow(clippy::borrowed_box)]
@@ -64,17 +96,17 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
 
     let fields = object.class_definition().fields();
     for field in fields {
+        if field.access_flags().contains(FieldAccessFlags::STATIC) {
+            continue;
+        }
+
         let descriptor = field.descriptor();
 
         if !descriptor.starts_with("L") && !descriptor.starts_with("[") {
             continue;
         }
 
-        let value = if field.access_flags().contains(FieldAccessFlags::STATIC) {
-            object.class_definition().get_static_field(&*field).unwrap()
-        } else {
-            object.get_field(&*field).unwrap()
-        };
+        let value = object.get_field(&*field).unwrap();
 
         if descriptor.starts_with("L") && descriptor.ends_with(";") {
             if let JavaValue::Object(Some(value)) = value {
