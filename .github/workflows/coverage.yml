@@ -23,12 +23,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target
-          key: ${{ runner.os }}-stable-build-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-stable-build-target-
+          key: ${{ runner.os }}-stable-coverage-build-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-stable-coverage-build-target-
 
       - name: Generate code coverage
         run: |
-          cargo tarpaulin --all-features --workspace --timeout 120 --out xml
+          cargo tarpaulin --all-features --skip-clean --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
