@@ -30,9 +30,6 @@ jobs:
         run: |
           cargo tarpaulin --all-features --workspace --timeout 120 --out xml
 
-      - name: Prepare codecov
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE" # https://github.com/codecov/feedback/issues/263
-
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
         with:
