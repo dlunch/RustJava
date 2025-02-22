@@ -3,7 +3,7 @@ members = ["classfile", "java_runtime", "jvm", "jvm_rust", "test_utils"]
 
 [workspace.package]
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 
 [workspace.dependencies]
