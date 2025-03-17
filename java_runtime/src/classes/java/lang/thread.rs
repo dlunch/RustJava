@@ -7,7 +7,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::Runnable, RuntimeClassProto, RuntimeContext, SpawnCallback};
+use crate::{RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::Runnable};
 
 // class java.lang.Thread
 pub struct Thread;
@@ -89,7 +89,7 @@ impl Thread {
 
         #[async_trait::async_trait]
         impl SpawnCallback for ThreadStartProxy {
-            #[tracing::instrument(name = "thread", fields(thread = self.thread_id), skip_all)]
+            #[tracing::instrument(name = "java thread", fields(id = self.thread_id), skip_all)]
             async fn call(&self) -> Result<()> {
                 tracing::trace!("Thread start");
 
