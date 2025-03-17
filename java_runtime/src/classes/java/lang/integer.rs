@@ -2,9 +2,9 @@ use alloc::{format, string::ToString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
-use crate::{classes::java::lang::String, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
 // class java.lang.Integer
 pub struct Integer;

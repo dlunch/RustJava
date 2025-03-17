@@ -6,7 +6,7 @@ use alloc::{
 };
 use dyn_clone::clone_trait_object;
 
-use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue, Result};
+use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue};
 
 pub trait ArrayClassDefinition: ClassDefinition {
     fn element_type_name(&self) -> String;

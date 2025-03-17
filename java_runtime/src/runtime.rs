@@ -3,7 +3,7 @@ mod io;
 use alloc::boxed::Box;
 use core::time::Duration;
 
-use dyn_clone::{clone_trait_object, DynClone};
+use dyn_clone::{DynClone, clone_trait_object};
 
 use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 

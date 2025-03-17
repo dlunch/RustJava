@@ -10,8 +10,8 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
-    classes::java::{io::InputStream, lang::System},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::InputStream, lang::System},
 };
 
 const BUF_SIZE: usize = 10;

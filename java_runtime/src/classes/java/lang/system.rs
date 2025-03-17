@@ -1,14 +1,14 @@
 use alloc::{string::String as RustString, vec, vec::Vec};
 
-use jvm::{runtime::JavaLangString, JavaValue};
+use jvm::{JavaValue, runtime::JavaLangString};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{io::FileDescriptor, lang::String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::FileDescriptor, lang::String},
 };
 
 // class java.lang.System

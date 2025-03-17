@@ -3,11 +3,11 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::io::{File, FileDescriptor},
     RuntimeClassProto, RuntimeContext,
+    classes::java::io::{File, FileDescriptor},
 };
 
 // class java.io.FileInputStream

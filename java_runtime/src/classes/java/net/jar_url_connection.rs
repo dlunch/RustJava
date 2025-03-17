@@ -1,11 +1,11 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::{lang::String, net::URL, util::jar::Attributes},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{lang::String, net::URL, util::jar::Attributes},
 };
 
 // class java.net.JarURLConnection

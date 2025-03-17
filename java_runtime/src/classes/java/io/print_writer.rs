@@ -1,11 +1,11 @@
 use alloc::{format, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::{io::Writer, lang::String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::Writer, lang::String},
 };
 
 // class java.io.PrintWriter

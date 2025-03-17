@@ -1,9 +1,9 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
-use crate::{classes::java::lang::String, FileType, RuntimeClassProto, RuntimeContext};
+use crate::{FileType, RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
 // class java.io.File
 pub struct File;

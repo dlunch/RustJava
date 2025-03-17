@@ -6,7 +6,7 @@ use std::{
 use clap::{ArgGroup, Parser};
 
 use jvm::Result;
-use rust_java::{run, StartType};
+use rust_java::{StartType, run};
 
 #[derive(Parser)]
 #[clap(group = ArgGroup::new("target").required(true).multiple(false))]

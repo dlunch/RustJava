@@ -1,12 +1,12 @@
 use alloc::{collections::BTreeMap, vec::Vec};
 
 use nom::{
+    IResult,
     bytes::complete::take,
     combinator::{flat_map, map, success},
     multi::count,
     number::complete::{be_i16, be_i32, be_u16, i8, u8},
     sequence::tuple,
-    IResult,
 };
 
 use crate::constant_pool::{ConstantPoolItem, ReferenceConstant, ValueConstant};

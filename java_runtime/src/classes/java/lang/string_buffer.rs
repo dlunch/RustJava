@@ -5,11 +5,11 @@ use alloc::{
 };
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::lang::{Object, String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::lang::{Object, String},
 };
 
 // class java.lang.StringBuffer

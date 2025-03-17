@@ -4,8 +4,8 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
-    classes::java::{io::Reader, lang::String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::Reader, lang::String},
 };
 
 // class java.io.BufferedReader

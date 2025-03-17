@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{runtime::JavaLangString, Result};
+use jvm::{Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -29,7 +29,9 @@ async fn test_data_output_stream() -> Result<()> {
 
     assert_eq!(
         buf,
-        vec![1, b'h', b'e', b'l', b'l', b'o', b',', b' ', b'w', b'o', b'r', b'l', b'd', 0, 0xbc, 0x4f, 0xf2, 0, 0, 0, 0x1c, 0xbb, 0xf2, 0xe2, 0x4c]
+        vec![
+            1, b'h', b'e', b'l', b'l', b'o', b',', b' ', b'w', b'o', b'r', b'l', b'd', 0, 0xbc, 0x4f, 0xf2, 0, 0, 0, 0x1c, 0xbb, 0xf2, 0xe2, 0x4c
+        ]
     );
 
     Ok(())

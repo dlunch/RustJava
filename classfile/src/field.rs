@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
-use nom::{combinator::map, multi::length_count, number::complete::be_u16, sequence::tuple, IResult};
+use nom::{IResult, combinator::map, multi::length_count, number::complete::be_u16, sequence::tuple};
 
 use java_constants::FieldAccessFlags;
 

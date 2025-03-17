@@ -1,16 +1,16 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use nom::{
+    IResult,
     bytes::complete::take,
     combinator::{flat_map, map, map_res},
     multi::length_count,
     number::complete::{be_u16, be_u32},
     sequence::tuple,
-    IResult,
 };
 use nom_derive::{NomBE, Parse};
 
-use crate::{constant_pool::ConstantPoolItem, opcode::Opcode, ValueConstant};
+use crate::{ValueConstant, constant_pool::ConstantPoolItem, opcode::Opcode};
 
 pub struct CodeAttributeExceptionTable {
     pub start_pc: u16,

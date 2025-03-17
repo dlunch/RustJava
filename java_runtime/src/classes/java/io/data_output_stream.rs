@@ -5,7 +5,7 @@ use bytemuck::cast_vec;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{classes::java::io::InputStream, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
 
 // class java.io.DataOutputStream
 pub struct DataOutputStream;

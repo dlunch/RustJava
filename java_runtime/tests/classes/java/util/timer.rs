@@ -5,7 +5,7 @@ use java_runtime::{RuntimeClassProto, RuntimeContext};
 use jvm::{ClassInstanceRef, Jvm, Result};
 use jvm_rust::ClassDefinitionImpl;
 
-use test_utils::{create_test_jvm, TestRuntime};
+use test_utils::{TestRuntime, create_test_jvm};
 
 struct TestClass;
 impl TestClass {

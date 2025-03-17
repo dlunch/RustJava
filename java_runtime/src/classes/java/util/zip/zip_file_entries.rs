@@ -4,11 +4,11 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Object, String},
         util::zip::ZipFile,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.util.zip.ZipFile$Entries

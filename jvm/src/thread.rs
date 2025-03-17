@@ -4,7 +4,7 @@ use alloc::{
     vec::Vec,
 };
 
-use crate::{class_loader::Class, ClassInstance};
+use crate::{ClassInstance, class_loader::Class};
 
 pub enum StackFrame {
     Java(JavaStackFrame),

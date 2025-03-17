@@ -4,11 +4,11 @@ use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::String,
-        net::{URLConnection, URL},
+        net::{URL, URLConnection},
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class rustjava.net.FileURLHandler

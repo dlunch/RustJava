@@ -4,7 +4,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::FieldAccessFlags;
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::io::OutputStream, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::OutputStream};
 
 // class java.io.FilterOutputStream
 pub struct FilterOutputStream;

@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-use crate::{class_instance::ClassInstance, jvm::Jvm, JavaChar, Result};
+use crate::{JavaChar, Result, class_instance::ClassInstance, jvm::Jvm};
 
 pub struct JavaLangString;
 

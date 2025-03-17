@@ -1,14 +1,14 @@
 use alloc::{boxed::Box, format, string::String as RustString, sync::Arc, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{PrintStream, PrintWriter},
         lang::String,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.lang.Throwable

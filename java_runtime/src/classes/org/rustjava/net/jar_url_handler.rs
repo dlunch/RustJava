@@ -4,8 +4,8 @@ use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::net::{URLConnection, URL},
     RuntimeClassProto, RuntimeContext,
+    classes::java::net::{URL, URLConnection},
 };
 
 // class rustjava.net.JarURLHandler

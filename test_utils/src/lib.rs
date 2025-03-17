@@ -11,7 +11,7 @@ use jvm::{ClassDefinition, Jvm, Result};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use java_runtime::{
-    get_bootstrap_class_loader, get_runtime_class_proto, File, FileSize, FileStat, FileType, IOError, IOResult, Runtime, SpawnCallback, RT_RUSTJAR,
+    File, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader, get_runtime_class_proto,
 };
 
 #[derive(Clone)]

@@ -1,19 +1,19 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{File, InputStream},
         lang::String,
         util::{
+            Enumeration,
             jar::{JarEntry, Manifest},
             zip::ZipEntry,
-            Enumeration,
         },
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.util.jar.JarFile

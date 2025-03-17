@@ -2,16 +2,16 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{
-    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     ClassInstanceRef, Jvm, Result,
+    runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
 };
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::{ClassLoader, String},
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.lang.Class

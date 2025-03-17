@@ -4,8 +4,8 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
-    classes::java::lang::{String, StringBuffer},
     RuntimeClassProto, RuntimeContext,
+    classes::java::lang::{String, StringBuffer},
 };
 
 // class java.io.StringWriter
@@ -71,7 +71,7 @@ impl StringWriter {
 mod tests {
     use alloc::vec;
 
-    use jvm::{runtime::JavaLangString, JavaChar, Result};
+    use jvm::{JavaChar, Result, runtime::JavaLangString};
 
     use test_utils::test_jvm;
 

@@ -9,15 +9,15 @@ use parking_lot::Mutex;
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{File, InputStream},
         lang::String,
-        util::{zip::ZipEntry, Enumeration},
+        util::{Enumeration, zip::ZipEntry},
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 type JavaZipArchive = Arc<Mutex<ZipArchive<Cursor<Vec<u8>>>>>;

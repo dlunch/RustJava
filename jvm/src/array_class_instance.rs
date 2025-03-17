@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, value::JavaValue, Result};
+use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, value::JavaValue};
 
 #[async_trait::async_trait]
 pub trait ArrayClassInstance: ClassInstance {

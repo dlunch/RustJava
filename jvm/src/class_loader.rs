@@ -3,8 +3,8 @@ use alloc::{boxed::Box, sync::Arc};
 use parking_lot::RwLock;
 
 use crate::{
-    runtime::{JavaLangClass, JavaLangClassLoader},
     ClassDefinition, ClassInstance, Jvm, Result,
+    runtime::{JavaLangClass, JavaLangClassLoader},
 };
 
 #[derive(Clone)]

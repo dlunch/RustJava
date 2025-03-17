@@ -11,11 +11,11 @@ use bytemuck::{cast_slice, cast_vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::lang::{Object, System},
     RuntimeClassProto, RuntimeContext,
+    classes::java::lang::{Object, System},
 };
 
 use super::StringBuffer;
@@ -180,11 +180,7 @@ impl String {
         let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
         let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
 
-        if this_string == other_string {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        if this_string == other_string { Ok(true) } else { Ok(false) }
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {

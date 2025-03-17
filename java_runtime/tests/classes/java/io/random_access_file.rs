@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{runtime::JavaLangString, Result};
+use jvm::{Result, runtime::JavaLangString};
 
 use test_utils::test_jvm_filesystem;
 

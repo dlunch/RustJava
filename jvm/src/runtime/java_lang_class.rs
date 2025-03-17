@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use crate::{class_definition::ClassDefinition, class_instance::ClassInstance, jvm::Jvm, Result};
+use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInstance, jvm::Jvm};
 
 pub struct JavaLangClass;
 

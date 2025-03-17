@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
 // I'm too lazy to implement hashmap in java, so i'm leveraging rust hashmap here...
 // We can't use java object as hashmap key as we need `await` to call `equals()`

@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use dyn_clone::{clone_trait_object, DynClone};
+use dyn_clone::{DynClone, clone_trait_object};
 
 #[derive(Debug)]
 pub enum IOError {

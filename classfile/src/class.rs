@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
-use nom::{combinator::map, number::complete::be_u16, IResult};
+use nom::{IResult, combinator::map, number::complete::be_u16};
 use nom_derive::{NomBE, Parse};
 
 use java_constants::ClassAccessFlags;

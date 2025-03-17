@@ -4,8 +4,8 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::{io::InputStream, net::URL},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::InputStream, net::URL},
 };
 
 // class java.net.URLConnection

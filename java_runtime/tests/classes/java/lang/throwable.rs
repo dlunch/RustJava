@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 
 use java_runtime::classes::java::lang::String;
-use jvm::{runtime::JavaLangString, ClassInstance, ClassInstanceRef, JavaError, Result};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 

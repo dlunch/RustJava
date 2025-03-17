@@ -1,4 +1,4 @@
-use jvm::{runtime::JavaLangClass, Result};
+use jvm::{Result, runtime::JavaLangClass};
 
 use test_utils::test_jvm;
 

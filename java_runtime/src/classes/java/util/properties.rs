@@ -4,8 +4,8 @@ use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
-    classes::java::lang::{Object, String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::lang::{Object, String},
 };
 
 // class java.util.Properties

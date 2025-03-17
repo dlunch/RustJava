@@ -3,11 +3,11 @@ use alloc::{borrow::ToOwned, string::ToString, vec};
 use url::Url;
 
 use java_class_proto::JavaMethodProto;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::{lang::String, net::URL},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{lang::String, net::URL},
 };
 
 // class java.net.URLStreamHandler

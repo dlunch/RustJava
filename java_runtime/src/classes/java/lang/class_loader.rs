@@ -2,14 +2,14 @@ use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, String},
         net::URL,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.lang.ClassLoader

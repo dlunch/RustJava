@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use crate::{class_instance::ClassInstance, jvm::Jvm, Result};
+use crate::{Result, class_instance::ClassInstance, jvm::Jvm};
 
 use super::JavaLangString;
 

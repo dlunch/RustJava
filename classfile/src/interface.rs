@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
-use nom::{combinator::map, number::complete::be_u16, IResult};
+use nom::{IResult, combinator::map, number::complete::be_u16};
 
 use crate::constant_pool::ConstantPoolItem;
 

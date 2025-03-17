@@ -5,10 +5,10 @@ use core::{
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, sync::Arc};
 
-use java_runtime::{classes::java::lang::Object, Runtime, SpawnCallback};
+use java_runtime::{Runtime, SpawnCallback, classes::java::lang::Object};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use test_utils::{create_test_jvm, TestRuntime};
+use test_utils::{TestRuntime, create_test_jvm};
 
 #[tokio::test]
 async fn test_wait() -> Result<()> {

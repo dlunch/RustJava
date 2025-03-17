@@ -8,7 +8,7 @@ use parking_lot::RwLock;
 
 use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Result};
 
-use crate::{class_definition::ClassDefinitionImpl, FieldImpl};
+use crate::{FieldImpl, class_definition::ClassDefinitionImpl};
 
 struct ClassInstanceInner {
     class: Box<dyn ClassDefinition>,

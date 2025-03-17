@@ -1,5 +1,5 @@
 use java_runtime::classes::java::util::jar::JarEntry;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Result};
+use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm_filesystem;
 

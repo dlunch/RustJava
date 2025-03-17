@@ -2,7 +2,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 use bytemuck::cast_vec;
 
-use crate::{class_instance::ClassInstance, jvm::Jvm, Result};
+use crate::{Result, class_instance::ClassInstance, jvm::Jvm};
 
 pub struct JavaIoInputStream;
 

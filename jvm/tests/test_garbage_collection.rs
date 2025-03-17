@@ -1,4 +1,4 @@
-use jvm::{runtime::JavaLangString, Result as JvmResult};
+use jvm::{Result as JvmResult, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 

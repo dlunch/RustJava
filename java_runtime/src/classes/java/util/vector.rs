@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
 // I'm too lazy to implement vector in java, so i'm leveraging rust vector here...
 type RustVector = Arc<Mutex<Vec<Option<Box<dyn ClassInstance>>>>>;

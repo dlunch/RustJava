@@ -3,7 +3,7 @@ use alloc::vec;
 use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::util::zip::ZipEntry, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::zip::ZipEntry};
 
 // class java.util.jar.JarEntry
 pub struct JarEntry;

@@ -1,11 +1,11 @@
 use alloc::{string::String as RustString, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::{io::InputStream, lang::String},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::InputStream, lang::String},
 };
 
 // class java.io.DataInputStream

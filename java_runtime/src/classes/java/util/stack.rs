@@ -3,7 +3,7 @@ use alloc::vec;
 use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::lang::Object, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Stack
 pub struct Stack;

@@ -7,9 +7,9 @@ use event_listener::Event;
 use hashbrown::DefaultHashBuilder;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{runtime::JavaLangString, Array, ClassInstance, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
-use crate::{classes::java::lang::String, Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback};
+use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::String};
 
 // class java.lang.Object
 pub struct Object;

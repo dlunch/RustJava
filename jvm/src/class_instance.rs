@@ -5,10 +5,10 @@ use core::{
     ops::{Deref, DerefMut},
 };
 
-use dyn_clone::{clone_trait_object, DynClone};
-use dyn_hash::{hash_trait_object, DynHash};
+use dyn_clone::{DynClone, clone_trait_object};
+use dyn_hash::{DynHash, hash_trait_object};
 
-use crate::{as_any::AsAny, value::JavaValue, ArrayClassInstance, ClassDefinition, Field, Result};
+use crate::{ArrayClassInstance, ClassDefinition, Field, Result, as_any::AsAny, value::JavaValue};
 
 #[async_trait::async_trait]
 pub trait ClassInstance: Sync + Send + AsAny + Debug + DynHash + DynClone + 'static {

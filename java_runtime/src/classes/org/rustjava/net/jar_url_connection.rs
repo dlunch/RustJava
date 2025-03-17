@@ -2,16 +2,16 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{FieldAccessFlags, MethodAccessFlags};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::{Object, String},
         net::URL,
         util::jar::JarFile,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class rustjava.net.JarURLConnection

@@ -1,15 +1,15 @@
 use alloc::{format, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::String,
         net::{URLConnection, URLStreamHandler},
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.net.URL
@@ -300,7 +300,7 @@ impl URL {
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, Result};
+    use jvm::{Result, runtime::JavaLangString};
 
     use test_utils::test_jvm;
 

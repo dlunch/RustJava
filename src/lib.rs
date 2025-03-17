@@ -4,8 +4,8 @@ mod runtime;
 
 use std::{io::Write, path::Path};
 
-use java_runtime::{get_bootstrap_class_loader, Runtime, RT_RUSTJAR};
-use jvm::{runtime::JavaLangString, JavaValue, Jvm, Result};
+use java_runtime::{RT_RUSTJAR, Runtime, get_bootstrap_class_loader};
+use jvm::{JavaValue, Jvm, Result, runtime::JavaLangString};
 
 use runtime::RuntimeImpl;
 

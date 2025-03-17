@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 
 use jvm::{BootstrapClassLoader, ClassDefinition, Jvm, Result};
 
-use crate::{Runtime, RuntimeClassProto, RT_RUSTJAR};
+use crate::{RT_RUSTJAR, Runtime, RuntimeClassProto};
 
 pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
     let protos = [

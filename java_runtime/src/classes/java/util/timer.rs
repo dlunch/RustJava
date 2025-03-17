@@ -3,7 +3,7 @@ use alloc::{boxed::Box, vec};
 use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::util::TimerTask, RuntimeClassProto, RuntimeContext, SpawnCallback};
+use crate::{RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::util::TimerTask};
 
 // class java.util.Timer
 pub struct Timer;

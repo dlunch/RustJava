@@ -7,11 +7,11 @@ use core::{
 };
 use std::{
     fs,
-    io::{stderr, stdin, Write},
+    io::{Write, stderr, stdin},
     sync::Mutex,
 };
 
-use java_runtime::{get_runtime_class_proto, File, FileStat, FileType, IOError, IOResult, Runtime, SpawnCallback, RT_RUSTJAR};
+use java_runtime::{File, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 

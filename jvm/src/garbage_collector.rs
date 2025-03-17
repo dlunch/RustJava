@@ -3,10 +3,10 @@ use core::mem::forget;
 use java_constants::FieldAccessFlags;
 
 use bytemuck::cast_slice;
-use hashbrown::{hash_set::Entry, HashMap, HashSet};
+use hashbrown::{HashMap, HashSet, hash_set::Entry};
 use parking_lot::Mutex;
 
-use crate::{class_loader::Class, thread::JvmThread, ClassInstance, JavaValue, Jvm};
+use crate::{ClassInstance, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
 
 // XXX java/util/Vector, java/util/HashMap internal..
 type RustVector = Arc<Mutex<Vec<Box<dyn ClassInstance>>>>;

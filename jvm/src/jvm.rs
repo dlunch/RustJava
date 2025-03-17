@@ -16,6 +16,7 @@ use parking_lot::RwLock;
 use java_constants::MethodAccessFlags;
 
 use crate::{
+    Result,
     array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
@@ -25,11 +26,10 @@ use crate::{
     garbage_collector::determine_garbage,
     invoke_arg::InvokeArg,
     method::Method,
-    r#type::JavaType,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::JvmThread,
+    r#type::JavaType,
     value::JavaValue,
-    Result,
 };
 
 struct JvmInner {

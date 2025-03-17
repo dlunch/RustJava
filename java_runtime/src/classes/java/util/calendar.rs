@@ -4,7 +4,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{classes::java::util::Date, RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::Date};
 
 // class java.util.Calendar
 pub struct Calendar;

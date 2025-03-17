@@ -1,10 +1,10 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
 use nom::{
+    IResult,
     bytes::complete::take,
     combinator::{flat_map, map},
     number::complete::{be_u16, u8},
-    IResult,
 };
 use nom_derive::{NomBE, Parse};
 

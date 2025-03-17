@@ -1,9 +1,9 @@
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::fmt::Debug;
 
-use dyn_clone::{clone_trait_object, DynClone};
+use dyn_clone::{DynClone, clone_trait_object};
 
-use crate::{as_any::AsAny, ArrayClassDefinition, ClassInstance, Field, JavaValue, Method, Result};
+use crate::{ArrayClassDefinition, ClassInstance, Field, JavaValue, Method, Result, as_any::AsAny};
 
 #[async_trait::async_trait]
 pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {

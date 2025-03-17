@@ -5,11 +5,11 @@ use alloc::{
 };
 
 use nom::{
+    IResult,
     bytes::complete::{take, take_until},
     character::complete::anychar,
     multi::many0,
     sequence::terminated,
-    IResult,
 };
 
 use crate::JavaValue;

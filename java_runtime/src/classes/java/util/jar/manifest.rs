@@ -1,11 +1,11 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    classes::java::{io::InputStream, lang::String, util::jar::Attributes},
     RuntimeClassProto, RuntimeContext,
+    classes::java::{io::InputStream, lang::String, util::jar::Attributes},
 };
 
 // class java.util.jar.Manifest
@@ -92,7 +92,7 @@ impl Manifest {
 
 #[cfg(test)]
 mod test {
-    use jvm::{runtime::JavaLangString, Result};
+    use jvm::{Result, runtime::JavaLangString};
 
     use test_utils::test_jvm;
 

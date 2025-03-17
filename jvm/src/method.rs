@@ -3,7 +3,7 @@ use core::fmt::Debug;
 
 use java_constants::MethodAccessFlags;
 
-use crate::{as_any::AsAny, JavaValue, Jvm, Result};
+use crate::{JavaValue, Jvm, Result, as_any::AsAny};
 
 #[async_trait::async_trait]
 pub trait Method: Sync + Send + AsAny + Debug {

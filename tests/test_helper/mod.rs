@@ -8,7 +8,7 @@ use std::{
 };
 
 use jvm::Result;
-use rust_java::{run, StartType};
+use rust_java::{StartType, run};
 
 struct Output {
     output: Arc<Mutex<Vec<u8>>>,

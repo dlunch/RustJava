@@ -1,14 +1,14 @@
 use alloc::{format, string::ToString, vec};
 
 use java_class_proto::JavaMethodProto;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::OutputStream,
         lang::{Object, String},
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.io.PrintStream

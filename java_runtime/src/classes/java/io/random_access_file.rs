@@ -3,14 +3,14 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{runtime::JavaLangString, Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{File, FileDescriptor},
         lang::String,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.io.RandomAccessFile

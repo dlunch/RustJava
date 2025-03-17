@@ -1,5 +1,5 @@
 use java_runtime::classes::java::lang::StringBuffer;
-use jvm::{runtime::JavaLangString, ClassInstanceRef, JavaChar, Result};
+use jvm::{ClassInstanceRef, JavaChar, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 

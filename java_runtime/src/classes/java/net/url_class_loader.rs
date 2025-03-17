@@ -2,17 +2,17 @@ use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{
-    runtime::{JavaIoInputStream, JavaLangString},
     Array, ClassInstanceRef, Jvm, Result,
+    runtime::{JavaIoInputStream, JavaLangString},
 };
 
 use crate::{
+    RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, ClassLoader, String},
         net::{JarURLConnection, URL},
         util::jar::JarEntry,
     },
-    RuntimeClassProto, RuntimeContext,
 };
 
 // class java.net.URLClassLoader
