@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, Opcode, ValueConstant};
-use jvm::{runtime::JavaLangString, ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result};
+use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result, runtime::JavaLangString};
 
 use crate::stack_frame::StackFrame;
 
@@ -22,7 +22,7 @@ impl Interpreter {
 
         stack_frame
             .local_variables
-            .extend(iter::repeat(JavaValue::Void).take(code_attribute.max_locals as usize));
+            .extend(iter::repeat_n(JavaValue::Void, code_attribute.max_locals as usize));
 
         let mut iter = code_attribute.code.range(0..);
         while let Some((offset, opcode)) = iter.next() {
