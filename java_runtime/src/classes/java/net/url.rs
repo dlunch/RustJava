@@ -292,7 +292,7 @@ impl URL {
             Ok(jvm.new_class("org/rustjava/net/JarURLHandler", "()V", ()).await?.into())
         } else {
             Err(jvm
-                .exception("java/net/MalformedURLException", &format!("unknown protocol: {}", protocol))
+                .exception("java/net/MalformedURLException", &format!("unknown protocol: {protocol}"))
                 .await)
         }
     }

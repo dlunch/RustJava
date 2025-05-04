@@ -15,8 +15,8 @@ pub enum JavaError {
 impl Display for JavaError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            JavaError::JavaException(e) => write!(f, "Java exception: {:?}", e),
-            JavaError::FatalError(e) => write!(f, "Fatal error: {}", e),
+            JavaError::JavaException(e) => write!(f, "Java exception: {e:?}"),
+            JavaError::FatalError(e) => write!(f, "Fatal error: {e}"),
         }
     }
 }

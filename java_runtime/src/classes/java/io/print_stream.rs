@@ -151,7 +151,7 @@ impl PrintStream {
     async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, double: f64) -> Result<()> {
         tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &double);
 
-        let string = format!("{:.1}", double);
+        let string = format!("{double:.1}");
 
         let java_string = JavaLangString::from_rust_string(jvm, &string).await?;
 

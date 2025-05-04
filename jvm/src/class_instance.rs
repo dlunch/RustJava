@@ -71,7 +71,7 @@ impl<T> ClassInstanceRef<T> {
 impl<T> Debug for ClassInstanceRef<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Some(x) = &self.instance {
-            write!(f, "{:?}", x)
+            write!(f, "{x:?}")
         } else {
             write!(f, "null")
         }

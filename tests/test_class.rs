@@ -29,7 +29,7 @@ async fn test_class() -> Result<()> {
             continue;
         }
 
-        let expected_path = base_path.join(format!("{}.txt", name));
+        let expected_path = base_path.join(format!("{name}.txt"));
         let expected = fs::read_to_string(expected_path).unwrap();
 
         let result = if extension.unwrap().to_str().unwrap() == "jar" {
@@ -39,7 +39,7 @@ async fn test_class() -> Result<()> {
         };
 
         if let Err(err) = result {
-            panic!("Test {} failed with error: {}", name, err);
+            panic!("Test {name} failed with error: {err}");
         } else {
             assert_eq!(result.as_ref().unwrap().clone(), expected, "Test {} failed: {}", name, result.unwrap());
         }

@@ -49,7 +49,7 @@ async fn test_real_jvm() -> Result<()> {
         };
 
         if let Err(err) = result {
-            panic!("Test {} failed with error: {}", name, err);
+            panic!("Test {name} failed with error: {err}");
         } else {
             assert_eq!(result.as_ref().unwrap().clone(), expected, "Test {} failed: {}", name, result.unwrap());
         }

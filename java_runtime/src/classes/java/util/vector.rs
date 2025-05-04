@@ -208,7 +208,7 @@ impl Vector {
 
         if index as usize >= size {
             return Err(jvm
-                .exception("java/lang/IndexOutOfBoundsException", &format!("{} >= {}", index, size))
+                .exception("java/lang/IndexOutOfBoundsException", &format!("{index} >= {size}"))
                 .await);
         }
 

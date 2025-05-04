@@ -81,7 +81,7 @@ impl Integer {
     async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Integer::toHexString({:?})", value);
 
-        let string = JavaLangString::from_rust_string(jvm, &format!("{:x}", value)).await?;
+        let string = JavaLangString::from_rust_string(jvm, &format!("{value:x}")).await?;
 
         Ok(string.into())
     }

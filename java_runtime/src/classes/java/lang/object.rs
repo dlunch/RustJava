@@ -94,7 +94,7 @@ impl Object {
 
         let hash_code: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
 
-        let result = format!("{}@{:x}", class_name_rust, hash_code);
+        let result = format!("{class_name_rust}@{hash_code:x}");
 
         Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }

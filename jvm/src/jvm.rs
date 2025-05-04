@@ -136,7 +136,7 @@ impl Jvm {
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
 
-        let class_name = format!("[{}", element_type_name);
+        let class_name = format!("[{element_type_name}");
 
         let class = self.resolve_class(&class_name).await?.definition;
         let array_class = class.as_array_class_definition().unwrap();
@@ -166,7 +166,7 @@ impl Jvm {
             Ok(class.definition.get_static_field(&*field)?.into())
         } else {
             Err(self
-                .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
+                .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }
@@ -185,7 +185,7 @@ impl Jvm {
             class.definition.put_static_field(&*field, value.into())
         } else {
             Err(self
-                .exception("java/lang/NoSuchFieldError", &format!("{}.{}:{}", class_name, name, descriptor))
+                .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }
@@ -248,7 +248,7 @@ impl Jvm {
                 return Err(self
                     .exception(
                         "java/lang/IncompatibleClassChangeError",
-                        &format!("{}.{}:{}", class_name, name, descriptor),
+                        &format!("{class_name}.{name}:{descriptor}"),
                     )
                     .await);
             }
@@ -258,7 +258,7 @@ impl Jvm {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
             Err(self
-                .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
+                .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }
@@ -320,7 +320,7 @@ impl Jvm {
                 return Err(self
                     .exception(
                         "java/lang/IncompatibleClassChangeError",
-                        &format!("{}.{}:{}", class_name, name, descriptor),
+                        &format!("{class_name}.{name}:{descriptor}"),
                     )
                     .await);
             }
@@ -331,7 +331,7 @@ impl Jvm {
                 .into())
         } else {
             Err(self
-                .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class_name, name, descriptor))
+                .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }

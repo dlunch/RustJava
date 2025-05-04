@@ -30,7 +30,7 @@ where
 
     // add rt.rustjar
     // TODO do we need boot class path?
-    let class_path_str = format!("{}:{}", RT_RUSTJAR, class_path_str);
+    let class_path_str = format!("{RT_RUSTJAR}:{class_path_str}");
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
     let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?;

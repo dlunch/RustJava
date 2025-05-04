@@ -132,7 +132,7 @@ impl URLClassLoader {
             if file.ends_with('/') || file.is_empty() {
                 // directory
                 let final_path = if file.ends_with('/') {
-                    format!("{}{}", file, name_str)
+                    format!("{file}{name_str}")
                 } else {
                     name_str.clone()
                 };
@@ -158,7 +158,7 @@ impl URLClassLoader {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
 
-                let jar_url_str = format!("jar:file:{}!/{}", file, name_str); // TODO url might not be file
+                let jar_url_str = format!("jar:file:{file}!/{name_str}"); // TODO url might not be file
                 let jar_url = JavaLangString::from_rust_string(jvm, &jar_url_str).await?;
                 let jar_url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (jar_url,)).await?;
                 let connection: ClassInstanceRef<JarURLConnection> =

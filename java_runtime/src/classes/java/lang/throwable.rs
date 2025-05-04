@@ -135,7 +135,7 @@ impl Throwable {
             if message.is_empty() {
                 class_name
             } else {
-                format!("{}: {}", class_name, message)
+                format!("{class_name}: {message}")
             }
         };
 
@@ -154,7 +154,7 @@ impl Throwable {
             .await?;
 
         for line in stack_trace.iter() {
-            let line = format!("\tat {}", line);
+            let line = format!("\tat {line}");
             let line = JavaLangString::from_rust_string(jvm, &line).await?;
             let _: () = jvm.invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
         }
