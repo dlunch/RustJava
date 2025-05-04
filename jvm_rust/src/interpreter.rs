@@ -453,18 +453,18 @@ impl Interpreter {
                 stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
             }
             Opcode::IfAcmpeq(x) => {
-                let value2: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
-                let value1: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+                let value2: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                if value1.equals(&*value2)? {
+                if value1 == value2 {
                     return Ok(ExecuteNext::Jump((current_offset as i32 + *x as i32) as u32));
                 }
             }
             Opcode::IfAcmpne(x) => {
-                let value2: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
-                let value1: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+                let value2: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                let value1: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                if !value1.equals(&*value2)? {
+                if value1 != value2 {
                     return Ok(ExecuteNext::Jump((current_offset as i32 + *x as i32) as u32));
                 }
             }
