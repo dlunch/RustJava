@@ -22,6 +22,7 @@ impl FileInputStream {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
+                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
@@ -48,6 +49,21 @@ impl FileInputStream {
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
 
         Ok(())
+    }
+
+    async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.FileInputStream::available({:?})", &this);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let rust_file = FileDescriptor::file(jvm, fd).await?;
+
+        // TODO get os buffer size
+        let stat = rust_file.metadata().await.unwrap();
+        let tell = rust_file.tell().await.unwrap();
+
+        let available = stat.size - tell;
+
+        Ok(available as _)
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, mut buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {

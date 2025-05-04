@@ -43,3 +43,20 @@ async fn test_file_input_stream_read_int() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_file_input_stream_available() -> Result<()> {
+    let filesystem = [("test.txt".into(), b"hello world".to_vec())];
+    let jvm = test_jvm_filesystem(filesystem.into_iter().collect()).await?;
+
+    let file = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
+
+    let java_file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
+    let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
+
+    let available: i32 = jvm.invoke_virtual(&fis, "available", "()I", ()).await?;
+
+    assert!(available > 0);
+
+    Ok(())
+}

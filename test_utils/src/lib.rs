@@ -123,11 +123,12 @@ impl Runtime for TestRuntime {
 #[derive(Clone)]
 struct DummyFile {
     data: Vec<u8>,
+    pos: FileSize,
 }
 
 impl DummyFile {
     pub fn new(data: Vec<u8>) -> Self {
-        Self { data }
+        Self { data, pos: 0 }
     }
 }
 
@@ -145,12 +146,14 @@ impl File for DummyFile {
         Err(IOError::Unsupported)
     }
 
-    async fn seek(&mut self, _pos: FileSize) -> IOResult<()> {
-        Err(IOError::Unsupported)
+    async fn seek(&mut self, pos: FileSize) -> IOResult<()> {
+        self.pos = pos;
+
+        Ok(())
     }
 
     async fn tell(&self) -> IOResult<FileSize> {
-        Err(IOError::Unsupported)
+        Ok(self.pos as _)
     }
 
     async fn set_len(&mut self, _len: FileSize) -> IOResult<()> {
@@ -158,7 +161,10 @@ impl File for DummyFile {
     }
 
     async fn metadata(&self) -> IOResult<FileStat> {
-        Err(IOError::Unsupported)
+        Ok(FileStat {
+            size: self.data.len() as FileSize,
+            r#type: FileType::File,
+        })
     }
 }
 
