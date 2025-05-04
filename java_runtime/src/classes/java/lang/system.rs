@@ -47,6 +47,7 @@ impl System {
                     Self::set_property,
                     MethodAccessFlags::STATIC,
                 ),
+                JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::STATIC),
             ],
             fields: vec![
                 JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
@@ -156,6 +157,12 @@ impl System {
             .await?;
 
         Ok(value)
+    }
+
+    async fn exit(_jvm: &Jvm, _: &mut RuntimeContext, status: i32) -> Result<()> {
+        tracing::warn!("stub java.lang.System::exit({status})");
+
+        Ok(())
     }
 
     pub async fn get_charset(jvm: &Jvm) -> Result<RustString> {
