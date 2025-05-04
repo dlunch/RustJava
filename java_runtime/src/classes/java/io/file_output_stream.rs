@@ -29,6 +29,7 @@ impl FileOutputStream {
                 ),
                 JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
         }
@@ -99,6 +100,12 @@ impl FileOutputStream {
         let mut file = FileDescriptor::file(jvm, fd).await?;
 
         file.write(&[byte as u8]).await.unwrap();
+
+        Ok(())
+    }
+
+    async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("stub java.io.FileInputStream::close({:?})", &this);
 
         Ok(())
     }
