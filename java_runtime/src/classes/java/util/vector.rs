@@ -207,9 +207,7 @@ impl Vector {
         let size = rust_vector.lock().len();
 
         if index as usize >= size {
-            return Err(jvm
-                .exception("java/lang/IndexOutOfBoundsException", &format!("{index} >= {size}"))
-                .await);
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", &format!("{index} >= {size}")).await);
         }
 
         let vector = rust_vector.lock();

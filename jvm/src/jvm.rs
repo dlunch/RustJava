@@ -246,10 +246,7 @@ impl Jvm {
         if let Some(method) = method {
             if !method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
-                    .exception(
-                        "java/lang/IncompatibleClassChangeError",
-                        &format!("{class_name}.{name}:{descriptor}"),
-                    )
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
@@ -318,10 +315,7 @@ impl Jvm {
 
             if method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
-                    .exception(
-                        "java/lang/IncompatibleClassChangeError",
-                        &format!("{class_name}.{name}:{descriptor}"),
-                    )
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
