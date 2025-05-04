@@ -22,6 +22,7 @@ impl FileInputStream {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
@@ -66,6 +67,21 @@ impl FileInputStream {
         jvm.store_array(&mut buf, 0, cast_vec::<u8, i8>(rust_buf)).await?;
 
         Ok(read as _)
+    }
+
+    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.FileInputStream::read({:?})", &this);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let mut rust_file = FileDescriptor::file(jvm, fd).await?;
+
+        let mut buf = [0; 1];
+        let read = rust_file.read(&mut buf).await.unwrap();
+        if read == 0 {
+            return Ok(-1);
+        }
+
+        Ok(buf[0] as i32)
     }
 
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
