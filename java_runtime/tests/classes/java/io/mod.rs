@@ -1,8 +1,8 @@
-mod buffered_reader;
-mod byte_array_output_stream;
-mod data_input_stream;
-mod data_output_stream;
-mod file_input_stream;
-mod input_stream_reader;
-mod print_writer;
-mod random_access_file;
+mod test_buffered_reader;
+mod test_byte_array_output_stream;
+mod test_data_input_stream;
+mod test_data_output_stream;
+mod test_file_input_stream;
+mod test_input_stream_reader;
+mod test_print_writer;
+mod test_random_access_file;

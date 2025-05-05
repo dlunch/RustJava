@@ -1,6 +1,6 @@
-mod hashtable;
+mod test_hashtable;
 mod jar;
-mod stack;
-mod timer;
-mod vector;
+mod test_stack;
+mod test_timer;
+mod test_vector;
 mod zip;

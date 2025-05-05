@@ -1,2 +1,2 @@
-mod jar_url_connection;
-mod url_class_loader;
+mod test_jar_url_connection;
+mod test_url_class_loader;
