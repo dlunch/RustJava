@@ -1,11 +1,10 @@
 use std::{
-    io,
+    io::{self, stderr},
     path::{Path, PathBuf},
 };
 
 use clap::{ArgGroup, Parser};
 
-use jvm::Result;
 use rust_java::{StartType, run};
 
 #[derive(Parser)]
@@ -19,7 +18,12 @@ struct Opts {
     args: Vec<String>,
 }
 
-pub fn main() -> Result<()> {
+pub fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_writer(stderr)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
     #[cfg(not(target_arch = "wasm32"))]
     let runtime = tokio::runtime::Runtime::new().unwrap();
     #[cfg(target_arch = "wasm32")]
@@ -28,7 +32,7 @@ pub fn main() -> Result<()> {
     runtime.block_on(async_main())
 }
 
-pub async fn async_main() -> Result<()> {
+pub async fn async_main() -> anyhow::Result<()> {
     let opts = Opts::parse();
 
     let start_type = if opts.main_class.is_some() {

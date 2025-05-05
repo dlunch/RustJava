@@ -7,7 +7,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use jvm::Result;
 use rust_java::{StartType, run};
 
 struct Output {
@@ -24,7 +23,7 @@ impl io::Write for Output {
     }
 }
 
-pub async fn run_class(path: &Path, class_path: &[&Path], args: &[String]) -> Result<String> {
+pub async fn run_class(path: &Path, class_path: &[&Path], args: &[String]) -> anyhow::Result<String> {
     let output = Arc::new(Mutex::new(Vec::new()));
 
     run(Output { output: output.clone() }, StartType::Class(path), args, class_path).await?;
@@ -34,7 +33,7 @@ pub async fn run_class(path: &Path, class_path: &[&Path], args: &[String]) -> Re
     Ok(result)
 }
 
-pub async fn run_jar(jar_path: &Path, args: &[String]) -> Result<String> {
+pub async fn run_jar(jar_path: &Path, args: &[String]) -> anyhow::Result<String> {
     let output = Arc::new(Mutex::new(Vec::new()));
 
     run(Output { output: output.clone() }, StartType::Jar(jar_path), args, &[]).await?;
