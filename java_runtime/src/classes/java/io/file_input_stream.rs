@@ -21,9 +21,9 @@ impl FileInputStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
-                JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
-                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read_array, Default::default()),
+                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
@@ -66,21 +66,26 @@ impl FileInputStream {
         Ok(available as _)
     }
 
-    async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, mut buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
-        tracing::debug!("java.io.FileInputStream::read({:?}, {:?})", &this, &buf);
-
-        let length = jvm.array_length(&buf).await?;
+    async fn read_array(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        mut buf: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<i32> {
+        tracing::debug!("java.io.FileInputStream::read({this:?}, {buf:?}, {offset:?}, {length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
 
-        let mut rust_buf = vec![0; length];
+        let mut rust_buf = vec![0; length as _];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
         if read == 0 {
             return Ok(-1);
         }
 
-        jvm.store_array(&mut buf, 0, cast_vec::<u8, i8>(rust_buf)).await?;
+        jvm.store_array(&mut buf, offset as _, cast_vec::<u8, i8>(rust_buf)).await?;
 
         Ok(read as _)
     }
