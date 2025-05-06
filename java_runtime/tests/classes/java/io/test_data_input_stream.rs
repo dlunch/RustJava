@@ -2,7 +2,8 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use jvm::Result;
+use java_runtime::classes::java::lang::String;
+use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -12,7 +13,7 @@ async fn test_data_input_stream() -> Result<()> {
 
     let data = vec![
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-        0x18, 0x19, 0x1a, 0x1b,
+        0x18, 0x19, 0x1a, 0x1b, 0, 5, b'a', b'b', b'c', b'b', b'd',
     ];
     let data_len = data.len();
 
@@ -44,6 +45,10 @@ async fn test_data_input_stream() -> Result<()> {
 
     let double: f64 = jvm.invoke_virtual(&data_input_stream, "readDouble", "()D", ()).await?;
     assert_eq!(double, f64::from_be_bytes([0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b]));
+
+    let utf: ClassInstanceRef<String> = jvm.invoke_virtual(&data_input_stream, "readUTF", "()Ljava/lang/String;", ()).await?;
+    let string = JavaLangString::to_rust_string(&jvm, &utf).await?;
+    assert_eq!(string, "abcbd");
 
     Ok(())
 }

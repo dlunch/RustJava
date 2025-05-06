@@ -21,8 +21,10 @@ impl DataOutputStream {
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("writeByte", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("writeInt", "(I)V", Self::write_int, Default::default()),
+                JavaMethodProto::new("writeShort", "(I)V", Self::write_short, Default::default()),
                 JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
                 JavaMethodProto::new("writeChars", "(Ljava/lang/String;)V", Self::write_chars, Default::default()),
+                JavaMethodProto::new("writeUTF", "(Ljava/lang/String;)V", Self::write_utf, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
             ],
@@ -45,6 +47,19 @@ impl DataOutputStream {
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "(I)V", [b.into()]).await?;
+
+        Ok(())
+    }
+
+    async fn write_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: i32) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeShort({:?}, {:?})", &this, s);
+
+        let bytes = (s as i16).to_be_bytes();
+        let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
+        jvm.store_array(&mut byte_array, 0, cast_vec::<u8, i8>(bytes.to_vec())).await?;
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (byte_array,)).await?;
 
         Ok(())
     }
@@ -79,6 +94,21 @@ impl DataOutputStream {
         tracing::debug!("java.io.DataOutputStream::writeChars({:?}, {:?})", &this, &s);
 
         let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await?;
+
+        Ok(())
+    }
+
+    async fn write_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<JavaChar>) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeUTF({:?}, {:?})", &this, &s);
+
+        // TODO handle modified utf-8
+        let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
+        let length = jvm.array_length(&bytes).await?;
+
+        let _: () = jvm.invoke_virtual(&this, "writeShort", "(I)V", (length as i32,)).await?;
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await?;
