@@ -22,6 +22,7 @@ impl BufferedReader {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/Reader;)V", Self::init, Default::default()),
                 JavaMethodProto::new("readLine", "()Ljava/lang/String;", Self::read_line, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("in", "Ljava/io/Reader;", Default::default()),
@@ -98,5 +99,14 @@ impl BufferedReader {
             let result = jvm.new_class("java/lang/String", "([CII)V", (buf, 0, buf_size)).await?;
             result.into()
         })
+    }
+
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.BufferedReader::close({this:?})");
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;
+
+        Ok(())
     }
 }
