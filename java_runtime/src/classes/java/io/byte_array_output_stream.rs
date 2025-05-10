@@ -19,6 +19,7 @@ impl ByteArrayOutputStream {
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_size, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("toByteArray", "()[B", Self::to_byte_array, Default::default()),
+                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![
@@ -82,6 +83,14 @@ impl ByteArrayOutputStream {
             .await?;
 
         Ok(dest.into())
+    }
+
+    async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.ByteArrayOutputStream::size({:?})", &this);
+
+        let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
+
+        Ok(pos)
     }
 
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
