@@ -20,6 +20,7 @@ impl ByteArrayOutputStream {
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("toByteArray", "()[B", Self::to_byte_array, Default::default()),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
+                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![
@@ -91,6 +92,14 @@ impl ByteArrayOutputStream {
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
         Ok(pos)
+    }
+
+    async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.ByteArrayOutputStream::reset({:?})", &this);
+
+        jvm.put_field(&mut this, "pos", "I", 0).await?;
+
+        Ok(())
     }
 
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
