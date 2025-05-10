@@ -18,6 +18,7 @@ impl ByteArrayOutputStream {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_size, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
+                JavaMethodProto::new("writeByte", "(I)V", Self::write_byte, Default::default()),
                 JavaMethodProto::new("toByteArray", "()[B", Self::to_byte_array, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],

@@ -64,8 +64,7 @@ impl DataOutputStream {
     async fn write_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, v: bool) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeBoolean({this:?}, {v:?})");
 
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let _: () = jvm.invoke_virtual(&out, "writeByte", "(I)V", (v as i32,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "writeByte", "(I)V", (v as i32,)).await?;
 
         Ok(())
     }
