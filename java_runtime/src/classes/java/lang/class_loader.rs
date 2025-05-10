@@ -120,15 +120,32 @@ impl ClassLoader {
                 .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (url_array, None))
                 .await?;
 
+            let class_loader_type: ClassInstanceRef<String> = jvm
+                .invoke_static(
+                    "java/lang/System",
+                    "getProperty",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    (JavaLangString::from_rust_string(jvm, "java.system.class.loader").await?,),
+                )
+                .await?;
+
+            let system_class_loader = if !class_loader_type.is_null() {
+                let class_loader_type_str = JavaLangString::to_rust_string(jvm, &class_loader_type).await?;
+                jvm.new_class(&class_loader_type_str, "(Ljava/lang/ClassLoader;)V", (url_class_loader,))
+                    .await?
+            } else {
+                url_class_loader
+            };
+
             jvm.put_static_field(
                 "java/lang/ClassLoader",
                 "systemClassLoader",
                 "Ljava/lang/ClassLoader;",
-                url_class_loader.clone(),
+                system_class_loader.clone(),
             )
             .await?;
 
-            return Ok(url_class_loader.into());
+            return Ok(system_class_loader.into());
         }
 
         Ok(system_class_loader)
