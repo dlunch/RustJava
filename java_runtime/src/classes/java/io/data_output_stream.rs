@@ -19,7 +19,8 @@ impl DataOutputStream {
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
-                JavaMethodProto::new("writeByte", "(I)V", Self::write, Default::default()),
+                JavaMethodProto::new("writeByte", "(I)V", Self::write_byte, Default::default()),
+                JavaMethodProto::new("writeBoolean", "(Z)V", Self::write_boolean, Default::default()),
                 JavaMethodProto::new("writeInt", "(I)V", Self::write_int, Default::default()),
                 JavaMethodProto::new("writeShort", "(I)V", Self::write_short, Default::default()),
                 JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
@@ -43,10 +44,28 @@ impl DataOutputStream {
     }
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: i32) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::write({:?}, {:?})", &this, b);
+        tracing::debug!("java.io.DataOutputStream::write({this:?}, {b:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let _: () = jvm.invoke_virtual(&out, "write", "(I)V", [b.into()]).await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "(I)V", (b,)).await?;
+
+        Ok(())
+    }
+
+    async fn write_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, v: i32) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeByte({this:?}, {v:?})");
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "(I)V", (v,)).await?;
+
+        Ok(())
+    }
+
+    async fn write_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, v: bool) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeBoolean({this:?}, {v:?})");
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let _: () = jvm.invoke_virtual(&out, "writeByte", "(I)V", (v as i32,)).await?;
 
         Ok(())
     }
