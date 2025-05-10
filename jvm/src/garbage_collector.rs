@@ -52,22 +52,9 @@ fn find_static_reachable_objects(jvm: &Jvm, class: &Class, reachable_objects: &m
         let descriptor = field.descriptor();
         let value = class.definition.get_static_field(&*field).unwrap();
 
-        if descriptor.starts_with("L") && descriptor.ends_with(";") {
+        if (descriptor.starts_with('L') && descriptor.ends_with(';')) || descriptor.starts_with('[') {
             if let JavaValue::Object(Some(value)) = value {
                 find_reachable_objects(jvm, &value, reachable_objects);
-            }
-        } else if descriptor.starts_with("[") {
-            if let JavaValue::Object(Some(value)) = value {
-                reachable_objects.insert(value.clone());
-
-                let array = value.as_array_instance().unwrap();
-                let values = array.load(0, array.length()).unwrap();
-
-                for value in values {
-                    if let JavaValue::Object(Some(value)) = value {
-                        find_reachable_objects(jvm, &value, reachable_objects);
-                    }
-                }
             }
         }
     }
@@ -81,48 +68,43 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
     }
     entry.insert();
 
-    // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
-    if jvm.is_instance(&**object, "java/util/Vector") {
-        let members = vector_members(jvm, &**object);
-        for member in members {
-            find_reachable_objects(jvm, &member, reachable_objects);
-        }
-    } else if jvm.is_instance(&**object, "java/util/Hashtable") {
-        let members = hashtable_members(jvm, &**object);
-        for member in members {
-            find_reachable_objects(jvm, &member, reachable_objects);
-        }
-    }
+    let name = object.class_definition().name();
+    if name.starts_with('[') {
+        // is array
+        let array = object.as_array_instance().unwrap();
+        let values = array.load(0, array.length()).unwrap();
 
-    let fields = object.class_definition().fields();
-    for field in fields {
-        if field.access_flags().contains(FieldAccessFlags::STATIC) {
-            continue;
-        }
-
-        let descriptor = field.descriptor();
-
-        if !descriptor.starts_with("L") && !descriptor.starts_with("[") {
-            continue;
-        }
-
-        let value = object.get_field(&*field).unwrap();
-
-        if descriptor.starts_with("L") && descriptor.ends_with(";") {
+        for value in values {
             if let JavaValue::Object(Some(value)) = value {
                 find_reachable_objects(jvm, &value, reachable_objects);
             }
-        } else if descriptor.starts_with("[") {
-            if let JavaValue::Object(Some(value)) = value {
-                reachable_objects.insert(value.clone());
+        }
+    } else {
+        // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
+        if jvm.is_instance(&**object, "java/util/Vector") {
+            let members = vector_members(jvm, &**object);
+            for member in members {
+                find_reachable_objects(jvm, &member, reachable_objects);
+            }
+        } else if jvm.is_instance(&**object, "java/util/Hashtable") {
+            let members = hashtable_members(jvm, &**object);
+            for member in members {
+                find_reachable_objects(jvm, &member, reachable_objects);
+            }
+        }
 
-                let array = value.as_array_instance().unwrap();
-                let values = array.load(0, array.length()).unwrap();
+        let fields = object.class_definition().fields();
+        for field in fields {
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                continue;
+            }
 
-                for value in values {
-                    if let JavaValue::Object(Some(value)) = value {
-                        find_reachable_objects(jvm, &value, reachable_objects);
-                    }
+            let descriptor = field.descriptor();
+
+            if (descriptor.starts_with('L') && descriptor.ends_with(';')) || descriptor.starts_with('[') {
+                let value = object.get_field(&*field).unwrap();
+                if let JavaValue::Object(Some(value)) = value {
+                    find_reachable_objects(jvm, &value, reachable_objects);
                 }
             }
         }
