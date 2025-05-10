@@ -76,6 +76,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::Stack::as_proto(),
         crate::classes::java::util::Timer::as_proto(),
         crate::classes::java::util::TimerTask::as_proto(),
+        crate::classes::java::util::TimeZone::as_proto(),
         crate::classes::java::util::Vector::as_proto(),
         crate::classes::java::util::jar::Attributes::as_proto(),
         crate::classes::java::util::jar::JarEntry::as_proto(),
