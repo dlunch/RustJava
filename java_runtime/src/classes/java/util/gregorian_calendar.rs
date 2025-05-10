@@ -1,11 +1,11 @@
 use alloc::{vec, vec::Vec};
 
-use chrono::{DateTime, Datelike, FixedOffset, TimeZone, Timelike};
+use chrono::{DateTime, Datelike, FixedOffset, TimeZone as ChronoTimeZone, Timelike};
 
 use java_class_proto::JavaMethodProto;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::TimeZone};
 
 // class java.util.GregorianCalendar
 pub struct GregorianCalendar;
@@ -18,6 +18,7 @@ impl GregorianCalendar {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/TimeZone;)V", Self::init_with_time_zone, Default::default()),
                 JavaMethodProto::new("computeTime", "()V", Self::compute_time, Default::default()),
                 JavaMethodProto::new("computeFields", "()V", Self::compute_fields, Default::default()),
             ],
@@ -26,7 +27,20 @@ impl GregorianCalendar {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.GregorianCalendar::<init>({:?})", &this);
+        tracing::debug!("java.util.GregorianCalendar::<init>({this:?})");
+
+        let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
+
+        Ok(())
+    }
+
+    async fn init_with_time_zone(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        time_zone: ClassInstanceRef<TimeZone>,
+    ) -> Result<()> {
+        tracing::debug!("java.util.GregorianCalendar::<init>({this:?}, {time_zone:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
 
