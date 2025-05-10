@@ -27,14 +27,16 @@ impl InputStream {
         }
     }
 
-    async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.lang.InputStream::<init>({:?})", &this);
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::warn!("stub java.io.InputStream::<init>({:?})", &this);
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         Ok(())
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
-        tracing::debug!("java.lang.InputStream::read({:?}, {:?})", &this, &b);
+        tracing::debug!("java.io.InputStream::read({:?}, {:?})", &this, &b);
 
         let array_length = jvm.array_length(&b).await? as i32;
 
@@ -42,7 +44,7 @@ impl InputStream {
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
-        tracing::debug!("java.lang.InputStream::skip({:?}, {:?})", &this, n);
+        tracing::debug!("java.io.InputStream::skip({:?}, {:?})", &this, n);
 
         let scratch = jvm.instantiate_array("B", n as _).await?;
         let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, n as i32)).await?;
