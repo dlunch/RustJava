@@ -4,7 +4,10 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::Date};
+use crate::{
+    RuntimeClassProto, RuntimeContext,
+    classes::java::util::{Date, TimeZone},
+};
 
 // class java.util.Calendar
 pub struct Calendar;
@@ -18,6 +21,12 @@ impl Calendar {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("getInstance", "()Ljava/util/Calendar;", Self::get_instance, MethodAccessFlags::STATIC),
+                JavaMethodProto::new(
+                    "getInstance",
+                    "(Ljava/util/TimeZone;)Ljava/util/Calendar;",
+                    Self::get_instance_with_time_zone,
+                    MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new("setTime", "(Ljava/util/Date;)V", Self::set_time, Default::default()),
                 JavaMethodProto::new("getTime", "()Ljava/util/Date;", Self::get_time, Default::default()),
                 JavaMethodProto::new("set", "(II)V", Self::set, Default::default()),
@@ -36,6 +45,20 @@ impl Calendar {
         tracing::debug!("java.util.Calendar::getInstance()");
 
         let instance = jvm.new_class("java/util/GregorianCalendar", "()V", []).await?;
+
+        Ok(instance.into())
+    }
+
+    async fn get_instance_with_time_zone(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        time_zone: ClassInstanceRef<TimeZone>,
+    ) -> Result<ClassInstanceRef<Calendar>> {
+        tracing::debug!("java.util.Calendar::getInstance({:?})", &time_zone);
+
+        let instance = jvm
+            .new_class("java/util/GregorianCalendar", "(Ljava/util/TimeZone;)V", (time_zone,))
+            .await?;
 
         Ok(instance.into())
     }
