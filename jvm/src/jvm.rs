@@ -606,14 +606,12 @@ impl Jvm {
     }
 
     async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
-        if !class.definition.name().starts_with('[') {
-            if let Some(super_class) = class.definition.super_class_name() {
-                if !self.has_class(&super_class) {
+        if !class.definition.name().starts_with('[')
+            && let Some(super_class) = class.definition.super_class_name()
+                && !self.has_class(&super_class) {
                     // ensure superclass is loaded
                     self.resolve_class_internal(&super_class, class_loader_wrapper).await?;
                 }
-            }
-        }
 
         self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());
 

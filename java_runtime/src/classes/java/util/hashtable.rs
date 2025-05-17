@@ -58,8 +58,8 @@ impl Hashtable {
 
         let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
-        if vec.is_some() {
-            for (key, _) in &vec.unwrap() {
+        if let Some(x) = vec {
+            for (key, _) in &x {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
                     return Ok(true);
@@ -78,8 +78,8 @@ impl Hashtable {
 
         let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
-        if vec.is_some() {
-            for (key, value) in &vec.unwrap() {
+        if let Some(x) = vec {
+            for (key, value) in &x {
                 let equals = jvm.invoke_virtual(key, "equals", "(Ljava/lang/Object;)Z", ((*key).clone(),)).await?;
                 if equals {
                     return Ok(value.clone().into());
@@ -104,8 +104,8 @@ impl Hashtable {
 
         let vec = rust_hash_map.lock().get(&key_hash).cloned();
 
-        if vec.is_some() {
-            for (i, (bucket_key, _)) in vec.unwrap().iter().enumerate() {
+        if let Some(x) = vec {
+            for (i, (bucket_key, _)) in x.iter().enumerate() {
                 let equals = jvm.invoke_virtual(bucket_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
                 if equals {
                     let (_, old_value) = rust_hash_map.lock().get_mut(&key_hash).unwrap().remove(i);

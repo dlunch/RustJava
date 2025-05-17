@@ -45,11 +45,10 @@ fn find_static_reachable_objects(jvm: &Jvm, class: &Class, reachable_objects: &m
         let descriptor = field.descriptor();
         let value = class.definition.get_static_field(&*field).unwrap();
 
-        if (descriptor.starts_with('L') && descriptor.ends_with(';')) || descriptor.starts_with('[') {
-            if let JavaValue::Object(Some(value)) = value {
+        if ((descriptor.starts_with('L') && descriptor.ends_with(';')) || descriptor.starts_with('['))
+            && let JavaValue::Object(Some(value)) = value {
                 find_reachable_objects(jvm, &value, reachable_objects);
             }
-        }
     }
 }
 
