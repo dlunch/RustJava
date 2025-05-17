@@ -6,7 +6,7 @@ use bytemuck::cast_slice;
 use hashbrown::{HashMap, HashSet, hash_set::Entry};
 use parking_lot::Mutex;
 
-use crate::{ClassInstance, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
+use crate::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
 
 // XXX java/util/Vector, java/util/HashMap internal..
 type RustVector = Arc<Mutex<Vec<Box<dyn ClassInstance>>>>;
@@ -32,18 +32,11 @@ pub fn determine_garbage(
             find_reachable_objects(jvm, x, &mut reachable_objects);
         });
 
-    // HACK we should test if class loader is in use
-    for class_instance in all_class_instances.iter() {
-        if jvm.is_instance(&**class_instance, "java/lang/ClassLoader") {
-            find_reachable_objects(jvm, class_instance, &mut reachable_objects);
-        }
-    }
-
     all_class_instances.difference(&reachable_objects).cloned().collect()
 }
 
 fn find_static_reachable_objects(jvm: &Jvm, class: &Class, reachable_objects: &mut HashSet<Box<dyn ClassInstance>>) {
-    let fields = class.definition.fields();
+    let fields = find_all_fields(jvm, &*class.definition);
     for field in fields {
         if !field.access_flags().contains(FieldAccessFlags::STATIC) {
             continue;
@@ -93,7 +86,7 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
             }
         }
 
-        let fields = object.class_definition().fields();
+        let fields = find_all_fields(jvm, &*object.class_definition());
         for field in fields {
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 continue;
@@ -108,6 +101,19 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
                 }
             }
         }
+    }
+}
+
+fn find_all_fields(jvm: &Jvm, class_definition: &dyn ClassDefinition) -> Vec<Box<dyn Field>> {
+    let result = class_definition.fields();
+    let super_class_name = class_definition.super_class_name();
+
+    if let Some(x) = super_class_name {
+        let super_class = jvm.get_class(&x).unwrap();
+        let super_fields = find_all_fields(jvm, &*super_class.definition);
+        result.into_iter().chain(super_fields).collect()
+    } else {
+        result
     }
 }
 
