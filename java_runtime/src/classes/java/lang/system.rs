@@ -96,7 +96,19 @@ impl System {
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::gc()");
 
-        jvm.collect_garbage()?;
+        // TODO should be jvm arg
+        let disable_explicit_gc_property: ClassInstanceRef<String> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (JavaLangString::from_rust_string(jvm, "rustjava.disable_explicit_gc").await?,),
+            )
+            .await?;
+
+        if disable_explicit_gc_property.is_null() || JavaLangString::to_rust_string(jvm, &disable_explicit_gc_property).await? != "true" {
+            jvm.collect_garbage()?;
+        }
 
         Ok(())
     }
@@ -165,7 +177,7 @@ impl System {
     }
 
     pub async fn get_charset(jvm: &Jvm) -> Result<RustString> {
-        let charset: ClassInstanceRef<Self> = jvm
+        let charset: ClassInstanceRef<String> = jvm
             .invoke_static(
                 "java/lang/System",
                 "getProperty",
