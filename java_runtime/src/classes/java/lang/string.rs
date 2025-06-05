@@ -60,6 +60,7 @@ impl String {
                 JavaMethodProto::new("indexOf", "(II)I", Self::index_of_from, Default::default()),
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;)I", Self::index_of_string, Default::default()),
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_string_from, Default::default()),
+                JavaMethodProto::new("lastIndexOf", "(I)I", Self::last_index_of, Default::default()),
                 JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;)Z", Self::starts_with, Default::default()),
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;I)Z", Self::starts_with_offset, Default::default()),
@@ -369,6 +370,21 @@ impl String {
         let chars = this_string.chars().skip(from_index as usize).collect::<Vec<_>>();
         let str_chars = str_string.chars().collect::<Vec<_>>();
         let index = chars.windows(str_chars.len()).position(|x| x == str_chars).map(|x| x as i32 + from_index);
+
+        Ok(index.unwrap_or(-1))
+    }
+
+    async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
+        tracing::debug!("java.lang.String::lastIndexOf({:?}, {:?})", &this, ch);
+
+        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+
+        let index = this_string
+            .chars()
+            .collect::<Vec<_>>() // TODO i think we don't need collect..
+            .into_iter()
+            .rposition(|x| x as u32 == ch as u32)
+            .map(|x| x as i32);
 
         Ok(index.unwrap_or(-1))
     }

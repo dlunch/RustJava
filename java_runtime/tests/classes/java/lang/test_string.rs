@@ -130,3 +130,21 @@ async fn test_starts_with() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_last_index_of() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "456 가나다 456").await?;
+
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(I)I", (b'4' as i32,)).await?;
+    assert_eq!(index, 8);
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(I)I", (b'5' as i32,)).await?;
+    assert_eq!(index, 9);
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(I)I", (b'6' as i32,)).await?;
+    assert_eq!(index, 10);
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(I)I", (b'7' as i32,)).await?;
+    assert_eq!(index, -1);
+
+    Ok(())
+}
