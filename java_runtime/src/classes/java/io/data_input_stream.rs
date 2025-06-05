@@ -33,6 +33,7 @@ impl DataInputStream {
                 JavaMethodProto::new("readUnsignedShort", "()I", Self::read_unsigned_short, Default::default()),
                 JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", Default::default())],
         }
@@ -230,6 +231,15 @@ impl DataInputStream {
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;
+
+        Ok(())
+    }
+
+    async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.DataInputStream::reset({:?})", &this);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let _: () = jvm.invoke_virtual(&r#in, "reset", "()V", ()).await?;
 
         Ok(())
     }
