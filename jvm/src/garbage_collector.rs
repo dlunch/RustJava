@@ -63,15 +63,18 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
 
     let name = object.class_definition().name();
     if name.starts_with('[') {
-        // is array
-        let array = object.as_array_instance().unwrap();
-        let values = array.load(0, array.length()).unwrap();
+        if name.starts_with("[L") || name.starts_with("[[") {
+            // is object array
+            let array = object.as_array_instance().unwrap();
+            let values = array.load(0, array.length()).unwrap();
 
-        for value in values {
-            if let JavaValue::Object(Some(value)) = value {
-                find_reachable_objects(jvm, &value, reachable_objects);
+            for value in values {
+                if let JavaValue::Object(Some(value)) = value {
+                    find_reachable_objects(jvm, &value, reachable_objects);
+                }
             }
         }
+        // do nothing for primitive arrays
     } else {
         // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
         if jvm.is_instance(&**object, "java/util/Vector") {
