@@ -1,4 +1,4 @@
-use jvm::{Result as JvmResult, runtime::JavaLangString};
+use jvm::{JavaValue, Result as JvmResult, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -70,6 +70,37 @@ async fn test_garbage_collection() -> JvmResult<()> {
     // vector, string, and its internal [C should be garbage collected
     let garbage_count = jvm.collect_garbage()?;
     assert_eq!(garbage_count, 5);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_garbage_collection_hashtable() -> JvmResult<()> {
+    let jvm = test_jvm().await?;
+
+    // collect garbage before test to ensure a clean state
+    jvm.collect_garbage()?;
+
+    let hashtable = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
+
+    jvm.push_native_frame();
+
+    let key = JavaLangString::from_rust_string(&jvm, "key").await?;
+    let value = JavaLangString::from_rust_string(&jvm, "value").await?;
+    let _: JavaValue = jvm
+        .invoke_virtual(
+            &hashtable,
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key.clone(), value.clone()),
+        )
+        .await
+        .unwrap();
+
+    jvm.pop_frame();
+
+    let garbage_count = jvm.collect_garbage()?;
+    assert_eq!(garbage_count, 2);
 
     Ok(())
 }

@@ -154,5 +154,8 @@ fn hashtable_members(jvm: &Jvm, hashtable: &dyn ClassInstance) -> Vec<Box<dyn Cl
     let rust_hashmap: RustHashMap = get_rust_object_field(jvm, hashtable, "raw");
 
     let rust_hashmap = rust_hashmap.lock();
-    rust_hashmap.iter().flat_map(|(_, v)| v.iter().map(|x| x.1.clone())).collect()
+    rust_hashmap
+        .iter()
+        .flat_map(|(_, v)| v.iter().flat_map(|x| [x.0.clone(), x.1.clone()].into_iter()))
+        .collect()
 }
