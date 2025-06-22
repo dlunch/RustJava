@@ -2,7 +2,7 @@ use alloc::vec;
 
 use bytemuck::cast_vec;
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_class_proto::JavaMethodProto;
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
@@ -14,7 +14,7 @@ impl DataOutputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
             name: "java/io/DataOutputStream",
-            parent_class: Some("java/io/OutputStream"),
+            parent_class: Some("java/io/FilterOutputStream"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
@@ -29,16 +29,16 @@ impl DataOutputStream {
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", Default::default())],
+            fields: vec![],
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::<init>({:?}, {:?})", &this, &r#in);
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<InputStream>) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::<init>({this:?}, {out:?})");
 
-        let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
-
-        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", r#in).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
+            .await?;
 
         Ok(())
     }
