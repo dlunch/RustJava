@@ -21,6 +21,7 @@ impl ByteArrayInputStream {
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
+                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("buf", "[B", Default::default()),
@@ -119,5 +120,14 @@ impl ByteArrayInputStream {
         jvm.put_field(&mut this, "pos", "I", pos + len_to_skip as i32).await?;
 
         Ok(len_to_skip)
+    }
+
+    async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.ByteArrayInputStream::reset({:?})", &this);
+
+        // TODO mark position
+        jvm.put_field(&mut this, "pos", "I", 0).await?;
+
+        Ok(())
     }
 }
