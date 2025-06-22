@@ -206,7 +206,7 @@ impl RandomAccessFile {
     }
 
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("stub java.io.RandomAccessFile::close({:?})", &this);
+        tracing::debug!("java.io.RandomAccessFile::close({:?})", &this);
 
         Ok(())
     }
