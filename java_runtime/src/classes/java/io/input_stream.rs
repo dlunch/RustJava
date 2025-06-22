@@ -53,9 +53,9 @@ impl InputStream {
         Ok(n)
     }
 
-    async fn reset(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStream::reset({:?})", &this);
 
-        Ok(())
+        Err(jvm.exception("java/io/IOException", "reset not supported").await)
     }
 }
