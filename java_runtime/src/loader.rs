@@ -17,6 +17,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::io::FileInputStream::as_proto(),
         crate::classes::java::io::FileNotFoundException::as_proto(),
         crate::classes::java::io::FileOutputStream::as_proto(),
+        crate::classes::java::io::FilterInputStream::as_proto(),
         crate::classes::java::io::FilterOutputStream::as_proto(),
         crate::classes::java::io::InputStream::as_proto(),
         crate::classes::java::io::InputStreamReader::as_proto(),

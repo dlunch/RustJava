@@ -1,6 +1,6 @@
 use alloc::{string::String as RustString, vec};
 
-use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_class_proto::JavaMethodProto;
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -15,11 +15,10 @@ impl DataInputStream {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
             name: "java/io/DataInputStream",
-            parent_class: Some("java/io/InputStream"),
+            parent_class: Some("java/io/FilterInputStream"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
-                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("read", "()I", Self::read_byte_int, Default::default()),
                 JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
                 JavaMethodProto::new("readBoolean", "()Z", Self::read_boolean, Default::default()),
@@ -32,30 +31,19 @@ impl DataInputStream {
                 JavaMethodProto::new("readShort", "()S", Self::read_short, Default::default()),
                 JavaMethodProto::new("readUnsignedShort", "()I", Self::read_unsigned_short, Default::default()),
                 JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
-                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", Default::default())],
+            fields: vec![],
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::<init>({:?}, {:?})", &this, &r#in);
 
-        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
-
-        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FilterInputStream", "<init>", "(Ljava/io/InputStream;)V", (r#in,))
+            .await?;
 
         Ok(())
-    }
-
-    async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.DataInputStream::available({:?})", &this);
-
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let available: i32 = jvm.invoke_virtual(&r#in, "available", "()I", ()).await?;
-
-        Ok(available)
     }
 
     async fn read(
@@ -224,23 +212,5 @@ impl DataInputStream {
         let string = RustString::from_utf8(buf).unwrap();
 
         Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
-    }
-
-    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::close({:?})", &this);
-
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;
-
-        Ok(())
-    }
-
-    async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::reset({:?})", &this);
-
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let _: () = jvm.invoke_virtual(&r#in, "reset", "()V", ()).await?;
-
-        Ok(())
     }
 }
