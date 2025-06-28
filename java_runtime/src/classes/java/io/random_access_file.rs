@@ -107,13 +107,7 @@ impl RandomAccessFile {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        tracing::debug!(
-            "java.io.RandomAccessFile::read_offset_length({:?}, {:?}, {:?}, {:?})",
-            &this,
-            &buf,
-            &offset,
-            &length
-        );
+        tracing::debug!("java.io.RandomAccessFile::read({:?}, {:?}, {:?}, {:?})", &this, &buf, &offset, &length);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
@@ -143,13 +137,7 @@ impl RandomAccessFile {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.io.RandomAccessFile::write_offset_length({:?}, {:?}, {:?}, {:?})",
-            &this,
-            &buf,
-            &offset,
-            &length
-        );
+        tracing::debug!("java.io.RandomAccessFile::write({:?}, {:?}, {:?}, {:?})", &this, &buf, &offset, &length);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
@@ -173,7 +161,7 @@ impl RandomAccessFile {
     }
 
     async fn set_length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, new_length: i64) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::set_length({:?}, {:?})", &this, &new_length);
+        tracing::debug!("java.io.RandomAccessFile::setLength({:?}, {:?})", &this, &new_length);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, fd).await?;
