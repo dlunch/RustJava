@@ -40,27 +40,35 @@ async fn test_entries() -> Result<()> {
 
     let entries = jvm.invoke_virtual(&jar, "entries", "()Ljava/util/Enumeration;", ()).await?;
 
-    assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+    let has_more_elements: bool = jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?;
+
+    assert!(has_more_elements);
     let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
     let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/");
 
-    assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+    let has_more_elements: bool = jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?;
+    assert!(has_more_elements);
     let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
     let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/MANIFEST.MF");
 
-    assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+    let has_more_elements: bool = jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?;
+    assert!(has_more_elements);
+
     let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
     let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "JarTest.class");
 
-    assert!(jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+    let has_more_elements: bool = jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?;
+    assert!(has_more_elements);
+
     let next_element: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&entries, "nextElement", "()Ljava/lang/Object;", ()).await?;
     let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "test.txt");
 
-    assert!(!jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?);
+    let has_more_elements: bool = jvm.invoke_virtual(&entries, "hasMoreElements", "()Z", ()).await?;
+    assert!(!has_more_elements);
 
     Ok(())
 }
