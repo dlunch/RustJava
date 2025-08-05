@@ -1,20 +1,16 @@
 use std::{
+    env,
     io::{self, stderr},
     path::{Path, PathBuf},
 };
 
-use clap::{ArgGroup, Parser};
+use anyhow::bail;
 
 use rust_java::{StartType, run};
 
-#[derive(Parser)]
-#[clap(group = ArgGroup::new("target").required(true).multiple(false))]
 struct Opts {
-    #[arg(group = "target", name = "mainclass")]
-    main_class: Option<PathBuf>,
-    #[arg(long, group = "target", name = "jarfile")]
     jar: Option<PathBuf>,
-
+    main_class: Option<PathBuf>,
     args: Vec<String>,
 }
 
@@ -33,7 +29,7 @@ pub fn main() -> anyhow::Result<()> {
 }
 
 pub async fn async_main() -> anyhow::Result<()> {
-    let opts = Opts::parse();
+    let opts = parse_args()?;
 
     let start_type = if opts.main_class.is_some() {
         StartType::Class(opts.main_class.as_ref().unwrap())
@@ -44,4 +40,35 @@ pub async fn async_main() -> anyhow::Result<()> {
     run(io::stdout(), start_type, &opts.args, &[Path::new(".")]).await?;
 
     Ok(())
+}
+
+fn parse_args() -> anyhow::Result<Opts> {
+    let mut args = env::args().skip(1); // skip program name
+    let mut jar = None;
+    let mut main_class = None;
+    let mut rest_args = Vec::new();
+
+    if let Some(first) = args.next() {
+        if first == "-jar" {
+            // java -jar foo.jar [args...]
+            if let Some(jar_path) = args.next() {
+                jar = Some(jar_path.into());
+                rest_args.extend(args);
+            } else {
+                bail!("Missing jar file after -jar");
+            }
+        } else {
+            // java MainClass [args...]
+            main_class = Some(first.into());
+            rest_args.extend(args);
+        }
+    } else {
+        bail!("No class or -jar specified");
+    }
+
+    Ok(Opts {
+        jar,
+        main_class,
+        args: rest_args,
+    })
 }
