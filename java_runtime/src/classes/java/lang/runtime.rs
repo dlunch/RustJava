@@ -52,8 +52,10 @@ impl Runtime {
         Ok(0x100000) // TODO: hardcoded
     }
 
-    async fn gc(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
-        tracing::warn!("stub java.lang.Runtime::gc({:?})", &this);
+    async fn gc(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
+        tracing::debug!("java.lang.Runtime::gc({:?})", &this);
+
+        jvm.collect_garbage()?;
 
         Ok(())
     }
