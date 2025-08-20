@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_class_proto::JavaMethodProto;
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -18,7 +18,10 @@ impl TimerTask {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new_abstract("run", "()V", Default::default()),
             ],
-            fields: vec![],
+            fields: vec![
+                JavaFieldProto::new("nextExecutionTime", "J", Default::default()),
+                JavaFieldProto::new("period", "J", Default::default()),
+            ],
         }
     }
 

@@ -16,10 +16,12 @@ mod stack;
 mod time_zone;
 mod timer;
 mod timer_task;
+mod timer_thread;
 mod vector;
 
 pub use self::{
     abstract_collection::AbstractCollection, abstract_list::AbstractList, calendar::Calendar, date::Date, dictionary::Dictionary,
     empty_stack_exception::EmptyStackException, enumeration::Enumeration, gregorian_calendar::GregorianCalendar, hashtable::Hashtable,
-    properties::Properties, random::Random, stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask, vector::Vector,
+    properties::Properties, random::Random, stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask, timer_thread::TimerThread,
+    vector::Vector,
 };

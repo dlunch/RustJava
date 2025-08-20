@@ -6,6 +6,7 @@ use core::{
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use jvm::{ClassDefinition, Jvm, Result};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
@@ -53,7 +54,7 @@ impl Runtime for TestRuntime {
     }
 
     fn now(&self) -> u64 {
-        todo!()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_millis() as u64
     }
 
     fn current_task_id(&self) -> u64 {
