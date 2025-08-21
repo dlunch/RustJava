@@ -16,6 +16,7 @@ impl ByteArrayInputStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "([B)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_offset_length, Default::default()),
                 JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
@@ -26,15 +27,38 @@ impl ByteArrayInputStream {
             fields: vec![
                 JavaFieldProto::new("buf", "[B", Default::default()),
                 JavaFieldProto::new("pos", "I", Default::default()),
+                JavaFieldProto::new("count", "I", Default::default()),
             ],
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayInputStream::<init>({:?}, {:?})", &this, &data);
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
+        tracing::debug!("java.io.ByteArrayInputStream::<init>({this:?}, {data:?})");
+
+        let count = jvm.array_length(&data).await?;
+
+        let _: () = jvm
+            .invoke_special(&this, "java/io/ByteArrayInputStream", "<init>", "([BII)V", (data, 0, count as i32))
+            .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        data: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<()> {
+        tracing::debug!("java.io.ByteArrayInputStream::<init>({this:?}, {data:?}, {offset}, {length})");
+
+        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "buf", "[B", data).await?;
-        jvm.put_field(&mut this, "pos", "I", 0).await?;
+        jvm.put_field(&mut this, "pos", "I", offset).await?;
+        jvm.put_field(&mut this, "count", "I", length).await?;
 
         Ok(())
     }
@@ -42,11 +66,10 @@ impl ByteArrayInputStream {
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayInputStream::available({:?})", &this);
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
+        let count: i32 = jvm.get_field(&this, "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let buf_length = jvm.array_length(&buf).await? as i32;
 
-        Ok((buf_length - pos) as _)
+        Ok((count - pos) as _)
     }
 
     async fn read(
