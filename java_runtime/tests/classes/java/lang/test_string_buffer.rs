@@ -24,6 +24,9 @@ async fn test_string_buffer() -> Result<()> {
     let length: i32 = jvm.invoke_virtual(&string_buffer, "length", "()I", ()).await?;
     assert_eq!(length, 12);
 
+    let char: JavaChar = jvm.invoke_virtual(&string_buffer, "charAt", "(I)C", (7,)).await?;
+    assert_eq!(char, '4' as JavaChar);
+
     let result = jvm.invoke_virtual(&string_buffer, "toString", "()Ljava/lang/String;", ()).await?;
     let result = JavaLangString::to_rust_string(&jvm, &result).await?;
 

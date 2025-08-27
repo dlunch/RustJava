@@ -231,4 +231,13 @@ impl StringBuffer {
 
         Ok(count)
     }
+
+    async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<JavaChar> {
+        tracing::debug!("java.lang.StringBuffer::charAt({:?}, {:?})", &this, index);
+
+        let java_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let char_at: JavaChar = jvm.load_array(&java_value, index as _, 1).await?.into_iter().next().unwrap();
+
+        Ok(char_at)
+    }
 }
