@@ -57,7 +57,7 @@ impl StringWriter {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.io.StringWriter::to_string({:?})", &this);
+        tracing::debug!("java.io.StringWriter::toString({:?})", &this);
 
         let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
 
