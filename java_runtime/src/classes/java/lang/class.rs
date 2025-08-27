@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{
     ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
@@ -32,6 +33,12 @@ impl Class {
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
                     Self::get_resource_as_stream,
                     Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "forName",
+                    "(Ljava/lang/String;)Ljava/lang/Class;",
+                    Self::for_name,
+                    MethodAccessFlags::STATIC,
                 ),
             ],
             fields: vec![
@@ -86,5 +93,15 @@ impl Class {
 
         jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
             .await
+    }
+
+    async fn for_name(jvm: &Jvm, _context: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Class>> {
+        tracing::debug!("java.lang.Class::forName({:?})", &name);
+
+        let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
+        let qualified_name = rust_name.replace('.', "/");
+        let class = jvm.get_class(&qualified_name).unwrap().java_class();
+
+        Ok(class.into())
     }
 }

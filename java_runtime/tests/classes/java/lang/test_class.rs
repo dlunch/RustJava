@@ -1,4 +1,8 @@
-use jvm::{Result, runtime::JavaLangClass};
+use java_runtime::classes::java::lang::Class;
+use jvm::{
+    ClassInstanceRef, Result,
+    runtime::{JavaLangClass, JavaLangString},
+};
 
 use test_utils::test_jvm;
 
@@ -36,6 +40,21 @@ async fn test_is_assignable_from() -> Result<()> {
         .invoke_virtual(&string_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (thread_class,))
         .await?;
     assert!(!result);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_for_name() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let class_name = JavaLangString::from_rust_string(&jvm, "java.lang.String").await?;
+    let class: ClassInstanceRef<Class> = jvm
+        .invoke_static("java/lang/Class", "forName", "(Ljava/lang/String;)Ljava/lang/Class;", (class_name,))
+        .await?;
+
+    let rust_class = JavaLangClass::to_rust_class(&jvm, &class).await?;
+    assert_eq!(rust_class.name(), "java/lang/String");
 
     Ok(())
 }
