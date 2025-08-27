@@ -44,6 +44,7 @@ impl StringBuffer {
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("setLength", "(I)V", Self::set_length, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
+                JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("value", "[C", Default::default()),
@@ -223,7 +224,7 @@ impl StringBuffer {
         Ok(())
     }
 
-   async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+    async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.StringBuffer::length({:?})", &this);
 
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
