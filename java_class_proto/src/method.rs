@@ -110,7 +110,7 @@ __generate!(P0, P1, P2, P3, P4, P5, P6);
 __generate!(P0, P1, P2, P3, P4, P5, P6, P7);
 __generate!(P0, P1, P2, P3, P4, P5, P6, P7, P8);
 __generate!(P0, P1, P2, P3, P4, P5, P6, P7, P8, P9);
-__generate!(P0, P1, P2, P3, P4, P5, P6, P7, P8);
+__generate!(P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10);
 
 impl TypeConverter<i8> for i8 {
     fn to_rust(_: &Jvm, raw: JavaValue) -> i8 {
