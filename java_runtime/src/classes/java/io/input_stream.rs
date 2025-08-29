@@ -22,6 +22,7 @@ impl InputStream {
                 JavaMethodProto::new_abstract("read", "()I", Default::default()),
                 JavaMethodProto::new_abstract("close", "()V", Default::default()),
                 JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![],
@@ -51,6 +52,12 @@ impl InputStream {
         let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, n as i32)).await?;
 
         Ok(n)
+    }
+
+    async fn mark(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
+        tracing::debug!("java.io.InputStream::mark({:?}, {:?})", &this, readlimit);
+
+        Ok(())
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {

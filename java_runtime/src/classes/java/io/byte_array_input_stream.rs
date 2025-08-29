@@ -22,12 +22,14 @@ impl ByteArrayInputStream {
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("buf", "[B", Default::default()),
                 JavaFieldProto::new("pos", "I", Default::default()),
                 JavaFieldProto::new("count", "I", Default::default()),
+                JavaFieldProto::new("mark", "I", Default::default()),
             ],
         }
     }
@@ -145,11 +147,19 @@ impl ByteArrayInputStream {
         Ok(len_to_skip)
     }
 
+    async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
+        tracing::debug!("java.io.ByteArrayInputStream::mark({:?}, {:?})", &this, readlimit);
+
+        jvm.put_field(&mut this, "mark", "I", readlimit).await?;
+
+        Ok(())
+    }
+
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::reset({:?})", &this);
 
-        // TODO mark position
-        jvm.put_field(&mut this, "pos", "I", 0).await?;
+        let mark: i32 = jvm.get_field(&this, "mark", "I").await?;
+        jvm.put_field(&mut this, "pos", "I", mark).await?;
 
         Ok(())
     }
