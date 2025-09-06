@@ -21,6 +21,12 @@ impl FileInputStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/io/FileDescriptor;)V",
+                    Self::init_with_file_descriptor,
+                    Default::default(),
+                ),
                 JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
                 JavaMethodProto::new("read", "([BII)I", Self::read_array, Default::default()),
                 JavaMethodProto::new("available", "()I", Self::available, Default::default()),
@@ -30,10 +36,8 @@ impl FileInputStream {
         }
     }
 
-    async fn init(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
+    async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileInputStream::<init>({:?}, {:?})", &this, &file);
-
-        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -45,6 +49,23 @@ impl FileInputStream {
         }
 
         let fd = FileDescriptor::from_file(jvm, rust_file.unwrap()).await?;
+
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FileInputStream", "<init>", "(Ljava/io/FileDescriptor;)V", (fd,))
+            .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_file_descriptor(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        fd: ClassInstanceRef<FileDescriptor>,
+    ) -> Result<()> {
+        tracing::debug!("java.io.FileInputStream::<init>({:?}, {:?})", &this, &fd);
+
+        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
 

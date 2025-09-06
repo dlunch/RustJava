@@ -35,10 +35,8 @@ impl FileOutputStream {
         }
     }
 
-    async fn init(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
+    async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({:?}, {:?})", &this, &file);
-
-        let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -46,7 +44,9 @@ impl FileOutputStream {
         let file = context.open(&path, true).await.unwrap();
         let fd = FileDescriptor::from_file(jvm, file).await?;
 
-        jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FileOutputStream", "<init>", "(Ljava/io/FileDescriptor;)V", (fd,))
+            .await?;
 
         Ok(())
     }
