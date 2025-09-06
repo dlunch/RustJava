@@ -31,6 +31,7 @@ impl RandomAccessFile {
                 JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, Default::default()),
                 JavaMethodProto::new("length", "()J", Self::length, Default::default()),
                 JavaMethodProto::new("getFilePointer", "()J", Self::get_file_pointer, Default::default()),
+                JavaMethodProto::new("getFD", "()Ljava/io/FileDescriptor;", Self::get_fd, Default::default()),
                 JavaMethodProto::new("seek", "(J)V", Self::seek, Default::default()),
                 JavaMethodProto::new("setLength", "(J)V", Self::set_length, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
@@ -191,6 +192,14 @@ impl RandomAccessFile {
         let pos = rust_file.tell().await.unwrap();
 
         Ok(pos as i64)
+    }
+
+    async fn get_fd(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<File>> {
+        tracing::debug!("java.io.RandomAccessFile::getFD({:?})", &this);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+
+        Ok(fd)
     }
 
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
