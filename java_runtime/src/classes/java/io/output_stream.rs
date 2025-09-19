@@ -20,6 +20,7 @@ impl OutputStream {
                 JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
                 JavaMethodProto::new_abstract("write", "(I)V", Default::default()),
                 JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![],
         }
@@ -64,6 +65,12 @@ impl OutputStream {
 
     async fn flush(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::flush({:?})", &this);
+
+        Ok(())
+    }
+
+    async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.OutputStream::close({:?})", &this);
 
         Ok(())
     }
