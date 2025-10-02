@@ -2,7 +2,7 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::FieldAccessFlags;
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
 
@@ -19,6 +19,9 @@ impl FilterInputStream {
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("available", "()I", Self::available, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read_byte_int, Default::default()),
+                JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read_with_offset_length, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", FieldAccessFlags::PROTECTED)],
@@ -60,5 +63,39 @@ impl FilterInputStream {
         let _: () = jvm.invoke_virtual(&r#in, "reset", "()V", ()).await?;
 
         Ok(())
+    }
+
+    async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
+        tracing::debug!("java.io.FilterInputStream::read({:?}, {:?})", &this, &b);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "read", "([B)I", (b,)).await?;
+
+        Ok(result)
+    }
+
+    async fn read_with_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        b: ClassInstanceRef<Array<i8>>,
+        off: i32,
+        len: i32,
+    ) -> Result<i32> {
+        tracing::debug!("java.io.FilterInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (b, off, len)).await?;
+
+        Ok(result)
+    }
+
+    async fn read_byte_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.FilterInputStream::read({:?})", &this);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let result: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
+
+        Ok(result)
     }
 }

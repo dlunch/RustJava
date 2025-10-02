@@ -19,13 +19,13 @@ impl DataInputStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
-                JavaMethodProto::new("read", "()I", Self::read_byte_int, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
                 JavaMethodProto::new("readBoolean", "()Z", Self::read_boolean, Default::default()),
                 JavaMethodProto::new("readByte", "()B", Self::read_byte, Default::default()),
                 JavaMethodProto::new("readChar", "()C", Self::read_char, Default::default()),
                 JavaMethodProto::new("readDouble", "()D", Self::read_double, Default::default()),
                 JavaMethodProto::new("readFloat", "()F", Self::read_float, Default::default()),
+                JavaMethodProto::new("readFully", "([B)V", Self::read_fully, Default::default()),
+                JavaMethodProto::new("readFully", "([BII)V", Self::read_fully_offset_length, Default::default()),
                 JavaMethodProto::new("readInt", "()I", Self::read_int, Default::default()),
                 JavaMethodProto::new("readLong", "()J", Self::read_long, Default::default()),
                 JavaMethodProto::new("readShort", "()S", Self::read_short, Default::default()),
@@ -44,31 +44,6 @@ impl DataInputStream {
             .await?;
 
         Ok(())
-    }
-
-    async fn read(
-        jvm: &Jvm,
-        _: &mut RuntimeContext,
-        this: ClassInstanceRef<Self>,
-        b: ClassInstanceRef<Array<i8>>,
-        off: i32,
-        len: i32,
-    ) -> Result<i32> {
-        tracing::debug!("java.io.DataInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
-
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let result: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (b, off, len)).await?;
-
-        Ok(result)
-    }
-
-    async fn read_byte_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.DataInputStream::read({:?})", &this);
-
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let result: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
-
-        Ok(result)
     }
 
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
@@ -212,5 +187,37 @@ impl DataInputStream {
         let string = RustString::from_utf8(buf).unwrap();
 
         Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
+    }
+
+    async fn read_fully(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<()> {
+        tracing::debug!("java.io.DataInputStream::readFully({:?}, {:?})", &this, &b);
+
+        let length = jvm.array_length(&b).await?;
+
+        let _: () = jvm.invoke_virtual(&this, "readFully", "([BII)V", (b.clone(), 0, length as i32)).await?;
+
+        Ok(())
+    }
+
+    async fn read_fully_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        b: ClassInstanceRef<Array<i8>>,
+        off: i32,
+        len: i32,
+    ) -> Result<()> {
+        tracing::debug!("java.io.DataInputStream::readFully({:?}, {:?}, {}, {})", &this, &b, off, len);
+
+        let mut read = 0;
+        while read < len {
+            let r: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (b.clone(), off + read, len - read)).await?;
+            if r == -1 {
+                return Err(jvm.exception("java/io/EOFException", "End of stream reached before reading fully").await);
+            }
+            read += r;
+        }
+
+        Ok(())
     }
 }
