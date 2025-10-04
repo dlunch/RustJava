@@ -54,7 +54,7 @@ async fn test_timer() -> Result<()> {
         .invoke_virtual(&timer, "schedule", "(Ljava/util/TimerTask;JJ)V", (test_class.clone(), 100i64, 0i64))
         .await?;
 
-    let _: () = jvm.invoke_static("java/lang/Thread", "sleep", "(J)V", (200i64,)).await?;
+    let _: () = jvm.invoke_static("java/lang/Thread", "sleep", "(J)V", (500i64,)).await?;
     let run_count: i32 = jvm.get_field(&test_class, "runCount", "I").await?;
     assert_eq!(run_count, 1);
 
@@ -67,7 +67,7 @@ async fn test_timer() -> Result<()> {
         )
         .await?;
 
-    let _: () = jvm.invoke_static("java/lang/Thread", "sleep", "(J)V", (200i64,)).await?;
+    let _: () = jvm.invoke_static("java/lang/Thread", "sleep", "(J)V", (500i64,)).await?;
     let run_count: i32 = jvm.get_field(&test_class, "runCount", "I").await?;
     assert_eq!(run_count, 2);
 
