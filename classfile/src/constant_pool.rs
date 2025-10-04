@@ -34,7 +34,7 @@ pub enum ConstantPoolItem {
     #[nom(Selector = "10")]
     Methodref { class_index: u16, name_and_type_index: u16 },
     #[nom(Selector = "11")]
-    InstanceMethodref { class_index: u16, name_and_type_index: u16 },
+    InterfaceMethodref { class_index: u16, name_and_type_index: u16 },
     #[nom(Selector = "12")]
     NameAndType { name_index: u16, descriptor_index: u16 },
 }
@@ -105,18 +105,19 @@ impl ConstantPoolItem {
 }
 
 #[derive(Clone, Debug)]
-pub enum ValueConstant {
+pub enum ConstantPoolReference {
     Integer(i32),
     Float(f32),
     Long(i64),
     Double(f64),
     String(Arc<String>),
     Class(Arc<String>),
-    Method(ReferenceConstant),
-    Field(ReferenceConstant),
+    Method(FieldMethodref),
+    InterfaceMethodref(FieldMethodref),
+    Field(FieldMethodref),
 }
 
-impl ValueConstant {
+impl ConstantPoolReference {
     pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Self {
         match &constant_pool.get(&index).unwrap() {
             ConstantPoolItem::Integer(x) => Self::Integer(*x),
@@ -129,7 +130,7 @@ impl ValueConstant {
             ConstantPoolItem::Methodref {
                 class_index,
                 name_and_type_index,
-            } => Self::Method(ReferenceConstant::from_reference_info(
+            } => Self::Method(FieldMethodref::from_reference_info(
                 constant_pool,
                 *class_index as _,
                 *name_and_type_index as _,
@@ -137,7 +138,15 @@ impl ValueConstant {
             ConstantPoolItem::Fieldref {
                 class_index,
                 name_and_type_index,
-            } => Self::Field(ReferenceConstant::from_reference_info(
+            } => Self::Field(FieldMethodref::from_reference_info(
+                constant_pool,
+                *class_index as _,
+                *name_and_type_index as _,
+            )),
+            ConstantPoolItem::InterfaceMethodref {
+                class_index,
+                name_and_type_index,
+            } => Self::InterfaceMethodref(FieldMethodref::from_reference_info(
                 constant_pool,
                 *class_index as _,
                 *name_and_type_index as _,
@@ -153,34 +162,40 @@ impl ValueConstant {
             panic!("Invalid constant pool item");
         }
     }
+
+    pub fn as_field_ref(&self) -> &FieldMethodref {
+        if let Self::Field(x) = self {
+            x
+        } else {
+            panic!("Invalid constant pool item");
+        }
+    }
+
+    pub fn as_method_ref(&self) -> &FieldMethodref {
+        if let Self::Method(x) = self {
+            x
+        } else {
+            panic!("Invalid constant pool item");
+        }
+    }
+
+    pub fn as_interface_method_ref(&self) -> &FieldMethodref {
+        if let Self::InterfaceMethodref(x) = self {
+            x
+        } else {
+            panic!("Invalid constant pool item");
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
-pub struct ReferenceConstant {
+pub struct FieldMethodref {
     pub class: Arc<String>,
     pub name: Arc<String>,
     pub descriptor: Arc<String>,
 }
 
-impl ReferenceConstant {
-    pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Self {
-        match &constant_pool.get(&index).unwrap() {
-            ConstantPoolItem::Fieldref {
-                class_index,
-                name_and_type_index,
-            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
-            ConstantPoolItem::Methodref {
-                class_index,
-                name_and_type_index,
-            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
-            ConstantPoolItem::InstanceMethodref {
-                class_index,
-                name_and_type_index,
-            } => Self::from_reference_info(constant_pool, *class_index, *name_and_type_index),
-            _ => panic!("Invalid constant pool item {:?}", constant_pool.get(&index).unwrap()),
-        }
-    }
-
+impl FieldMethodref {
     pub fn from_reference_info(constant_pool: &BTreeMap<u16, ConstantPoolItem>, class_index: u16, name_and_type_index: u16) -> Self {
         let class_name_index = constant_pool.get(&class_index).unwrap().class_name_index();
         let class_name = constant_pool.get(&class_name_index).unwrap().utf8();

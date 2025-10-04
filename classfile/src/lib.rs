@@ -12,7 +12,7 @@ mod opcode;
 pub use {
     attribute::{AttributeInfo, AttributeInfoCode},
     class::ClassInfo,
-    constant_pool::{ReferenceConstant, ValueConstant},
+    constant_pool::{ConstantPoolReference, FieldMethodref},
     field::FieldInfo,
     method::MethodInfo,
     opcode::Opcode,

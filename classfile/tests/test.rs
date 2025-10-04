@@ -1,6 +1,6 @@
 use java_constants::ClassAccessFlags;
 
-use classfile::{AttributeInfo, ClassInfo, Opcode, ValueConstant};
+use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference, Opcode};
 
 #[test]
 fn test_hello() {
@@ -26,9 +26,9 @@ fn test_hello() {
     if let AttributeInfo::Code(x) = &class.methods[0].attributes[0] {
         assert_eq!(x.code.len(), 3);
         assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload(0)));
-        assert!(
-            matches!(x.code.get(&1).unwrap(), Opcode::Invokespecial(x) if x.class == "java/lang/Object".to_string().into() && x.name == "<init>".to_string().into() && x.descriptor == "()V".to_string().into())
-        );
+        assert!(matches!(x.code.get(&1).unwrap(),
+            Opcode::Invokespecial(
+                ConstantPoolReference::Method(x)) if x.class == "java/lang/Object".to_string().into() && x.name == "<init>".to_string().into() && x.descriptor == "()V".to_string().into()));
         assert!(matches!(x.code.get(&4).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");
@@ -39,15 +39,12 @@ fn test_hello() {
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
         assert_eq!(x.code.len(), 4);
-        assert!(
-            matches!(x.code.get(&0).unwrap(), Opcode::Getstatic(x) if x.class == "java/lang/System".to_string().into() && x.name == "out".to_string().into() && x.descriptor == "Ljava/io/PrintStream;".to_string().into())
-        );
-        assert!(
-            matches!(x.code.get(&3).unwrap(), Opcode::Ldc(x) if matches!(x, ValueConstant::String(y) if *y == "Hello, world!".to_string().into()))
-        );
-        assert!(
-            matches!(x.code.get(&5).unwrap(), Opcode::Invokevirtual(x) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into())
-        );
+        assert!(matches!(x.code.get(&0).unwrap(),
+            Opcode::Getstatic(ConstantPoolReference::Field(x)) if x.class == "java/lang/System".to_string().into() && x.name == "out".to_string().into() && x.descriptor == "Ljava/io/PrintStream;".to_string().into()));
+        assert!(matches!(x.code.get(&3).unwrap(),
+            Opcode::Ldc(x) if matches!(x, ConstantPoolReference::String(y) if *y == "Hello, world!".to_string().into())));
+        assert!(matches!(x.code.get(&5).unwrap(),
+            Opcode::Invokevirtual(ConstantPoolReference::Method(x)) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into()));
         assert!(matches!(x.code.get(&8).unwrap(), Opcode::Return));
     } else {
         panic!("Expected code attribute");

@@ -9,7 +9,7 @@ use nom::{
     sequence::tuple,
 };
 
-use crate::constant_pool::{ConstantPoolItem, ReferenceConstant, ValueConstant};
+use crate::constant_pool::{ConstantPoolItem, ConstantPoolReference};
 
 #[derive(Clone, Debug)]
 pub enum Opcode {
@@ -17,7 +17,7 @@ pub enum Opcode {
     Aastore,
     AconstNull,
     Aload(u8),
-    Anewarray(ValueConstant),
+    Anewarray(ConstantPoolReference),
     Areturn,
     Arraylength,
     Astore(u8),
@@ -27,7 +27,7 @@ pub enum Opcode {
     Bipush(i8),
     Caload,
     Castore,
-    Checkcast(ValueConstant),
+    Checkcast(ConstantPoolReference),
     D2f,
     D2i,
     D2l,
@@ -68,8 +68,8 @@ pub enum Opcode {
     Freturn,
     Fstore(u8),
     Fsub,
-    Getfield(ReferenceConstant),
-    Getstatic(ReferenceConstant),
+    Getfield(ConstantPoolReference),
+    Getstatic(ConstantPoolReference),
     Goto(i16),
     GotoW(i32),
     I2b,
@@ -104,12 +104,12 @@ pub enum Opcode {
     Iload(u8),
     Imul,
     Ineg,
-    Instanceof(ValueConstant),
-    Invokedynamic(ReferenceConstant),
-    Invokeinterface(ReferenceConstant, u8, u8),
-    Invokespecial(ReferenceConstant),
-    Invokestatic(ReferenceConstant),
-    Invokevirtual(ReferenceConstant),
+    Instanceof(ConstantPoolReference),
+    Invokedynamic(ConstantPoolReference),
+    Invokeinterface(ConstantPoolReference, u8, u8),
+    Invokespecial(ConstantPoolReference),
+    Invokestatic(ConstantPoolReference),
+    Invokevirtual(ConstantPoolReference),
     Ior,
     Irem,
     Ireturn,
@@ -130,9 +130,9 @@ pub enum Opcode {
     Lastore,
     Lcmp,
     Lconst(u8),
-    Ldc(ValueConstant),
-    LdcW(ValueConstant),
-    Ldc2W(ValueConstant),
+    Ldc(ConstantPoolReference),
+    LdcW(ConstantPoolReference),
+    Ldc2W(ConstantPoolReference),
     Ldiv,
     Lload(u8),
     Lmul,
@@ -149,14 +149,14 @@ pub enum Opcode {
     Lxor,
     Monitorenter,
     Monitorexit,
-    Multianewarray(ValueConstant, u8),
-    New(ValueConstant),
+    Multianewarray(ConstantPoolReference, u8),
+    New(ConstantPoolReference),
     Newarray(u8),
     Nop,
     Pop,
     Pop2,
-    Putfield(ReferenceConstant),
-    Putstatic(ReferenceConstant),
+    Putfield(ConstantPoolReference),
+    Putstatic(ConstantPoolReference),
     Ret(u8),
     Return,
     Saload,
@@ -182,7 +182,9 @@ impl Opcode {
             0x2b => success(Opcode::Aload(1))(data),
             0x2c => success(Opcode::Aload(2))(data),
             0x2d => success(Opcode::Aload(3))(data),
-            0xbd => map(be_u16, |x| Opcode::Anewarray(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xbd => map(be_u16, |x| {
+                Opcode::Anewarray(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xb0 => success(Opcode::Areturn)(data),
             0xbe => success(Opcode::Arraylength)(data),
             0x3a => map(u8, Opcode::Astore)(data),
@@ -196,7 +198,9 @@ impl Opcode {
             0x10 => map(i8, Opcode::Bipush)(data),
             0x34 => success(Opcode::Caload)(data),
             0x55 => success(Opcode::Castore)(data),
-            0xc0 => map(be_u16, |x| Opcode::Checkcast(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xc0 => map(be_u16, |x| {
+                Opcode::Checkcast(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0x90 => success(Opcode::D2f)(data),
             0x8e => success(Opcode::D2i)(data),
             0x8f => success(Opcode::D2l)(data),
@@ -256,9 +260,11 @@ impl Opcode {
             0x45 => success(Opcode::Fstore(2))(data),
             0x46 => success(Opcode::Fstore(3))(data),
             0x66 => success(Opcode::Fsub)(data),
-            0xb4 => map(be_u16, |x| Opcode::Getfield(ReferenceConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xb4 => map(be_u16, |x| {
+                Opcode::Getfield(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xb2 => map(be_u16, |x| {
-                Opcode::Getstatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Getstatic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0xa7 => map(be_i16, Opcode::Goto)(data),
             0xc8 => map(be_i32, Opcode::GotoW)(data),
@@ -304,21 +310,23 @@ impl Opcode {
             0x1d => success(Opcode::Iload(3))(data),
             0x68 => success(Opcode::Imul)(data),
             0x74 => success(Opcode::Ineg)(data),
-            0xc1 => map(be_u16, |x| Opcode::Instanceof(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xc1 => map(be_u16, |x| {
+                Opcode::Instanceof(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xba => map(be_u16, |x| {
-                Opcode::Invokedynamic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Invokedynamic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0xb9 => map(be_u16, |x| {
-                Opcode::Invokeinterface(ReferenceConstant::from_constant_pool(constant_pool, x as _), 0, 0)
+                Opcode::Invokeinterface(ConstantPoolReference::from_constant_pool(constant_pool, x as _), 0, 0)
             })(data),
             0xb7 => map(be_u16, |x| {
-                Opcode::Invokespecial(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Invokespecial(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0xb8 => map(be_u16, |x| {
-                Opcode::Invokestatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Invokestatic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0xb6 => map(be_u16, |x| {
-                Opcode::Invokevirtual(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Invokevirtual(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0x80 => success(Opcode::Ior)(data),
             0x70 => success(Opcode::Irem)(data),
@@ -345,9 +353,11 @@ impl Opcode {
             0x94 => success(Opcode::Lcmp)(data),
             0x09 => success(Opcode::Lconst(0))(data),
             0x0a => success(Opcode::Lconst(1))(data),
-            0x12 => map(u8, |x| Opcode::Ldc(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
-            0x13 => map(be_u16, |x| Opcode::LdcW(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
-            0x14 => map(be_u16, |x| Opcode::Ldc2W(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0x12 => map(u8, |x| Opcode::Ldc(ConstantPoolReference::from_constant_pool(constant_pool, x as _)))(data),
+            0x13 => map(be_u16, |x| Opcode::LdcW(ConstantPoolReference::from_constant_pool(constant_pool, x as _)))(data),
+            0x14 => map(be_u16, |x| {
+                Opcode::Ldc2W(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0x6d => success(Opcode::Ldiv)(data),
             0x16 => map(u8, Opcode::Lload)(data),
             0x1e => success(Opcode::Lload(0))(data),
@@ -379,16 +389,18 @@ impl Opcode {
             0xc2 => success(Opcode::Monitorenter)(data),
             0xc3 => success(Opcode::Monitorexit)(data),
             0xc5 => map(tuple((be_u16, u8)), |(index, dimensions)| {
-                Opcode::Multianewarray(ValueConstant::from_constant_pool(constant_pool, index as _), dimensions)
+                Opcode::Multianewarray(ConstantPoolReference::from_constant_pool(constant_pool, index as _), dimensions)
             })(data),
-            0xbb => map(be_u16, |x| Opcode::New(ValueConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xbb => map(be_u16, |x| Opcode::New(ConstantPoolReference::from_constant_pool(constant_pool, x as _)))(data),
             0xbc => map(u8, Opcode::Newarray)(data),
             0x00 => success(Opcode::Nop)(data),
             0x57 => success(Opcode::Pop)(data),
             0x58 => success(Opcode::Pop2)(data),
-            0xb5 => map(be_u16, |x| Opcode::Putfield(ReferenceConstant::from_constant_pool(constant_pool, x as _)))(data),
+            0xb5 => map(be_u16, |x| {
+                Opcode::Putfield(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
+            })(data),
             0xb3 => map(be_u16, |x| {
-                Opcode::Putstatic(ReferenceConstant::from_constant_pool(constant_pool, x as _))
+                Opcode::Putstatic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })(data),
             0xa9 => map(u8, Opcode::Ret)(data),
             0xb1 => success(Opcode::Return)(data),

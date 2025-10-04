@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, vec::Vec};
 use core::iter;
 
-use classfile::{AttributeInfoCode, Opcode, ValueConstant};
+use classfile::{AttributeInfoCode, ConstantPoolReference, Opcode};
 use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result, runtime::JavaLangString};
 
 use crate::stack_frame::StackFrame;
@@ -396,6 +396,7 @@ impl Interpreter {
                 stack_frame.operand_stack.push(JavaValue::Float(value1 - value2));
             }
             Opcode::Getfield(x) => {
+                let x = x.as_field_ref();
                 let instance = stack_frame.operand_stack.pop().unwrap();
 
                 let value = jvm.get_field(&instance.into(), &x.name, &x.descriptor).await?;
@@ -403,6 +404,7 @@ impl Interpreter {
                 stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
             }
             Opcode::Getstatic(x) => {
+                let x = x.as_field_ref();
                 let value = jvm.get_static_field(&x.class, &x.name, &x.descriptor).await?;
 
                 stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
@@ -569,6 +571,7 @@ impl Interpreter {
                 todo!()
             }
             Opcode::Invokeinterface(x, _count, _zero) => {
+                let x = x.as_interface_method_ref();
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
                 let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -585,6 +588,7 @@ impl Interpreter {
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokespecial(x) => {
+                let x = x.as_method_ref();
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
                 let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -601,12 +605,14 @@ impl Interpreter {
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokestatic(x) => {
+                let x = x.as_method_ref();
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
                 let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokevirtual(x) => {
+                let x = x.as_method_ref();
                 let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
 
                 let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -822,12 +828,14 @@ impl Interpreter {
                 stack_frame.operand_stack.pop().unwrap();
             }
             Opcode::Putfield(x) => {
+                let x = x.as_field_ref();
                 let value = stack_frame.operand_stack.pop().unwrap();
                 let instance = stack_frame.operand_stack.pop().unwrap();
 
                 jvm.put_field(&mut instance.into(), &x.name, &x.descriptor, value).await?;
             }
             Opcode::Putstatic(x) => {
+                let x = x.as_field_ref();
                 jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
                     .await?
             }
@@ -932,14 +940,14 @@ impl Interpreter {
         }
     }
 
-    async fn constant_to_value(jvm: &Jvm, constant: &ValueConstant) -> Result<JavaValue> {
+    async fn constant_to_value(jvm: &Jvm, constant: &ConstantPoolReference) -> Result<JavaValue> {
         Ok(match constant {
-            ValueConstant::Integer(x) => JavaValue::Int(*x),
-            ValueConstant::Float(x) => JavaValue::Float(*x),
-            ValueConstant::Long(x) => JavaValue::Long(*x),
-            ValueConstant::Double(x) => JavaValue::Double(*x),
-            ValueConstant::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
-            ValueConstant::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
+            ConstantPoolReference::Integer(x) => JavaValue::Int(*x),
+            ConstantPoolReference::Float(x) => JavaValue::Float(*x),
+            ConstantPoolReference::Long(x) => JavaValue::Long(*x),
+            ConstantPoolReference::Double(x) => JavaValue::Double(*x),
+            ConstantPoolReference::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
+            ConstantPoolReference::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
             _ => unimplemented!(),
         })
     }

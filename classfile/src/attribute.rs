@@ -10,7 +10,7 @@ use nom::{
 };
 use nom_derive::{NomBE, Parse};
 
-use crate::{ValueConstant, constant_pool::ConstantPoolItem, opcode::Opcode};
+use crate::{ConstantPoolReference, constant_pool::ConstantPoolItem, opcode::Opcode};
 
 pub struct CodeAttributeExceptionTable {
     pub start_pc: u16,
@@ -122,7 +122,7 @@ impl LocalVariableTableEntry {
 }
 
 pub enum AttributeInfo {
-    ConstantValue(ValueConstant),
+    ConstantValue(ConstantPoolReference),
     Code(AttributeInfoCode),
     StackMap(Vec<u8>),      // TODO Older variant of StackMapTable
     StackMapTable(Vec<u8>), // TODO
@@ -167,8 +167,8 @@ impl AttributeInfo {
         map(be_u16, |x| constant_pool.get(&x).unwrap().utf8())(data)
     }
 
-    fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], ValueConstant> {
-        map(be_u16, |x| ValueConstant::from_constant_pool(constant_pool, x as _))(data)
+    fn parse_constant_value<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], ConstantPoolReference> {
+        map(be_u16, |x| ConstantPoolReference::from_constant_pool(constant_pool, x as _))(data)
     }
 
     fn parse_local_variable_table<'a>(
