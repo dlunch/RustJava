@@ -36,6 +36,7 @@ impl Vector {
                 JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
                 JavaMethodProto::new("removeAllElements", "()V", Self::remove_all_elements, Default::default()),
                 JavaMethodProto::new("removeElementAt", "(I)V", Self::remove_element_at, Default::default()),
+                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;I)I", Self::last_index_of_index, Default::default()),
                 JavaMethodProto::new("firstElement", "()Ljava/lang/Object;", Self::first_element, Default::default()),
@@ -181,6 +182,30 @@ impl Vector {
         Ok(())
     }
 
+    async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
+        tracing::debug!("java.util.Vector::indexOf({:?}, {:?})", &this, &element);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        let vector = rust_vector.lock();
+
+        for (i, item) in vector.iter().enumerate() {
+            if item.is_none() && element.is_null() {
+                return Ok(i as i32);
+            }
+
+            if item.is_none() || element.is_null() {
+                continue;
+            }
+
+            let value: Box<dyn ClassInstance> = element.clone().into();
+            if item.as_ref().unwrap().equals(&*value)? {
+                return Ok(i as i32);
+            }
+        }
+
+        Ok(-1)
+    }
+
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?})", &this, &element);
 
@@ -213,10 +238,11 @@ impl Vector {
         let vector = rust_vector.lock();
 
         for (i, item) in vector[..=index as usize].iter().enumerate().rev() {
-            if item.is_none() {
-                if element.is_null() {
-                    return Ok(i as i32);
-                }
+            if item.is_none() && element.is_null() {
+                return Ok(i as i32);
+            }
+
+            if item.is_none() || element.is_null() {
                 continue;
             }
 

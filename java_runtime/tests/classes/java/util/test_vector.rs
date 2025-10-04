@@ -59,7 +59,7 @@ async fn test_vector_null() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_vector_last_index_of() -> Result<()> {
+async fn test_vector_index_of() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
@@ -97,6 +97,23 @@ async fn test_vector_last_index_of() -> Result<()> {
     let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (None,)).await?;
     let index: i32 = jvm.invoke_virtual(&vector, "lastIndexOf", "(Ljava/lang/Object;)I", (None,)).await?;
     assert_eq!(index, 4);
+
+    let index: i32 = jvm.invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (element2,)).await?;
+    assert_eq!(index, 1);
+
+    let index: i32 = jvm.invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (None,)).await?;
+    assert_eq!(index, 4);
+
+    let non_existing_element = JavaLangString::from_rust_string(&jvm, "nonExisting").await?;
+    let index: i32 = jvm
+        .invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (non_existing_element.clone(),))
+        .await?;
+    assert_eq!(index, -1);
+
+    let index: i32 = jvm
+        .invoke_virtual(&vector, "lastIndexOf", "(Ljava/lang/Object;)I", (non_existing_element,))
+        .await?;
+    assert_eq!(index, -1);
 
     Ok(())
 }
