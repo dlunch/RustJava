@@ -133,6 +133,7 @@ pub enum AttributeInfo {
     SourceDebugExtension,
     LineNumberTable(Vec<AttributeInfoLineNumberTableEntry>),
     LocalVariableTable(Vec<LocalVariableTableEntry>),
+    BootstrapMethods(Vec<u8>), // TODO
     MethodParameters(Vec<u8>), // TODO
     NestMembers(Vec<u8>),      // TODO
     NestHost(Vec<u8>),         // TODO
@@ -154,6 +155,7 @@ impl AttributeInfo {
                     "Exceptions" => AttributeInfo::Exceptions(info.to_vec()),
                     "InnerClasses" => AttributeInfo::InnerClasses(info.to_vec()),
                     "Synthetic" => AttributeInfo::Synthetic(info.to_vec()),
+                    "BootstrapMethods" => AttributeInfo::BootstrapMethods(info.to_vec()),
                     "MethodParameters" => AttributeInfo::MethodParameters(info.to_vec()),
                     "NestMembers" => AttributeInfo::NestMembers(info.to_vec()),
                     "NestHost" => AttributeInfo::NestHost(info.to_vec()),
