@@ -17,6 +17,7 @@ impl Math {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("abs", "(I)I", Self::abs, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("abs", "(J)J", Self::abs_long, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("max", "(II)I", Self::max, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("min", "(II)I", Self::min, MethodAccessFlags::STATIC),
             ],
@@ -26,6 +27,12 @@ impl Math {
 
     async fn abs(_: &Jvm, _: &mut RuntimeContext, x: i32) -> Result<i32> {
         tracing::debug!("java.lang.Math::abs({:?})", x);
+
+        Ok(x.abs())
+    }
+
+    async fn abs_long(_: &Jvm, _: &mut RuntimeContext, x: i64) -> Result<i64> {
+        tracing::debug!("java.lang.Math::abs({x:?})");
 
         Ok(x.abs())
     }
