@@ -192,7 +192,7 @@ impl StringBuffer {
         let new_count = new_chars.len() as i32;
 
         jvm.store_array(&mut java_value, 0, new_chars).await?;
-        jvm.put_field(&mut this, "count", "I", new_count as i32).await?;
+        jvm.put_field(&mut this, "count", "I", new_count).await?;
 
         Ok(this)
     }
