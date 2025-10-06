@@ -41,6 +41,7 @@ impl StringBuffer {
                 JavaMethodProto::new("append", "(J)Ljava/lang/StringBuffer;", Self::append_long, Default::default()),
                 JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, Default::default()),
                 JavaMethodProto::new("append", "([CII)Ljava/lang/StringBuffer;", Self::append_char_array, Default::default()),
+                JavaMethodProto::new("delete", "(II)Ljava/lang/StringBuffer;", Self::delete, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("setLength", "(I)V", Self::set_length, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
@@ -170,6 +171,28 @@ impl StringBuffer {
         let string = RustString::from_utf16(&value).unwrap();
 
         Self::append(jvm, &mut this, &string).await?;
+
+        Ok(this)
+    }
+
+    async fn delete(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, start: i32, end: i32) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.StringBuffer::delete({this:?}, {start}, {end})");
+
+        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+
+        let mut java_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&java_value, 0, count as _).await?;
+
+        let new_chars = chars
+            .iter()
+            .take(start as _)
+            .chain(chars.iter().skip(end as _))
+            .cloned()
+            .collect::<Vec<_>>();
+        let new_count = new_chars.len() as i32;
+
+        jvm.store_array(&mut java_value, 0, new_chars).await?;
+        jvm.put_field(&mut this, "count", "I", new_count as i32).await?;
 
         Ok(this)
     }

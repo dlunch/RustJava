@@ -32,5 +32,12 @@ async fn test_string_buffer() -> Result<()> {
 
     assert_eq!("Hello, 42H42", result);
 
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&string_buffer, "delete", "(II)Ljava/lang/StringBuffer;", (5, 7))
+        .await?;
+    let result = jvm.invoke_virtual(&string_buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = JavaLangString::to_rust_string(&jvm, &result).await?;
+    assert_eq!("Hello42H42", result);
+
     Ok(())
 }
