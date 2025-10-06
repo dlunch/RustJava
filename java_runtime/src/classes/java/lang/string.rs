@@ -42,6 +42,7 @@ impl String {
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
                 JavaMethodProto::new("getBytes", "()[B", Self::get_bytes, Default::default()),
+                JavaMethodProto::new("getChars", "(II[CI)V", Self::get_chars, Default::default()),
                 JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, Default::default()),
                 JavaMethodProto::new("toUpperCase", "()Ljava/lang/String;", Self::to_upper_case, Default::default()),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
@@ -252,6 +253,33 @@ impl String {
         jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
 
         Ok(byte_array.into())
+    }
+
+    async fn get_chars(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        src_begin: i32,
+        src_end: i32,
+        mut dst: ClassInstanceRef<Array<JavaChar>>,
+        dst_begin: i32,
+    ) -> Result<()> {
+        tracing::debug!(
+            "java.lang.String::getChars({:?}, {}, {}, {:?}, {})",
+            &this,
+            src_begin,
+            src_end,
+            &dst,
+            dst_begin
+        );
+
+        let value = jvm.get_field(&this, "value", "[C").await?;
+
+        let count = src_end - src_begin;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, src_begin as _, count as _).await?;
+        jvm.store_array(&mut dst, dst_begin as _, chars).await?;
+
+        Ok(())
     }
 
     async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {

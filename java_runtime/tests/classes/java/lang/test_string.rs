@@ -148,3 +148,30 @@ async fn test_last_index_of() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_get_chars() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "Hello, 테스트!").await?;
+
+    let char_array = jvm.instantiate_array("[C", 11).await?;
+
+    let _: () = jvm
+        .invoke_virtual(&string, "getChars", "(II[CI)V", (0i32, 11i32, char_array.clone(), 0i32))
+        .await?;
+    let chars = jvm.load_array::<u16>(&char_array, 0, 11).await?;
+    let rust_string = String::from_utf16(&chars).unwrap();
+    assert_eq!(rust_string, "Hello, 테스트!");
+
+    let partial_array = jvm.instantiate_array("[C", 4).await?;
+
+    let _: () = jvm
+        .invoke_virtual(&string, "getChars", "(II[CI)V", (7i32, 11i32, partial_array.clone(), 0i32))
+        .await?;
+    let chars = jvm.load_array::<u16>(&partial_array, 0, 4).await?;
+    let rust_string = String::from_utf16(&chars).unwrap();
+    assert_eq!(rust_string, "테스트!");
+
+    Ok(())
+}
