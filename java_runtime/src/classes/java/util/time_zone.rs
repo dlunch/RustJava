@@ -37,9 +37,9 @@ impl TimeZone {
     }
 
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, id: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
-        tracing::warn!("stub java.util.TimeZone::getTimeZone({id:?})");
+        tracing::debug!("java.util.TimeZone::getTimeZone({id:?})");
 
-        let result = jvm.new_class("java/util/TimeZone", "()V", ()).await?;
+        let result = jvm.new_class("java/util/SimpleTimeZone", "(Ljava/lang/String;)V", (id,)).await?;
 
         Ok(result.into())
     }

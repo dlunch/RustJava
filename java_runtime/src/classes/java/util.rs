@@ -12,6 +12,7 @@ mod gregorian_calendar;
 mod hashtable;
 mod properties;
 mod random;
+mod simple_time_zone;
 mod stack;
 mod time_zone;
 mod timer;
@@ -22,6 +23,6 @@ mod vector;
 pub use self::{
     abstract_collection::AbstractCollection, abstract_list::AbstractList, calendar::Calendar, date::Date, dictionary::Dictionary,
     empty_stack_exception::EmptyStackException, enumeration::Enumeration, gregorian_calendar::GregorianCalendar, hashtable::Hashtable,
-    properties::Properties, random::Random, stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask, timer_thread::TimerThread,
-    vector::Vector,
+    properties::Properties, random::Random, simple_time_zone::SimpleTimeZone, stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask,
+    timer_thread::TimerThread, vector::Vector,
 };

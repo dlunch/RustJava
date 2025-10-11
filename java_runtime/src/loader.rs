@@ -74,6 +74,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::Hashtable::as_proto(),
         crate::classes::java::util::Properties::as_proto(),
         crate::classes::java::util::Random::as_proto(),
+        crate::classes::java::util::SimpleTimeZone::as_proto(),
         crate::classes::java::util::Stack::as_proto(),
         crate::classes::java::util::Timer::as_proto(),
         crate::classes::java::util::TimerTask::as_proto(),
