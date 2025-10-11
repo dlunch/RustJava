@@ -14,7 +14,7 @@ use parking_lot::RwLock;
 
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Method, Result};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
@@ -22,6 +22,7 @@ use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodI
 struct ClassDefinitionInner {
     name: String,
     super_class_name: Option<String>,
+    access_flags: ClassAccessFlags,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
     storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
@@ -33,11 +34,18 @@ pub struct ClassDefinitionImpl {
 }
 
 impl ClassDefinitionImpl {
-    pub fn new(name: &str, super_class_name: Option<String>, methods: Vec<MethodImpl>, fields: Vec<FieldImpl>) -> Self {
+    pub fn new(
+        name: &str,
+        super_class_name: Option<String>,
+        access_flags: ClassAccessFlags,
+        methods: Vec<MethodImpl>,
+        fields: Vec<FieldImpl>,
+    ) -> Self {
         Self {
             inner: Arc::new(ClassDefinitionInner {
                 name: name.to_string(),
                 super_class_name,
+                access_flags,
                 methods,
                 fields,
                 storage: RwLock::new(BTreeMap::new()),
@@ -58,7 +66,7 @@ impl ClassDefinitionImpl {
 
         let fields = proto.fields.into_iter().map(FieldImpl::from_field_proto).collect::<Vec<_>>();
 
-        Self::new(proto.name, proto.parent_class.map(|x| x.to_string()), methods, fields)
+        Self::new(proto.name, proto.parent_class.map(|x| x.to_string()), proto.access_flags, methods, fields)
     }
 
     pub fn from_classfile(data: &[u8]) -> Result<Self> {
@@ -69,7 +77,13 @@ impl ClassDefinitionImpl {
 
         let methods = class.methods.into_iter().map(MethodImpl::from_method_info).collect::<Vec<_>>();
 
-        Ok(Self::new(&class.this_class, class.super_class.map(|x| x.to_string()), methods, fields))
+        Ok(Self::new(
+            &class.this_class,
+            class.super_class.map(|x| x.to_string()),
+            class.access_flags,
+            methods,
+            fields,
+        ))
     }
 
     pub fn fields(&self) -> &[FieldImpl] {
@@ -85,6 +99,10 @@ impl ClassDefinition for ClassDefinitionImpl {
 
     fn super_class_name(&self) -> Option<String> {
         self.inner.super_class_name.as_ref().map(|x| x.to_string())
+    }
+
+    fn access_flags(&self) -> ClassAccessFlags {
+        self.inner.access_flags
     }
 
     fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {

@@ -1,6 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::ClassAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
     classes::java::{lang::String, net::URL, util::jar::Attributes},
 };
 
-// class java.net.JarURLConnection
+// abstract class java.net.JarURLConnection
 pub struct JarURLConnection;
 
 impl JarURLConnection {
@@ -34,7 +35,7 @@ impl JarURLConnection {
                 JavaFieldProto::new("fileUrl", "Ljava/net/URL;", Default::default()),
                 JavaFieldProto::new("entry", "Ljava/lang/String;", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

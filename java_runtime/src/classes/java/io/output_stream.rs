@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.io.OutputStream
+// abstract class java.io.OutputStream
 pub struct OutputStream;
 
 impl OutputStream {
@@ -23,7 +24,7 @@ impl OutputStream {
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

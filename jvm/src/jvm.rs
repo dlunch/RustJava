@@ -13,7 +13,7 @@ use dyn_clone::clone_box;
 use hashbrown::HashSet;
 use parking_lot::RwLock;
 
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 
 use crate::{
     Result,
@@ -105,10 +105,21 @@ impl Jvm {
         Ok(jvm)
     }
 
+    #[async_recursion::async_recursion]
     pub async fn instantiate_class(&self, class_name: &str) -> Result<Box<dyn ClassInstance>> {
         tracing::trace!("Instantiate {}", class_name);
 
         let class = self.resolve_class(class_name).await?;
+
+        let access_flags = class.definition.access_flags();
+        if access_flags.contains(ClassAccessFlags::INTERFACE) || access_flags.contains(ClassAccessFlags::ABSTRACT) {
+            return Err(self
+                .exception(
+                    "java/lang/InstantiationError",
+                    &format!("Cannot instantiate abstract class or interface: {}", class_name),
+                )
+                .await);
+        }
 
         let instance = class.definition.instantiate()?;
 

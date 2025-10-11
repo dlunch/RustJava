@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 
 use crate::RuntimeClassProto;
 
@@ -18,7 +19,7 @@ impl Enumeration {
                 JavaMethodProto::new_abstract("nextElement", "()Ljava/lang/Object;", Default::default()),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::INTERFACE,
         }
     }
 }

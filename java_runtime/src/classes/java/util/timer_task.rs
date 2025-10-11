@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::ClassAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.util.TimerTask
+// abstract class java.util.TimerTask
 pub struct TimerTask;
 
 impl TimerTask {
@@ -22,7 +23,7 @@ impl TimerTask {
                 JavaFieldProto::new("nextExecutionTime", "J", Default::default()),
                 JavaFieldProto::new("period", "J", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

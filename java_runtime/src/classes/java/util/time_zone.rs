@@ -1,12 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
-// class java.util.TimeZone
+// abstract class java.util.TimeZone
 pub struct TimeZone;
 
 impl TimeZone {
@@ -25,7 +25,7 @@ impl TimeZone {
                 ),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.io.Writer
+// abstract class java.io.Writer
 pub struct Writer;
 
 impl Writer {
@@ -20,7 +21,7 @@ impl Writer {
                 JavaMethodProto::new("write", "(Ljava/lang/String;)V", Self::write_string, Default::default()),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

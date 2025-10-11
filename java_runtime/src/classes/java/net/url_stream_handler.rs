@@ -1,5 +1,6 @@
 use alloc::{borrow::ToOwned, string::ToString, vec};
 
+use java_constants::ClassAccessFlags;
 use url::Url;
 
 use java_class_proto::JavaMethodProto;
@@ -10,7 +11,7 @@ use crate::{
     classes::java::{lang::String, net::URL},
 };
 
-// class java.net.URLStreamHandler
+// abstract class java.net.URLStreamHandler
 pub struct URLStreamHandler;
 
 impl URLStreamHandler {
@@ -31,7 +32,7 @@ impl URLStreamHandler {
                 ),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

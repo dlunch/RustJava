@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.util.AbstractList
+// abstract class java.util.AbstractList
 pub struct AbstractList;
 
 impl AbstractList {
@@ -16,7 +17,7 @@ impl AbstractList {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

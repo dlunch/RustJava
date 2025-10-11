@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 use jvm::{ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.io.Reader
+// abstract class java.io.Reader
 pub struct Reader;
 
 impl Reader {
@@ -21,7 +22,7 @@ impl Reader {
                 JavaMethodProto::new_abstract("close", "()V", Default::default()),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

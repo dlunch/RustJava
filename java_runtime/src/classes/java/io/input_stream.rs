@@ -1,11 +1,12 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
-// class java.io.InputStream
+// abstract class java.io.InputStream
 pub struct InputStream;
 
 impl InputStream {
@@ -26,7 +27,7 @@ impl InputStream {
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

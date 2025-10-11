@@ -5,6 +5,7 @@ use alloc::{
     vec::Vec,
 };
 use dyn_clone::clone_trait_object;
+use java_constants::ClassAccessFlags;
 
 use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue};
 
@@ -23,6 +24,10 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
 
     fn super_class_name(&self) -> Option<String> {
         Some("java/lang/Object".to_string())
+    }
+
+    fn access_flags(&self) -> ClassAccessFlags {
+        ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL
     }
 
     fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {

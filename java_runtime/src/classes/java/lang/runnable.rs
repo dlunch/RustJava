@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::ClassAccessFlags;
 
 use crate::RuntimeClassProto;
 
@@ -16,7 +17,7 @@ impl Runnable {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new_abstract("run", "()V", Default::default())],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::INTERFACE,
         }
     }
 }

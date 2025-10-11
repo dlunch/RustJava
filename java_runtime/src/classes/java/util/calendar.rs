@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
     classes::java::util::{Date, TimeZone},
 };
 
-// class java.util.Calendar
+// abstract class java.util.Calendar
 pub struct Calendar;
 
 impl Calendar {
@@ -38,7 +38,7 @@ impl Calendar {
                 JavaFieldProto::new("time", "J", Default::default()),
                 JavaFieldProto::new("fields", "[I", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::ABSTRACT,
         }
     }
 

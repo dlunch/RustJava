@@ -3,12 +3,15 @@ use core::fmt::Debug;
 
 use dyn_clone::{DynClone, clone_trait_object};
 
+use java_constants::ClassAccessFlags;
+
 use crate::{ArrayClassDefinition, ClassInstance, Field, JavaValue, Method, Result, as_any::AsAny};
 
 #[async_trait::async_trait]
 pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
+    fn access_flags(&self) -> ClassAccessFlags;
     fn instantiate(&self) -> Result<Box<dyn ClassInstance>>;
     fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>>;
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>>;
