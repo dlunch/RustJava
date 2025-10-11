@@ -21,6 +21,7 @@ impl Date {
                 JavaMethodProto::new("setTime", "(J)V", Self::set_time, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("value", "J", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

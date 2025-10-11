@@ -23,6 +23,7 @@ impl StringWriter {
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("buf", "Ljava/lang/StringBuffer;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

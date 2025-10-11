@@ -37,6 +37,7 @@ impl RandomAccessFile {
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

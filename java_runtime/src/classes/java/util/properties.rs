@@ -33,6 +33,7 @@ impl Properties {
                 ),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -42,6 +42,7 @@ impl Vector {
                 JavaMethodProto::new("firstElement", "()Ljava/lang/Object;", Self::first_element, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

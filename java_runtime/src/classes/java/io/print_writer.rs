@@ -23,6 +23,7 @@ impl PrintWriter {
                 JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/Writer;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

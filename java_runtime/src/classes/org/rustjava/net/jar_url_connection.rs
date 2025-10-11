@@ -30,6 +30,7 @@ impl JarURLConnection {
                 JavaMethodProto::new("getInputStream", "()Ljava/io/InputStream;", Self::get_input_stream, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("openedFiles", "Ljava/util/Hashtable;", FieldAccessFlags::STATIC)],
+            access_flags: Default::default(),
         }
     }
 

@@ -67,6 +67,7 @@ impl URL {
                 JavaFieldProto::new("file", "Ljava/lang/String;", Default::default()),
                 JavaFieldProto::new("handler", "Ljava/net/URLStreamHandler;", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

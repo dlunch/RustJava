@@ -22,6 +22,7 @@ impl URLConnection {
                 JavaMethodProto::new("getInputStream", "()Ljava/io/InputStream;", Self::get_input_stream, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("url", "Ljava/net/URL;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

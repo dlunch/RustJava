@@ -38,6 +38,7 @@ impl InputStreamReader {
                 JavaFieldProto::new("writeBufSize", "I", Default::default()),
                 JavaFieldProto::new("decoder", "[B", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

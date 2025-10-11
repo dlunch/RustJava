@@ -29,6 +29,7 @@ impl BufferedReader {
                 JavaFieldProto::new("buf", "[C", Default::default()),
                 JavaFieldProto::new("bufSize", "I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

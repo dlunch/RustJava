@@ -24,6 +24,7 @@ impl File {
                 JavaMethodProto::new("length", "()J", Self::length, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("path", "Ljava/lang/String;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

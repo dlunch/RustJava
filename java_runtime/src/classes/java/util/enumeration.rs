@@ -18,6 +18,7 @@ impl Enumeration {
                 JavaMethodProto::new_abstract("nextElement", "()Ljava/lang/Object;", Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 }

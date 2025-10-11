@@ -19,6 +19,7 @@ impl NullPointerException {
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

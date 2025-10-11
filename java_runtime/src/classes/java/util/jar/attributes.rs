@@ -25,6 +25,7 @@ impl Attributes {
                 JavaMethodProto::new("getValue", "(Ljava/lang/String;)Ljava/lang/String;", Self::get_value, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("map", "Ljava/util/Map;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

@@ -20,6 +20,7 @@ impl Random {
                 JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("seed", "J", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

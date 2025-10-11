@@ -27,6 +27,7 @@ impl ByteArrayOutputStream {
                 JavaFieldProto::new("buf", "[B", Default::default()),
                 JavaFieldProto::new("pos", "I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

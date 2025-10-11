@@ -51,6 +51,7 @@ impl StringBuffer {
                 JavaFieldProto::new("value", "[C", Default::default()),
                 JavaFieldProto::new("count", "I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

@@ -31,6 +31,7 @@ impl ByteArrayInputStream {
                 JavaFieldProto::new("count", "I", Default::default()),
                 JavaFieldProto::new("mark", "I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

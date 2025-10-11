@@ -30,6 +30,7 @@ impl DataOutputStream {
                 JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

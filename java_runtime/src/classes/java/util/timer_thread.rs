@@ -20,6 +20,7 @@ impl TimerThread {
                 JavaMethodProto::new("run", "()V", Self::run, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("tasks", "Ljava/util/Vector;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

@@ -25,6 +25,7 @@ impl TimeZone {
                 ),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

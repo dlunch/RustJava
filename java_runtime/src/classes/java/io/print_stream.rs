@@ -33,6 +33,7 @@ impl PrintStream {
                 JavaMethodProto::new("println", "(D)V", Self::println_double, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

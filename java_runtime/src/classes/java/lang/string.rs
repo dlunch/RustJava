@@ -67,6 +67,7 @@ impl String {
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;I)Z", Self::starts_with_offset, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

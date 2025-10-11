@@ -16,6 +16,7 @@ impl AbstractCollection {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

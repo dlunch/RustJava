@@ -33,6 +33,7 @@ impl DataInputStream {
                 JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

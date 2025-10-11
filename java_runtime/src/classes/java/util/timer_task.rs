@@ -22,6 +22,7 @@ impl TimerTask {
                 JavaFieldProto::new("nextExecutionTime", "J", Default::default()),
                 JavaFieldProto::new("period", "J", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

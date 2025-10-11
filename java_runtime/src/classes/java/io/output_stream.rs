@@ -23,6 +23,7 @@ impl OutputStream {
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

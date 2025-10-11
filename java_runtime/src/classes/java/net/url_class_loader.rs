@@ -35,6 +35,7 @@ impl URLClassLoader {
                 ),
             ],
             fields: vec![JavaFieldProto::new("urls", "[Ljava/net/URL;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

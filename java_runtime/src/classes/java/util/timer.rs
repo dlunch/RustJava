@@ -31,6 +31,7 @@ impl Timer {
                 JavaFieldProto::new("tasks", "Ljava/util/Vector;", Default::default()),
                 JavaFieldProto::new("thread", "Ljava/lang/Thread;", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

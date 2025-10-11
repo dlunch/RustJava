@@ -54,6 +54,7 @@ impl System {
                 JavaFieldProto::new("err", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
                 JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::STATIC),
             ],
+            access_flags: Default::default(),
         }
     }
 

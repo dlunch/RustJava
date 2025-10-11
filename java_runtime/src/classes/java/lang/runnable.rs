@@ -16,6 +16,7 @@ impl Runnable {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new_abstract("run", "()V", Default::default())],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 }

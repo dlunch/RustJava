@@ -21,6 +21,7 @@ impl Reader {
                 JavaMethodProto::new_abstract("close", "()V", Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

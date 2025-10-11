@@ -23,6 +23,7 @@ impl Runtime {
                 JavaMethodProto::new("gc", "()V", Self::gc, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -27,6 +27,7 @@ impl JarURLHandler {
                 ),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -25,6 +25,7 @@ impl Integer {
                 JavaMethodProto::new("toHexString", "(I)Ljava/lang/String;", Self::to_hex_string, MethodAccessFlags::STATIC),
             ],
             fields: vec![JavaFieldProto::new("value", "I", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

@@ -16,6 +16,7 @@ impl SimpleTimeZone {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default())],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

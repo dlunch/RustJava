@@ -31,6 +31,7 @@ impl URLStreamHandler {
                 ),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -38,6 +38,7 @@ impl JarFile {
                 JavaMethodProto::new("getManifest", "()Ljava/util/jar/Manifest;", Self::get_manifest, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

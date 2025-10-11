@@ -45,6 +45,7 @@ impl Class {
                 JavaFieldProto::new("raw", "[B", Default::default()), // raw rust pointer of Box<dyn Class>
                 JavaFieldProto::new("classLoader", "Ljava/lang/ClassLoader;", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

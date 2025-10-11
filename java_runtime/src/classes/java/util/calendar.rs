@@ -38,6 +38,7 @@ impl Calendar {
                 JavaFieldProto::new("time", "J", Default::default()),
                 JavaFieldProto::new("fields", "[I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

@@ -34,6 +34,7 @@ impl JarURLConnection {
                 JavaFieldProto::new("fileUrl", "Ljava/net/URL;", Default::default()),
                 JavaFieldProto::new("entry", "Ljava/lang/String;", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

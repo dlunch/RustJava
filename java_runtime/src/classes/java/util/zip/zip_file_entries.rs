@@ -30,6 +30,7 @@ impl ZipFileEntries {
                 JavaFieldProto::new("names", "[Ljava/lang/String;", Default::default()),
                 JavaFieldProto::new("i", "I", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

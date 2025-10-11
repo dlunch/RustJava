@@ -35,6 +35,7 @@ impl Hashtable {
                 JavaMethodProto::new("remove", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::remove, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

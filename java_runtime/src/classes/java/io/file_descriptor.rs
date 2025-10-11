@@ -25,6 +25,7 @@ impl FileDescriptor {
                 JavaFieldProto::new("in", "Ljava/io/FileDescriptor;", FieldAccessFlags::STATIC),
                 JavaFieldProto::new("out", "Ljava/io/FileDescriptor;", FieldAccessFlags::STATIC),
             ],
+            access_flags: Default::default(),
         }
     }
 

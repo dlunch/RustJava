@@ -28,6 +28,7 @@ impl Manifest {
                 ),
             ],
             fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

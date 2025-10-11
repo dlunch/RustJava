@@ -48,6 +48,7 @@ impl Throwable {
                 JavaFieldProto::new("detailMessage", "Ljava/lang/String;", Default::default()),
                 JavaFieldProto::new("stackTrace", "[B", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

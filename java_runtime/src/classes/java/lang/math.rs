@@ -22,6 +22,7 @@ impl Math {
                 JavaMethodProto::new("min", "(II)I", Self::min, MethodAccessFlags::STATIC),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{JavaError, JavaValue, Jvm};
 
 use crate::method::{MethodBody, MethodImpl};
@@ -14,6 +14,7 @@ where
     pub interfaces: Vec<&'static str>,
     pub methods: Vec<JavaMethodProto<C>>,
     pub fields: Vec<JavaFieldProto>,
+    pub access_flags: ClassAccessFlags,
 }
 
 pub struct JavaFieldProto {

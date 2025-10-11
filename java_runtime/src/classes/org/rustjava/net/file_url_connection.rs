@@ -25,6 +25,7 @@ impl FileURLConnection {
                 JavaMethodProto::new("getInputStream", "()Ljava/io/InputStream;", Self::get_input_stream, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("file", "Ljava/io/File;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

@@ -23,6 +23,7 @@ impl GregorianCalendar {
                 JavaMethodProto::new("computeFields", "()V", Self::compute_fields, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

@@ -21,6 +21,7 @@ impl JarEntry {
                 Default::default(),
             )],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

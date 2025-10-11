@@ -23,6 +23,7 @@ impl Stack {
                 JavaMethodProto::new("search", "(Ljava/lang/Object;)I", Self::search, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

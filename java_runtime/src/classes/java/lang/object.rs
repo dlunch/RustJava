@@ -35,6 +35,7 @@ impl Object {
                 JavaMethodProto::new("finalize", "()V", Self::finalize, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("waitEvent", "[B", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

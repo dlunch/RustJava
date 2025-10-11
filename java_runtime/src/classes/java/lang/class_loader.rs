@@ -66,6 +66,7 @@ impl ClassLoader {
                 JavaFieldProto::new("systemClassLoader", "Ljava/lang/ClassLoader;", FieldAccessFlags::STATIC),
                 JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

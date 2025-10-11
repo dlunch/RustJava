@@ -26,6 +26,7 @@ impl JarFileEntries {
                 JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("entries", "Ljava/util/zip/ZipFile$Entries;", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

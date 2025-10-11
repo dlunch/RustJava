@@ -21,6 +21,7 @@ impl FilterOutputStream {
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PROTECTED)],
+            access_flags: Default::default(),
         }
     }
 

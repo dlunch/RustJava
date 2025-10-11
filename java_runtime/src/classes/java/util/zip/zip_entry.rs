@@ -25,6 +25,7 @@ impl ZipEntry {
                 JavaFieldProto::new("name", "Ljava/lang/String;", Default::default()),
                 JavaFieldProto::new("size", "J", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

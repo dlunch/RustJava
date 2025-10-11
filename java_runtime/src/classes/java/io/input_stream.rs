@@ -26,6 +26,7 @@ impl InputStream {
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

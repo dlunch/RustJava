@@ -19,6 +19,7 @@ impl TestClass {
                 JavaMethodProto::new("run", "()V", Self::run, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("ran", "Z", Default::default())],
+            access_flags: Default::default(),
         }
     }
 

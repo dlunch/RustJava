@@ -42,6 +42,7 @@ impl Thread {
                 JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default()),
                 JavaFieldProto::new("joinEvent", "[B", Default::default()),
             ],
+            access_flags: Default::default(),
         }
     }
 

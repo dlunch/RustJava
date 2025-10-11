@@ -25,6 +25,7 @@ impl FilterInputStream {
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", FieldAccessFlags::PROTECTED)],
+            access_flags: Default::default(),
         }
     }
 

@@ -20,6 +20,7 @@ impl Writer {
                 JavaMethodProto::new("write", "(Ljava/lang/String;)V", Self::write_string, Default::default()),
             ],
             fields: vec![],
+            access_flags: Default::default(),
         }
     }
 

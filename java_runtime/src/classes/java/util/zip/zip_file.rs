@@ -48,6 +48,7 @@ impl ZipFile {
                 JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("zip", "[B", Default::default())],
+            access_flags: Default::default(),
         }
     }
 
