@@ -21,7 +21,7 @@ impl RandomAccessFile {
         RuntimeClassProto {
             name: "java/io/RandomAccessFile",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/DataInput", "java/io/DataOutput"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(Ljava/io/File;Ljava/lang/String;)V", Self::init_with_file, Default::default()),

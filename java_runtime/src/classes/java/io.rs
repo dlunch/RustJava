@@ -1,7 +1,9 @@
 mod buffered_reader;
 mod byte_array_input_stream;
 mod byte_array_output_stream;
+mod data_input;
 mod data_input_stream;
+mod data_output;
 mod data_output_stream;
 mod eof_exception;
 mod file;
@@ -24,10 +26,10 @@ mod writer;
 
 pub use self::{
     buffered_reader::BufferedReader, byte_array_input_stream::ByteArrayInputStream, byte_array_output_stream::ByteArrayOutputStream,
-    data_input_stream::DataInputStream, data_output_stream::DataOutputStream, eof_exception::EOFException, file::File,
-    file_descriptor::FileDescriptor, file_input_stream::FileInputStream, file_not_found_exception::FileNotFoundException,
-    file_output_stream::FileOutputStream, filter_input_stream::FilterInputStream, filter_output_stream::FilterOutputStream,
-    input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException, output_stream::OutputStream,
-    print_stream::PrintStream, print_writer::PrintWriter, random_access_file::RandomAccessFile, reader::Reader, string_writer::StringWriter,
-    writer::Writer,
+    data_input::DataInput, data_input_stream::DataInputStream, data_output::DataOutput, data_output_stream::DataOutputStream,
+    eof_exception::EOFException, file::File, file_descriptor::FileDescriptor, file_input_stream::FileInputStream,
+    file_not_found_exception::FileNotFoundException, file_output_stream::FileOutputStream, filter_input_stream::FilterInputStream,
+    filter_output_stream::FilterOutputStream, input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException,
+    output_stream::OutputStream, print_stream::PrintStream, print_writer::PrintWriter, random_access_file::RandomAccessFile, reader::Reader,
+    string_writer::StringWriter, writer::Writer,
 };

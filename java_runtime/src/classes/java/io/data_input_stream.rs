@@ -16,7 +16,7 @@ impl DataInputStream {
         RuntimeClassProto {
             name: "java/io/DataInputStream",
             parent_class: Some("java/io/FilterInputStream"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/DataInput"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("readBoolean", "()Z", Self::read_boolean, Default::default()),

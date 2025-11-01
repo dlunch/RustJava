@@ -15,7 +15,7 @@ impl DataOutputStream {
         RuntimeClassProto {
             name: "java/io/DataOutputStream",
             parent_class: Some("java/io/FilterOutputStream"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/DataOutput"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
