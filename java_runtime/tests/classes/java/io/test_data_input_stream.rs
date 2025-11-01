@@ -59,7 +59,7 @@ async fn test_data_input_stream_high_bit() -> Result<()> {
 
     let data = cast_vec(vec![
         0x81u8, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
-        0x98, 0x99, 0x9a, 0x9b, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+        0x98, 0x99, 0x9a, 0x9b, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
     ]);
     let data_len = data.len();
 
@@ -97,6 +97,15 @@ async fn test_data_input_stream_high_bit() -> Result<()> {
     let mut buffer = vec![0; 6];
     jvm.array_raw_buffer(&array).await?.read(0, &mut buffer)?;
     assert_eq!(buffer, vec![0x10, 0x11, 0x12, 0x13, 0x14, 0x15]);
+
+    let skipped: i32 = jvm.invoke_virtual(&data_input_stream, "skipBytes", "(I)I", (2,)).await?;
+    assert_eq!(skipped, 2);
+
+    let short: i16 = jvm.invoke_virtual(&data_input_stream, "readShort", "()S", ()).await?;
+    assert_eq!(short, i16::from_be_bytes([0x18, 0x19]));
+
+    let available: i32 = jvm.invoke_virtual(&data_input_stream, "available", "()I", ()).await?;
+    assert_eq!(available, 1);
 
     Ok(())
 }

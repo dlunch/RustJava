@@ -31,6 +31,7 @@ impl DataInputStream {
                 JavaMethodProto::new("readShort", "()S", Self::read_short, Default::default()),
                 JavaMethodProto::new("readUnsignedShort", "()I", Self::read_unsigned_short, Default::default()),
                 JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
+                JavaMethodProto::new("skipBytes", "(I)I", Self::skip_bytes, Default::default()),
             ],
             fields: vec![],
             access_flags: Default::default(),
@@ -220,5 +221,14 @@ impl DataInputStream {
         }
 
         Ok(())
+    }
+
+    async fn skip_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i32) -> Result<i32> {
+        tracing::debug!("java.io.DataInputStream::skipBytes({:?}, {:?})", &this, n);
+
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let skipped: i64 = jvm.invoke_virtual(&r#in, "skip", "(J)J", (n as i64,)).await?;
+
+        Ok(skipped as _)
     }
 }

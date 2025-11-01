@@ -26,6 +26,7 @@ impl DataInput {
                 JavaMethodProto::new_abstract("readShort", "()S", Default::default()),
                 JavaMethodProto::new_abstract("readUnsignedShort", "()I", Default::default()),
                 JavaMethodProto::new_abstract("readUTF", "()Ljava/lang/String;", Default::default()),
+                JavaMethodProto::new_abstract("skipBytes", "(I)I", Default::default()),
             ],
             fields: vec![],
             access_flags: ClassAccessFlags::INTERFACE,
