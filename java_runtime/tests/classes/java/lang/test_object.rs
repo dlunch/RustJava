@@ -1,4 +1,5 @@
 use core::{
+    panic,
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
@@ -6,7 +7,7 @@ use core::{
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, sync::Arc};
 
 use java_runtime::{Runtime, SpawnCallback, classes::java::lang::Object};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, JavaError, Jvm, Result};
 
 use test_utils::{TestRuntime, create_test_jvm};
 
@@ -101,6 +102,24 @@ async fn test_wait_timeout() -> Result<()> {
     assert!(!notified.load(Ordering::Relaxed));
     let _: () = jvm.invoke_virtual(&object, "wait", "(J)V", (100i64,)).await?;
     assert!(!notified.load(Ordering::Relaxed));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_clone_not_cloneable() -> Result<()> {
+    let runtime = TestRuntime::new(BTreeMap::new());
+    let jvm = create_test_jvm(runtime.clone()).await?;
+
+    let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+
+    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&object, "clone", "()Ljava/lang/Object;", ()).await;
+    let Err(JavaError::JavaException(java_exception)) = result else {
+        panic!("Expected JavaException, got {:?}", result);
+    };
+
+    let class_name = java_exception.class_definition().name();
+    assert_eq!(class_name, "java/lang/CloneNotSupportedException");
 
     Ok(())
 }

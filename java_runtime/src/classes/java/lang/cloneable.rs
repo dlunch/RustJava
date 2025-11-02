@@ -1,20 +1,19 @@
 use alloc::vec;
 
-use java_class_proto::JavaMethodProto;
 use java_constants::ClassAccessFlags;
 
 use crate::RuntimeClassProto;
 
-// interface java.lang.Runnable
-pub struct Runnable;
+// interface java.lang.Cloneable
+pub struct Cloneable;
 
-impl Runnable {
+impl Cloneable {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/lang/Runnable",
+            name: "java/lang/Cloneable",
             parent_class: None,
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new_abstract("run", "()V", Default::default())],
+            methods: vec![],
             fields: vec![],
             access_flags: ClassAccessFlags::INTERFACE,
         }

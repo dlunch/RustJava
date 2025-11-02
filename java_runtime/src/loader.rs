@@ -34,6 +34,8 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::lang::ArrayIndexOutOfBoundsException::as_proto(),
         crate::classes::java::lang::Class::as_proto(),
         crate::classes::java::lang::ClassLoader::as_proto(),
+        crate::classes::java::lang::Cloneable::as_proto(),
+        crate::classes::java::lang::CloneNotSupportedException::as_proto(),
         crate::classes::java::lang::Error::as_proto(),
         crate::classes::java::lang::Exception::as_proto(),
         crate::classes::java::lang::IllegalArgumentException::as_proto(),

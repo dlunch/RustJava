@@ -25,7 +25,7 @@ impl Object {
                 JavaMethodProto::new("getClass", "()Ljava/lang/Class;", Self::get_class, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::java_clone, MethodAccessFlags::NATIVE),
+                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::NATIVE),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("notify", "()V", Self::notify, Default::default()),
                 JavaMethodProto::new("notifyAll", "()V", Self::notify_all, Default::default()),
@@ -80,8 +80,12 @@ impl Object {
         rust_this.equals(&*rust_other)
     }
 
-    async fn java_clone(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+    async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::warn!("stub java.lang.Object::clone({:?})", &this);
+
+        if !jvm.is_instance(&**this, "java/lang/Cloneable") {
+            return Err(jvm.exception("java/lang/CloneNotSupportedException", "Cannot clone this object").await);
+        }
 
         Ok(None.into())
     }
