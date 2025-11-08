@@ -90,6 +90,15 @@ impl From<JavaValue> for f64 {
     }
 }
 
+impl<'a> From<&'a JavaValue> for &'a Option<Box<dyn ClassInstance>> {
+    fn from(x: &'a JavaValue) -> Self {
+        match x {
+            JavaValue::Object(x) => x,
+            _ => panic!("Expected object, got {:?}", x),
+        }
+    }
+}
+
 impl From<JavaValue> for Option<Box<dyn ClassInstance>> {
     fn from(x: JavaValue) -> Self {
         match x {

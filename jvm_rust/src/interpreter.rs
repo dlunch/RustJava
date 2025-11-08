@@ -153,9 +153,11 @@ impl Interpreter {
             }
             Opcode::Bipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
             Opcode::Checkcast(x) => {
-                let top_stack = stack_frame.operand_stack.last().unwrap();
+                let top_stack: &Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.last().unwrap().into();
 
-                tracing::warn!("Unimplemented checkcast: {:?} {:?}", top_stack, x);
+                if !top_stack.is_none() && !jvm.is_instance(&**top_stack.as_ref().unwrap(), x.as_class()) {
+                    return Err(jvm.exception("java/lang/ClassCastException", "Invalid cast").await);
+                }
             }
             Opcode::D2f => {
                 let value: f64 = stack_frame.operand_stack.pop().unwrap().into();
