@@ -794,10 +794,12 @@ impl Interpreter {
                 return Ok(ExecuteNext::Jump((current_offset as i32 + *default) as u32));
             }
             Opcode::Monitorenter => {
-                tracing::warn!("Unimplemented monitorenter");
+                let stack_value = stack_frame.operand_stack.pop().unwrap();
+                tracing::warn!("Unimplemented monitorenter{stack_value:?}");
             }
             Opcode::Monitorexit => {
-                tracing::warn!("Unimplemented monitorexit");
+                let stack_value = stack_frame.operand_stack.pop().unwrap();
+                tracing::warn!("Unimplemented monitorexit{stack_value:?}");
             }
             Opcode::Multianewarray(x, d) => {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
