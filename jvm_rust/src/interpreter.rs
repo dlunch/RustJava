@@ -452,6 +452,10 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
+                if value2 == 0 {
+                    return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
+                }
+
                 stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
             }
             Opcode::IfAcmpeq(x) => {
@@ -716,6 +720,10 @@ impl Interpreter {
             Opcode::Ldiv => {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
+
+                if value2 == 0 {
+                    return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
+                }
 
                 stack_frame.operand_stack.push(JavaValue::Long(value1 / value2));
             }
