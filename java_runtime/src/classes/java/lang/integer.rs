@@ -14,7 +14,7 @@ impl Integer {
         RuntimeClassProto {
             name: "java/lang/Integer",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Comparable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(I)V", Self::init, Default::default()),
                 JavaMethodProto::new("parseInt", "(Ljava/lang/String;)I", Self::parse_int, MethodAccessFlags::STATIC),

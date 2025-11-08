@@ -13,7 +13,7 @@ impl Date {
         RuntimeClassProto {
             name: "java/util/Date",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/Serializable", "java/lang/Cloneable", "java/lang/Comparable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(J)V", Self::init_with_time, Default::default()),
