@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, format, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, ConstantPoolReference, Opcode};
@@ -18,7 +18,19 @@ impl Interpreter {
     pub async fn run(jvm: &Jvm, code_attribute: &AttributeInfoCode, args: Box<[JavaValue]>, return_type: &JavaType) -> Result<JavaValue> {
         let mut stack_frame = StackFrame::new();
 
-        stack_frame.local_variables = args.into_vec().into_iter().map(Self::to_stack_frame_type).collect();
+        stack_frame.local_variables = args
+            .into_iter()
+            .flat_map(|x| {
+                let stack_value = Self::to_stack_frame_type(x);
+                match stack_value {
+                    // long and double take two slots in local variables
+                    JavaValue::Long(_) | JavaValue::Double(_) => {
+                        vec![stack_value, JavaValue::Void]
+                    }
+                    _ => vec![stack_value],
+                }
+            })
+            .collect::<Vec<_>>();
 
         stack_frame
             .local_variables

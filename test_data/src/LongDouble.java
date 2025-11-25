@@ -13,6 +13,9 @@ class LongDouble {
 
         System.out.println(test1);
         System.out.println(test2);
+
+        long test5 = testtesttest(test1, test4);
+        System.out.println(test5);
     }
 
     static long testtest(long arg) {
@@ -20,6 +23,10 @@ class LongDouble {
     }
 
     static long testtesttest(long arg) {
-        return arg --;
+        return arg--;
+    }
+
+    static long testtesttest(long arg1, long arg2) {
+        return arg1 + arg2;
     }
 }
