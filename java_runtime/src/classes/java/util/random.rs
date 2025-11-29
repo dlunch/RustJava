@@ -18,7 +18,7 @@ impl Random {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, Default::default()),
                 JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
-                JavaMethodProto::new("setSeed", "()J", Self::set_seed, Default::default()),
+                JavaMethodProto::new("setSeed", "(J)V", Self::set_seed, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("seed", "J", Default::default())],
             access_flags: Default::default(),
