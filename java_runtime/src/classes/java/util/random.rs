@@ -18,6 +18,7 @@ impl Random {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, Default::default()),
                 JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
+                JavaMethodProto::new("setSeed", "()J", Self::set_seed, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("seed", "J", Default::default())],
             access_flags: Default::default(),
@@ -38,10 +39,7 @@ impl Random {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        // TODO constant
-        let seed = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1);
-
-        jvm.put_field(&mut this, "seed", "J", seed).await?;
+        let _: () = jvm.invoke_virtual(&this, "setSeed", "(J)V", (seed,)).await?;
 
         Ok(())
     }
@@ -57,5 +55,15 @@ impl Random {
         let value = next_seed.wrapping_shr(16) as i32;
 
         Ok(value)
+    }
+
+    async fn set_seed(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
+        tracing::debug!("java.util.Random::setSeed({:?}, {:?})", &this, seed);
+
+        let seed = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1);
+
+        jvm.put_field(&mut this, "seed", "J", seed).await?;
+
+        Ok(())
     }
 }
