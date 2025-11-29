@@ -34,7 +34,7 @@ impl Random {
         Ok(())
     }
 
-    async fn init_with_seed(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
+    async fn init_with_seed(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
         tracing::debug!("java.util.Random::<init>({:?}, {:?})", &this, seed);
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
