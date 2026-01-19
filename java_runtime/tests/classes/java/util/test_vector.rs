@@ -117,3 +117,68 @@ async fn test_vector_index_of() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_vector_remove_element() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
+
+    let element1 = JavaLangString::from_rust_string(&jvm, "testValue1").await?;
+    let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
+    let element3 = JavaLangString::from_rust_string(&jvm, "testValue3").await?;
+
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element1.clone(),)).await?;
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element2.clone(),)).await?;
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element3.clone(),)).await?;
+
+    let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+    assert_eq!(size, 3);
+
+    let removed: bool = jvm
+        .invoke_virtual(&vector, "removeElement", "(Ljava/lang/Object;)Z", (element2.clone(),))
+        .await?;
+    assert!(removed);
+
+    let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+    assert_eq!(size, 2);
+
+    let index: i32 = jvm
+        .invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (element2.clone(),))
+        .await?;
+    assert_eq!(index, -1);
+
+    let non_existing = JavaLangString::from_rust_string(&jvm, "nonExisting").await?;
+    let removed: bool = jvm
+        .invoke_virtual(&vector, "removeElement", "(Ljava/lang/Object;)Z", (non_existing,))
+        .await?;
+    assert!(!removed);
+
+    let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+    assert_eq!(size, 2);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_vector_trim_to_size() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let vector = jvm.new_class("java/util/Vector", "(I)V", (100,)).await?;
+
+    let element1 = JavaLangString::from_rust_string(&jvm, "testValue1").await?;
+    let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
+
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element1,)).await?;
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element2,)).await?;
+
+    let _: () = jvm.invoke_virtual(&vector, "trimToSize", "()V", ()).await?;
+
+    let size: i32 = jvm.invoke_virtual(&vector, "size", "()I", ()).await?;
+    assert_eq!(size, 2);
+
+    let element_at: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &element_at).await?, "testValue1");
+
+    Ok(())
+}

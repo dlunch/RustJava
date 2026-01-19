@@ -40,6 +40,8 @@ impl Vector {
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;I)I", Self::last_index_of_index, Default::default()),
                 JavaMethodProto::new("firstElement", "()Ljava/lang/Object;", Self::first_element, Default::default()),
+                JavaMethodProto::new("removeElement", "(Ljava/lang/Object;)Z", Self::remove_element, Default::default()),
+                JavaMethodProto::new("trimToSize", "()V", Self::trim_to_size, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("raw", "[B", Default::default())],
             access_flags: Default::default(),
@@ -268,6 +270,28 @@ impl Vector {
         let element = rust_vector.lock().first().cloned().unwrap();
 
         Ok(element.into())
+    }
+
+    async fn remove_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::removeElement({:?}, {:?})", &this, &element);
+
+        let index: i32 = jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/Object;)I", (element,)).await?;
+
+        if index >= 0 {
+            let _: () = jvm.invoke_virtual(&this, "removeElementAt", "(I)V", (index,)).await?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    async fn trim_to_size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.util.Vector::trimToSize({:?})", &this);
+
+        let rust_vector = Self::get_rust_vector(jvm, &this).await?;
+        rust_vector.lock().shrink_to_fit();
+
+        Ok(())
     }
 
     async fn get_rust_vector(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<RustVector> {
