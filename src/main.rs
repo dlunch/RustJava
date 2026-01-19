@@ -31,8 +31,8 @@ pub fn main() -> anyhow::Result<()> {
 pub async fn async_main() -> anyhow::Result<()> {
     let opts = parse_args()?;
 
-    let start_type = if opts.main_class.is_some() {
-        StartType::Class(opts.main_class.as_ref().unwrap())
+    let start_type = if let Some(main_class) = &opts.main_class {
+        StartType::Class(main_class)
     } else {
         StartType::Jar(opts.jar.as_ref().unwrap())
     };
