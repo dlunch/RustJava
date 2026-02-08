@@ -1,15 +1,9 @@
-use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
-use core::mem::forget;
+use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 use java_constants::FieldAccessFlags;
 
-use bytemuck::cast_slice;
-use hashbrown::{hash_set::Entry, HashMap, HashSet};
-use parking_lot::Mutex;
+use hashbrown::{hash_set::Entry, HashSet};
 
 use crate::{class_loader::Class, thread::JvmThread, ClassDefinition, ClassInstance, Field, JavaValue, Jvm};
-
-// XXX java/util/Hashtable internal..
-type RustHashMap = Arc<Mutex<HashMap<i32, Vec<(Box<dyn ClassInstance>, Box<dyn ClassInstance>)>>>>;
 
 pub fn determine_garbage(
     jvm: &Jvm,
@@ -75,14 +69,6 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
         }
         // do nothing for primitive arrays
     } else {
-        // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Hashtable
-        if jvm.is_instance(&**object, "java/util/Hashtable") {
-            let members = hashtable_members(jvm, &**object);
-            for member in members {
-                find_reachable_objects(jvm, &member, reachable_objects);
-            }
-        }
-
         let fields = find_all_fields(jvm, &*object.class_definition());
         for field in fields {
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
@@ -112,37 +98,4 @@ fn find_all_fields(jvm: &Jvm, class_definition: &dyn ClassDefinition) -> Vec<Box
     } else {
         result
     }
-}
-
-// Same as Jvm's one but without async
-fn get_rust_object_field<T: Clone>(jvm: &Jvm, object: &dyn ClassInstance, field_name: &str) -> T {
-    let field = jvm.find_field(&*object.class_definition(), field_name, "[B").unwrap().unwrap();
-    let value = object.get_field(&*field).unwrap();
-    let buf: Vec<i8> = match value {
-        JavaValue::Object(Some(value)) => {
-            let value_array = value.as_array_instance().unwrap();
-
-            value_array.load(0, value_array.length()).unwrap().into_iter().map(|x| x.into()).collect()
-        }
-        _ => panic!("Invalid field type"),
-    };
-
-    let rust_raw = usize::from_le_bytes(cast_slice(&buf).try_into().unwrap());
-
-    let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
-    let result = (*rust).clone();
-
-    forget(rust); // do not drop box as we still have it in java memory
-
-    result
-}
-
-fn hashtable_members(jvm: &Jvm, hashtable: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
-    let rust_hashmap: RustHashMap = get_rust_object_field(jvm, hashtable, "raw");
-
-    let rust_hashmap = rust_hashmap.lock();
-    rust_hashmap
-        .iter()
-        .flat_map(|(_, v)| v.iter().flat_map(|x| [x.0.clone(), x.1.clone()].into_iter()))
-        .collect()
 }

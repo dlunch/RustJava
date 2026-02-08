@@ -81,9 +81,8 @@ async fn test_garbage_collection_hashtable() -> JvmResult<()> {
     // collect garbage before test to ensure a clean state
     jvm.collect_garbage()?;
 
-    let hashtable = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
-
     jvm.push_native_frame();
+    let hashtable = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
 
     let key = JavaLangString::from_rust_string(&jvm, "key").await?;
     let value = JavaLangString::from_rust_string(&jvm, "value").await?;
@@ -97,10 +96,15 @@ async fn test_garbage_collection_hashtable() -> JvmResult<()> {
         .await
         .unwrap();
 
+    // all objects reachable through hashtable on the frame
+    let garbage_count = jvm.collect_garbage()?;
+    assert_eq!(garbage_count, 0);
+
     jvm.pop_frame();
 
+    // hashtable, table array, entry, key string, key [C, value string, value [C, and 2 temporaries from string construction
     let garbage_count = jvm.collect_garbage()?;
-    assert_eq!(garbage_count, 2);
+    assert_eq!(garbage_count, 9);
 
     Ok(())
 }
