@@ -61,7 +61,6 @@ async fn test_garbage_collection() -> JvmResult<()> {
         )
         .await?;
 
-    // temporaries from string construction should be garbage collected
     let garbage_count = jvm.collect_garbage()?;
     assert_eq!(garbage_count, 3);
 
