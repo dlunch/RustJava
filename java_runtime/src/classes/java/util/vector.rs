@@ -45,7 +45,7 @@ impl Vector {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Vector::<init>({:?})", &this);
+        tracing::debug!("java.util.Vector::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "(I)V", (10,)).await?;
 
@@ -53,7 +53,7 @@ impl Vector {
     }
 
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
-        tracing::debug!("java.util.Vector::<init>({:?}, {:?})", &this, capacity);
+        tracing::debug!("java.util.Vector::<init>({this:?}, {capacity:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "(II)V", (capacity, 0)).await?;
 
@@ -67,7 +67,7 @@ impl Vector {
         capacity: i32,
         capacity_increment: i32,
     ) -> Result<()> {
-        tracing::debug!("java.util.Vector::<init>({:?}, {:?}, {:?})", &this, capacity, capacity_increment);
+        tracing::debug!("java.util.Vector::<init>({this:?}, {capacity:?}, {capacity_increment:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
@@ -80,7 +80,7 @@ impl Vector {
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        tracing::debug!("java.util.Vector::add({:?}, {:?})", &this, &element);
+        tracing::debug!("java.util.Vector::add({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
@@ -93,7 +93,7 @@ impl Vector {
     }
 
     async fn add_element(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
-        tracing::debug!("java.util.Vector::addElement({:?}, {:?})", &this, &element);
+        tracing::debug!("java.util.Vector::addElement({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
@@ -112,7 +112,7 @@ impl Vector {
         element: ClassInstanceRef<Object>,
         index: i32,
     ) -> Result<()> {
-        tracing::debug!("java.util.Vector::insertElementAt({:?}, {:?}, {:?})", &this, &element, index);
+        tracing::debug!("java.util.Vector::insertElementAt({this:?}, {element:?}, {index:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
@@ -132,7 +132,7 @@ impl Vector {
     }
 
     async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Vector::elementAt({:?}, {:?})", &this, index);
+        tracing::debug!("java.util.Vector::elementAt({this:?}, {index:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         if index < 0 || index >= element_count {
@@ -154,7 +154,7 @@ impl Vector {
         index: i32,
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Vector::set({:?}, {:?}, {:?})", &this, index, &element);
+        tracing::debug!("java.util.Vector::set({this:?}, {index:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         if index < 0 || index >= element_count {
@@ -171,13 +171,13 @@ impl Vector {
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.util.Vector::size({:?})", &this);
+        tracing::debug!("java.util.Vector::size({this:?})");
 
         jvm.get_field(&this, "elementCount", "I").await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.util.Vector::isEmpty({:?})", &this);
+        tracing::debug!("java.util.Vector::isEmpty({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
@@ -185,7 +185,7 @@ impl Vector {
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Vector::remove({:?}, {:?})", &this, index);
+        tracing::debug!("java.util.Vector::remove({this:?}, {index:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         if index < 0 || index >= element_count {
@@ -211,7 +211,7 @@ impl Vector {
     }
 
     async fn remove_all_elements(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Vector::removeAllElements({:?})", &this);
+        tracing::debug!("java.util.Vector::removeAllElements({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
@@ -227,7 +227,7 @@ impl Vector {
     }
 
     async fn remove_element_at(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
-        tracing::debug!("java.util.Vector::removeElementAt({:?}, {:?})", &this, index);
+        tracing::debug!("java.util.Vector::removeElementAt({this:?}, {index:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         if index < 0 || index >= element_count {
@@ -252,7 +252,7 @@ impl Vector {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        tracing::debug!("java.util.Vector::indexOf({:?}, {:?})", &this, &element);
+        tracing::debug!("java.util.Vector::indexOf({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
@@ -279,7 +279,7 @@ impl Vector {
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?})", &this, &element);
+        tracing::debug!("java.util.Vector::lastIndexOf({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
@@ -297,7 +297,7 @@ impl Vector {
         element: ClassInstanceRef<Object>,
         index: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.util.Vector::lastIndexOf({:?}, {:?}, {:?})", &this, &element, index);
+        tracing::debug!("java.util.Vector::lastIndexOf({this:?}, {element:?}, {index:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
@@ -329,7 +329,7 @@ impl Vector {
     }
 
     async fn first_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Vector::firstElement({:?})", &this);
+        tracing::debug!("java.util.Vector::firstElement({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
@@ -344,7 +344,7 @@ impl Vector {
     }
 
     async fn remove_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        tracing::debug!("java.util.Vector::removeElement({:?}, {:?})", &this, &element);
+        tracing::debug!("java.util.Vector::removeElement({this:?}, {element:?})");
 
         let index: i32 = jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/Object;)I", (element,)).await?;
 
@@ -357,7 +357,7 @@ impl Vector {
     }
 
     async fn trim_to_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Vector::trimToSize({:?})", &this);
+        tracing::debug!("java.util.Vector::trimToSize({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
