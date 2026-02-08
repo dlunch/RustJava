@@ -3,13 +3,12 @@ use core::mem::forget;
 use java_constants::FieldAccessFlags;
 
 use bytemuck::cast_slice;
-use hashbrown::{HashMap, HashSet, hash_set::Entry};
+use hashbrown::{hash_set::Entry, HashMap, HashSet};
 use parking_lot::Mutex;
 
-use crate::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
+use crate::{class_loader::Class, thread::JvmThread, ClassDefinition, ClassInstance, Field, JavaValue, Jvm};
 
-// XXX java/util/Vector, java/util/HashMap internal..
-type RustVector = Arc<Mutex<Vec<Box<dyn ClassInstance>>>>;
+// XXX java/util/Hashtable internal..
 type RustHashMap = Arc<Mutex<HashMap<i32, Vec<(Box<dyn ClassInstance>, Box<dyn ClassInstance>)>>>>;
 
 pub fn determine_garbage(
@@ -76,13 +75,8 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
         }
         // do nothing for primitive arrays
     } else {
-        // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Vector, java.util.Hashtable
-        if jvm.is_instance(&**object, "java/util/Vector") {
-            let members = vector_members(jvm, &**object);
-            for member in members {
-                find_reachable_objects(jvm, &member, reachable_objects);
-            }
-        } else if jvm.is_instance(&**object, "java/util/Hashtable") {
+        // XXX we have to deal with java value wrapped inside rust type e.g. java.util.Hashtable
+        if jvm.is_instance(&**object, "java/util/Hashtable") {
             let members = hashtable_members(jvm, &**object);
             for member in members {
                 find_reachable_objects(jvm, &member, reachable_objects);
@@ -141,13 +135,6 @@ fn get_rust_object_field<T: Clone>(jvm: &Jvm, object: &dyn ClassInstance, field_
     forget(rust); // do not drop box as we still have it in java memory
 
     result
-}
-
-fn vector_members(jvm: &Jvm, vector: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {
-    let rust_vector: RustVector = get_rust_object_field(jvm, vector, "raw");
-
-    let rust_vector = rust_vector.lock();
-    rust_vector.iter().cloned().collect()
 }
 
 fn hashtable_members(jvm: &Jvm, hashtable: &dyn ClassInstance) -> Vec<Box<dyn ClassInstance>> {

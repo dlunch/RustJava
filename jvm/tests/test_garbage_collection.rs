@@ -61,13 +61,13 @@ async fn test_garbage_collection() -> JvmResult<()> {
         )
         .await?;
 
-    // vector and string should not be garbage collected
+    // temporaries from string construction should be garbage collected
     let garbage_count = jvm.collect_garbage()?;
-    assert_eq!(garbage_count, 0);
+    assert_eq!(garbage_count, 3);
 
     jvm.pop_frame();
 
-    // vector, string, and its internal [C should be garbage collected
+    // vector, elementData, string, and its internal [C should be garbage collected
     let garbage_count = jvm.collect_garbage()?;
     assert_eq!(garbage_count, 5);
 
