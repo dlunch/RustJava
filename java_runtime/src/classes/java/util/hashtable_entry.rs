@@ -14,7 +14,12 @@ impl HashtableEntry {
             name: "java/util/Hashtable$Entry",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/Hashtable$Entry;)V", Self::init, Default::default())],
+            methods: vec![JavaMethodProto::new(
+                "<init>",
+                "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/Hashtable$Entry;)V",
+                Self::init,
+                Default::default(),
+            )],
             fields: vec![
                 JavaFieldProto::new("hash", "I", Default::default()),
                 JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),

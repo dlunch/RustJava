@@ -45,10 +45,18 @@ impl Hashtable {
 
         let _: () = jvm.invoke_special(&this, "java/util/Dictionary", "<init>", "()V", ()).await?;
 
-        let table = jvm.instantiate_array("Ljava/util/Hashtable$Entry;", DEFAULT_INITIAL_CAPACITY as _).await?;
+        let table = jvm
+            .instantiate_array("Ljava/util/Hashtable$Entry;", DEFAULT_INITIAL_CAPACITY as _)
+            .await?;
         jvm.put_field(&mut this, "table", "[Ljava/util/Hashtable$Entry;", table).await?;
         jvm.put_field(&mut this, "count", "I", 0).await?;
-        jvm.put_field(&mut this, "threshold", "I", (DEFAULT_INITIAL_CAPACITY as f32 * DEFAULT_LOAD_FACTOR) as i32).await?;
+        jvm.put_field(
+            &mut this,
+            "threshold",
+            "I",
+            (DEFAULT_INITIAL_CAPACITY as f32 * DEFAULT_LOAD_FACTOR) as i32,
+        )
+        .await?;
 
         Ok(())
     }
@@ -230,7 +238,8 @@ impl Hashtable {
         }
 
         jvm.put_field(this, "table", "[Ljava/util/Hashtable$Entry;", new_table).await?;
-        jvm.put_field(this, "threshold", "I", (new_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32).await?;
+        jvm.put_field(this, "threshold", "I", (new_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32)
+            .await?;
 
         Ok(())
     }

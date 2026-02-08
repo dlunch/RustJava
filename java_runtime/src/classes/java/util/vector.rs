@@ -204,7 +204,8 @@ impl Vector {
         }
 
         let null_ref: ClassInstanceRef<Object> = None.into();
-        jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref)).await?;
+        jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref))
+            .await?;
         jvm.put_field(&mut this, "elementCount", "I", element_count - 1).await?;
 
         Ok(removed)
@@ -245,7 +246,8 @@ impl Vector {
         }
 
         let null_ref: ClassInstanceRef<Object> = None.into();
-        jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref)).await?;
+        jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref))
+            .await?;
         jvm.put_field(&mut this, "elementCount", "I", element_count - 1).await?;
 
         Ok(())
@@ -302,7 +304,9 @@ impl Vector {
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
         if index >= element_count {
-            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", &format!("{index} >= {element_count}")).await);
+            return Err(jvm
+                .exception("java/lang/IndexOutOfBoundsException", &format!("{index} >= {element_count}"))
+                .await);
         }
 
         let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;

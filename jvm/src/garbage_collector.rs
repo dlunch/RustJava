@@ -1,9 +1,9 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 use java_constants::FieldAccessFlags;
 
-use hashbrown::{hash_set::Entry, HashSet};
+use hashbrown::{HashSet, hash_set::Entry};
 
-use crate::{class_loader::Class, thread::JvmThread, ClassDefinition, ClassInstance, Field, JavaValue, Jvm};
+use crate::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
 
 pub fn determine_garbage(
     jvm: &Jvm,
