@@ -23,26 +23,24 @@ where
 
     let result = invoke_entrypoint(&jvm, &start_type, args).await;
 
-    if let Err(x) = result {
-        Err(match x {
-            JavaError::JavaException(x) => {
-                let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await.unwrap();
-                let print_writer = jvm
-                    .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
-                    .await
-                    .unwrap();
+    if let Err(JavaError::JavaException(x)) = result {
+        let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await.unwrap();
+        let print_writer = jvm
+            .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
+            .await
+            .unwrap();
 
-                let _: () = jvm
-                    .invoke_virtual(&x, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
-                    .await
-                    .unwrap();
+        let _: () = jvm
+            .invoke_virtual(&x, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+            .await
+            .unwrap();
 
-                let trace = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", []).await.unwrap();
+        let trace = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", []).await.unwrap();
 
-                anyhow::anyhow!("Java Exception:\n{}", JavaLangString::to_rust_string(&jvm, &trace).await.unwrap())
-            }
-            JavaError::FatalError(x) => anyhow::anyhow!("Fatal error: {x}"),
-        })
+        Err(anyhow::anyhow!(
+            "Java Exception:\n{}",
+            JavaLangString::to_rust_string(&jvm, &trace).await.unwrap()
+        ))
     } else {
         Ok(result?)
     }

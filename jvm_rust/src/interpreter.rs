@@ -58,7 +58,6 @@ impl Interpreter {
                         return Err(JavaError::JavaException(e));
                     }
                 }
-                Err(e) => return Err(e),
             }
         }
 
@@ -680,7 +679,9 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(((value1 as u32) >> ((value2 as u32) & 0x1f)) as _));
+                stack_frame
+                    .operand_stack
+                    .push(JavaValue::Int(((value1 as u32) >> ((value2 as u32) & 0x1f)) as _));
             }
             Opcode::Ixor => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -786,7 +787,9 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(((value1 as u64) >> ((value2 as u64) & 0x3f)) as _));
+                stack_frame
+                    .operand_stack
+                    .push(JavaValue::Long(((value1 as u64) >> ((value2 as u64) & 0x3f)) as _));
             }
             Opcode::Lxor => {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
