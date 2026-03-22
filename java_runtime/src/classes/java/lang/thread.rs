@@ -5,7 +5,7 @@ use event_listener::Event;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::Runnable};
 
@@ -96,7 +96,36 @@ impl Thread {
 
                 self.jvm.attach_thread()?;
 
-                let _: () = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await?;
+                let result: Result<()> = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await;
+
+                if let Err(jvm::JavaError::JavaException(x)) = result {
+                    let string_writer = self.jvm.new_class("java/io/StringWriter", "()V", ()).await.unwrap();
+                    let print_writer = self
+                        .jvm
+                        .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
+                        .await
+                        .unwrap();
+
+                    let _: () = self
+                        .jvm
+                        .invoke_virtual(&x, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+                        .await
+                        .unwrap();
+
+                    let trace = self
+                        .jvm
+                        .invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", [])
+                        .await
+                        .unwrap();
+
+                    tracing::error!(
+                        "Uncaught exception in thread {}:\n{}",
+                        self.thread_id,
+                        JavaLangString::to_rust_string(&self.jvm, &trace).await.unwrap()
+                    );
+                } else {
+                    result?;
+                }
 
                 self.jvm.detach_thread()?;
 
