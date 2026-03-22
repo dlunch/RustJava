@@ -32,6 +32,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::io::Serializable::as_proto(),
         crate::classes::java::io::StringWriter::as_proto(),
         crate::classes::java::io::Writer::as_proto(),
+        crate::classes::java::lang::AbstractMethodError::as_proto(),
         crate::classes::java::lang::ArrayIndexOutOfBoundsException::as_proto(),
         crate::classes::java::lang::Class::as_proto(),
         crate::classes::java::lang::ClassCastException::as_proto(),

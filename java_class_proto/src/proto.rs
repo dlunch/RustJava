@@ -70,9 +70,13 @@ where
         where
             C: ?Sized + Send,
         {
-            async fn call(&self, _: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
-                // TODO java.lang.AbstractMethodError
-                Err(JavaError::FatalError(format!("Abstract {}{} method called", self.name, self.descriptor)))
+            async fn call(&self, jvm: &Jvm, _: &mut C, _: Box<[JavaValue]>) -> Result<JavaValue, JavaError> {
+                Err(jvm
+                    .exception(
+                        "java/lang/AbstractMethodError",
+                        &format!("Abstract {}{} method called", self.name, self.descriptor),
+                    )
+                    .await)
             }
         }
 
