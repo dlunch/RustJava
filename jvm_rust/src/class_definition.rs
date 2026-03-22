@@ -15,7 +15,7 @@ use parking_lot::RwLock;
 use classfile::ClassInfo;
 use java_class_proto::JavaClassProto;
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Method, Result};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
@@ -105,7 +105,7 @@ impl ClassDefinition for ClassDefinitionImpl {
         self.inner.access_flags
     }
 
-    async fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
+    async fn instantiate(&self, _: &Jvm) -> Result<Box<dyn ClassInstance>> {
         Ok(Box::new(ClassInstanceImpl::new(self)))
     }
 
