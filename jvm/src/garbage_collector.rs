@@ -19,8 +19,8 @@ pub fn determine_garbage(
     });
 
     threads
-        .iter()
-        .flat_map(|(_, thread)| thread.iter_frame().flat_map(|stack| stack.local_variables()))
+        .values()
+        .flat_map(|thread| thread.iter_frame().flat_map(|stack| stack.local_variables()))
         .for_each(|x| {
             find_reachable_objects(jvm, x, &mut reachable_objects);
         });
