@@ -105,7 +105,7 @@ impl ClassDefinition for ClassDefinitionImpl {
         self.inner.access_flags
     }
 
-    fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
+    async fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
         Ok(Box::new(ClassInstanceImpl::new(self)))
     }
 

@@ -28,12 +28,13 @@ impl ArrayClassDefinitionImpl {
     }
 }
 
+#[async_trait::async_trait]
 impl ArrayClassDefinition for ArrayClassDefinitionImpl {
     fn element_type_name(&self) -> String {
         self.inner.element_type_name.clone()
     }
 
-    fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>> {
+    async fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>> {
         Ok(Box::new(ArrayClassInstanceImpl::new(self, length)))
     }
 }

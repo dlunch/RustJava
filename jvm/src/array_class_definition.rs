@@ -9,9 +9,10 @@ use java_constants::ClassAccessFlags;
 
 use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInstance, field::Field, method::Method, value::JavaValue};
 
+#[async_trait::async_trait]
 pub trait ArrayClassDefinition: ClassDefinition {
     fn element_type_name(&self) -> String;
-    fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>>;
+    async fn instantiate_array(&self, length: usize) -> Result<Box<dyn ClassInstance>>;
 }
 
 clone_trait_object!(ArrayClassDefinition);
@@ -30,7 +31,7 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL
     }
 
-    fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
+    async fn instantiate(&self) -> Result<Box<dyn ClassInstance>> {
         panic!("Cannot instantiate array class")
     }
 

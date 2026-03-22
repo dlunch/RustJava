@@ -12,7 +12,7 @@ pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
     fn access_flags(&self) -> ClassAccessFlags;
-    fn instantiate(&self) -> Result<Box<dyn ClassInstance>>;
+    async fn instantiate(&self) -> Result<Box<dyn ClassInstance>>;
     fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>>;
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>>;
     fn fields(&self) -> Vec<Box<dyn Field>>;
