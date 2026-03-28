@@ -15,6 +15,9 @@ async fn test_string_buffer() -> Result<()> {
         .await?;
     let _: ClassInstanceRef<StringBuffer> = jvm.invoke_virtual(&string_buffer, "append", "(I)Ljava/lang/StringBuffer;", (42,)).await?;
     let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&string_buffer, "append", "(Z)Ljava/lang/StringBuffer;", (true,))
+        .await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&string_buffer, "append", "(C)Ljava/lang/StringBuffer;", (b'H' as JavaChar,))
         .await?;
     let _: ClassInstanceRef<StringBuffer> = jvm
@@ -22,7 +25,7 @@ async fn test_string_buffer() -> Result<()> {
         .await?;
 
     let length: i32 = jvm.invoke_virtual(&string_buffer, "length", "()I", ()).await?;
-    assert_eq!(length, 12);
+    assert_eq!(length, 16);
 
     let char: JavaChar = jvm.invoke_virtual(&string_buffer, "charAt", "(I)C", (7,)).await?;
     assert_eq!(char, '4' as JavaChar);
@@ -30,14 +33,14 @@ async fn test_string_buffer() -> Result<()> {
     let result = jvm.invoke_virtual(&string_buffer, "toString", "()Ljava/lang/String;", ()).await?;
     let result = JavaLangString::to_rust_string(&jvm, &result).await?;
 
-    assert_eq!("Hello, 42H42", result);
+    assert_eq!("Hello, 42trueH42", result);
 
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&string_buffer, "delete", "(II)Ljava/lang/StringBuffer;", (5, 7))
         .await?;
     let result = jvm.invoke_virtual(&string_buffer, "toString", "()Ljava/lang/String;", ()).await?;
     let result = JavaLangString::to_rust_string(&jvm, &result).await?;
-    assert_eq!("Hello42H42", result);
+    assert_eq!("Hello42trueH42", result);
 
     Ok(())
 }

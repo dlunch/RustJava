@@ -37,6 +37,7 @@ impl StringBuffer {
                     Self::append_object,
                     Default::default(),
                 ),
+                JavaMethodProto::new("append", "(Z)Ljava/lang/StringBuffer;", Self::append_boolean, Default::default()),
                 JavaMethodProto::new("append", "(I)Ljava/lang/StringBuffer;", Self::append_integer, Default::default()),
                 JavaMethodProto::new("append", "(J)Ljava/lang/StringBuffer;", Self::append_long, Default::default()),
                 JavaMethodProto::new("append", "(C)Ljava/lang/StringBuffer;", Self::append_character, Default::default()),
@@ -134,6 +135,16 @@ impl StringBuffer {
         let digits = value.to_string();
 
         Self::append(jvm, &mut this, &digits).await?;
+
+        Ok(this)
+    }
+
+    async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
+
+        let value = value.to_string();
+
+        Self::append(jvm, &mut this, &value).await?;
 
         Ok(this)
     }
