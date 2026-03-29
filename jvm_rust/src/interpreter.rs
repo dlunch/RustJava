@@ -75,6 +75,9 @@ impl Interpreter {
             Opcode::Aaload | Opcode::Baload | Opcode::Caload | Opcode::Daload | Opcode::Faload | Opcode::Iaload | Opcode::Laload | Opcode::Saload => {
                 // TODO type checking
                 let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                if index < 0 {
+                    return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
+                }
                 let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                 if array.is_none() {
                     return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
@@ -95,6 +98,9 @@ impl Interpreter {
                 // TODO type checking
                 let value = stack_frame.operand_stack.pop().unwrap();
                 let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                if index < 0 {
+                    return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
+                }
                 let mut array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                 if array.is_none() {
                     return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
@@ -104,7 +110,7 @@ impl Interpreter {
 
                 // operand stack has only integer, so convert it to the correct type
                 let value = match element_type {
-                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) == 1),
+                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) & 1 != 0),
                     JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
                     JavaType::Char => JavaValue::Char(i32::from(value) as _),
                     JavaType::Short => JavaValue::Short(i32::from(value) as _),
@@ -120,13 +126,25 @@ impl Interpreter {
                 stack_frame.operand_stack.push(value);
             }
             Opcode::Athrow => {
-                let exception = stack_frame.operand_stack.pop().unwrap().into();
+                let exception: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                return Err(JavaError::JavaException(exception));
+                if exception.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "null").await);
+                }
+
+                return Err(JavaError::JavaException(exception.unwrap()));
             }
             Opcode::Anewarray(x) => {
                 let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                let element_type_name = format!("L{};", x.as_class());
+                if length < 0 {
+                    return Err(jvm.exception("java/lang/NegativeArraySizeException", &format!("{}", length)).await);
+                }
+                let class_name = x.as_class();
+                let element_type_name = if class_name.starts_with('[') {
+                    alloc::string::String::from(class_name)
+                } else {
+                    format!("L{};", class_name)
+                };
                 let array = jvm.instantiate_array(&element_type_name, length as _).await?;
 
                 stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
@@ -136,7 +154,7 @@ impl Interpreter {
                 if matches!(opcode, Opcode::Ireturn) {
                     let value: i32 = return_value.into();
                     if *return_type == JavaType::Boolean {
-                        return Ok(ExecuteNext::Return(JavaValue::Boolean(value == 1)));
+                        return Ok(ExecuteNext::Return(JavaValue::Boolean(value & 1 != 0)));
                     } else if *return_type == JavaType::Char {
                         return Ok(ExecuteNext::Return(JavaValue::Char(value as _)));
                     } else if *return_type == JavaType::Byte {
@@ -410,9 +428,13 @@ impl Interpreter {
             }
             Opcode::Getfield(x) => {
                 let x = x.as_field_ref();
-                let instance = stack_frame.operand_stack.pop().unwrap();
+                let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                let value = jvm.get_field(&instance.into(), &x.name, &x.descriptor).await?;
+                if instance.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "null").await);
+                }
+
+                let value = jvm.get_field(&instance.unwrap(), &x.name, &x.descriptor).await?;
 
                 stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
             }
@@ -426,7 +448,7 @@ impl Interpreter {
             Opcode::GotoW(x) => return Ok(ExecuteNext::Jump((current_offset as i32 + *x) as u32)),
             Opcode::I2b => {
                 let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                stack_frame.operand_stack.push(JavaValue::Int(value as u8 as _));
+                stack_frame.operand_stack.push(JavaValue::Int((value as i8) as i32));
             }
             Opcode::I2c => {
                 let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -446,7 +468,7 @@ impl Interpreter {
             }
             Opcode::I2s => {
                 let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                stack_frame.operand_stack.push(JavaValue::Int(value as u16 as _));
+                stack_frame.operand_stack.push(JavaValue::Int((value as i16) as i32));
             }
             Opcode::Iadd => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -469,7 +491,7 @@ impl Interpreter {
                     return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
                 }
 
-                stack_frame.operand_stack.push(JavaValue::Int(value1 / value2));
+                stack_frame.operand_stack.push(JavaValue::Int(value1.wrapping_div(value2)));
             }
             Opcode::IfAcmpeq(x) => {
                 let value2: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -565,7 +587,7 @@ impl Interpreter {
                 let value = stack_frame.local_variables[*x as usize].clone();
                 let value: i32 = value.into();
 
-                stack_frame.local_variables[*x as usize] = JavaValue::Int(value + *y as i32);
+                stack_frame.local_variables[*x as usize] = JavaValue::Int(value.wrapping_add(*y as i32));
             }
             Opcode::Imul => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -576,12 +598,16 @@ impl Interpreter {
             Opcode::Ineg => {
                 let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(-value));
+                stack_frame.operand_stack.push(JavaValue::Int(value.wrapping_neg()));
             }
             Opcode::Instanceof(x) => {
-                let instance: Box<dyn ClassInstance> = stack_frame.operand_stack.pop().unwrap().into();
+                let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                let result = jvm.is_instance(&*instance, x.as_class());
+                let result = if let Some(instance) = instance {
+                    jvm.is_instance(&*instance, x.as_class())
+                } else {
+                    false
+                };
                 stack_frame.operand_stack.push(JavaValue::Int(result as _));
             }
             Opcode::Invokedynamic(_) => {
@@ -655,7 +681,11 @@ impl Interpreter {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Int(value1 % value2));
+                if value2 == 0 {
+                    return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
+                }
+
+                stack_frame.operand_stack.push(JavaValue::Int(value1.wrapping_rem(value2)));
             }
             Opcode::Ishl => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -715,7 +745,7 @@ impl Interpreter {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(value1 + value2));
+                stack_frame.operand_stack.push(JavaValue::Long(value1.wrapping_add(value2)));
             }
             Opcode::Land => {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -740,18 +770,18 @@ impl Interpreter {
                     return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
                 }
 
-                stack_frame.operand_stack.push(JavaValue::Long(value1 / value2));
+                stack_frame.operand_stack.push(JavaValue::Long(value1.wrapping_div(value2)));
             }
             Opcode::Lmul => {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(value1 * value2));
+                stack_frame.operand_stack.push(JavaValue::Long(value1.wrapping_mul(value2)));
             }
             Opcode::Lneg => {
                 let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(-value));
+                stack_frame.operand_stack.push(JavaValue::Long(value.wrapping_neg()));
             }
             Opcode::Lor => {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -763,7 +793,11 @@ impl Interpreter {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(value1 % value2));
+                if value2 == 0 {
+                    return Err(jvm.exception("java/lang/ArithmeticException", "Division by zero").await);
+                }
+
+                stack_frame.operand_stack.push(JavaValue::Long(value1.wrapping_rem(value2)));
             }
             Opcode::Lshl => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -781,7 +815,7 @@ impl Interpreter {
                 let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                 let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
 
-                stack_frame.operand_stack.push(JavaValue::Long(value1 - value2));
+                stack_frame.operand_stack.push(JavaValue::Long(value1.wrapping_sub(value2)));
             }
             Opcode::Lushr => {
                 let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -819,6 +853,11 @@ impl Interpreter {
             Opcode::Multianewarray(x, d) => {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
                 dimensions.reverse();
+                for dim in &dimensions {
+                    if *dim < 0 {
+                        return Err(jvm.exception("java/lang/NegativeArraySizeException", &format!("{}", dim)).await);
+                    }
+                }
 
                 let array = Self::new_multi_array(jvm, x.as_class(), &dimensions).await?;
 
@@ -843,6 +882,9 @@ impl Interpreter {
                 };
 
                 let length: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                if length < 0 {
+                    return Err(jvm.exception("java/lang/NegativeArraySizeException", &format!("{}", length)).await);
+                }
                 let array = jvm.instantiate_array(element_type_name, length as _).await?;
 
                 stack_frame.operand_stack.push(JavaValue::Object(Some(array)));
@@ -852,14 +894,29 @@ impl Interpreter {
                 stack_frame.operand_stack.pop().unwrap();
             }
             Opcode::Pop2 => {
-                stack_frame.operand_stack.pop().unwrap();
+                let value = stack_frame.operand_stack.pop().unwrap();
+                if !matches!(value, JavaValue::Long(_) | JavaValue::Double(_)) {
+                    stack_frame.operand_stack.pop().unwrap();
+                }
             }
             Opcode::Putfield(x) => {
                 let x = x.as_field_ref();
                 let value = stack_frame.operand_stack.pop().unwrap();
-                let instance = stack_frame.operand_stack.pop().unwrap();
+                let mut instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
-                jvm.put_field(&mut instance.into(), &x.name, &x.descriptor, value).await?;
+                if instance.is_none() {
+                    return Err(jvm.exception("java/lang/NullPointerException", "null").await);
+                }
+
+                let value = match x.descriptor.as_str() {
+                    "Z" => JavaValue::Boolean(i32::from(value) & 1 != 0),
+                    "B" => JavaValue::Byte(i32::from(value) as i8),
+                    "C" => JavaValue::Char(i32::from(value) as u16),
+                    "S" => JavaValue::Short(i32::from(value) as i16),
+                    _ => value,
+                };
+
+                jvm.put_field(instance.as_mut().unwrap(), &x.name, &x.descriptor, value).await?;
             }
             Opcode::Putstatic(x) => {
                 let x = x.as_field_ref();
@@ -935,7 +992,7 @@ impl Interpreter {
             .map(|x| {
                 let value = stack_frame.operand_stack.pop().unwrap();
                 match x {
-                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) == 1),
+                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) & 1 != 0),
                     JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
                     JavaType::Char => JavaValue::Char(i32::from(value) as _),
                     JavaType::Short => JavaValue::Short(i32::from(value) as _),
