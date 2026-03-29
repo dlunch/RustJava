@@ -1,0 +1,30 @@
+idiv:
+-2147483648
+3
+idiv zero:
+caught
+irem:
+0
+1
+irem zero:
+caught
+ldiv:
+-9223372036854775808
+ldiv zero:
+caught
+lrem:
+0
+lrem zero:
+caught
+ineg:
+-2147483648
+lneg:
+-9223372036854775808
+ladd:
+-9223372036854775808
+lmul:
+-2
+lsub:
+9223372036854775807
+iinc:
+-2147483648

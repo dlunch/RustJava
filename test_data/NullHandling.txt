@@ -1,0 +1,9 @@
+instanceof null:
+false
+false
+athrow null:
+caught NPE
+getfield null:
+caught NPE
+putfield null:
+caught NPE

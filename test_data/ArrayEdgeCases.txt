@@ -1,0 +1,13 @@
+negative size:
+caught
+caught
+negative index:
+caught
+caught
+2d array:
+hello
+world
+2
+3
+multi negative:
+caught

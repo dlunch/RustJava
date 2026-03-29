@@ -1,0 +1,11 @@
+boolean array:
+true
+false
+boolean field:
+true
+false
+boolean method:
+true
+false
+false
+true
