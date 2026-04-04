@@ -1,8 +1,8 @@
 mod io;
 
-use alloc::sync::Arc;
+use alloc::{collections::BTreeMap, sync::Arc};
 use core::{
-    sync::atomic::{AtomicU64, Ordering},
+    sync::atomic::{AtomicU32, AtomicU64, Ordering},
     time::Duration,
 };
 use std::{
@@ -11,7 +11,7 @@ use std::{
     sync::Mutex,
 };
 
-use java_runtime::{File, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto};
+use java_runtime::{File, FileDescriptorId, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
@@ -57,6 +57,8 @@ where
     T: Sync + Send + Write + 'static,
 {
     stdout: WriteWrapper<T>,
+    file_table: Arc<Mutex<BTreeMap<u32, Box<dyn File>>>>,
+    next_fd: Arc<AtomicU32>,
 }
 
 impl<T> RuntimeImpl<T>
@@ -68,7 +70,15 @@ where
             stdout: WriteWrapper {
                 write: Arc::new(Mutex::new(stdout)),
             },
+            file_table: Arc::new(Mutex::new(BTreeMap::new())),
+            next_fd: Arc::new(AtomicU32::new(1)),
         }
+    }
+
+    fn register_file(&self, file: Box<dyn File>) -> FileDescriptorId {
+        let fd = self.next_fd.fetch_add(1, Ordering::SeqCst);
+        self.file_table.lock().unwrap().insert(fd, file);
+        FileDescriptorId::new(fd)
     }
 }
 
@@ -104,20 +114,32 @@ where
         TASK_ID.try_with(|x| *x).unwrap_or(0)
     }
 
-    fn stdin(&self) -> IOResult<Box<dyn File>> {
-        Ok(Box::new(InputStreamFile::new(stdin())))
+    fn stdin(&self) -> IOResult<FileDescriptorId> {
+        let file = Box::new(InputStreamFile::new(stdin()));
+        Ok(self.register_file(file))
     }
 
-    fn stdout(&self) -> IOResult<Box<dyn File>> {
-        Ok(Box::new(WriteStreamFile::new(self.stdout.clone())))
+    fn stdout(&self) -> IOResult<FileDescriptorId> {
+        let file = Box::new(WriteStreamFile::new(self.stdout.clone()));
+        Ok(self.register_file(file))
     }
 
-    fn stderr(&self) -> IOResult<Box<dyn File>> {
-        Ok(Box::new(WriteStreamFile::new(stderr())))
+    fn stderr(&self) -> IOResult<FileDescriptorId> {
+        let file = Box::new(WriteStreamFile::new(stderr()));
+        Ok(self.register_file(file))
     }
 
-    async fn open(&self, path: &str, write: bool) -> IOResult<Box<dyn File>> {
-        Ok(Box::new(FileImpl::new(path, write)))
+    async fn open(&self, path: &str, write: bool) -> IOResult<FileDescriptorId> {
+        let file = Box::new(FileImpl::new(path, write));
+        Ok(self.register_file(file))
+    }
+
+    fn get_file(&self, fd: FileDescriptorId) -> IOResult<Box<dyn File>> {
+        self.file_table.lock().unwrap().get(&fd.id()).cloned().ok_or(IOError::NotFound)
+    }
+
+    fn close_file(&self, fd: FileDescriptorId) {
+        self.file_table.lock().unwrap().remove(&fd.id());
     }
 
     async fn unlink(&self, path: &str) -> IOResult<()> {
@@ -166,6 +188,10 @@ where
     T: Sync + Send + Write + 'static,
 {
     fn clone(&self) -> Self {
-        Self { stdout: self.stdout.clone() }
+        Self {
+            stdout: self.stdout.clone(),
+            file_table: self.file_table.clone(),
+            next_fd: self.next_fd.clone(),
+        }
     }
 }
