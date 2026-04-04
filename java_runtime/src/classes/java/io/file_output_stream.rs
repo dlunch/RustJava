@@ -42,8 +42,8 @@ impl FileOutputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let file = context.open(&path, true).await.unwrap();
-        let fd = FileDescriptor::from_file(jvm, file).await?;
+        let fd = context.open(&path, true).await.unwrap();
+        let fd = FileDescriptor::from_fd(jvm, fd).await?;
 
         let _: () = jvm
             .invoke_special(&this, "java/io/FileOutputStream", "<init>", "(Ljava/io/FileDescriptor;)V", (fd,))
@@ -69,7 +69,7 @@ impl FileOutputStream {
 
     async fn write_bytes_offset(
         jvm: &Jvm,
-        _: &mut RuntimeContext,
+        context: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         buffer: ClassInstanceRef<Array<i8>>,
         offset: i32,
@@ -84,7 +84,7 @@ impl FileOutputStream {
         );
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
-        let mut file = FileDescriptor::file(jvm, fd).await?;
+        let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut buf = vec![0; length as _];
         jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut buf).unwrap();
@@ -94,19 +94,22 @@ impl FileOutputStream {
         Ok(())
     }
 
-    async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
+    async fn write(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::write({:?}, {:?})", &this, &byte);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
-        let mut file = FileDescriptor::file(jvm, fd).await?;
+        let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
         file.write(&[byte as u8]).await.unwrap();
 
         Ok(())
     }
 
-    async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("stub java.io.FileInputStream::close({:?})", &this);
+    async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.FileOutputStream::close({:?})", &this);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        FileDescriptor::close(jvm, context, fd).await?;
 
         Ok(())
     }
