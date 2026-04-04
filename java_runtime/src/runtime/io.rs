@@ -2,6 +2,19 @@ use alloc::boxed::Box;
 
 use dyn_clone::{DynClone, clone_trait_object};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FileDescriptorId(u32);
+
+impl FileDescriptorId {
+    pub fn new(id: u32) -> Self {
+        Self(id)
+    }
+
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug)]
 pub enum IOError {
     Unsupported,

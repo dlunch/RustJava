@@ -7,7 +7,7 @@ mod runtime;
 
 pub use self::{
     loader::{get_bootstrap_class_loader, get_runtime_class_proto},
-    runtime::{File, FileSize, FileStat, FileType, IOError, IOResult, Runtime, SpawnCallback},
+    runtime::{File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult, Runtime, SpawnCallback},
 };
 
 pub type RuntimeContext = dyn runtime::Runtime;
