@@ -1,28 +1,53 @@
 extern crate alloc;
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::{
     cmp::min,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::atomic::{AtomicU32, AtomicU64, Ordering},
     time::Duration,
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    sync::Mutex,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use jvm::{ClassDefinition, Jvm, Result};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
 
 use java_runtime::{
-    File, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader, get_runtime_class_proto,
+    File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader,
+    get_runtime_class_proto,
 };
 
-#[derive(Clone)]
 pub struct TestRuntime {
     filesystem: BTreeMap<String, Vec<u8>>,
+    file_table: Arc<Mutex<BTreeMap<u32, Box<dyn File>>>>,
+    next_fd: Arc<AtomicU32>,
+}
+
+impl Clone for TestRuntime {
+    fn clone(&self) -> Self {
+        Self {
+            filesystem: self.filesystem.clone(),
+            file_table: self.file_table.clone(),
+            next_fd: self.next_fd.clone(),
+        }
+    }
 }
 
 impl TestRuntime {
     pub fn new(filesystem: BTreeMap<String, Vec<u8>>) -> Self {
-        Self { filesystem }
+        Self {
+            filesystem,
+            file_table: Arc::new(Mutex::new(BTreeMap::new())),
+            next_fd: Arc::new(AtomicU32::new(1)),
+        }
+    }
+
+    fn register_file(&self, file: Box<dyn File>) -> FileDescriptorId {
+        let fd = self.next_fd.fetch_add(1, Ordering::SeqCst);
+        self.file_table.lock().unwrap().insert(fd, file);
+        FileDescriptorId::new(fd)
     }
 }
 
@@ -61,25 +86,34 @@ impl Runtime for TestRuntime {
         TASK_ID.try_with(|x| *x).unwrap_or(0)
     }
 
-    fn stdin(&self) -> IOResult<Box<dyn File>> {
+    fn stdin(&self) -> IOResult<FileDescriptorId> {
         Err(IOError::NotFound)
     }
 
-    fn stdout(&self) -> IOResult<Box<dyn File>> {
+    fn stdout(&self) -> IOResult<FileDescriptorId> {
         Err(IOError::NotFound)
     }
 
-    fn stderr(&self) -> IOResult<Box<dyn File>> {
+    fn stderr(&self) -> IOResult<FileDescriptorId> {
         Err(IOError::NotFound)
     }
 
-    async fn open(&self, path: &str, _write: bool) -> IOResult<Box<dyn File>> {
+    async fn open(&self, path: &str, _write: bool) -> IOResult<FileDescriptorId> {
         let entry = self.filesystem.get(path);
         if let Some(data) = entry {
-            Ok(Box::new(DummyFile::new(data.clone())) as Box<_>)
+            let file = Box::new(DummyFile::new(data.clone())) as Box<dyn File>;
+            Ok(self.register_file(file))
         } else {
             Err(IOError::NotFound)
         }
+    }
+
+    fn get_file(&self, fd: FileDescriptorId) -> IOResult<Box<dyn File>> {
+        self.file_table.lock().unwrap().get(&fd.id()).cloned().ok_or(IOError::NotFound)
+    }
+
+    fn close_file(&self, fd: FileDescriptorId) {
+        self.file_table.lock().unwrap().remove(&fd.id());
     }
 
     async fn unlink(&self, _path: &str) -> IOResult<()> {
