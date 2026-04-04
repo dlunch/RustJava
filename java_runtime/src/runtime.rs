@@ -7,7 +7,7 @@ use dyn_clone::{DynClone, clone_trait_object};
 
 use jvm::{ClassDefinition, Jvm, Result as JvmResult};
 
-pub use io::{File, FileSize, FileStat, FileType, IOError, IOResult};
+pub use io::{File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult};
 
 #[async_trait::async_trait]
 pub trait SpawnCallback: Sync + Send {
@@ -23,11 +23,13 @@ pub trait Runtime: Sync + Send + DynClone {
     fn now(&self) -> u64; // unix time in millis
     fn current_task_id(&self) -> u64;
 
-    fn stdin(&self) -> IOResult<Box<dyn File>>;
-    fn stdout(&self) -> IOResult<Box<dyn File>>;
-    fn stderr(&self) -> IOResult<Box<dyn File>>;
+    fn stdin(&self) -> IOResult<FileDescriptorId>;
+    fn stdout(&self) -> IOResult<FileDescriptorId>;
+    fn stderr(&self) -> IOResult<FileDescriptorId>;
 
-    async fn open(&self, path: &str, write: bool) -> IOResult<Box<dyn File>>;
+    async fn open(&self, path: &str, write: bool) -> IOResult<FileDescriptorId>;
+    fn get_file(&self, fd: FileDescriptorId) -> IOResult<Box<dyn File>>;
+    fn close_file(&self, fd: FileDescriptorId);
     async fn unlink(&self, path: &str) -> IOResult<()>;
     async fn metadata(&self, path: &str) -> IOResult<FileStat>;
 
