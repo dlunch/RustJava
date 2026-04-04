@@ -43,13 +43,12 @@ impl FileInputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let rust_file = context.open(&path, false).await;
-        if rust_file.is_err() {
-            // TODO correct error handling
+        let fd = context.open(&path, false).await;
+        if fd.is_err() {
             return Err(jvm.exception("java/io/FileNotFoundException", "File not found").await);
         }
 
-        let fd = FileDescriptor::from_file(jvm, rust_file.unwrap()).await?;
+        let fd = FileDescriptor::from_fd(jvm, fd.unwrap()).await?;
 
         let _: () = jvm
             .invoke_special(&this, "java/io/FileInputStream", "<init>", "(Ljava/io/FileDescriptor;)V", (fd,))
@@ -73,11 +72,11 @@ impl FileInputStream {
         Ok(())
     }
 
-    async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+    async fn available(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FileInputStream::available({:?})", &this);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
-        let rust_file = FileDescriptor::file(jvm, fd).await?;
+        let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         // TODO get os buffer size
         let stat = rust_file.metadata().await.unwrap();
@@ -90,7 +89,7 @@ impl FileInputStream {
 
     async fn read_array(
         jvm: &Jvm,
-        _: &mut RuntimeContext,
+        context: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         mut buf: ClassInstanceRef<Array<i8>>,
         offset: i32,
@@ -99,7 +98,7 @@ impl FileInputStream {
         tracing::debug!("java.io.FileInputStream::read({this:?}, {buf:?}, {offset:?}, {length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
-        let mut rust_file = FileDescriptor::file(jvm, fd).await?;
+        let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as _];
         let read = rust_file.read(&mut rust_buf).await.unwrap();
@@ -112,11 +111,11 @@ impl FileInputStream {
         Ok(read as _)
     }
 
-    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+    async fn read_byte(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FileInputStream::read({:?})", &this);
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
-        let mut rust_file = FileDescriptor::file(jvm, fd).await?;
+        let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut buf = [0; 1];
         let read = rust_file.read(&mut buf).await.unwrap();
@@ -127,8 +126,11 @@ impl FileInputStream {
         Ok(buf[0] as i32)
     }
 
-    async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("stub java.io.FileInputStream::close({:?})", &this);
+    async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.FileInputStream::close({:?})", &this);
+
+        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        FileDescriptor::close(jvm, context, fd).await?;
 
         Ok(())
     }
