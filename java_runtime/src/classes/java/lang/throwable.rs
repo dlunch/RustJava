@@ -1,7 +1,7 @@
-use alloc::{boxed::Box, format, string::String as RustString, sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -46,7 +46,7 @@ impl Throwable {
             ],
             fields: vec![
                 JavaFieldProto::new("detailMessage", "Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("stackTrace", "[B", Default::default()),
+                JavaFieldProto::new("stackTrace", "[Ljava/lang/String;", Default::default()),
             ],
             access_flags: Default::default(),
         }
@@ -77,9 +77,13 @@ impl Throwable {
     async fn fill_in_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::fillInStackTrace({:?})", &this);
 
-        let stack_trace = Arc::new(jvm.stack_trace());
-
-        jvm.put_rust_object_field(&mut this, "stackTrace", stack_trace).await?;
+        let stack_trace = jvm.stack_trace();
+        let mut stack_trace_array = jvm.instantiate_array("Ljava/lang/String;", stack_trace.len()).await?;
+        for (i, line) in stack_trace.iter().enumerate() {
+            let java_line = JavaLangString::from_rust_string(jvm, line).await?;
+            jvm.store_array(&mut stack_trace_array, i, core::iter::once(java_line)).await?;
+        }
+        jvm.put_field(&mut this, "stackTrace", "[Ljava/lang/String;", stack_trace_array).await?;
 
         Ok(this)
     }
@@ -146,7 +150,7 @@ impl Throwable {
     }
 
     async fn do_print_stack_trace(jvm: &Jvm, this: ClassInstanceRef<Self>, stream_or_writer: Box<dyn ClassInstance>) -> Result<()> {
-        let stack_trace: Arc<Vec<RustString>> = jvm.get_rust_object_field(&this, "stackTrace").await?;
+        let stack_trace: ClassInstanceRef<Array<ClassInstanceRef<String>>> = jvm.get_field(&this, "stackTrace", "[Ljava/lang/String;").await?;
 
         // TODO we can call println(Ljava/lang/Object;)V
         let string: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "toString", "()Ljava/lang/String;", ()).await?;
@@ -154,10 +158,15 @@ impl Throwable {
             .invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (string,))
             .await?;
 
-        for line in stack_trace.iter() {
-            let line = format!("\tat {line}");
-            let line = JavaLangString::from_rust_string(jvm, &line).await?;
-            let _: () = jvm.invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
+        if !stack_trace.is_null() {
+            let length = jvm.array_length(&stack_trace).await?;
+            let lines: Vec<ClassInstanceRef<String>> = jvm.load_array(&stack_trace, 0, length).await?;
+            for line_ref in lines {
+                let line = JavaLangString::to_rust_string(jvm, &line_ref).await?;
+                let line = format!("\tat {line}");
+                let line = JavaLangString::from_rust_string(jvm, &line).await?;
+                let _: () = jvm.invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
+            }
         }
 
         Ok(())
