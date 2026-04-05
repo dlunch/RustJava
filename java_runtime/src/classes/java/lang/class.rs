@@ -42,7 +42,9 @@ impl Class {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("raw", "[B", Default::default()), // raw rust pointer of Box<dyn Class>
+                // Stored as raw bytes instead of java/lang/String to avoid circular dependency:
+                // from_rust_class -> JavaLangString::from_rust_string -> new_class("java/lang/String") -> from_rust_class -> stack overflow
+                JavaFieldProto::new("nameBytes", "[B", Default::default()),
                 JavaFieldProto::new("classLoader", "Ljava/lang/ClassLoader;", Default::default()),
             ],
             access_flags: Default::default(),
