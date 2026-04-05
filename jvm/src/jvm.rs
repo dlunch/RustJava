@@ -5,11 +5,9 @@ use core::{
     fmt::Debug,
     hash::BuildHasher,
     iter,
-    mem::{forget, size_of_val},
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use bytemuck::cast_slice;
 use dyn_clone::clone_box;
 use event_listener::{Event, EventListener};
 use hashbrown::{DefaultHashBuilder, HashSet};
@@ -655,37 +653,6 @@ impl Jvm {
 
             x.run(self, Box::new([])).await?;
         }
-
-        Ok(())
-    }
-
-    pub async fn get_rust_object_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str) -> Result<T>
-    where
-        T: Clone,
-    {
-        let raw_storage = self.get_field(instance, name, "[B").await?;
-        let length = self.array_length(&raw_storage).await?;
-        let buf: Vec<i8> = self.load_array(&raw_storage, 0, length).await?;
-
-        let rust_raw = usize::from_le_bytes(cast_slice(&buf).try_into().unwrap());
-
-        let rust = unsafe { Box::from_raw(rust_raw as *mut T) };
-        let result = (*rust).clone();
-
-        forget(rust); // do not drop box as we still have it in java memory
-
-        Ok(result)
-    }
-
-    pub async fn put_rust_object_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, value: T) -> Result<()> {
-        let rust_raw = Box::into_raw(Box::new(value)) as *const u8 as usize;
-
-        let length = size_of_val(&rust_raw);
-        let mut raw_storage = self.instantiate_array("B", length).await?;
-        self.store_array(&mut raw_storage, 0, cast_slice::<u8, i8>(&rust_raw.to_le_bytes()).to_vec())
-            .await?;
-
-        self.put_field(instance, name, "[B", raw_storage).await?;
 
         Ok(())
     }
