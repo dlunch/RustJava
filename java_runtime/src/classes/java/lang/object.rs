@@ -1,9 +1,11 @@
-use core::{hash::BuildHasher, time::Duration};
+use core::{
+    hash::{Hash, Hasher},
+    time::Duration,
+};
 
 use alloc::{boxed::Box, format, vec};
 
 use dyn_clone::clone_box;
-use hashbrown::DefaultHashBuilder;
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
@@ -12,6 +14,27 @@ use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::
 
 // class java.lang.Object
 pub struct Object;
+
+const FNV_OFFSET_BASIS_64: u64 = 0xcbf29ce484222325;
+const FNV_PRIME_64: u64 = 0x100000001b3;
+
+#[derive(Default)]
+struct IdentityHasher(u64);
+
+impl Hasher for IdentityHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        let mut hash = if self.0 == 0 { FNV_OFFSET_BASIS_64 } else { self.0 };
+        for byte in bytes {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(FNV_PRIME_64);
+        }
+        self.0 = hash;
+    }
+}
 
 impl Object {
     pub fn as_proto() -> RuntimeClassProto {
@@ -61,7 +84,9 @@ impl Object {
 
         let rust_this: Box<dyn ClassInstance> = this.into();
 
-        let hash = DefaultHashBuilder::default().hash_one(&rust_this);
+        let mut hasher = IdentityHasher::default();
+        rust_this.hash(&mut hasher);
+        let hash = hasher.finish();
 
         Ok(hash as _)
     }

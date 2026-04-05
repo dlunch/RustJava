@@ -123,3 +123,36 @@ async fn test_clone_not_cloneable() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_hash_code_is_stable_for_same_object() -> Result<()> {
+    let runtime = TestRuntime::new(BTreeMap::new());
+    let jvm = create_test_jvm(runtime).await?;
+
+    let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+
+    let first: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
+    let second: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
+
+    assert_eq!(first, second);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_hash_code_is_not_constant_across_objects() -> Result<()> {
+    let runtime = TestRuntime::new(BTreeMap::new());
+    let jvm = create_test_jvm(runtime).await?;
+
+    let mut hashes = hashbrown::HashSet::new();
+
+    for _ in 0..32 {
+        let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+        let hash: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
+        hashes.insert(hash);
+    }
+
+    assert!(hashes.len() > 1);
+
+    Ok(())
+}
