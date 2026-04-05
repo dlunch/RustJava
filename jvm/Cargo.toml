@@ -16,6 +16,8 @@ nom = { workspace = true }
 parking_lot = { workspace = true }
 tracing = { workspace = true }
 
+event-listener = { version = "^5.4", default-features = false }
+
 java_constants = { workspace = true }
 
 [dev-dependencies]

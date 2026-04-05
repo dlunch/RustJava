@@ -3,6 +3,7 @@
 use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     fmt::Debug,
+    hash::BuildHasher,
     iter,
     mem::{forget, size_of_val},
     sync::atomic::{AtomicBool, Ordering},
@@ -10,7 +11,8 @@ use core::{
 
 use bytemuck::cast_slice;
 use dyn_clone::clone_box;
-use hashbrown::HashSet;
+use event_listener::{Event, EventListener};
+use hashbrown::{DefaultHashBuilder, HashSet};
 use parking_lot::RwLock;
 
 use java_constants::{ClassAccessFlags, MethodAccessFlags};
@@ -36,6 +38,8 @@ struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
+    monitors: RwLock<BTreeMap<u64, Arc<Event>>>,
+    monitor_hasher: DefaultHashBuilder,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
     bootstrapping: AtomicBool,
@@ -57,6 +61,8 @@ impl Jvm {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
                 all_objects: RwLock::new(HashSet::new()),
+                monitors: RwLock::new(BTreeMap::new()),
+                monitor_hasher: DefaultHashBuilder::default(),
                 get_current_thread_id: Box::new(get_current_thread_id),
                 bootstrap_class_loader: Box::new(bootstrap_class_loader),
                 bootstrapping: AtomicBool::new(true),
@@ -464,6 +470,21 @@ impl Jvm {
         self.inner.classes.read().get(class_name).cloned()
     }
 
+    pub fn object_listen(&self, obj: &Box<dyn ClassInstance>) -> EventListener {
+        self.get_or_create_monitor(obj).listen()
+    }
+
+    pub async fn object_wait(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
+        self.object_listen(obj).await;
+
+        Ok(())
+    }
+
+    pub fn object_notify(&self, obj: &Box<dyn ClassInstance>, count: usize) {
+        let monitor = self.get_or_create_monitor(obj);
+        monitor.notify(count);
+    }
+
     #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
         self.resolve_class_internal(class_name, None).await
@@ -718,6 +739,19 @@ impl Jvm {
             let system_class_loader = JavaLangClassLoader::get_system_class_loader(self).await?;
             Ok(system_class_loader)
         }
+    }
+
+    fn get_or_create_monitor(&self, obj: &Box<dyn ClassInstance>) -> Arc<Event> {
+        let key = self.inner.monitor_hasher.hash_one(obj);
+
+        let monitors = self.inner.monitors.read();
+        if let Some(monitor) = monitors.get(&key) {
+            return monitor.clone();
+        }
+        drop(monitors);
+
+        let mut monitors = self.inner.monitors.write();
+        monitors.entry(key).or_insert_with(|| Arc::new(Event::new())).clone()
     }
 
     pub(crate) fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {

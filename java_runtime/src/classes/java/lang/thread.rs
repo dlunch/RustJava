@@ -1,11 +1,9 @@
-use alloc::{boxed::Box, sync::Arc, vec};
+use alloc::{boxed::Box, vec};
 use core::time::Duration;
-
-use event_listener::Event;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::MethodAccessFlags;
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::Runnable};
 
@@ -40,7 +38,7 @@ impl Thread {
             fields: vec![
                 JavaFieldProto::new("id", "J", Default::default()),
                 JavaFieldProto::new("target", "Ljava/lang/Runnable;", Default::default()),
-                JavaFieldProto::new("joinEvent", "[B", Default::default()),
+                JavaFieldProto::new("alive", "Z", Default::default()),
             ],
             access_flags: Default::default(),
         }
@@ -84,7 +82,6 @@ impl Thread {
         struct ThreadStartProxy {
             jvm: Jvm,
             thread_id: i32,
-            join_event: Arc<Event>,
             this: ClassInstanceRef<Thread>,
         }
 
@@ -129,14 +126,15 @@ impl Thread {
 
                 self.jvm.detach_thread()?;
 
-                self.join_event.notify(usize::MAX);
+                let mut this = self.this.clone();
+                self.jvm.put_field(&mut this, "alive", "Z", false).await.unwrap();
+                self.jvm.object_notify(&self.this, usize::MAX);
 
                 Ok(())
             }
         }
 
-        let join_event = Arc::new(Event::new());
-        jvm.put_rust_object_field(&mut this, "joinEvent", join_event.clone()).await?;
+        jvm.put_field(&mut this, "alive", "Z", true).await?;
 
         let id: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
 
@@ -145,7 +143,6 @@ impl Thread {
             Box::new(ThreadStartProxy {
                 jvm: jvm.clone(),
                 thread_id: id,
-                join_event,
                 this: this.clone(),
             }),
         );
@@ -164,27 +161,23 @@ impl Thread {
         Ok(())
     }
 
-    async fn join(jvm: &Jvm, _context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn join(jvm: &Jvm, _context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::join({:?})", &this);
 
-        // TODO we don't have get same field twice
-        let raw_join_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "joinEvent", "[B").await?;
-        if raw_join_event.is_null() {
-            return Ok(()); // already joined or not started
+        loop {
+            let listener = jvm.object_listen(&this);
+            let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
+            if !alive {
+                return Ok(());
+            }
+            listener.await;
         }
-
-        let join_event: Arc<Event> = jvm.get_rust_object_field(&this, "joinEvent").await?;
-        join_event.listen().await;
-
-        jvm.put_field(&mut this, "joinEvent", "[B", None).await?;
-
-        Ok(())
     }
 
-    async fn is_alive(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::warn!("stub java.lang.Thread::isAlive({:?})", &this);
-
-        Ok(true)
+    async fn is_alive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.lang.Thread::isAlive({:?})", &this);
+        let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
+        Ok(alive)
     }
 
     async fn sleep(_: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<()> {

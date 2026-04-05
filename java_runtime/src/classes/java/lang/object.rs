@@ -1,13 +1,12 @@
 use core::{hash::BuildHasher, time::Duration};
 
-use alloc::{boxed::Box, format, sync::Arc, vec};
+use alloc::{boxed::Box, format, vec};
 
 use dyn_clone::clone_box;
-use event_listener::Event;
 use hashbrown::DefaultHashBuilder;
-use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::String};
 
@@ -34,7 +33,7 @@ impl Object {
                 JavaMethodProto::new("wait", "()V", Self::wait, Default::default()),
                 JavaMethodProto::new("finalize", "()V", Self::finalize, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("waitEvent", "[B", Default::default())],
+            fields: vec![],
             access_flags: Default::default(),
         }
     }
@@ -107,13 +106,7 @@ impl Object {
     async fn notify(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notify({:?})", &this);
 
-        let wait_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "waitEvent", "[B").await?;
-        if wait_event.is_null() {
-            return Ok(());
-        }
-
-        let wait_event: Arc<Event> = jvm.get_rust_object_field(&this, "waitEvent").await?;
-        wait_event.notify(1);
+        jvm.object_notify(&this, 1);
 
         Ok(())
     }
@@ -121,13 +114,7 @@ impl Object {
     async fn notify_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notifyAll({:?})", &this);
 
-        let wait_event: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "waitEvent", "[B").await?;
-        if wait_event.is_null() {
-            return Ok(());
-        }
-
-        let wait_event: Arc<Event> = jvm.get_rust_object_field(&this, "waitEvent").await?;
-        wait_event.notify(usize::MAX);
+        jvm.object_notify(&this, usize::MAX);
 
         Ok(())
     }
@@ -140,24 +127,21 @@ impl Object {
         Ok(())
     }
 
-    async fn wait_long_int(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
+    async fn wait_long_int(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({:?}, {:?}, {:?})", &this, millis, nanos);
 
-        let wait_event = Arc::new(Event::new());
-        jvm.put_rust_object_field(&mut this, "waitEvent", wait_event.clone()).await?;
-
-        struct Waiter {
+        struct TimeoutNotifier {
             timeout: i64,
-            wait_event: Arc<Event>,
+            jvm: Jvm,
+            this: Box<dyn ClassInstance>,
             context: Box<dyn Runtime>,
         }
 
         #[async_trait::async_trait]
-        impl SpawnCallback for Waiter {
+        impl SpawnCallback for TimeoutNotifier {
             async fn call(&self) -> Result<()> {
                 self.context.sleep(Duration::from_millis(self.timeout as _)).await;
-
-                self.wait_event.notify(1); // TODO this would notify other waiter
+                self.jvm.object_notify(&self.this, 1); // TODO this may wake an unrelated waiter
                 Ok(())
             }
         }
@@ -166,15 +150,16 @@ impl Object {
         if timeout != 0 {
             context.spawn(
                 jvm,
-                Box::new(Waiter {
+                Box::new(TimeoutNotifier {
                     timeout,
-                    wait_event: wait_event.clone(),
+                    jvm: jvm.clone(),
+                    this: this.clone().into(),
                     context: clone_box(context),
                 }),
             );
         }
 
-        wait_event.listen().await;
+        jvm.object_wait(&this).await?;
 
         Ok(())
     }
