@@ -1,15 +1,14 @@
-use alloc::{string::ToString, sync::Arc, vec, vec::Vec};
+use alloc::{string::ToString, vec, vec::Vec};
 use core::iter;
 
 // XXX for zip..
 extern crate std;
 use std::io::{Cursor, Read};
 
-use parking_lot::Mutex;
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -19,8 +18,6 @@ use crate::{
         util::{Enumeration, zip::ZipEntry},
     },
 };
-
-type JavaZipArchive = Arc<Mutex<ZipArchive<Cursor<Vec<u8>>>>>;
 
 // class java.util.zip.ZipFile
 pub struct ZipFile;
@@ -47,9 +44,17 @@ impl ZipFile {
                 ),
                 JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("zip", "[B", Default::default())],
+            fields: vec![JavaFieldProto::new("zipData", "[B", Default::default())],
             access_flags: Default::default(),
         }
+    }
+
+    async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<Cursor<Vec<u8>>>> {
+        let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "zipData", "[B").await?;
+        let length = jvm.array_length(&zip_data).await?;
+        let mut buf = vec![0u8; length];
+        jvm.array_raw_buffer(&zip_data).await?.read(0, &mut buf).unwrap();
+        Ok(ZipArchive::new(Cursor::new(buf)).unwrap())
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
@@ -63,10 +68,7 @@ impl ZipFile {
         let buf = jvm.instantiate_array("B", length as _).await?;
         let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
 
-        let mut rust_buf = vec![0; length as _];
-        jvm.array_raw_buffer(&buf).await?.read(0, &mut rust_buf).unwrap();
-        let zip = Arc::new(Mutex::new(ZipArchive::new(Cursor::new(rust_buf)).unwrap()));
-        jvm.put_rust_object_field(&mut this, "zip", zip).await?;
+        jvm.put_field(&mut this, "zipData", "[B", buf).await?;
 
         Ok(())
     }
@@ -82,8 +84,8 @@ impl ZipFile {
         let entry = jvm.new_class("java/util/zip/ZipEntry", "(Ljava/lang/String;)V", (name.clone(),)).await?;
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
-        let file_size = zip.lock().by_name(&name).map(|x| x.size());
+        let mut zip = Self::get_zip_archive(jvm, &this).await?;
+        let file_size = zip.by_name(&name).map(|x| x.size());
 
         if let Ok(x) = file_size {
             let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (x as i64,)).await?;
@@ -97,8 +99,8 @@ impl ZipFile {
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
         tracing::debug!("java.util.zip.ZipFile::entries({:?})", &this);
 
-        let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
-        let names = zip.lock().file_names().map(|x| x.to_string()).collect::<Vec<_>>();
+        let zip = Self::get_zip_archive(jvm, &this).await?;
+        let names = zip.file_names().map(|x| x.to_string()).collect::<Vec<_>>();
 
         let mut name_array = jvm.instantiate_array("Ljava/lang/String;", names.len() as _).await?;
         for (i, name) in names.iter().enumerate() {
@@ -129,9 +131,7 @@ impl ZipFile {
         let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;
 
         let data = {
-            let zip: JavaZipArchive = jvm.get_rust_object_field(&this, "zip").await?;
-
-            let mut zip = zip.lock();
+            let mut zip = Self::get_zip_archive(jvm, &this).await?;
             let mut file = zip.by_name(&entry_name).unwrap();
 
             let mut buf = Vec::new();
