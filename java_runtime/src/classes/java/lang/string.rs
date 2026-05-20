@@ -751,17 +751,19 @@ impl String {
     }
 
     fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
-        match charset {
-            "UTF-8" => str::from_utf8(bytes).unwrap().to_string(),
-            "EUC-KR" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
+        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
+            "UTF-8" | "UTF8" => str::from_utf8(bytes).unwrap().to_string(),
+            "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
+            "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => bytes.iter().map(|&b| b as char).collect(),
             _ => unimplemented!("unsupported charset: {}", charset),
         }
     }
 
     fn encode_str(charset: &str, string: &str) -> Vec<u8> {
-        match charset {
-            "UTF-8" => string.as_bytes().to_vec(),
-            "EUC-KR" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
+        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
+            "UTF-8" | "UTF8" => string.as_bytes().to_vec(),
+            "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
+            "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => string.chars().map(|c| c as u8).collect(),
             _ => unimplemented!("unsupported charset: {}", charset),
         }
     }
