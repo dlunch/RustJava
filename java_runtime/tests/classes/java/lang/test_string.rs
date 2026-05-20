@@ -175,3 +175,155 @@ async fn test_get_chars() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_ends_with() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "Hello, 테스트!").await?;
+
+    let suffix = JavaLangString::from_rust_string(&jvm, "테스트!").await?;
+    let result: bool = jvm.invoke_virtual(&string, "endsWith", "(Ljava/lang/String;)Z", (suffix,)).await?;
+    assert!(result);
+
+    let suffix = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let result: bool = jvm.invoke_virtual(&string, "endsWith", "(Ljava/lang/String;)Z", (suffix,)).await?;
+    assert!(!result);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_equals_ignore_case() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let a = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let b = JavaLangString::from_rust_string(&jvm, "HELLO").await?;
+    let result: bool = jvm.invoke_virtual(&a, "equalsIgnoreCase", "(Ljava/lang/String;)Z", (b,)).await?;
+    assert!(result);
+
+    let a = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let b = JavaLangString::from_rust_string(&jvm, "World").await?;
+    let result: bool = jvm.invoke_virtual(&a, "equalsIgnoreCase", "(Ljava/lang/String;)Z", (b,)).await?;
+    assert!(!result);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_to_lower_case() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "HELLO 테스트").await?;
+    let result = jvm.invoke_virtual(&string, "toLowerCase", "()Ljava/lang/String;", ()).await?;
+    let result_string = JavaLangString::to_rust_string(&jvm, &result).await?;
+    assert_eq!(result_string, "hello 테스트");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_replace() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "a.b.c.d").await?;
+    let result = jvm
+        .invoke_virtual(&string, "replace", "(CC)Ljava/lang/String;", (b'.' as u16, b'/' as u16))
+        .await?;
+    let result_string = JavaLangString::to_rust_string(&jvm, &result).await?;
+    assert_eq!(result_string, "a/b/c/d");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_region_matches() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let a = JavaLangString::from_rust_string(&jvm, "Hello World").await?;
+    let b = JavaLangString::from_rust_string(&jvm, "WORLD!!!").await?;
+
+    let result: bool = jvm
+        .invoke_virtual(&a, "regionMatches", "(ZILjava/lang/String;II)Z", (false, 6i32, b.clone(), 0i32, 5i32))
+        .await?;
+    assert!(!result);
+
+    let result: bool = jvm
+        .invoke_virtual(&a, "regionMatches", "(ZILjava/lang/String;II)Z", (true, 6i32, b.clone(), 0i32, 5i32))
+        .await?;
+    assert!(result);
+
+    let result: bool = jvm
+        .invoke_virtual(&a, "regionMatches", "(ZILjava/lang/String;II)Z", (false, 0i32, b, 0i32, 3i32))
+        .await?;
+    assert!(!result);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_last_index_of_from() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "abcabc").await?;
+
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(II)I", (b'a' as i32, 5i32)).await?;
+    assert_eq!(index, 3);
+
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(II)I", (b'a' as i32, 2i32)).await?;
+    assert_eq!(index, 0);
+
+    let index: i32 = jvm.invoke_virtual(&string, "lastIndexOf", "(II)I", (b'z' as i32, 5i32)).await?;
+    assert_eq!(index, -1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_value_of_overloads() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let result = jvm.invoke_static("java/lang/String", "valueOf", "(Z)Ljava/lang/String;", (true,)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "true");
+
+    let result = jvm
+        .invoke_static("java/lang/String", "valueOf", "(J)Ljava/lang/String;", (12345i64,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "12345");
+
+    let chars = jvm.instantiate_array("C", 3).await?;
+    jvm.store_array(&mut chars.clone(), 0, vec![b'a' as u16, b'b' as u16, b'c' as u16])
+        .await?;
+    let result = jvm
+        .invoke_static("java/lang/String", "valueOf", "([C)Ljava/lang/String;", (chars,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "abc");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_empty() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = jvm.new_class("java/lang/String", "()V", ()).await?;
+    let result = JavaLangString::to_rust_string(&jvm, &string).await?;
+    assert_eq!(result, "");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_byte_array_charset() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let bytes = vec![b'H' as i8, b'i' as i8, b'!' as i8];
+    let mut array = jvm.instantiate_array("B", 3).await?;
+    jvm.store_array(&mut array, 0, bytes).await?;
+
+    let charset = JavaLangString::from_rust_string(&jvm, "UTF-8").await?;
+    let string = jvm.new_class("java/lang/String", "([BLjava/lang/String;)V", (array, charset)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hi!");
+
+    Ok(())
+}
