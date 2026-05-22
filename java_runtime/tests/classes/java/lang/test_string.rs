@@ -299,6 +299,24 @@ async fn test_value_of_overloads() -> Result<()> {
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "abc");
 
+    let result = jvm
+        .invoke_static("java/lang/String", "valueOf", "(F)Ljava/lang/String;", (1.5f32,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "1.5");
+
+    let result = jvm
+        .invoke_static("java/lang/String", "valueOf", "(D)Ljava/lang/String;", (3.14f64,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "3.14");
+
+    let mut chars = jvm.instantiate_array("C", 5).await?;
+    jvm.store_array(&mut chars, 0, vec![b'h' as u16, b'e' as u16, b'l' as u16, b'l' as u16, b'o' as u16])
+        .await?;
+    let result = jvm
+        .invoke_static("java/lang/String", "valueOf", "([CII)Ljava/lang/String;", (chars, 1i32, 3i32))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "ell");
+
     Ok(())
 }
 

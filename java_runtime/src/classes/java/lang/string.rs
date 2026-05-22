@@ -1,7 +1,6 @@
 use core::cmp::Ordering;
 
 use alloc::{
-    str,
     string::{String as RustString, ToString},
     vec,
     vec::Vec,
@@ -547,6 +546,10 @@ impl String {
             &charset_name
         );
 
+        if charset_name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "charsetName is null").await);
+        }
+
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
@@ -582,6 +585,10 @@ impl String {
         charset_name: ClassInstanceRef<Self>,
     ) -> Result<ClassInstanceRef<Array<i8>>> {
         tracing::debug!("java.lang.String::getBytes({:?}, {:?})", &this, &charset_name);
+
+        if charset_name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "charsetName is null").await);
+        }
 
         let string = JavaLangString::to_rust_string(jvm, &this).await?;
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
@@ -647,6 +654,10 @@ impl String {
             len
         );
 
+        if other.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "other is null").await);
+        }
+
         if toffset < 0 || ooffset < 0 || len < 0 {
             return Ok(false);
         }
@@ -696,6 +707,10 @@ impl String {
 
     async fn ends_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, suffix: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.String::endsWith({:?}, {:?})", &this, &suffix);
+
+        if suffix.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "suffix is null").await);
+        }
 
         let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
         let suffix_string = JavaLangString::to_rust_string(jvm, &suffix).await?;
@@ -752,7 +767,7 @@ impl String {
 
     fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
         match charset.to_ascii_uppercase().replace('_', "-").as_str() {
-            "UTF-8" | "UTF8" => str::from_utf8(bytes).unwrap().to_string(),
+            "UTF-8" | "UTF8" => RustString::from_utf8_lossy(bytes).into_owned(),
             "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
             "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => bytes.iter().map(|&b| b as char).collect(),
             _ => unimplemented!("unsupported charset: {}", charset),
