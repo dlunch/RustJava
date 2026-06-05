@@ -1,61 +1,90 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
-use nom::{IResult, combinator::map, number::complete::be_u16};
-use nom_derive::{NomBE, Parse};
+use nom::{
+    IResult, Parser,
+    multi::length_count,
+    number::complete::{be_u16, be_u32},
+};
 
 use java_constants::ClassAccessFlags;
 
 use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
 
 fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Arc<String>> {
-    map(be_u16, |x| {
-        let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
-        constant_pool.get(&class_name_index).unwrap().utf8()
-    })(data)
+    let (data, this_class) = be_u16(data)?;
+    let class_name_index = constant_pool.get(&this_class).unwrap().class_name_index();
+
+    Ok((data, constant_pool.get(&class_name_index).unwrap().utf8()))
 }
 
 fn parse_super_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Option<Arc<String>>> {
-    map(be_u16, |x| {
-        if x != 0 {
-            let class_name_index = constant_pool.get(&x).unwrap().class_name_index();
-            let name = constant_pool.get(&class_name_index).unwrap().utf8();
+    let (data, super_class) = be_u16(data)?;
 
-            Some(name)
-        } else {
-            None
-        }
-    })(data)
+    let super_class = if super_class != 0 {
+        let class_name_index = constant_pool.get(&super_class).unwrap().class_name_index();
+        Some(constant_pool.get(&class_name_index).unwrap().utf8())
+    } else {
+        None
+    };
+
+    Ok((data, super_class))
 }
 
-#[derive(NomBE)]
-#[nom(Exact)]
-#[nom(Complete)]
 pub struct ClassInfo {
-    #[nom(Verify = "*magic == 0xCAFEBABE")]
     pub magic: u32,
     pub minor_version: u16,
     pub major_version: u16,
-    #[nom(Parse = "ConstantPoolItem::parse_all")]
     pub constant_pool: BTreeMap<u16, ConstantPoolItem>, // TODO change to Vec
-    #[nom(Parse = "map(be_u16, ClassAccessFlags::from_bits_truncate)")]
     pub access_flags: ClassAccessFlags,
-    #[nom(Parse = "{ |x| parse_this_class(x, &constant_pool) }")]
     pub this_class: Arc<String>,
-    #[nom(Parse = "{ |x| parse_super_class(x, &constant_pool) }")]
     pub super_class: Option<Arc<String>>,
-    #[nom(LengthCount = "be_u16", Parse = "{ |x| parse_interface(x, &constant_pool) }")]
     pub interfaces: Vec<Arc<String>>,
-    #[nom(LengthCount = "be_u16", Parse = "{ |x| FieldInfo::parse(x, &constant_pool) }")]
     pub fields: Vec<FieldInfo>,
-    #[nom(LengthCount = "be_u16", Parse = "{ |x| MethodInfo::parse(x, &constant_pool) }")]
     pub methods: Vec<MethodInfo>,
-    #[nom(LengthCount = "be_u16", Parse = "{ |x| AttributeInfo::parse(x, &constant_pool) }")]
     pub attributes: Vec<AttributeInfo>,
 }
 
 impl ClassInfo {
+    fn parse_info(data: &[u8]) -> IResult<&[u8], Self> {
+        let (data, magic) = be_u32(data)?;
+        if magic != 0xCAFEBABE {
+            return Err(nom::Err::Error(nom::error::Error::new(data, nom::error::ErrorKind::Verify)));
+        }
+
+        let (data, minor_version) = be_u16(data)?;
+        let (data, major_version) = be_u16(data)?;
+        let (data, constant_pool) = ConstantPoolItem::parse_all(data)?;
+        let (data, access_flags) = be_u16(data)?;
+        let (data, this_class) = parse_this_class(data, &constant_pool)?;
+        let (data, super_class) = parse_super_class(data, &constant_pool)?;
+        let (data, interfaces) = length_count(be_u16, |x| parse_interface(x, &constant_pool)).parse(data)?;
+        let (data, fields) = length_count(be_u16, |x| FieldInfo::parse(x, &constant_pool)).parse(data)?;
+        let (data, methods) = length_count(be_u16, |x| MethodInfo::parse(x, &constant_pool)).parse(data)?;
+        let (data, attributes) = length_count(be_u16, |x| AttributeInfo::parse(x, &constant_pool)).parse(data)?;
+
+        Ok((
+            data,
+            Self {
+                magic,
+                minor_version,
+                major_version,
+                constant_pool,
+                access_flags: ClassAccessFlags::from_bits_truncate(access_flags),
+                this_class,
+                super_class,
+                interfaces,
+                fields,
+                methods,
+                attributes,
+            },
+        ))
+    }
+
     pub fn parse(file: &[u8]) -> Option<Self> {
-        let result = Parse::parse(file).ok()?.1;
+        let (remaining, result) = Self::parse_info(file).ok()?;
+        if !remaining.is_empty() {
+            return None;
+        }
 
         Some(result)
     }

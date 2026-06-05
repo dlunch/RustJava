@@ -5,7 +5,7 @@ use alloc::{
 };
 
 use nom::{
-    IResult,
+    IResult, Parser,
     bytes::complete::{take, take_until},
     character::complete::anychar,
     multi::many0,
@@ -74,7 +74,7 @@ impl JavaType {
             'F' => Ok((remaining, Self::Float)),
             'D' => Ok((remaining, Self::Double)),
             'L' => {
-                let (remaining, class_name) = terminated(take_until(";"), take(1usize))(remaining)?;
+                let (remaining, class_name) = terminated(take_until(";"), take(1usize)).parse(remaining)?;
                 Ok((remaining, Self::Class(class_name.to_string())))
             }
             '[' => {
@@ -82,8 +82,8 @@ impl JavaType {
                 Ok((remaining, Self::Array(Box::new(element_type))))
             }
             '(' => {
-                let (remaining, params) = terminated(take_until(")"), take(1usize))(remaining)?;
-                let param_types = many0(Self::parse_type)(params)?.1;
+                let (remaining, params) = terminated(take_until(")"), take(1usize)).parse(remaining)?;
+                let param_types = many0(Self::parse_type).parse(params)?.1;
 
                 let (remaining, return_type) = Self::parse_type(remaining)?;
 

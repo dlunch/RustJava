@@ -1,45 +1,113 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
 use nom::{
-    IResult,
+    IResult, Parser,
     bytes::complete::take,
-    combinator::{flat_map, map},
-    number::complete::{be_u16, u8},
+    error::{Error, ErrorKind},
+    number::complete::{be_f32, be_f64, be_i32, be_i64, be_u16, u8},
 };
-use nom_derive::{NomBE, Parse};
 
 fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
-    map(flat_map(be_u16, take), |x: &[u8]| Arc::new(String::from_utf8(x.to_vec()).unwrap()))(data)
+    let (data, length) = be_u16(data)?;
+    let (data, utf8) = take(length as usize).parse(data)?;
+
+    Ok((data, Arc::new(String::from_utf8(utf8.to_vec()).unwrap())))
 }
 
-#[derive(NomBE, Debug)]
-#[nom(Selector = "u8")]
+#[derive(Debug)]
 pub enum ConstantPoolItem {
-    #[nom(Selector = "1")]
-    Utf8(#[nom(Parse = "parse_utf8")] Arc<String>),
-    #[nom(Selector = "3")]
+    Utf8(Arc<String>),
     Integer(i32),
-    #[nom(Selector = "4")]
     Float(f32),
-    #[nom(Selector = "5")]
     Long(i64),
-    #[nom(Selector = "6")]
     Double(f64),
-    #[nom(Selector = "7")]
     Class { name_index: u16 },
-    #[nom(Selector = "8")]
     String { string_index: u16 },
-    #[nom(Selector = "9")]
     Fieldref { class_index: u16, name_and_type_index: u16 },
-    #[nom(Selector = "10")]
     Methodref { class_index: u16, name_and_type_index: u16 },
-    #[nom(Selector = "11")]
     InterfaceMethodref { class_index: u16, name_and_type_index: u16 },
-    #[nom(Selector = "12")]
     NameAndType { name_index: u16, descriptor_index: u16 },
 }
 
 impl ConstantPoolItem {
+    fn parse_tagged(data: &[u8], tag: u8) -> IResult<&[u8], Self> {
+        match tag {
+            1 => {
+                let (data, utf8) = parse_utf8(data)?;
+                Ok((data, Self::Utf8(utf8)))
+            }
+            3 => {
+                let (data, value) = be_i32(data)?;
+                Ok((data, Self::Integer(value)))
+            }
+            4 => {
+                let (data, value) = be_f32(data)?;
+                Ok((data, Self::Float(value)))
+            }
+            5 => {
+                let (data, value) = be_i64(data)?;
+                Ok((data, Self::Long(value)))
+            }
+            6 => {
+                let (data, value) = be_f64(data)?;
+                Ok((data, Self::Double(value)))
+            }
+            7 => {
+                let (data, name_index) = be_u16(data)?;
+                Ok((data, Self::Class { name_index }))
+            }
+            8 => {
+                let (data, string_index) = be_u16(data)?;
+                Ok((data, Self::String { string_index }))
+            }
+            9 => {
+                let (data, class_index) = be_u16(data)?;
+                let (data, name_and_type_index) = be_u16(data)?;
+                Ok((
+                    data,
+                    Self::Fieldref {
+                        class_index,
+                        name_and_type_index,
+                    },
+                ))
+            }
+            10 => {
+                let (data, class_index) = be_u16(data)?;
+                let (data, name_and_type_index) = be_u16(data)?;
+                Ok((
+                    data,
+                    Self::Methodref {
+                        class_index,
+                        name_and_type_index,
+                    },
+                ))
+            }
+            11 => {
+                let (data, class_index) = be_u16(data)?;
+                let (data, name_and_type_index) = be_u16(data)?;
+                Ok((
+                    data,
+                    Self::InterfaceMethodref {
+                        class_index,
+                        name_and_type_index,
+                    },
+                ))
+            }
+            12 => {
+                let (data, name_index) = be_u16(data)?;
+                let (data, descriptor_index) = be_u16(data)?;
+                Ok((
+                    data,
+                    Self::NameAndType {
+                        name_index,
+                        descriptor_index,
+                    },
+                ))
+            }
+            _ => Err(nom::Err::Error(Error::new(data, ErrorKind::Switch))),
+        }
+    }
+
     pub fn parse_all(data: &[u8]) -> IResult<&[u8], BTreeMap<u16, Self>> {
         let (remaining, count) = be_u16(data)?;
 
@@ -72,7 +140,8 @@ impl ConstantPoolItem {
     }
 
     pub fn parse_with_tag(data: &[u8]) -> IResult<&[u8], Self> {
-        flat_map(u8, |x| move |i| Self::parse(i, x))(data)
+        let (data, tag) = u8(data)?;
+        Self::parse_tagged(data, tag)
     }
 
     pub fn utf8(&self) -> Arc<String> {

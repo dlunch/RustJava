@@ -14,7 +14,7 @@ bytemuck = { version = "^1.25", default-features = false, features = ["extern_cr
 dyn-clone = { version = "^1.0", default-features = false }
 dyn-hash = { version = "^1.0", default-features = false }
 hashbrown = { version = "^0.17", features = ["default-hasher"], default-features = false }
-nom = { version = "^7.1", default-features = false, features = ["alloc"] }
+nom = { version = "^8.0", default-features = false, features = ["alloc"] }
 parking_lot = { version = "^0.12", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["attributes"] }
 
