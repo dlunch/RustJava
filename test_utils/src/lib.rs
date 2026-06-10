@@ -158,21 +158,28 @@ impl Runtime for TestRuntime {
 #[derive(Clone)]
 struct DummyFile {
     data: Vec<u8>,
-    pos: FileSize,
+    // shared between clones, as Runtime::get_file hands out cloned handles to the same file
+    pos: Arc<Mutex<FileSize>>,
 }
 
 impl DummyFile {
     pub fn new(data: Vec<u8>) -> Self {
-        Self { data, pos: 0 }
+        Self {
+            data,
+            pos: Arc::new(Mutex::new(0)),
+        }
     }
 }
 
 #[async_trait::async_trait]
 impl File for DummyFile {
     async fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
-        let len = min(buf.len(), self.data.len());
-        buf[..len].copy_from_slice(&self.data[..len]);
-        self.data = self.data[len..].to_vec();
+        let mut pos = self.pos.lock().unwrap();
+
+        let remaining = &self.data[min(*pos as usize, self.data.len())..];
+        let len = min(buf.len(), remaining.len());
+        buf[..len].copy_from_slice(&remaining[..len]);
+        *pos += len as FileSize;
 
         Ok(len)
     }
@@ -182,13 +189,13 @@ impl File for DummyFile {
     }
 
     async fn seek(&mut self, pos: FileSize) -> IOResult<()> {
-        self.pos = pos;
+        *self.pos.lock().unwrap() = pos;
 
         Ok(())
     }
 
     async fn tell(&self) -> IOResult<FileSize> {
-        Ok(self.pos as _)
+        Ok(*self.pos.lock().unwrap())
     }
 
     async fn set_len(&mut self, _len: FileSize) -> IOResult<()> {
