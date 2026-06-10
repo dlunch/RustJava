@@ -26,7 +26,9 @@ impl StringIndexOutOfBoundsException {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.StringIndexOutOfBoundsException::<init>({:?})", &this);
 
-        let _: () = jvm.invoke_special(&this, "java/lang/IndexOutOfBoundsException", "<init>", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/IndexOutOfBoundsException", "<init>", "()V", ())
+            .await?;
 
         Ok(())
     }
@@ -35,7 +37,13 @@ impl StringIndexOutOfBoundsException {
         tracing::debug!("java.lang.StringIndexOutOfBoundsException::<init>({:?}, {:?})", &this, &message);
 
         let _: () = jvm
-            .invoke_special(&this, "java/lang/IndexOutOfBoundsException", "<init>", "(Ljava/lang/String;)V", (message,))
+            .invoke_special(
+                &this,
+                "java/lang/IndexOutOfBoundsException",
+                "<init>",
+                "(Ljava/lang/String;)V",
+                (message,),
+            )
             .await?;
 
         Ok(())

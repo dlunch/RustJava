@@ -26,7 +26,9 @@ impl NumberFormatException {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.NumberFormatException::<init>({:?})", &this);
 
-        let _: () = jvm.invoke_special(&this, "java/lang/IllegalArgumentException", "<init>", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/IllegalArgumentException", "<init>", "()V", ())
+            .await?;
 
         Ok(())
     }

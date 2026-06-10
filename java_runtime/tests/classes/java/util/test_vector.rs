@@ -207,9 +207,13 @@ async fn test_index_of_null() -> Result<()> {
 
     let element = JavaLangString::from_rust_string(&jvm, "testValue").await?;
     let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element,)).await?;
-    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (JavaValue::Object(None),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (JavaValue::Object(None),))
+        .await?;
 
-    let index: i32 = jvm.invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (JavaValue::Object(None),)).await?;
+    let index: i32 = jvm
+        .invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (JavaValue::Object(None),))
+        .await?;
     assert_eq!(index, 1);
 
     Ok(())

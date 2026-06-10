@@ -78,7 +78,9 @@ impl Integer {
 
         match s.parse() {
             Ok(x) => Ok(x),
-            Err(_) => Err(jvm.exception("java/lang/NumberFormatException", &format!("For input string: \"{s}\"")).await),
+            Err(_) => Err(jvm
+                .exception("java/lang/NumberFormatException", &format!("For input string: \"{s}\""))
+                .await),
         }
     }
 
