@@ -151,7 +151,8 @@ impl ByteArrayInputStream {
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::mark({:?}, {:?})", &this, readlimit);
 
-        jvm.put_field(&mut this, "mark", "I", readlimit).await?;
+        let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
+        jvm.put_field(&mut this, "mark", "I", pos).await?;
 
         Ok(())
     }

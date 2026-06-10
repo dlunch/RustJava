@@ -1,4 +1,5 @@
 mod test_buffered_reader;
+mod test_byte_array_input_stream;
 mod test_byte_array_output_stream;
 mod test_data_input_stream;
 mod test_data_output_stream;

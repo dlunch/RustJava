@@ -1,4 +1,5 @@
-use jvm::{Result, runtime::JavaLangString};
+use java_runtime::classes::java::lang::String as JavaString;
+use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -305,9 +306,9 @@ async fn test_value_of_overloads() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "1.5");
 
     let result = jvm
-        .invoke_static("java/lang/String", "valueOf", "(D)Ljava/lang/String;", (3.14f64,))
+        .invoke_static("java/lang/String", "valueOf", "(D)Ljava/lang/String;", (3.15f64,))
         .await?;
-    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "3.14");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "3.15");
 
     let mut chars = jvm.instantiate_array("C", 5).await?;
     jvm.store_array(&mut chars, 0, vec![b'h' as u16, b'e' as u16, b'l' as u16, b'l' as u16, b'o' as u16])
@@ -342,6 +343,39 @@ async fn test_init_byte_array_charset() -> Result<()> {
     let charset = JavaLangString::from_rust_string(&jvm, "UTF-8").await?;
     let string = jvm.new_class("java/lang/String", "([BLjava/lang/String;)V", (array, charset)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hi!");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_substring_invalid_range() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "hello").await?;
+
+    for (begin, end) in [(3i32, 1i32), (0, 10), (-1, 3)] {
+        let result: Result<ClassInstanceRef<JavaString>> = jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (begin, end)).await;
+
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("Expected JavaException for ({begin}, {end}), got {:?}", result);
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_bytes_unmappable_charset() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "a한b").await?;
+    let charset = JavaLangString::from_rust_string(&jvm, "ISO-8859-1").await?;
+
+    let bytes = jvm.invoke_virtual(&string, "getBytes", "(Ljava/lang/String;)[B", (charset,)).await?;
+    let bytes = jvm.load_array::<i8>(&bytes, 0, 3).await?;
+
+    assert_eq!(bytes, [0x61, 0x3f, 0x62]);
 
     Ok(())
 }

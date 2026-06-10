@@ -113,3 +113,22 @@ fn test_switch() {
             Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]));
     }
 }
+
+#[test]
+fn test_invokeinterface() {
+    let interface = include_bytes!("../../test_data/Interface.class");
+
+    let class = ClassInfo::parse(interface).unwrap();
+
+    assert_eq!(class.methods[1].name, "main".to_string().into());
+    if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
+        assert_eq!(x.code.len(), 7);
+        assert!(matches!(x.code.get(&9).unwrap(),
+            Opcode::Invokeinterface(ConstantPoolReference::InterfaceMethodref(m), 1, 0) if m.class == "Interface$IInterface".to_string().into() && m.name == "test".to_string().into()));
+        assert!(!x.code.contains_key(&12));
+        assert!(!x.code.contains_key(&13));
+        assert!(matches!(x.code.get(&14).unwrap(), Opcode::Return));
+    } else {
+        panic!("Expected code attribute");
+    }
+}

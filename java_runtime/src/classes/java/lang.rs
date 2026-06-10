@@ -19,6 +19,7 @@ mod linkage_error;
 mod math;
 mod negative_array_size_exception;
 mod no_class_def_found_error;
+mod number_format_exception;
 mod no_such_field_error;
 mod no_such_method_error;
 mod null_pointer_exception;
@@ -29,6 +30,7 @@ mod runtime_exception;
 mod security_exception;
 mod string;
 mod string_buffer;
+mod string_index_out_of_bounds_exception;
 mod system;
 mod thread;
 mod throwable;
@@ -41,8 +43,9 @@ pub use self::{
     exception::Exception, illegal_argument_exception::IllegalArgumentException, incompatible_class_change_error::IncompatibleClassChangeError,
     index_out_of_bounds_exception::IndexOutOfBoundsException, instantiation_error::InstantiationError, integer::Integer,
     interrupted_exception::InterruptedException, linkage_error::LinkageError, math::Math, negative_array_size_exception::NegativeArraySizeException,
-    no_class_def_found_error::NoClassDefFoundError, no_such_field_error::NoSuchFieldError, no_such_method_error::NoSuchMethodError,
+    no_class_def_found_error::NoClassDefFoundError, number_format_exception::NumberFormatException, no_such_field_error::NoSuchFieldError, no_such_method_error::NoSuchMethodError,
     null_pointer_exception::NullPointerException, object::Object, runnable::Runnable, runtime::Runtime, runtime_exception::RuntimeException,
-    security_exception::SecurityException, string::String, string_buffer::StringBuffer, system::System, thread::Thread, throwable::Throwable,
+    security_exception::SecurityException, string::String, string_buffer::StringBuffer,
+    string_index_out_of_bounds_exception::StringIndexOutOfBoundsException, system::System, thread::Thread, throwable::Throwable,
     unsupported_operation_exception::UnsupportedOperationException,
 };

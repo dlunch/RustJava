@@ -22,6 +22,7 @@ use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodI
 struct ClassDefinitionInner {
     name: String,
     super_class_name: Option<String>,
+    interfaces: Vec<String>,
     access_flags: ClassAccessFlags,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
@@ -37,6 +38,7 @@ impl ClassDefinitionImpl {
     pub fn new(
         name: &str,
         super_class_name: Option<String>,
+        interfaces: Vec<String>,
         access_flags: ClassAccessFlags,
         methods: Vec<MethodImpl>,
         fields: Vec<FieldImpl>,
@@ -45,6 +47,7 @@ impl ClassDefinitionImpl {
             inner: Arc::new(ClassDefinitionInner {
                 name: name.to_string(),
                 super_class_name,
+                interfaces,
                 access_flags,
                 methods,
                 fields,
@@ -66,7 +69,16 @@ impl ClassDefinitionImpl {
 
         let fields = proto.fields.into_iter().map(FieldImpl::from_field_proto).collect::<Vec<_>>();
 
-        Self::new(proto.name, proto.parent_class.map(|x| x.to_string()), proto.access_flags, methods, fields)
+        let interfaces = proto.interfaces.into_iter().map(|x| x.to_string()).collect();
+
+        Self::new(
+            proto.name,
+            proto.parent_class.map(|x| x.to_string()),
+            interfaces,
+            proto.access_flags,
+            methods,
+            fields,
+        )
     }
 
     pub fn from_classfile(data: &[u8]) -> Result<Self> {
@@ -77,9 +89,12 @@ impl ClassDefinitionImpl {
 
         let methods = class.methods.into_iter().map(MethodImpl::from_method_info).collect::<Vec<_>>();
 
+        let interfaces = class.interfaces.into_iter().map(|x| x.to_string()).collect();
+
         Ok(Self::new(
             &class.this_class,
             class.super_class.map(|x| x.to_string()),
+            interfaces,
             class.access_flags,
             methods,
             fields,
@@ -99,6 +114,10 @@ impl ClassDefinition for ClassDefinitionImpl {
 
     fn super_class_name(&self) -> Option<String> {
         self.inner.super_class_name.as_ref().map(|x| x.to_string())
+    }
+
+    fn interface_names(&self) -> Vec<String> {
+        self.inner.interfaces.clone()
     }
 
     fn access_flags(&self) -> ClassAccessFlags {

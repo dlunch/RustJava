@@ -76,7 +76,10 @@ impl Integer {
 
         let s = JavaLangString::to_rust_string(jvm, &s).await?;
 
-        Ok(s.parse().unwrap())
+        match s.parse() {
+            Ok(x) => Ok(x),
+            Err(_) => Err(jvm.exception("java/lang/NumberFormatException", &format!("For input string: \"{s}\"")).await),
+        }
     }
 
     async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {

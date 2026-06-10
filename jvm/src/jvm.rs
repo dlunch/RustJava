@@ -573,8 +573,23 @@ impl Jvm {
             return true;
         }
 
+        for interface in class.interface_names() {
+            if interface == class_name {
+                return true;
+            }
+
+            // transitive superinterfaces are checked only if already loaded, as we cannot load classes here
+            let interface_class = self.inner.classes.read().get(&interface).map(|x| x.definition.clone());
+            if let Some(x) = interface_class
+                && self.is_inherited_from(&*x, class_name)
+            {
+                return true;
+            }
+        }
+
         if let Some(super_class) = class.super_class_name() {
-            self.is_inherited_from(&*self.inner.classes.read().get(&super_class).unwrap().definition, class_name)
+            let super_class = self.inner.classes.read().get(&super_class).unwrap().definition.clone();
+            self.is_inherited_from(&*super_class, class_name)
         } else {
             false
         }
