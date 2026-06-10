@@ -176,7 +176,7 @@ impl File for DummyFile {
     async fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
         let mut pos = self.pos.lock().unwrap();
 
-        let remaining = &self.data[min(*pos as usize, self.data.len())..];
+        let remaining = &self.data[(*pos).min(self.data.len() as FileSize) as usize..];
         let len = min(buf.len(), remaining.len());
         buf[..len].copy_from_slice(&remaining[..len]);
         *pos += len as FileSize;

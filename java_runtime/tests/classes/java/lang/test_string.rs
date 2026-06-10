@@ -379,3 +379,37 @@ async fn test_get_bytes_unmappable_charset() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_substring_utf16_indices() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    // "a😀b" has Java length 4: the emoji is a surrogate pair
+    let string = JavaLangString::from_rust_string(&jvm, "a😀b").await?;
+
+    let full: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (0, 4)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &full).await?, "a😀b");
+
+    let emoji: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (1, 3)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &emoji).await?, "😀");
+
+    let tail: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&string, "substring", "(I)Ljava/lang/String;", (3,)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &tail).await?, "b");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_bytes_ascii_replaces_non_ascii() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string = JavaLangString::from_rust_string(&jvm, "aé한").await?;
+    let charset = JavaLangString::from_rust_string(&jvm, "US-ASCII").await?;
+
+    let bytes = jvm.invoke_virtual(&string, "getBytes", "(Ljava/lang/String;)[B", (charset,)).await?;
+    let bytes = jvm.load_array::<i8>(&bytes, 0, 3).await?;
+
+    assert_eq!(bytes, [0x61, 0x3f, 0x3f]);
+
+    Ok(())
+}
