@@ -39,6 +39,10 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         panic!("Cannot instantiate array class")
     }
 
+    async fn prepare(&self, _: &Jvm) -> Result<()> {
+        Ok(())
+    }
+
     fn method(&self, _name: &str, _descriptor: &str, _is_static: bool) -> Option<Box<dyn Method>> {
         None
     }

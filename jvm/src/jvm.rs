@@ -721,6 +721,11 @@ impl Jvm {
             }
         }
 
+        if let Err(err) = class.definition.prepare(self).await {
+            class.set_init_state(InitState::Erroneous);
+            return Err(err);
+        }
+
         if let Some(clinit) = class.definition.method("<clinit>", "()V", true) {
             tracing::debug!("Calling <clinit> for {}", class.definition.name());
 

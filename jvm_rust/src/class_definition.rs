@@ -12,10 +12,10 @@ use core::{
 
 use parking_lot::RwLock;
 
-use classfile::ClassInfo;
+use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference};
 use java_class_proto::JavaClassProto;
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result, runtime::JavaLangString};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
@@ -26,6 +26,7 @@ struct ClassDefinitionInner {
     access_flags: ClassAccessFlags,
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
+    constant_values: Vec<(FieldImpl, ConstantPoolReference)>,
     storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
 }
 
@@ -43,6 +44,19 @@ impl ClassDefinitionImpl {
         methods: Vec<MethodImpl>,
         fields: Vec<FieldImpl>,
     ) -> Self {
+        Self::with_constant_values(name, super_class_name, interfaces, access_flags, methods, fields, Vec::new())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn with_constant_values(
+        name: &str,
+        super_class_name: Option<String>,
+        interfaces: Vec<String>,
+        access_flags: ClassAccessFlags,
+        methods: Vec<MethodImpl>,
+        fields: Vec<FieldImpl>,
+        constant_values: Vec<(FieldImpl, ConstantPoolReference)>,
+    ) -> Self {
         Self {
             inner: Arc::new(ClassDefinitionInner {
                 name: name.to_string(),
@@ -51,6 +65,7 @@ impl ClassDefinitionImpl {
                 access_flags,
                 methods,
                 fields,
+                constant_values,
                 storage: RwLock::new(BTreeMap::new()),
             }),
         }
@@ -85,19 +100,39 @@ impl ClassDefinitionImpl {
         let class = ClassInfo::parse(data).unwrap(); // TODO ClassFormatError
         assert_eq!(class.magic, 0xCAFEBABE);
 
-        let fields = class.fields.into_iter().map(FieldImpl::from_field_info).collect::<Vec<_>>();
+        let mut constant_values = Vec::new();
+        let fields = class
+            .fields
+            .into_iter()
+            .map(|field_info| {
+                let constant = field_info.attributes.iter().find_map(|x| match x {
+                    AttributeInfo::ConstantValue(value) => Some(value.clone()),
+                    _ => None,
+                });
+
+                let field = FieldImpl::from_field_info(field_info);
+                if let Some(x) = constant
+                    && field.access_flags().contains(FieldAccessFlags::STATIC)
+                {
+                    constant_values.push((field.clone(), x));
+                }
+
+                field
+            })
+            .collect::<Vec<_>>();
 
         let methods = class.methods.into_iter().map(MethodImpl::from_method_info).collect::<Vec<_>>();
 
         let interfaces = class.interfaces.into_iter().map(|x| x.to_string()).collect();
 
-        Ok(Self::new(
+        Ok(Self::with_constant_values(
             &class.this_class,
             class.super_class.map(|x| x.to_string()),
             interfaces,
             class.access_flags,
             methods,
             fields,
+            constant_values,
         ))
     }
 
@@ -126,6 +161,29 @@ impl ClassDefinition for ClassDefinitionImpl {
 
     async fn instantiate(&self, _: &Jvm) -> Result<Box<dyn ClassInstance>> {
         Ok(Box::new(ClassInstanceImpl::new(self)))
+    }
+
+    async fn prepare(&self, jvm: &Jvm) -> Result<()> {
+        for (field, constant) in &self.inner.constant_values {
+            let value = match constant {
+                ConstantPoolReference::Integer(x) => match field.descriptor().as_str() {
+                    "Z" => JavaValue::Boolean(*x != 0),
+                    "B" => JavaValue::Byte(*x as i8),
+                    "C" => JavaValue::Char(*x as u16),
+                    "S" => JavaValue::Short(*x as i16),
+                    _ => JavaValue::Int(*x),
+                },
+                ConstantPoolReference::Long(x) => JavaValue::Long(*x),
+                ConstantPoolReference::Float(x) => JavaValue::Float(*x),
+                ConstantPoolReference::Double(x) => JavaValue::Double(*x),
+                ConstantPoolReference::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
+                _ => continue,
+            };
+
+            self.inner.storage.write().insert(field.clone(), value);
+        }
+
+        Ok(())
     }
 
     fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>> {
