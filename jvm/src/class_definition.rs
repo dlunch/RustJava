@@ -11,9 +11,7 @@ use crate::{ArrayClassDefinition, ClassInstance, Field, JavaValue, Jvm, Method, 
 pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn name(&self) -> String;
     fn super_class_name(&self) -> Option<String>;
-    fn interface_names(&self) -> Vec<String> {
-        Vec::new()
-    }
+    fn interface_names(&self) -> Vec<String>;
     fn access_flags(&self) -> ClassAccessFlags;
     async fn instantiate(&self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>>;
     fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>>;

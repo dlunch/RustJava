@@ -27,6 +27,10 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
         Some("java/lang/Object".to_string())
     }
 
+    fn interface_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+
     fn access_flags(&self) -> ClassAccessFlags {
         ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL
     }
