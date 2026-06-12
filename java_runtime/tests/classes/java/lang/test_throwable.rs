@@ -16,7 +16,7 @@ async fn test_to_string() -> Result<()> {
 
     let result = JavaLangString::to_rust_string(&jvm, &to_string).await?;
 
-    assert_eq!(result, "java/lang/Throwable: test message");
+    assert_eq!(result, "java.lang.Throwable: test message");
 
     Ok(())
 }
@@ -46,7 +46,7 @@ async fn test_stacktrace() -> Result<()> {
     assert_eq!(
         result,
         "\
-                java/net/MalformedURLException: unknown protocol: invalid\n\
+                java.net.MalformedURLException: unknown protocol: invalid\n\
                     \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V\n\
                     \tat java/net/URL.<init>(Ljava/net/URL;Ljava/lang/String;)V\n\
                     \tat java/net/URL.<init>(Ljava/lang/String;)V\n\

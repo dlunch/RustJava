@@ -1,2 +1,0 @@
-class MarkImpl implements MarkIFace {
-}

@@ -1,0 +1,3 @@
+java.lang.ExceptionInInitializerError
+java.lang.NoClassDefFoundError
+java.lang.LinkageError
