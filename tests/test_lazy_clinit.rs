@@ -133,3 +133,40 @@ async fn test_interface_not_initialized_by_implementor() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_clinit_failure_wrapped_and_class_erroneous() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    register(&jvm, include_bytes!("../test_data/unit/ClinitThrows.class")).await?;
+
+    let result: Result<()> = jvm.invoke_static("ClinitThrows", "touch", "()V", ()).await;
+    let Err(jvm::JavaError::JavaException(exception)) = result else {
+        panic!("Expected JavaException, got {:?}", result);
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/ExceptionInInitializerError"));
+
+    let result: Result<()> = jvm.invoke_static("ClinitThrows", "touch", "()V", ()).await;
+    let Err(jvm::JavaError::JavaException(exception)) = result else {
+        panic!("Expected JavaException, got {:?}", result);
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NoClassDefFoundError"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_clinit_failure_error_propagates_unwrapped() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    register(&jvm, include_bytes!("../test_data/unit/ClinitThrowsError.class")).await?;
+
+    let result: Result<()> = jvm.invoke_static("ClinitThrowsError", "touch", "()V", ()).await;
+    let Err(jvm::JavaError::JavaException(exception)) = result else {
+        panic!("Expected JavaException, got {:?}", result);
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/LinkageError"));
+    assert!(!jvm.is_instance(&*exception, "java/lang/ExceptionInInitializerError"));
+
+    Ok(())
+}

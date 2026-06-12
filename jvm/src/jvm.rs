@@ -725,7 +725,17 @@ impl Jvm {
 
             if let Err(err) = self.execute_method(class, None, &clinit, Box::new([])).await {
                 class.set_init_state(InitState::Erroneous);
-                return Err(err);
+
+                let JavaError::JavaException(exception) = &err;
+                if self.is_instance(&**exception, "java/lang/Error") {
+                    return Err(err);
+                }
+
+                // Throwable has no cause field, so carry the original exception as the message
+                let message: Box<dyn ClassInstance> = self.invoke_virtual(exception, "toString", "()Ljava/lang/String;", ()).await?;
+                let message = JavaLangString::to_rust_string(self, &message).await?;
+
+                return Err(self.exception("java/lang/ExceptionInInitializerError", &message).await);
             }
         }
 

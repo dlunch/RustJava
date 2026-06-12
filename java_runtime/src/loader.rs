@@ -43,6 +43,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::lang::Comparable::as_proto(),
         crate::classes::java::lang::Error::as_proto(),
         crate::classes::java::lang::Exception::as_proto(),
+        crate::classes::java::lang::ExceptionInInitializerError::as_proto(),
         crate::classes::java::lang::IllegalArgumentException::as_proto(),
         crate::classes::java::lang::InstantiationError::as_proto(),
         crate::classes::java::lang::IncompatibleClassChangeError::as_proto(),
