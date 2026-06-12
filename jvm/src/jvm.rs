@@ -20,7 +20,7 @@ use crate::{
     array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
-    class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, JavaClassLoaderWrapper},
+    class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, InitState, JavaClassLoaderWrapper},
     error::JavaError,
     field::Field,
     garbage_collector::determine_garbage,
@@ -125,6 +125,8 @@ impl Jvm {
                 .await);
         }
 
+        self.ensure_initialized(&class).await?;
+
         let instance = class.definition.instantiate(self).await?;
 
         let thread_id = (self.inner.get_current_thread_id)();
@@ -178,6 +180,8 @@ impl Jvm {
 
         let field = class.definition.field(name, descriptor, true);
         if let Some(field) = field {
+            self.ensure_initialized(&class).await?;
+
             Ok(class.definition.get_static_field(&*field)?.into())
         } else {
             Err(self
@@ -197,6 +201,8 @@ impl Jvm {
         let field = class.definition.field(name, descriptor, true);
 
         if let Some(field) = field {
+            self.ensure_initialized(&class).await?;
+
             class.definition.put_static_field(&*field, value.into())
         } else {
             Err(self
@@ -264,6 +270,8 @@ impl Jvm {
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
+
+            self.ensure_initialized(&class).await?;
 
             Ok(self.execute_method(&class, None, &method, args).await?.into())
         } else {
@@ -513,7 +521,14 @@ impl Jvm {
             &JavaClassLoaderWrapper::new(self.current_class_loader().await?)
         };
 
-        self.load_class(class_name, class_loader_wrapper).await
+        let class = self.load_class(class_name, class_loader_wrapper).await?;
+
+        // wrapper가 만든 별도 Class를 그대로 쓰면 init 상태가 공유되지 않으므로 레지스트리에 등록된 canonical 본을 반환
+        if let Some(registered) = self.get_class(class_name) {
+            return Ok(registered);
+        }
+
+        Ok(class)
     }
 
     async fn load_class(&self, class_name: &str, class_loader_wrapper: &dyn ClassLoaderWrapper) -> Result<Class> {
@@ -665,13 +680,58 @@ impl Jvm {
 
         self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());
 
-        let clinit = class.definition.method("<clinit>", "()V", true);
+        self.ensure_initialized(&class).await?;
 
-        if let Some(x) = clinit {
+        Ok(())
+    }
+
+    #[async_recursion::async_recursion]
+    async fn ensure_initialized(&self, class: &Class) -> Result<()> {
+        if class.definition.name().starts_with('[') {
+            return Ok(());
+        }
+
+        match class.init_state() {
+            InitState::Initialized | InitState::InProgress => return Ok(()),
+            InitState::Erroneous => {
+                return Err(self
+                    .exception(
+                        "java/lang/NoClassDefFoundError",
+                        &format!("Could not initialize class {}", class.definition.name()),
+                    )
+                    .await);
+            }
+            InitState::NotInitialized => {}
+        }
+
+        class.set_init_state(InitState::InProgress);
+
+        if let Some(super_name) = class.definition.super_class_name() {
+            // resolve 실패는 초기화 실패가 아님 — 재시도 가능 상태로 되돌린다
+            let super_class = match self.resolve_class(&super_name).await {
+                Ok(x) => x,
+                Err(err) => {
+                    class.set_init_state(InitState::NotInitialized);
+                    return Err(err);
+                }
+            };
+
+            if let Err(err) = self.ensure_initialized(&super_class).await {
+                class.set_init_state(InitState::Erroneous);
+                return Err(err);
+            }
+        }
+
+        if let Some(clinit) = class.definition.method("<clinit>", "()V", true) {
             tracing::debug!("Calling <clinit> for {}", class.definition.name());
 
-            x.run(self, Box::new([])).await?;
+            if let Err(err) = self.execute_method(class, None, &clinit, Box::new([])).await {
+                class.set_init_state(InitState::Erroneous);
+                return Err(err);
+            }
         }
+
+        class.set_init_state(InitState::Initialized);
 
         Ok(())
     }
