@@ -573,8 +573,20 @@ impl Jvm {
             return true;
         }
 
+        for interface in class.interface_names() {
+            if interface == class_name {
+                return true;
+            }
+
+            let interface_class = self.inner.classes.read().get(&interface).unwrap().definition.clone();
+            if self.is_inherited_from(&*interface_class, class_name) {
+                return true;
+            }
+        }
+
         if let Some(super_class) = class.super_class_name() {
-            self.is_inherited_from(&*self.inner.classes.read().get(&super_class).unwrap().definition, class_name)
+            let super_class = self.inner.classes.read().get(&super_class).unwrap().definition.clone();
+            self.is_inherited_from(&*super_class, class_name)
         } else {
             false
         }
@@ -636,12 +648,19 @@ impl Jvm {
     }
 
     async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
-        if !class.definition.name().starts_with('[')
-            && let Some(super_class) = class.definition.super_class_name()
-            && !self.has_class(&super_class)
-        {
-            // ensure superclass is loaded
-            self.resolve_class_internal(&super_class, class_loader_wrapper).await?;
+        if !class.definition.name().starts_with('[') {
+            // ensure superclass and superinterfaces are loaded
+            if let Some(super_class) = class.definition.super_class_name()
+                && !self.has_class(&super_class)
+            {
+                self.resolve_class_internal(&super_class, class_loader_wrapper).await?;
+            }
+
+            for interface in class.definition.interface_names() {
+                if !self.has_class(&interface) {
+                    self.resolve_class_internal(&interface, class_loader_wrapper).await?;
+                }
+            }
         }
 
         self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());

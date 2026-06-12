@@ -12,7 +12,7 @@ impl JavaLangString {
         let length = jvm.array_length(&value).await?;
         let string: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
 
-        Ok(String::from_utf16(&string).unwrap())
+        Ok(String::from_utf16_lossy(&string))
     }
 
     pub async fn from_rust_string(jvm: &Jvm, string: &str) -> Result<Box<dyn ClassInstance>> {

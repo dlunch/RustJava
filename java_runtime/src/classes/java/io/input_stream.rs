@@ -50,10 +50,25 @@ impl InputStream {
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.InputStream::skip({:?}, {:?})", &this, n);
 
-        let scratch = jvm.instantiate_array("B", n as _).await?;
-        let _: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, n as i32)).await?;
+        if n <= 0 {
+            return Ok(0);
+        }
 
-        Ok(n)
+        let scratch_size = n.min(4096);
+        let scratch = jvm.instantiate_array("B", scratch_size as _).await?;
+
+        let mut remaining = n;
+        while remaining > 0 {
+            let len_to_read = remaining.min(scratch_size) as i32;
+            let read: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, len_to_read)).await?;
+            if read <= 0 {
+                break;
+            }
+
+            remaining -= read as i64;
+        }
+
+        Ok(n - remaining)
     }
 
     async fn mark(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {

@@ -908,20 +908,15 @@ impl Interpreter {
                     return Err(jvm.exception("java/lang/NullPointerException", "null").await);
                 }
 
-                let value = match x.descriptor.as_str() {
-                    "Z" => JavaValue::Boolean(i32::from(value) & 1 != 0),
-                    "B" => JavaValue::Byte(i32::from(value) as i8),
-                    "C" => JavaValue::Char(i32::from(value) as u16),
-                    "S" => JavaValue::Short(i32::from(value) as i16),
-                    _ => value,
-                };
+                let value = Self::to_field_type(&x.descriptor, value);
 
                 jvm.put_field(instance.as_mut().unwrap(), &x.name, &x.descriptor, value).await?;
             }
             Opcode::Putstatic(x) => {
                 let x = x.as_field_ref();
-                jvm.put_static_field(&x.class, &x.name, &x.descriptor, stack_frame.operand_stack.pop().unwrap())
-                    .await?
+                let value = Self::to_field_type(&x.descriptor, stack_frame.operand_stack.pop().unwrap());
+
+                jvm.put_static_field(&x.class, &x.name, &x.descriptor, value).await?
             }
             Opcode::Ret(x) => {
                 let value = stack_frame.local_variables[*x as usize].clone();
@@ -1010,6 +1005,17 @@ impl Interpreter {
         match value {
             JavaValue::Void => {}
             _ => stack_frame.operand_stack.push(Self::to_stack_frame_type(value)),
+        }
+    }
+
+    // operand stack has only integer for small number types, so convert it to the field type
+    fn to_field_type(descriptor: &str, value: JavaValue) -> JavaValue {
+        match descriptor {
+            "Z" => JavaValue::Boolean(i32::from(value) & 1 != 0),
+            "B" => JavaValue::Byte(i32::from(value) as i8),
+            "C" => JavaValue::Char(i32::from(value) as u16),
+            "S" => JavaValue::Short(i32::from(value) as i16),
+            _ => value,
         }
     }
 

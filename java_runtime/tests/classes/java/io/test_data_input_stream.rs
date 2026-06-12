@@ -109,3 +109,23 @@ async fn test_data_input_stream_high_bit() -> Result<()> {
 
     Ok(())
 }
+
+// covers InputStream.skip, which DataInputStream inherits
+#[tokio::test]
+async fn test_skip_past_eof() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut buffer = jvm.instantiate_array("B", 5).await?;
+    jvm.array_raw_buffer_mut(&mut buffer).await?.write(0, b"hello")?;
+
+    let bais = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (buffer,)).await?;
+    let dis = jvm.new_class("java/io/DataInputStream", "(Ljava/io/InputStream;)V", (bais,)).await?;
+
+    let skipped: i64 = jvm.invoke_virtual(&dis, "skip", "(J)J", (10i64,)).await?;
+    assert_eq!(skipped, 5);
+
+    let read: i32 = jvm.invoke_virtual(&dis, "read", "()I", ()).await?;
+    assert_eq!(read, -1);
+
+    Ok(())
+}

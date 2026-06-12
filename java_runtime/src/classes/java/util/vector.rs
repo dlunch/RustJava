@@ -338,7 +338,7 @@ impl Vector {
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
 
         if element_count == 0 {
-            return Ok(None.into());
+            return Err(jvm.exception("java/util/NoSuchElementException", "Vector is empty").await);
         }
 
         let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;

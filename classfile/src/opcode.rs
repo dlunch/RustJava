@@ -317,12 +317,12 @@ impl Opcode {
                 Opcode::Instanceof(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })
             .parse(data),
-            0xba => map(be_u16, |x| {
+            0xba => map((be_u16, be_u16), |(x, _)| {
                 Opcode::Invokedynamic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })
             .parse(data),
-            0xb9 => map(be_u16, |x| {
-                Opcode::Invokeinterface(ConstantPoolReference::from_constant_pool(constant_pool, x as _), 0, 0)
+            0xb9 => map((be_u16, u8, u8), |(x, count, zero)| {
+                Opcode::Invokeinterface(ConstantPoolReference::from_constant_pool(constant_pool, x as _), count, zero)
             })
             .parse(data),
             0xb7 => map(be_u16, |x| {
@@ -430,5 +430,61 @@ impl Opcode {
             0xc4 => success(Opcode::Wide).parse(data),
             _ => panic!("Unknown opcode: {:02x}", opcode),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use alloc::{collections::BTreeMap, string::ToString, sync::Arc};
+
+    use super::Opcode;
+    use crate::constant_pool::ConstantPoolItem;
+
+    fn constant_pool() -> BTreeMap<u16, ConstantPoolItem> {
+        [
+            (1, ConstantPoolItem::Utf8(Arc::new("Foo".to_string()))),
+            (2, ConstantPoolItem::Class { name_index: 1 }),
+            (3, ConstantPoolItem::Utf8(Arc::new("bar".to_string()))),
+            (4, ConstantPoolItem::Utf8(Arc::new("()V".to_string()))),
+            (
+                5,
+                ConstantPoolItem::NameAndType {
+                    name_index: 3,
+                    descriptor_index: 4,
+                },
+            ),
+            (
+                6,
+                ConstantPoolItem::InterfaceMethodref {
+                    class_index: 2,
+                    name_and_type_index: 5,
+                },
+            ),
+            (
+                7,
+                ConstantPoolItem::Methodref {
+                    class_index: 2,
+                    name_and_type_index: 5,
+                },
+            ),
+        ]
+        .into_iter()
+        .collect()
+    }
+
+    #[test]
+    fn test_invokeinterface_consumes_count_and_zero() {
+        let (remaining, opcode) = Opcode::parse(&[0xb9, 0x00, 0x06, 0x01, 0x00], 0, &constant_pool()).unwrap();
+
+        assert!(remaining.is_empty());
+        assert!(matches!(opcode, Opcode::Invokeinterface(_, 1, 0)));
+    }
+
+    #[test]
+    fn test_invokedynamic_consumes_reserved_bytes() {
+        let (remaining, opcode) = Opcode::parse(&[0xba, 0x00, 0x07, 0x00, 0x00], 0, &constant_pool()).unwrap();
+
+        assert!(remaining.is_empty());
+        assert!(matches!(opcode, Opcode::Invokedynamic(_)));
     }
 }

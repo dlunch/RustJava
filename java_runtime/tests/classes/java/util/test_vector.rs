@@ -1,5 +1,5 @@
 use java_runtime::classes::java::lang::Object;
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaError, JavaValue, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -179,6 +179,42 @@ async fn test_vector_trim_to_size() -> Result<()> {
 
     let element_at: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &element_at).await?, "testValue1");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_first_element_empty() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
+
+    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&vector, "firstElement", "()Ljava/lang/Object;", ()).await;
+
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("Expected JavaException, got {:?}", result);
+    };
+    assert!(jvm.is_instance(&*exception, "java/util/NoSuchElementException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_index_of_null() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
+
+    let element = JavaLangString::from_rust_string(&jvm, "testValue").await?;
+    let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (element,)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (JavaValue::Object(None),))
+        .await?;
+
+    let index: i32 = jvm
+        .invoke_virtual(&vector, "indexOf", "(Ljava/lang/Object;)I", (JavaValue::Object(None),))
+        .await?;
+    assert_eq!(index, 1);
 
     Ok(())
 }

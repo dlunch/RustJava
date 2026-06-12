@@ -49,6 +49,9 @@ jvm_rust = { workspace = true }
 java_class_proto = { workspace = true }
 java_runtime = { workspace = true }
 
+[dev-dependencies]
+test_utils = { workspace = true }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 

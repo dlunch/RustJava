@@ -1,6 +1,7 @@
 use core::cmp::Ordering;
 
 use alloc::{
+    format,
     string::{String as RustString, ToString},
     vec,
     vec::Vec,
@@ -334,7 +335,20 @@ impl String {
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let substr = string.chars().skip(begin_index as usize).collect::<RustString>(); // TODO buffer sharing
+        // java string indices are in utf-16 code units
+        let utf16 = string.encode_utf16().collect::<Vec<_>>();
+
+        let length = utf16.len() as i32;
+        if begin_index < 0 || begin_index > length {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("begin {begin_index}, length {length}"),
+                )
+                .await);
+        }
+
+        let substr = RustString::from_utf16_lossy(&utf16[begin_index as usize..]); // TODO buffer sharing
 
         Ok(JavaLangString::from_rust_string(jvm, &substr).await?.into())
     }
@@ -350,11 +364,20 @@ impl String {
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
-        let substr = string
-            .chars()
-            .skip(begin_index as usize)
-            .take(end_index as usize - begin_index as usize)
-            .collect::<RustString>(); // TODO buffer sharing
+        // java string indices are in utf-16 code units
+        let utf16 = string.encode_utf16().collect::<Vec<_>>();
+
+        let length = utf16.len() as i32;
+        if begin_index < 0 || end_index > length || begin_index > end_index {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("begin {begin_index}, end {end_index}, length {length}"),
+                )
+                .await);
+        }
+
+        let substr = RustString::from_utf16_lossy(&utf16[begin_index as usize..end_index as usize]); // TODO buffer sharing
 
         Ok(JavaLangString::from_rust_string(jvm, &substr).await?.into())
     }
@@ -778,7 +801,8 @@ impl String {
         match charset.to_ascii_uppercase().replace('_', "-").as_str() {
             "UTF-8" | "UTF8" => string.as_bytes().to_vec(),
             "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
-            "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => string.chars().map(|c| c as u8).collect(),
+            "ISO-8859-1" | "LATIN1" => string.chars().map(|c| if (c as u32) <= 0xff { c as u8 } else { b'?' }).collect(),
+            "US-ASCII" | "ASCII" => string.chars().map(|c| if c.is_ascii() { c as u8 } else { b'?' }).collect(),
             _ => unimplemented!("unsupported charset: {}", charset),
         }
     }
