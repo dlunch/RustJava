@@ -680,8 +680,6 @@ impl Jvm {
 
         self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());
 
-        self.ensure_initialized(&class).await?;
-
         Ok(())
     }
 
