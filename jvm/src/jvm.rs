@@ -523,7 +523,8 @@ impl Jvm {
 
         let class = self.load_class(class_name, class_loader_wrapper).await?;
 
-        // wrapper가 만든 별도 Class를 그대로 쓰면 init 상태가 공유되지 않으므로 레지스트리에 등록된 canonical 본을 반환
+        // loader wrappers may build a fresh Class around an already-registered definition,
+        // so return the registry copy to keep init state shared
         if let Some(registered) = self.get_class(class_name) {
             return Ok(registered);
         }
@@ -705,7 +706,7 @@ impl Jvm {
         class.set_init_state(InitState::InProgress);
 
         if let Some(super_name) = class.definition.super_class_name() {
-            // resolve 실패는 초기화 실패가 아님 — 재시도 가능 상태로 되돌린다
+            // resolution failure is not an initialization failure, so initialization may be retried
             let super_class = match self.resolve_class(&super_name).await {
                 Ok(x) => x,
                 Err(err) => {
