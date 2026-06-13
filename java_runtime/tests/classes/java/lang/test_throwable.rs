@@ -55,3 +55,41 @@ async fn test_stacktrace() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_print_stack_trace_with_cause() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let cause_message = JavaLangString::from_rust_string(&jvm, "root").await?;
+    let cause = jvm
+        .new_class("java/lang/RuntimeException", "(Ljava/lang/String;)V", (cause_message,))
+        .await?;
+
+    let message = JavaLangString::from_rust_string(&jvm, "wrapper").await?;
+    let throwable = jvm
+        .new_class(
+            "java/lang/RuntimeException",
+            "(Ljava/lang/String;Ljava/lang/Throwable;)V",
+            (message, cause),
+        )
+        .await?;
+
+    let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await?;
+    let print_writer = jvm
+        .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
+        .await?;
+
+    let _: () = jvm
+        .invoke_virtual(&throwable, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+        .await?;
+
+    let result: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = JavaLangString::to_rust_string(&jvm, &result).await?;
+
+    assert_eq!(
+        result,
+        "java.lang.RuntimeException: wrapper\nCaused by: java.lang.RuntimeException: root\n"
+    );
+
+    Ok(())
+}

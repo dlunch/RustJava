@@ -737,11 +737,12 @@ impl Jvm {
                     return Err(err);
                 }
 
-                // Throwable has no cause field, so carry the original exception as the message
-                let message: Box<dyn ClassInstance> = self.invoke_virtual(exception, "toString", "()Ljava/lang/String;", ()).await?;
-                let message = JavaLangString::to_rust_string(self, &message).await?;
+                let cause = clone_box(&**exception);
+                let wrapped = self
+                    .new_class("java/lang/ExceptionInInitializerError", "(Ljava/lang/Throwable;)V", (cause,))
+                    .await?;
 
-                return Err(self.exception("java/lang/ExceptionInInitializerError", &message).await);
+                return Err(JavaError::JavaException(wrapped));
             }
         }
 

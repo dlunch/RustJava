@@ -26,6 +26,9 @@ public class ClinitFailure {
             Bad.touch();
         } catch (Throwable t) {
             System.out.println(t.getClass().getName());
+            System.out.println(t.getCause().getClass().getName());
+            System.out.println(t.getCause());
+            System.out.println(t);
         }
         try {
             Bad.touch();
