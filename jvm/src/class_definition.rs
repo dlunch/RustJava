@@ -14,6 +14,7 @@ pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
     fn interface_names(&self) -> Vec<String>;
     fn access_flags(&self) -> ClassAccessFlags;
     async fn instantiate(&self, jvm: &Jvm) -> Result<Box<dyn ClassInstance>>;
+    async fn prepare(&self, jvm: &Jvm) -> Result<()>;
     fn method(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Method>>;
     fn field(&self, name: &str, descriptor: &str, is_static: bool) -> Option<Box<dyn Field>>;
     fn fields(&self) -> Vec<Box<dyn Field>>;

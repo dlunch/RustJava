@@ -1,0 +1,7 @@
+java.lang.RuntimeException: outer
+java.lang.IllegalArgumentException: inner
+true
+java.lang.RuntimeException: java.lang.IllegalArgumentException: inner
+true
+null
+true

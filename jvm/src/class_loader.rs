@@ -7,10 +7,19 @@ use crate::{
     runtime::{JavaLangClass, JavaLangClassLoader},
 };
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum InitState {
+    NotInitialized,
+    InProgress,
+    Initialized,
+    Erroneous,
+}
+
 #[derive(Clone)]
 pub struct Class {
     pub definition: Box<dyn ClassDefinition>,
     java_class: Arc<RwLock<Option<Box<dyn ClassInstance>>>>,
+    init_state: Arc<RwLock<InitState>>,
 }
 
 impl Class {
@@ -18,7 +27,16 @@ impl Class {
         Self {
             definition,
             java_class: Arc::new(RwLock::new(java_class)),
+            init_state: Arc::new(RwLock::new(InitState::NotInitialized)),
         }
+    }
+
+    pub(crate) fn init_state(&self) -> InitState {
+        *self.init_state.read()
+    }
+
+    pub(crate) fn set_init_state(&self, state: InitState) {
+        *self.init_state.write() = state;
     }
 
     pub fn set_java_class(&self, java_class: Box<dyn ClassInstance>) {
@@ -81,10 +99,7 @@ impl ClassLoaderWrapper for JavaClassLoaderWrapper {
 
         if let Some(class) = class {
             let definition = JavaLangClass::to_rust_class(jvm, &class).await?;
-            Ok(Some(Class {
-                definition,
-                java_class: Arc::new(RwLock::new(Some(class))),
-            }))
+            Ok(Some(Class::new(definition, Some(class))))
         } else {
             Ok(None)
         }

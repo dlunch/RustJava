@@ -1,0 +1,6 @@
+java.lang.ExceptionInInitializerError
+java.lang.RuntimeException
+java.lang.RuntimeException: boom
+java.lang.ExceptionInInitializerError
+java.lang.NoClassDefFoundError
+java.lang.LinkageError

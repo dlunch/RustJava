@@ -1,0 +1,13 @@
+start
+getstatic-init
+5
+putstatic-init
+9
+new-init
+base-init
+derived-init
+impl-created
+iface-init
+1
+1
+41

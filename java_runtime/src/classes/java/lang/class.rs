@@ -63,7 +63,7 @@ impl Class {
         tracing::debug!("java.lang.Class::getName({:?})", &this);
 
         let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
-        let result = JavaLangString::from_rust_string(jvm, &rust_class.name()).await?;
+        let result = JavaLangString::from_rust_string(jvm, &rust_class.name().replace('/', ".")).await?;
 
         Ok(result.into())
     }
