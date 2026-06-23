@@ -185,8 +185,15 @@ impl DataInputStream {
         let mut buf = vec![0; length as _];
         jvm.array_raw_buffer(&java_array).await?.read(0, &mut buf)?;
 
-        // TODO handle modified utf-8
-        let string = RustString::from_utf8(buf).unwrap();
+        // TODO handle modified utf-8 (EUC-KR fallback)
+        let string = match RustString::from_utf8(buf) {
+            Ok(x) => x,
+            Err(e) => {
+                let bytes = e.into_bytes();
+                let (decoded, _, _) = encoding_rs::EUC_KR.decode(&bytes);
+                decoded.into_owned()
+            }
+        };
 
         Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
     }
