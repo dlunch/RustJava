@@ -1,0 +1,4 @@
+start
+base-init
+7
+end
