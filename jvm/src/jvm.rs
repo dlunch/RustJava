@@ -13,7 +13,7 @@ use event_listener::{Event, EventListener};
 use hashbrown::{DefaultHashBuilder, HashSet};
 use parking_lot::RwLock;
 
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
 use crate::{
     Result,
@@ -178,11 +178,16 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        let field = class.definition.field(name, descriptor, true);
-        if let Some(field) = field {
-            self.ensure_initialized(&class).await?;
+        if let Some((declaring_class, field)) = self.resolve_field(&class, name, descriptor) {
+            if !field.access_flags().contains(FieldAccessFlags::STATIC) {
+                return Err(self
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                    .await);
+            }
 
-            Ok(class.definition.get_static_field(&*field)?.into())
+            self.ensure_initialized(&declaring_class).await?;
+
+            Ok(declaring_class.definition.get_static_field(&*field)?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
@@ -196,14 +201,18 @@ impl Jvm {
     {
         tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
 
-        let mut class = self.resolve_class(class_name).await?;
+        let class = self.resolve_class(class_name).await?;
 
-        let field = class.definition.field(name, descriptor, true);
+        if let Some((mut declaring_class, field)) = self.resolve_field(&class, name, descriptor) {
+            if !field.access_flags().contains(FieldAccessFlags::STATIC) {
+                return Err(self
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                    .await);
+            }
 
-        if let Some(field) = field {
-            self.ensure_initialized(&class).await?;
+            self.ensure_initialized(&declaring_class).await?;
 
-            class.definition.put_static_field(&*field, value.into())
+            declaring_class.definition.put_static_field(&*field, value.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
@@ -262,18 +271,16 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        let method = class.definition.method(name, descriptor, true);
-
-        if let Some(method) = method {
+        if let Some((declaring_class, method)) = self.resolve_method(&class, name, descriptor) {
             if !method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            self.ensure_initialized(&class).await?;
+            self.ensure_initialized(&declaring_class).await?;
 
-            Ok(self.execute_method(&class, None, &method, args).await?.into())
+            Ok(self.execute_method(&declaring_class, None, &method, args).await?.into())
         } else {
             tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
 
@@ -813,6 +820,44 @@ impl Jvm {
 
         let mut monitors = self.inner.monitors.write();
         monitors.entry(key).or_insert_with(|| Arc::new(Event::new())).clone()
+    }
+
+    // JVMS 5.4.3.2 field resolution: search the class, then its superinterfaces, then its superclass.
+    // Matching is by name and descriptor only; the caller checks static-ness afterwards.
+    fn resolve_field(&self, class: &Class, name: &str, descriptor: &str) -> Option<(Class, Box<dyn Field>)> {
+        if let Some(field) = class
+            .definition
+            .field(name, descriptor, true)
+            .or_else(|| class.definition.field(name, descriptor, false))
+        {
+            return Some((class.clone(), field));
+        }
+
+        for interface in class.definition.interface_names() {
+            if let Some(interface_class) = self.get_class(&interface)
+                && let Some(found) = self.resolve_field(&interface_class, name, descriptor)
+            {
+                return Some(found);
+            }
+        }
+
+        let super_class = self.get_class(&class.definition.super_class_name()?)?;
+        self.resolve_field(&super_class, name, descriptor)
+    }
+
+    // JVMS 5.4.3.3 method resolution: search the class, then its superclass (interfaces have no static methods
+    // in a 1.2 target). Matching is by name and descriptor only; the caller checks static-ness afterwards.
+    fn resolve_method(&self, class: &Class, name: &str, descriptor: &str) -> Option<(Class, Box<dyn Method>)> {
+        if let Some(method) = class
+            .definition
+            .method(name, descriptor, true)
+            .or_else(|| class.definition.method(name, descriptor, false))
+        {
+            return Some((class.clone(), method));
+        }
+
+        let super_class = self.get_class(&class.definition.super_class_name()?)?;
+        self.resolve_method(&super_class, name, descriptor)
     }
 
     pub(crate) fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
