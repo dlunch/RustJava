@@ -36,6 +36,7 @@ struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
+    string_pool: RwLock<BTreeMap<String, Box<dyn ClassInstance>>>,
     monitors: RwLock<BTreeMap<u64, Arc<Event>>>,
     monitor_hasher: DefaultHashBuilder,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
@@ -59,6 +60,7 @@ impl Jvm {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
                 all_objects: RwLock::new(HashSet::new()),
+                string_pool: RwLock::new(BTreeMap::new()),
                 monitors: RwLock::new(BTreeMap::new()),
                 monitor_hasher: DefaultHashBuilder::default(),
                 get_current_thread_id: Box::new(get_current_thread_id),
@@ -475,6 +477,22 @@ impl Jvm {
         Ok(())
     }
 
+    // JVMS 5.1 string interning: equal string literals (and String.intern results) share one instance
+    pub async fn intern_string(&self, value: &str) -> Result<Box<dyn ClassInstance>> {
+        if let Some(interned) = self.inner.string_pool.read().get(value) {
+            return Ok(clone_box(&**interned));
+        }
+
+        let instance = JavaLangString::from_rust_string(self, value).await?;
+        self.inner.string_pool.write().insert(value.to_owned(), clone_box(&*instance));
+
+        Ok(instance)
+    }
+
+    pub(crate) fn interned_strings(&self) -> Vec<Box<dyn ClassInstance>> {
+        self.inner.string_pool.read().values().map(|x| clone_box(&**x)).collect()
+    }
+
     pub fn has_class(&self, class_name: &str) -> bool {
         self.inner.classes.read().contains_key(class_name)
     }
@@ -652,8 +670,9 @@ impl Jvm {
             let threads = self.inner.threads.read();
             let all_objects = self.inner.all_objects.read();
             let classes = self.inner.classes.read();
+            let interned_strings = self.interned_strings();
 
-            determine_garbage(self, &threads, &all_objects, &classes)
+            determine_garbage(self, &threads, &all_objects, &classes, &interned_strings)
         };
 
         let garbage_count = garbage.len();
