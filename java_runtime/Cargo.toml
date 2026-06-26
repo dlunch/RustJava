@@ -14,7 +14,7 @@ tracing = { workspace = true }
 
 chrono = { version = "^0.4", default-features = false }
 encoding_rs = { version = "^0.8", features = ["alloc"], default-features = false }
-tracing-attributes = { version = "<0.1.29" }                                       # Pin this to avoid compile error with no-std https://github.com/tokio-rs/tracing/issues/3388
+tracing-attributes = { version = "<0.1.32" }                                       # Pin this to avoid compile error with no-std https://github.com/tokio-rs/tracing/issues/3388
 url = { version = "^2.5", default-features = false }
 zip = { version = "^8.6", features = ["deflate"], default-features = false }
 
