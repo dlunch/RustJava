@@ -1,0 +1,7 @@
+arraylist-ok
+hashset-ok
+hashmap-ok
+hashmap-entry-ok
+hashtable-ok
+hashtable-entry-ok
+attributes-ok
