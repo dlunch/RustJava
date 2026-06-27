@@ -745,9 +745,13 @@ impl String {
     async fn intern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::intern({:?})", &this);
 
-        let value = JavaLangString::to_rust_string(jvm, &this).await?;
+        let chars = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&chars).await?;
+        let utf16: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
 
-        Ok(jvm.intern_string(&value).await?.into())
+        let receiver = this.instance.unwrap();
+
+        Ok(jvm.intern_string_instance(receiver, &utf16).into())
     }
 
     async fn value_of_boolean(jvm: &Jvm, _: &mut RuntimeContext, value: bool) -> Result<ClassInstanceRef<Self>> {

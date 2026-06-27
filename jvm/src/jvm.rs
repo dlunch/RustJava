@@ -36,7 +36,7 @@ struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
-    string_pool: RwLock<BTreeMap<String, Box<dyn ClassInstance>>>,
+    string_pool: RwLock<BTreeMap<Vec<u16>, Box<dyn ClassInstance>>>,
     monitors: RwLock<BTreeMap<u64, Arc<Event>>>,
     monitor_hasher: DefaultHashBuilder,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
@@ -479,14 +479,31 @@ impl Jvm {
 
     // JVMS 5.1 string interning: equal string literals (and String.intern results) share one instance
     pub async fn intern_string(&self, value: &str) -> Result<Box<dyn ClassInstance>> {
-        if let Some(interned) = self.inner.string_pool.read().get(value) {
+        let key = value.encode_utf16().collect::<Vec<_>>();
+        if let Some(interned) = self.inner.string_pool.read().get(&key) {
             return Ok(clone_box(&**interned));
         }
 
         let instance = JavaLangString::from_rust_string(self, value).await?;
-        self.inner.string_pool.write().insert(value.to_owned(), clone_box(&*instance));
 
-        Ok(instance)
+        Ok(self.intern_or_get(key, instance))
+    }
+
+    // String.intern(): the receiver itself is pooled and returned when it is the first with its value (JVMS String spec)
+    pub fn intern_string_instance(&self, instance: Box<dyn ClassInstance>, value: &[u16]) -> Box<dyn ClassInstance> {
+        if let Some(interned) = self.inner.string_pool.read().get(value) {
+            return clone_box(&**interned);
+        }
+
+        self.intern_or_get(value.to_owned(), instance)
+    }
+
+    // insert under the write lock, re-checking so concurrent interners converge on one canonical instance
+    fn intern_or_get(&self, key: Vec<u16>, instance: Box<dyn ClassInstance>) -> Box<dyn ClassInstance> {
+        let mut pool = self.inner.string_pool.write();
+        let interned = pool.entry(key).or_insert(instance);
+
+        clone_box(&**interned)
     }
 
     pub(crate) fn interned_strings(&self) -> Vec<Box<dyn ClassInstance>> {

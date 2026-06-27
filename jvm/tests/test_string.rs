@@ -20,14 +20,15 @@ async fn test_to_rust_string_unpaired_surrogate() -> Result<()> {
 async fn test_intern_identity_survives_gc() -> Result<()> {
     let jvm = test_jvm().await?;
 
+    // collect first for a clean baseline, then intern and assert the very next GC keeps it
+    jvm.collect_garbage()?;
+
     let a = jvm.intern_string("interned").await?;
     let b = jvm.intern_string("interned").await?;
     assert!(a == b);
 
-    jvm.collect_garbage()?;
-
     // the interned string is held by no frame, but the string pool roots it (and its [C),
-    // so a GC right after interning must collect nothing
+    // so the first GC after interning must collect nothing
     let garbage_count = jvm.collect_garbage()?;
     assert_eq!(garbage_count, 0);
 
