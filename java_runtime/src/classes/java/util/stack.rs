@@ -28,7 +28,7 @@ impl Stack {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::warn!("java.util.Stack::<init>({:?})", &this);
+        tracing::warn!("java.util.Stack::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "()V", ()).await?;
 
@@ -36,7 +36,7 @@ impl Stack {
     }
 
     async fn empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::warn!("java.util.Stack::size({:?})", &this);
+        tracing::warn!("java.util.Stack::size({this:?})");
 
         let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
         let is_empty = size == 0;
@@ -45,7 +45,7 @@ impl Stack {
     }
 
     async fn peek(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::warn!("java.util.Stack::peek({:?})", &this);
+        tracing::warn!("java.util.Stack::peek({this:?})");
 
         let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
         if size == 0 {
@@ -57,7 +57,7 @@ impl Stack {
     }
 
     async fn pop(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::warn!("java.util.Stack::pop({:?})", &this);
+        tracing::warn!("java.util.Stack::pop({this:?})");
 
         let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
         let element = jvm.invoke_virtual(&this, "peek", "()Ljava/lang/Object;", ()).await?;
@@ -72,7 +72,7 @@ impl Stack {
         this: ClassInstanceRef<Self>,
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        tracing::warn!("java.util.Stack::push({:?}, {:?})", &this, &element);
+        tracing::warn!("java.util.Stack::push({this:?}, {element:?})");
 
         let _: () = jvm
             .invoke_virtual(&this, "addElement", "(Ljava/lang/Object;)V", (element.clone(),))
@@ -82,7 +82,7 @@ impl Stack {
     }
 
     async fn search(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        tracing::warn!("java.util.Stack::search({:?}, {:?})", &this, &element);
+        tracing::warn!("java.util.Stack::search({this:?}, {element:?})");
 
         let i: i32 = jvm.invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/Object;)I", (element,)).await?;
 

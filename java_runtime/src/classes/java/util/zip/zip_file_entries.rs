@@ -41,7 +41,7 @@ impl ZipFileEntries {
         zip_file: ClassInstanceRef<ZipFile>,
         names: ClassInstanceRef<Array<String>>,
     ) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipFile$Entries::<init>({:?}, {:?})", &this, &zip_file,);
+        tracing::debug!("java.util.zip.ZipFile$Entries::<init>({this:?}, {zip_file:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -53,7 +53,7 @@ impl ZipFileEntries {
     }
 
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.util.zip.ZipFile$Entries::hasMoreElements({:?})", &this);
+        tracing::debug!("java.util.zip.ZipFile$Entries::hasMoreElements({this:?})");
 
         let i: i32 = jvm.get_field(&this, "i", "I").await?;
         let names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "names", "[Ljava/lang/String;").await?;
@@ -63,7 +63,7 @@ impl ZipFileEntries {
     }
 
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.zip.ZipFile$Entries::nextElement({:?})", &this);
+        tracing::debug!("java.util.zip.ZipFile$Entries::nextElement({this:?})");
 
         let i: i32 = jvm.get_field(&this, "i", "I").await?;
         let names: ClassInstanceRef<Array<String>> = jvm.get_field(&this, "names", "[Ljava/lang/String;").await?;

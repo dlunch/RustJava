@@ -58,7 +58,7 @@ impl ZipFile {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipFile::<init>({:?}, {:?})", &this, &file,);
+        tracing::debug!("java.util.zip.ZipFile::<init>({this:?}, {file:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -79,7 +79,7 @@ impl ZipFile {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<ZipEntry>> {
-        tracing::debug!("java.util.zip.ZipFile::getEntry({:?}, {:?})", &this, &name);
+        tracing::debug!("java.util.zip.ZipFile::getEntry({this:?}, {name:?})");
 
         let entry = jvm.new_class("java/util/zip/ZipEntry", "(Ljava/lang/String;)V", (name.clone(),)).await?;
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
@@ -97,7 +97,7 @@ impl ZipFile {
     }
 
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
-        tracing::debug!("java.util.zip.ZipFile::entries({:?})", &this);
+        tracing::debug!("java.util.zip.ZipFile::entries({this:?})");
 
         let zip = Self::get_zip_archive(jvm, &this).await?;
         let names = zip.file_names().map(|x| x.to_string()).collect::<Vec<_>>();
@@ -125,7 +125,7 @@ impl ZipFile {
         this: ClassInstanceRef<Self>,
         entry: ClassInstanceRef<ZipEntry>,
     ) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.util.zip.ZipFile::getInputStream({:?}, {:?})", &this, &entry);
+        tracing::debug!("java.util.zip.ZipFile::getInputStream({this:?}, {entry:?})");
 
         let entry_name = jvm.invoke_virtual(&entry, "getName", "()Ljava/lang/String;", ()).await?;
         let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;

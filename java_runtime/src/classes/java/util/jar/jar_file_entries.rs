@@ -31,7 +31,7 @@ impl JarFileEntries {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, entries: ClassInstanceRef<ZipFileEntries>) -> Result<()> {
-        tracing::debug!("java.util.jar.JarFile$Entries::<init>({:?}, {:?})", &this, &entries,);
+        tracing::debug!("java.util.jar.JarFile$Entries::<init>({this:?}, {entries:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -41,7 +41,7 @@ impl JarFileEntries {
     }
 
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.util.jar.JarFile$Entries::hasMoreElements({:?})", &this);
+        tracing::debug!("java.util.jar.JarFile$Entries::hasMoreElements({this:?})");
 
         let entries = jvm.get_field(&this, "entries", "Ljava/util/zip/ZipFile$Entries;").await?;
 
@@ -49,7 +49,7 @@ impl JarFileEntries {
     }
 
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.jar.JarFile$Entries::nextElement({:?})", &this);
+        tracing::debug!("java.util.jar.JarFile$Entries::nextElement({this:?})");
 
         let entries = jvm.get_field(&this, "entries", "Ljava/util/zip/ZipFile$Entries;").await?;
 

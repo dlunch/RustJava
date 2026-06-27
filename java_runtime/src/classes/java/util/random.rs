@@ -26,7 +26,7 @@ impl Random {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Random::<init>({:?})", &this);
+        tracing::debug!("java.util.Random::<init>({this:?})");
 
         let default_seed = 0i64; // TODO
         let _: () = jvm.invoke_special(&this, "java/util/Random", "<init>", "(J)V", (default_seed,)).await?;
@@ -35,7 +35,7 @@ impl Random {
     }
 
     async fn init_with_seed(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
-        tracing::debug!("java.util.Random::<init>({:?}, {:?})", &this, seed);
+        tracing::debug!("java.util.Random::<init>({this:?}, {seed:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -45,7 +45,7 @@ impl Random {
     }
 
     async fn next_int(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.util.Random::nextInt({:?})", &this);
+        tracing::debug!("java.util.Random::nextInt({this:?})");
 
         let seed: i64 = jvm.get_field(&this, "seed", "J").await?;
         let next_seed = seed.wrapping_mul(0x5DEECE66D).wrapping_add(0xB) & 0xFFFFFFFFFFFF;
@@ -58,7 +58,7 @@ impl Random {
     }
 
     async fn set_seed(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
-        tracing::debug!("java.util.Random::setSeed({:?}, {:?})", &this, seed);
+        tracing::debug!("java.util.Random::setSeed({this:?}, {seed:?})");
 
         let seed = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1);
 

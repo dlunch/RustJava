@@ -113,7 +113,7 @@ impl Jvm {
 
     #[async_recursion::async_recursion]
     pub async fn instantiate_class(&self, class_name: &str) -> Result<Box<dyn ClassInstance>> {
-        tracing::trace!("Instantiate {}", class_name);
+        tracing::trace!("Instantiate {class_name}");
 
         let class = self.resolve_class(class_name).await?;
 
@@ -153,7 +153,7 @@ impl Jvm {
     }
 
     pub async fn instantiate_array(&self, element_type_name: &str, length: usize) -> Result<Box<dyn ClassInstance>> {
-        tracing::trace!("Instantiate array of {} with length {}", element_type_name, length);
+        tracing::trace!("Instantiate array of {element_type_name} with length {length}");
 
         let class_name = format!("[{element_type_name}");
 
@@ -176,7 +176,7 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Get static field {}.{}:{}", class_name, name, descriptor);
+        tracing::trace!("Get static field {class_name}.{name}:{descriptor}");
 
         let class = self.resolve_class(class_name).await?;
 
@@ -201,7 +201,7 @@ impl Jvm {
     where
         T: Into<JavaValue> + Debug,
     {
-        tracing::trace!("Put static field {}.{}:{} = {:?}", class_name, name, descriptor, value);
+        tracing::trace!("Put static field {class_name}.{name}:{descriptor} = {value:?}");
 
         let class = self.resolve_class(class_name).await?;
 
@@ -226,7 +226,7 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Get field {}.{}:{}", instance.class_definition().name(), name, descriptor);
+        tracing::trace!("Get field {}.{name}:{descriptor}", instance.class_definition().name());
 
         let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
 
@@ -246,7 +246,7 @@ impl Jvm {
     where
         T: Into<JavaValue> + Debug,
     {
-        tracing::trace!("Put field {}.{}:{} = {:?}", instance.class_definition().name(), name, descriptor, value);
+        tracing::trace!("Put field {}.{name}:{descriptor} = {value:?}", instance.class_definition().name());
 
         let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
 
@@ -269,7 +269,7 @@ impl Jvm {
     {
         let args = args.into_arg();
 
-        tracing::trace!("Invoke static {}.{}:{}({:?})", class_name, name, descriptor, args);
+        tracing::trace!("Invoke static {class_name}.{name}:{descriptor}({args:?})");
 
         let class = self.resolve_class(class_name).await?;
 
@@ -284,7 +284,7 @@ impl Jvm {
 
             Ok(self.execute_method(&declaring_class, None, &method, args).await?.into())
         } else {
-            tracing::error!("No such method: {}.{}:{}", class_name, name, descriptor);
+            tracing::error!("No such method: {class_name}.{name}:{descriptor}");
 
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
@@ -298,13 +298,7 @@ impl Jvm {
         U: From<JavaValue>,
     {
         let args = args.into_arg();
-        tracing::trace!(
-            "Invoke virtual {}.{}:{}({:?})",
-            instance.class_definition().name(),
-            name,
-            descriptor,
-            args
-        );
+        tracing::trace!("Invoke virtual {}.{name}:{descriptor}({args:?})", instance.class_definition().name());
 
         let class = instance.class_definition();
         let method = self.find_virtual_method(&*class, name, descriptor, false)?;
@@ -319,7 +313,7 @@ impl Jvm {
                 .await?
                 .into())
         } else {
-            tracing::error!("No such method: {}.{}:{}", class.name(), name, descriptor);
+            tracing::error!("No such method: {}.{name}:{descriptor}", class.name());
 
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
@@ -335,7 +329,7 @@ impl Jvm {
         U: From<JavaValue>,
     {
         let args = args.into_arg();
-        tracing::trace!("Invoke special {}.{}:{}({:?})", class_name, name, descriptor, args);
+        tracing::trace!("Invoke special {class_name}.{name}:{descriptor}({args:?})");
 
         let class = self.resolve_class(class_name).await?;
         let method = class.definition.method(name, descriptor, false);
@@ -368,7 +362,7 @@ impl Jvm {
         T: IntoIterator<Item = U> + Send,
         U: Into<JavaValue>,
     {
-        tracing::trace!("Store array {} at offset {}", array.class_definition().name(), offset);
+        tracing::trace!("Store array {} at offset {offset}", array.class_definition().name());
 
         let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
 
@@ -397,7 +391,7 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Load array {} at offset {}", array.class_definition().name(), offset);
+        tracing::trace!("Load array {} at offset {offset}", array.class_definition().name());
 
         let array_size = self.array_length(array).await?;
         if offset + count > array_size {
@@ -540,7 +534,7 @@ impl Jvm {
 
     #[async_recursion::async_recursion]
     async fn resolve_class_internal(&self, class_name: &str, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<Class> {
-        tracing::trace!("Resolving class {}", class_name);
+        tracing::trace!("Resolving class {class_name}");
         let class = self.inner.classes.read().get(class_name).cloned();
 
         if let Some(x) = class {
@@ -575,17 +569,17 @@ impl Jvm {
     }
 
     async fn load_class(&self, class_name: &str, class_loader_wrapper: &dyn ClassLoaderWrapper) -> Result<Class> {
-        tracing::debug!("Loading class {}", class_name);
+        tracing::debug!("Loading class {class_name}");
 
         let class = class_loader_wrapper.load_class(self, class_name).await?;
 
         if class.is_none() {
-            tracing::error!("No such class: {}", class_name);
+            tracing::error!("No such class: {class_name}");
 
             return Err(self.exception("java/lang/NoClassDefFoundError", class_name).await);
         }
 
-        tracing::debug!("Loaded class {}", class_name);
+        tracing::debug!("Loaded class {class_name}");
 
         Ok(class.unwrap())
     }
@@ -685,7 +679,7 @@ impl Jvm {
     }
 
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
-        tracing::info!("throwing java exception: {} {}", r#type, message);
+        tracing::info!("throwing java exception: {} {message}", r#type);
 
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
         let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
@@ -728,11 +722,11 @@ impl Jvm {
 
         let garbage_count = garbage.len();
 
-        tracing::trace!("Garbage count: {}", garbage_count);
+        tracing::trace!("Garbage count: {garbage_count}");
 
         for object in garbage {
             let name = object.class_definition().name();
-            tracing::trace!("Destroying {:?}({})", object, name);
+            tracing::trace!("Destroying {object:?}({name})");
 
             self.destroy(object).unwrap();
         }
@@ -977,7 +971,7 @@ impl Jvm {
 
         let result = method.run(self, args).await;
 
-        tracing::trace!("Execute result: {:?}", result);
+        tracing::trace!("Execute result: {result:?}");
 
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
 

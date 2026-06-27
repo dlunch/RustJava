@@ -27,7 +27,7 @@ impl URLConnection {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
-        tracing::debug!("java.net.URL::<init>({:?}, {:?})", &this, &url,);
+        tracing::debug!("java.net.URLConnection::<init>({this:?}, {url:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -35,7 +35,7 @@ impl URLConnection {
     }
 
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.net.URL::getInputStream({:?})", &this);
+        tracing::debug!("java.net.URLConnection::getInputStream({this:?})");
 
         Err(jvm.exception("java/io/UnknownServiceException", "unsupported").await)
     }

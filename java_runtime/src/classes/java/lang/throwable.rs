@@ -68,7 +68,7 @@ impl Throwable {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::<init>({:?})", &this);
+        tracing::debug!("java.lang.Throwable::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -78,7 +78,7 @@ impl Throwable {
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::<init>({:?}, {:?})", &this, &message);
+        tracing::debug!("java.lang.Throwable::<init>({this:?}, {message:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -90,7 +90,7 @@ impl Throwable {
     }
 
     async fn init_with_cause(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, cause: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::<init>({:?}, {:?})", &this, &cause);
+        tracing::debug!("java.lang.Throwable::<init>({this:?}, {cause:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -114,7 +114,7 @@ impl Throwable {
         message: ClassInstanceRef<String>,
         cause: ClassInstanceRef<Self>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::<init>({:?}, {:?}, {:?})", &this, &message, &cause);
+        tracing::debug!("java.lang.Throwable::<init>({this:?}, {message:?}, {cause:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -127,7 +127,7 @@ impl Throwable {
     }
 
     async fn get_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.Throwable::getCause({:?})", &this);
+        tracing::debug!("java.lang.Throwable::getCause({this:?})");
 
         jvm.get_field(&this, "cause", "Ljava/lang/Throwable;").await
     }
@@ -138,7 +138,7 @@ impl Throwable {
         mut this: ClassInstanceRef<Self>,
         cause: ClassInstanceRef<Self>,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.Throwable::initCause({:?}, {:?})", &this, &cause);
+        tracing::debug!("java.lang.Throwable::initCause({this:?}, {cause:?})");
 
         jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
 
@@ -146,7 +146,7 @@ impl Throwable {
     }
 
     async fn fill_in_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.Throwable::fillInStackTrace({:?})", &this);
+        tracing::debug!("java.lang.Throwable::fillInStackTrace({this:?})");
 
         let stack_trace = jvm.stack_trace();
         let mut stack_trace_array = jvm.instantiate_array("Ljava/lang/String;", stack_trace.len()).await?;
@@ -160,7 +160,7 @@ impl Throwable {
     }
 
     async fn print_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::printStackTrace({:?})", &this);
+        tracing::debug!("java.lang.Throwable::printStackTrace({this:?})");
 
         let err: ClassInstanceRef<PrintStream> = jvm.get_static_field("java/lang/System", "err", "Ljava/io/PrintStream;").await?;
 
@@ -175,7 +175,7 @@ impl Throwable {
         this: ClassInstanceRef<Self>,
         stream: ClassInstanceRef<PrintStream>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::printStackTrace({:?}, {:?})", &this, &stream);
+        tracing::debug!("java.lang.Throwable::printStackTrace({this:?}, {stream:?})");
 
         Self::do_print_stack_trace(jvm, this, stream.into()).await?;
 
@@ -188,7 +188,7 @@ impl Throwable {
         this: ClassInstanceRef<Self>,
         writer: ClassInstanceRef<PrintWriter>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.Throwable::printStackTrace({:?}, {:?})", &this, &writer);
+        tracing::debug!("java.lang.Throwable::printStackTrace({this:?}, {writer:?})");
 
         Self::do_print_stack_trace(jvm, this, writer.into()).await?;
 
@@ -196,7 +196,7 @@ impl Throwable {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.Throwable::toString({:?})", &this);
+        tracing::debug!("java.lang.Throwable::toString({this:?})");
 
         let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
         let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;

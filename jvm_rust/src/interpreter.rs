@@ -38,7 +38,7 @@ impl Interpreter {
 
         let mut iter = code_attribute.code.range(0..);
         while let Some((offset, opcode)) = iter.next() {
-            tracing::trace!("Opcode {:?}", opcode);
+            tracing::trace!("Opcode {opcode:?}");
 
             let result = Self::execute_opcode(jvm, *offset, opcode, &mut stack_frame, return_type).await;
             match result {

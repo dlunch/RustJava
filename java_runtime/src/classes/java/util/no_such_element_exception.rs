@@ -24,7 +24,7 @@ impl NoSuchElementException {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.NoSuchElementException::<init>({:?})", &this);
+        tracing::debug!("java.util.NoSuchElementException::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "()V", ()).await?;
 
@@ -32,7 +32,7 @@ impl NoSuchElementException {
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.util.NoSuchElementException::<init>({:?}, {:?})", &this, &message);
+        tracing::debug!("java.util.NoSuchElementException::<init>({this:?}, {message:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))

@@ -28,7 +28,7 @@ impl Runtime {
     }
 
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
-        tracing::warn!("stub java.lang.Runtime::<init>({:?})", &this);
+        tracing::warn!("stub java.lang.Runtime::<init>({this:?})");
 
         Ok(())
     }
@@ -42,19 +42,19 @@ impl Runtime {
     }
 
     async fn total_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<i64> {
-        tracing::warn!("stub java.lang.Runtime::totalMemory({:?})", &this);
+        tracing::warn!("stub java.lang.Runtime::totalMemory({this:?})");
 
         Ok(0x100000) // TODO: hardcoded
     }
 
     async fn free_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<i64> {
-        tracing::warn!("stub java.lang.Runtime::freeMemory({:?})", &this);
+        tracing::warn!("stub java.lang.Runtime::freeMemory({this:?})");
 
         Ok(0x100000) // TODO: hardcoded
     }
 
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
-        tracing::debug!("java.lang.Runtime::gc({:?})", &this);
+        tracing::debug!("java.lang.Runtime::gc({this:?})");
 
         jvm.collect_garbage()?;
 

@@ -32,7 +32,7 @@ impl JarURLHandler {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("org.rustjava.net.JarURLHandler::<init>({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLHandler::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
 
@@ -45,7 +45,7 @@ impl JarURLHandler {
         this: ClassInstanceRef<Self>,
         url: ClassInstanceRef<URL>,
     ) -> Result<ClassInstanceRef<URLConnection>> {
-        tracing::debug!("org.rustjava.net.JarURLHandler::openConnection({:?}, {:?})", &this, &url);
+        tracing::debug!("org.rustjava.net.JarURLHandler::openConnection({this:?}, {url:?})");
 
         let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 

@@ -71,7 +71,7 @@ impl DataOutputStream {
     }
 
     async fn write_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: i32) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeShort({:?}, {:?})", &this, s);
+        tracing::debug!("java.io.DataOutputStream::writeShort({this:?}, {s:?})");
 
         let bytes = (s as i16).to_be_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
@@ -84,7 +84,7 @@ impl DataOutputStream {
     }
 
     async fn write_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, i: i32) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeInt({:?}, {:?})", &this, i);
+        tracing::debug!("java.io.DataOutputStream::writeInt({this:?}, {i:?})");
 
         let bytes = i.to_be_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
@@ -97,7 +97,7 @@ impl DataOutputStream {
     }
 
     async fn write_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, l: i64) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeLong({:?}, {:?})", &this, l);
+        tracing::debug!("java.io.DataOutputStream::writeLong({this:?}, {l:?})");
 
         let bytes = l.to_be_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len() as _).await?;
@@ -110,7 +110,7 @@ impl DataOutputStream {
     }
 
     async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<JavaChar>) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeChars({:?}, {:?})", &this, &s);
+        tracing::debug!("java.io.DataOutputStream::writeChars({this:?}, {s:?})");
 
         let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
 
@@ -121,7 +121,7 @@ impl DataOutputStream {
     }
 
     async fn write_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<JavaChar>) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeUTF({:?}, {:?})", &this, &s);
+        tracing::debug!("java.io.DataOutputStream::writeUTF({this:?}, {s:?})");
 
         // TODO handle modified utf-8
         let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
@@ -136,7 +136,7 @@ impl DataOutputStream {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::close({:?})", &this);
+        tracing::debug!("java.io.DataOutputStream::close({this:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "close", "()V", []).await?;
@@ -145,7 +145,7 @@ impl DataOutputStream {
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::flush({:?})", &this);
+        tracing::debug!("java.io.DataOutputStream::flush({this:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "flush", "()V", []).await?;

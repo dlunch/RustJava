@@ -30,7 +30,7 @@ impl Attributes {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.jar.Manifest::<init>({:?})", &this);
+        tracing::debug!("java.util.jar.Attributes::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -48,7 +48,7 @@ impl Attributes {
         name: ClassInstanceRef<String>,
         value: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.util.jar.Attributes::putValue({:?}, {:?}, {:?})", &this, &name, &value);
+        tracing::debug!("java.util.jar.Attributes::putValue({this:?}, {name:?}, {value:?})");
 
         // TODO we should store key in Attributes.Name type
         let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
@@ -65,7 +65,7 @@ impl Attributes {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.util.jar.Attributes::getValue({:?}, {:?})", &this, &name);
+        tracing::debug!("java.util.jar.Attributes::getValue({this:?}, {name:?})");
 
         let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
         let value = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name,)).await?;

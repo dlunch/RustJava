@@ -57,7 +57,7 @@ impl StringBuffer {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.StringBuffer::<init>({:?})", &this);
+        tracing::debug!("java.lang.StringBuffer::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/StringBuffer", "<init>", "(I)V", (16,)).await?;
 
@@ -65,7 +65,7 @@ impl StringBuffer {
     }
 
     async fn init_with_buffer_length(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, length: i32) -> Result<()> {
-        tracing::debug!("java.lang.StringBuffer::<init>({:?}, {:?})", &this, length);
+        tracing::debug!("java.lang.StringBuffer::<init>({this:?}, {length:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -77,7 +77,7 @@ impl StringBuffer {
     }
 
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.lang.StringBuffer::<init>({:?}, {:?})", &this, &string,);
+        tracing::debug!("java.lang.StringBuffer::<init>({this:?}, {string:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -96,7 +96,7 @@ impl StringBuffer {
         mut this: ClassInstanceRef<Self>,
         string: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, &string,);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {string:?})");
 
         let string = if string.is_null() {
             "null".into()
@@ -115,7 +115,7 @@ impl StringBuffer {
         mut this: ClassInstanceRef<Self>,
         object: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, &object,);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {object:?})");
 
         let string = if object.is_null() {
             "null".into()
@@ -130,7 +130,7 @@ impl StringBuffer {
     }
 
     async fn append_integer(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {value:?})");
 
         let digits = value.to_string();
 
@@ -140,7 +140,7 @@ impl StringBuffer {
     }
 
     async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {value:?})");
 
         let value = value.to_string();
 
@@ -150,7 +150,7 @@ impl StringBuffer {
     }
 
     async fn append_long(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {value:?})");
 
         let digits = value.to_string();
 
@@ -160,7 +160,7 @@ impl StringBuffer {
     }
 
     async fn append_character(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: u16) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?})", &this, value);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {value:?})");
 
         let value = RustString::from_utf16(&[value]).unwrap();
 
@@ -177,7 +177,7 @@ impl StringBuffer {
         offset: i32,
         length: i32,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.StringBuffer::append({:?}, {:?}, {:?}, {:?})", &this, &array, offset, length);
+        tracing::debug!("java.lang.StringBuffer::append({this:?}, {array:?}, {offset:?}, {length:?})");
 
         let value: Vec<JavaChar> = jvm.load_array(&array, offset as _, length as _).await?;
         let string = RustString::from_utf16(&value).unwrap();
@@ -210,7 +210,7 @@ impl StringBuffer {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.StringBuffer::toString({:?})", &this);
+        tracing::debug!("java.lang.StringBuffer::toString({this:?})");
 
         let java_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
@@ -252,7 +252,7 @@ impl StringBuffer {
     }
 
     async fn set_length(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, length: i32) -> Result<()> {
-        tracing::debug!("java.lang.StringBuffer::setLength({:?}, {:?})", &this, length);
+        tracing::debug!("java.lang.StringBuffer::setLength({this:?}, {length:?})");
 
         jvm.put_field(&mut this, "count", "I", length).await?;
 
@@ -260,7 +260,7 @@ impl StringBuffer {
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.StringBuffer::length({:?})", &this);
+        tracing::debug!("java.lang.StringBuffer::length({this:?})");
 
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
 
@@ -268,7 +268,7 @@ impl StringBuffer {
     }
 
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<JavaChar> {
-        tracing::debug!("java.lang.StringBuffer::charAt({:?}, {:?})", &this, index);
+        tracing::debug!("java.lang.StringBuffer::charAt({this:?}, {index:?})");
 
         let java_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
         let char_at: JavaChar = jvm.load_array(&java_value, index as _, 1).await?.into_iter().next().unwrap();

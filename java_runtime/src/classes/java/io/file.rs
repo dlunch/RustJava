@@ -29,7 +29,7 @@ impl File {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pathname: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.io.File::<init>({:?}, {:?})", &this, &pathname);
+        tracing::debug!("java.io.File::<init>({this:?}, {pathname:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -39,13 +39,13 @@ impl File {
     }
 
     async fn get_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.io.File::getPath({:?})", &this);
+        tracing::debug!("java.io.File::getPath({this:?})");
 
         jvm.get_field(&this, "path", "Ljava/lang/String;").await
     }
 
     async fn exists(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.io.File::exists({:?})", &this);
+        tracing::debug!("java.io.File::exists({this:?})");
 
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -54,7 +54,7 @@ impl File {
     }
 
     async fn is_directory(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.io.File::isDirectory({:?})", &this);
+        tracing::debug!("java.io.File::isDirectory({this:?})");
 
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -68,7 +68,7 @@ impl File {
     }
 
     async fn is_file(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.io.File::isFile({:?})", &this);
+        tracing::debug!("java.io.File::isFile({this:?})");
 
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -82,7 +82,7 @@ impl File {
     }
 
     async fn delete(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.io.File::delete({:?})", &this);
+        tracing::debug!("java.io.File::delete({this:?})");
 
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -91,7 +91,7 @@ impl File {
     }
 
     async fn length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        tracing::debug!("java.io.File::length({:?})", &this);
+        tracing::debug!("java.io.File::length({this:?})");
 
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;

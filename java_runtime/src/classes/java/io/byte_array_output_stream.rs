@@ -32,7 +32,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayOutputStream::<init>({:?})", &this);
+        tracing::debug!("java.io.ByteArrayOutputStream::<init>({this:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/io/ByteArrayOutputStream", "<init>", "(I)V", (1024,))
@@ -42,7 +42,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn init_with_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i32) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayOutputStream::<init>({:?}, {:?})", &this, size);
+        tracing::debug!("java.io.ByteArrayOutputStream::<init>({this:?}, {size:?})");
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
@@ -55,7 +55,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, b: i32) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayOutputStream::write({:?}, {:?})", &this, b);
+        tracing::debug!("java.io.ByteArrayOutputStream::write({this:?}, {b:?})");
 
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (pos + 1) as _).await?;
@@ -69,7 +69,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn to_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
-        tracing::debug!("java.io.ByteArrayOutputStream::to_byte_array({:?})", &this);
+        tracing::debug!("java.io.ByteArrayOutputStream::to_byte_array({this:?})");
 
         let buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
@@ -88,7 +88,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.ByteArrayOutputStream::size({:?})", &this);
+        tracing::debug!("java.io.ByteArrayOutputStream::size({this:?})");
 
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
@@ -96,7 +96,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayOutputStream::reset({:?})", &this);
+        tracing::debug!("java.io.ByteArrayOutputStream::reset({this:?})");
 
         jvm.put_field(&mut this, "pos", "I", 0).await?;
 

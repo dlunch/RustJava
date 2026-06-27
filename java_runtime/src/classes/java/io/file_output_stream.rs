@@ -37,7 +37,7 @@ impl FileOutputStream {
     }
 
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
-        tracing::debug!("java.io.FileOutputStream::<init>({:?}, {:?})", &this, &file);
+        tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file:?})");
 
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -58,7 +58,7 @@ impl FileOutputStream {
         mut this: ClassInstanceRef<Self>,
         file_descriptor: ClassInstanceRef<File>,
     ) -> Result<()> {
-        tracing::debug!("java.io.FileOutputStream::<init>({:?}, {:?})", &this, &file_descriptor);
+        tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file_descriptor:?})");
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
@@ -75,13 +75,7 @@ impl FileOutputStream {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.io.FileOutputStream::write({:?}, {:?}, {:?}, {:?})",
-            &this,
-            &buffer,
-            &offset,
-            &length
-        );
+        tracing::debug!("java.io.FileOutputStream::write({this:?}, {buffer:?}, {offset:?}, {length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
@@ -95,7 +89,7 @@ impl FileOutputStream {
     }
 
     async fn write(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
-        tracing::debug!("java.io.FileOutputStream::write({:?}, {:?})", &this, &byte);
+        tracing::debug!("java.io.FileOutputStream::write({this:?}, {byte:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
@@ -106,7 +100,7 @@ impl FileOutputStream {
     }
 
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.FileOutputStream::close({:?})", &this);
+        tracing::debug!("java.io.FileOutputStream::close({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         FileDescriptor::close(jvm, context, fd).await?;

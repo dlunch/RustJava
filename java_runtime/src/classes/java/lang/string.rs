@@ -104,7 +104,7 @@ impl String {
     }
 
     async fn init_with_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<i8>>) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
         let count = jvm.array_length(&value).await? as i32;
 
@@ -121,7 +121,7 @@ impl String {
         this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Array<u16>>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
         let count = jvm.array_length(&value).await? as i32;
 
@@ -140,7 +140,7 @@ impl String {
         offset: i32,
         count: i32,
     ) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?}, {offset}, {count})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -161,7 +161,7 @@ impl String {
         offset: i32,
         count: i32,
     ) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?}, {}, {})", &this, &value, offset, count);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?}, {offset}, {count})");
 
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
@@ -179,7 +179,7 @@ impl String {
     }
 
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
         let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&value, "toCharArray", "()[C", ()).await?;
 
@@ -194,7 +194,7 @@ impl String {
         this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<StringBuffer>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?})", &this, &value);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
         let string: ClassInstanceRef<Self> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
 
@@ -206,7 +206,7 @@ impl String {
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.String::equals({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.String::equals({this:?}, {other:?})");
 
         if other.is_null() {
             return Ok(false);
@@ -219,7 +219,7 @@ impl String {
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.String::compareTo({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.String::compareTo({this:?}, {other:?})");
 
         let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
         let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
@@ -234,7 +234,7 @@ impl String {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.String::hashCode({:?})", &this);
+        tracing::debug!("java.lang.String::hashCode({this:?})");
 
         let chars = jvm.get_field(&this, "value", "[C").await?;
         let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, jvm.array_length(&chars).await? as _).await?;
@@ -245,13 +245,13 @@ impl String {
     }
 
     async fn to_string(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::toString({:?})", &this);
+        tracing::debug!("java.lang.String::toString({this:?})");
 
         Ok(this)
     }
 
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<u16> {
-        tracing::debug!("java.lang.String::charAt({:?}, {})", &this, index);
+        tracing::debug!("java.lang.String::charAt({this:?}, {index})");
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
@@ -264,7 +264,7 @@ impl String {
         this: ClassInstanceRef<Self>,
         other: ClassInstanceRef<Self>,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::concat({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.String::concat({this:?}, {other:?})");
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
         let other_string = JavaLangString::to_rust_string(jvm, &other.clone()).await?;
@@ -275,7 +275,7 @@ impl String {
     }
 
     async fn get_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
-        tracing::debug!("java.lang.String::getBytes({:?})", &this);
+        tracing::debug!("java.lang.String::getBytes({this:?})");
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -297,14 +297,7 @@ impl String {
         mut dst: ClassInstanceRef<Array<JavaChar>>,
         dst_begin: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.lang.String::getChars({:?}, {}, {}, {:?}, {})",
-            &this,
-            src_begin,
-            src_end,
-            &dst,
-            dst_begin
-        );
+        tracing::debug!("java.lang.String::getChars({this:?}, {src_begin}, {src_end}, {dst:?}, {dst_begin})");
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
@@ -316,7 +309,7 @@ impl String {
     }
 
     async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
-        tracing::debug!("java.lang.String::toCharArray({:?})", &this);
+        tracing::debug!("java.lang.String::toCharArray({this:?})");
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
@@ -324,7 +317,7 @@ impl String {
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.String::length({:?})", &this);
+        tracing::debug!("java.lang.String::length({this:?})");
 
         let value = jvm.get_field(&this, "value", "[C").await?;
 
@@ -332,7 +325,7 @@ impl String {
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, begin_index: i32) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::substring({:?}, {})", &this, begin_index);
+        tracing::debug!("java.lang.String::substring({this:?}, {begin_index})");
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -361,7 +354,7 @@ impl String {
         begin_index: i32,
         end_index: i32,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::substring({:?}, {}, {})", &this, begin_index, end_index);
+        tracing::debug!("java.lang.String::substring({this:?}, {begin_index}, {end_index})");
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -384,7 +377,7 @@ impl String {
     }
 
     async fn value_of_char(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         let string = RustString::from_utf16(&[value]).unwrap();
 
@@ -392,7 +385,7 @@ impl String {
     }
 
     async fn value_of_integer(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         let string = value.to_string();
 
@@ -400,7 +393,7 @@ impl String {
     }
 
     async fn value_of_object(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Self>> {
-        tracing::warn!("stub java.lang.String::valueOf({:?})", &value);
+        tracing::warn!("stub java.lang.String::valueOf({value:?})");
 
         Ok(if value.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
@@ -410,13 +403,13 @@ impl String {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, ch);
+        tracing::debug!("java.lang.String::indexOf({this:?}, {ch:?})");
 
         jvm.invoke_virtual(&this, "indexOf", "(II)I", (ch, 0)).await
     }
 
     async fn index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?}, {:?})", &this, ch, from_index);
+        tracing::debug!("java.lang.String::indexOf({this:?}, {ch:?}, {from_index:?})");
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -430,7 +423,7 @@ impl String {
     }
 
     async fn index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?})", &this, &str);
+        tracing::debug!("java.lang.String::indexOf({this:?}, {str:?})");
 
         jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/String;I)I", (str, 0)).await
     }
@@ -442,13 +435,13 @@ impl String {
         str: ClassInstanceRef<Self>,
         from_index: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.lang.String::indexOf({:?}, {:?}, {})", &this, &str, from_index);
+        tracing::debug!("java.lang.String::indexOf({this:?}, {str:?}, {from_index})");
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
         let str_string = JavaLangString::to_rust_string(jvm, &str.clone()).await?;
 
-        tracing::trace!("this_string: {:?}", this_string);
-        tracing::trace!("str_string: {:?}", str_string);
+        tracing::trace!("this_string: {this_string:?}");
+        tracing::trace!("str_string: {str_string:?}");
 
         let chars = this_string.chars().skip(from_index as usize).collect::<Vec<_>>();
         let str_chars = str_string.chars().collect::<Vec<_>>();
@@ -458,7 +451,7 @@ impl String {
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::lastIndexOf({:?}, {:?})", &this, ch);
+        tracing::debug!("java.lang.String::lastIndexOf({this:?}, {ch:?})");
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -473,7 +466,7 @@ impl String {
     }
 
     async fn trim(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::trim({:?})", &this);
+        tracing::debug!("java.lang.String::trim({this:?})");
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -483,7 +476,7 @@ impl String {
     }
 
     async fn to_upper_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::toUpperCase({:?})", &this);
+        tracing::debug!("java.lang.String::toUpperCase({this:?})");
 
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
@@ -493,7 +486,7 @@ impl String {
     }
 
     async fn starts_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, prefix: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.String::startsWith({:?}, {:?})", &this, &prefix);
+        tracing::debug!("java.lang.String::startsWith({this:?}, {prefix:?})");
 
         jvm.invoke_virtual(&this, "startsWith", "(Ljava/lang/String;I)Z", (prefix, 0)).await
     }
@@ -505,7 +498,7 @@ impl String {
         prefix: ClassInstanceRef<Self>,
         offset: i32,
     ) -> Result<bool> {
-        tracing::debug!("java.lang.String::startsWith({:?}, {:?}, {})", &this, &prefix, offset);
+        tracing::debug!("java.lang.String::startsWith({this:?}, {prefix:?}, {offset})");
 
         let this_string = JavaLangString::to_rust_string(jvm, &this.clone())
             .await?
@@ -518,7 +511,7 @@ impl String {
     }
 
     async fn init_empty(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?})", &this);
+        tracing::debug!("java.lang.String::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -535,7 +528,7 @@ impl String {
         value: ClassInstanceRef<Array<i8>>,
         charset_name: ClassInstanceRef<Self>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.String::<init>({:?}, {:?}, {:?})", &this, &value, &charset_name);
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?}, {charset_name:?})");
 
         let count = jvm.array_length(&value).await? as i32;
 
@@ -561,14 +554,7 @@ impl String {
         count: i32,
         charset_name: ClassInstanceRef<Self>,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.lang.String::<init>({:?}, {:?}, {}, {}, {:?})",
-            &this,
-            &value,
-            offset,
-            count,
-            &charset_name
-        );
+        tracing::debug!("java.lang.String::<init>({this:?}, {value:?}, {offset}, {count}, {charset_name:?})");
 
         if charset_name.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "charsetName is null").await);
@@ -590,7 +576,7 @@ impl String {
     }
 
     async fn equals_ignore_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.String::equalsIgnoreCase({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.String::equalsIgnoreCase({this:?}, {other:?})");
 
         if other.is_null() {
             return Ok(false);
@@ -608,7 +594,7 @@ impl String {
         this: ClassInstanceRef<Self>,
         charset_name: ClassInstanceRef<Self>,
     ) -> Result<ClassInstanceRef<Array<i8>>> {
-        tracing::debug!("java.lang.String::getBytes({:?}, {:?})", &this, &charset_name);
+        tracing::debug!("java.lang.String::getBytes({this:?}, {charset_name:?})");
 
         if charset_name.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "charsetName is null").await);
@@ -626,7 +612,7 @@ impl String {
     }
 
     async fn to_lower_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::toLowerCase({:?})", &this);
+        tracing::debug!("java.lang.String::toLowerCase({this:?})");
 
         let string = JavaLangString::to_rust_string(jvm, &this).await?;
         let lower = string.to_lowercase();
@@ -641,7 +627,7 @@ impl String {
         old_char: JavaChar,
         new_char: JavaChar,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::replace({:?}, {}, {})", &this, old_char, new_char);
+        tracing::debug!("java.lang.String::replace({this:?}, {old_char}, {new_char})");
 
         let value = jvm.get_field(&this, "value", "[C").await?;
         let length = jvm.array_length(&value).await?;
@@ -668,15 +654,7 @@ impl String {
         ooffset: i32,
         len: i32,
     ) -> Result<bool> {
-        tracing::debug!(
-            "java.lang.String::regionMatches({:?}, {}, {}, {:?}, {}, {})",
-            &this,
-            ignore_case,
-            toffset,
-            &other,
-            ooffset,
-            len
-        );
+        tracing::debug!("java.lang.String::regionMatches({this:?}, {ignore_case}, {toffset}, {other:?}, {ooffset}, {len})");
 
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other is null").await);
@@ -714,7 +692,7 @@ impl String {
     }
 
     async fn last_index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
-        tracing::debug!("java.lang.String::lastIndexOf({:?}, {}, {})", &this, ch, from_index);
+        tracing::debug!("java.lang.String::lastIndexOf({this:?}, {ch}, {from_index})");
 
         if from_index < 0 {
             return Ok(-1);
@@ -730,7 +708,7 @@ impl String {
     }
 
     async fn ends_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, suffix: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.String::endsWith({:?}, {:?})", &this, &suffix);
+        tracing::debug!("java.lang.String::endsWith({this:?}, {suffix:?})");
 
         if suffix.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "suffix is null").await);
@@ -743,7 +721,7 @@ impl String {
     }
 
     async fn intern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::intern({:?})", &this);
+        tracing::debug!("java.lang.String::intern({this:?})");
 
         let chars = jvm.get_field(&this, "value", "[C").await?;
         let length = jvm.array_length(&chars).await?;
@@ -755,32 +733,32 @@ impl String {
     }
 
     async fn value_of_boolean(jvm: &Jvm, _: &mut RuntimeContext, value: bool) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         let string = if value { "true" } else { "false" };
         Ok(JavaLangString::from_rust_string(jvm, string).await?.into())
     }
 
     async fn value_of_long(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         Ok(JavaLangString::from_rust_string(jvm, &value.to_string()).await?.into())
     }
 
     async fn value_of_float(jvm: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         Ok(JavaLangString::from_rust_string(jvm, &value.to_string()).await?.into())
     }
 
     async fn value_of_double(jvm: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({})", value);
+        tracing::debug!("java.lang.String::valueOf({value})");
 
         Ok(JavaLangString::from_rust_string(jvm, &value.to_string()).await?.into())
     }
 
     async fn value_of_char_array(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<Array<JavaChar>>) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({:?})", &value);
+        tracing::debug!("java.lang.String::valueOf({value:?})");
 
         let new_string = jvm.new_class("java/lang/String", "([C)V", (value,)).await?;
 
@@ -794,7 +772,7 @@ impl String {
         offset: i32,
         count: i32,
     ) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.String::valueOf({:?}, {}, {})", &value, offset, count);
+        tracing::debug!("java.lang.String::valueOf({value:?}, {offset}, {count})");
 
         let new_string = jvm.new_class("java/lang/String", "([CII)V", (value, offset, count)).await?;
 

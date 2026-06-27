@@ -45,7 +45,7 @@ impl Thread {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Thread::<init>({:?})", &this);
+        tracing::debug!("java.lang.Thread::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -58,7 +58,7 @@ impl Thread {
         mut this: ClassInstanceRef<Self>,
         target: ClassInstanceRef<Runnable>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.Thread::<init>({:?}, {:?})", &this, &target);
+        tracing::debug!("java.lang.Thread::<init>({this:?}, {target:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -68,7 +68,7 @@ impl Thread {
     }
 
     async fn init_internal(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
-        tracing::debug!("java.lang.Thread::<init>({:?}, {:?})", &this, internal);
+        tracing::debug!("java.lang.Thread::<init>({this:?}, {internal:?})");
 
         let id = context.current_task_id();
         jvm.put_field(&mut this, "id", "J", id as i64).await?;
@@ -77,7 +77,7 @@ impl Thread {
     }
 
     async fn start(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Thread::start({:?})", &this);
+        tracing::debug!("java.lang.Thread::start({this:?})");
 
         struct ThreadStartProxy {
             jvm: Jvm,
@@ -151,7 +151,7 @@ impl Thread {
     }
 
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Thread::run({:?})", &this);
+        tracing::debug!("java.lang.Thread::run({this:?})");
 
         let target: ClassInstanceRef<Runnable> = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
         if !target.is_null() {
@@ -162,7 +162,7 @@ impl Thread {
     }
 
     async fn join(jvm: &Jvm, _context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Thread::join({:?})", &this);
+        tracing::debug!("java.lang.Thread::join({this:?})");
 
         loop {
             let listener = jvm.object_listen(&this);
@@ -175,13 +175,13 @@ impl Thread {
     }
 
     async fn is_alive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.Thread::isAlive({:?})", &this);
+        tracing::debug!("java.lang.Thread::isAlive({this:?})");
         let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
         Ok(alive)
     }
 
     async fn sleep(_: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<()> {
-        tracing::debug!("java.lang.Thread::sleep({:?})", duration);
+        tracing::debug!("java.lang.Thread::sleep({duration:?})");
 
         context.sleep(Duration::from_millis(duration as _)).await;
 
@@ -196,7 +196,7 @@ impl Thread {
     }
 
     async fn set_priority(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Thread>, new_priority: i32) -> Result<()> {
-        tracing::warn!("stub java.lang.Thread::setPriority({:?}, {:?})", &this, new_priority);
+        tracing::warn!("stub java.lang.Thread::setPriority({this:?}, {new_priority:?})");
 
         Ok(())
     }

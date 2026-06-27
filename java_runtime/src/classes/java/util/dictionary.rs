@@ -22,7 +22,7 @@ impl Dictionary {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Dictionary::<init>({:?})", &this);
+        tracing::debug!("java.util.Dictionary::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

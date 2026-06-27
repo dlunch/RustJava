@@ -30,7 +30,7 @@ impl TimeZone {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.TimeZone::<init>({:?})", &this);
+        tracing::debug!("java.util.TimeZone::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

@@ -49,7 +49,7 @@ impl GregorianCalendar {
     }
 
     async fn compute_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.GregorianCalendar::computeTime({:?})", &this);
+        tracing::debug!("java.util.GregorianCalendar::computeTime({this:?})");
 
         // fields -> time
 
@@ -90,7 +90,7 @@ impl GregorianCalendar {
     }
 
     async fn compute_fields(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.GregorianCalendar::computeFields({:?})", &this);
+        tracing::debug!("java.util.GregorianCalendar::computeFields({this:?})");
 
         // time -> fields
 

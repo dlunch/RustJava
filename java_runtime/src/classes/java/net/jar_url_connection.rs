@@ -40,7 +40,7 @@ impl JarURLConnection {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
-        tracing::debug!("java.net.JarURLConnection::<init>({:?}, {:?})", &this, &url,);
+        tracing::debug!("java.net.JarURLConnection::<init>({this:?}, {url:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
@@ -61,7 +61,7 @@ impl JarURLConnection {
     }
 
     async fn get_entry_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.net.JarURLConnection::getEntryName({:?})", &this);
+        tracing::debug!("java.net.JarURLConnection::getEntryName({this:?})");
 
         let entry = jvm.get_field(&this, "entry", "Ljava/lang/String;").await?;
 
@@ -69,7 +69,7 @@ impl JarURLConnection {
     }
 
     async fn get_jar_file_url(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.net.JarURLConnection::getJarFileURL({:?})", &this);
+        tracing::debug!("java.net.JarURLConnection::getJarFileURL({this:?})");
 
         let file_url = jvm.get_field(&this, "fileUrl", "Ljava/net/URL;").await?;
 
@@ -77,7 +77,7 @@ impl JarURLConnection {
     }
 
     async fn get_jar_entry(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.net.JarURLConnection::getJarEntry({:?})", &this);
+        tracing::debug!("java.net.JarURLConnection::getJarEntry({this:?})");
 
         let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
         let entry_name: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getEntryName", "()Ljava/lang/String;", ()).await?;
@@ -90,7 +90,7 @@ impl JarURLConnection {
     }
 
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
-        tracing::debug!("java.net.JarURLConnection::getMainAttributes({:?})", &this);
+        tracing::debug!("java.net.JarURLConnection::getMainAttributes({this:?})");
 
         let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
         let manifest = jvm.invoke_virtual(&jar_file, "getManifest", "()Ljava/util/jar/Manifest;", ()).await?;

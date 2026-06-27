@@ -25,7 +25,7 @@ impl TimerThread {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, tasks: ClassInstanceRef<Vector>) -> Result<()> {
-        tracing::debug!("java.util.Timer$TimerThread::<init>({:?})", &this);
+        tracing::debug!("java.util.Timer$TimerThread::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Thread", "<init>", "()V", ()).await?;
 
@@ -35,7 +35,7 @@ impl TimerThread {
     }
 
     async fn run(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Timer$TimerThread::run({:?})", &this);
+        tracing::debug!("java.util.Timer$TimerThread::run({this:?})");
 
         let java_tasks = jvm.get_field(&this, "tasks", "Ljava/util/Vector;").await?;
 

@@ -26,7 +26,7 @@ impl Date {
     }
 
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Date::<init>({:?})", &this);
+        tracing::debug!("java.util.Date::<init>({this:?})");
 
         let now: u64 = context.now();
 
@@ -36,7 +36,7 @@ impl Date {
     }
 
     async fn init_with_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
-        tracing::debug!("java.util.Date::<init>({:?}, {:?})", &this, time);
+        tracing::debug!("java.util.Date::<init>({this:?}, {time:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -46,7 +46,7 @@ impl Date {
     }
 
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        tracing::debug!("java.util.Date::getTime({:?})", &this);
+        tracing::debug!("java.util.Date::getTime({this:?})");
 
         let time = jvm.get_field(&this, "value", "J").await?;
 
@@ -54,7 +54,7 @@ impl Date {
     }
 
     async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
-        tracing::debug!("java.util.Date::setTime({:?}, {:?})", &this, time);
+        tracing::debug!("java.util.Date::setTime({this:?}, {time:?})");
 
         jvm.put_field(&mut this, "value", "J", time).await?;
 
