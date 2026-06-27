@@ -111,14 +111,7 @@ impl System {
         dest_pos: i32,
         length: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.lang.System::arraycopy({:?}, {}, {:?}, {}, {})",
-            &src,
-            src_pos,
-            &dest,
-            dest_pos,
-            length
-        );
+        tracing::debug!("java.lang.System::arraycopy({src:?}, {src_pos}, {dest:?}, {dest_pos}, {length})");
 
         // TODO i think we can make it faster
         let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _).await?;
@@ -128,7 +121,7 @@ impl System {
     }
 
     async fn get_property(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.System::getProperty({:?})", key);
+        tracing::debug!("java.lang.System::getProperty({key:?})");
 
         let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm
@@ -144,7 +137,7 @@ impl System {
         key: ClassInstanceRef<String>,
         value: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.System::setProperty({:?}, {:?})", key, value);
+        tracing::debug!("java.lang.System::setProperty({key:?}, {value:?})");
 
         let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm

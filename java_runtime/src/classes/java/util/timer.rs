@@ -36,7 +36,7 @@ impl Timer {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Timer::<init>({:?})", &this);
+        tracing::debug!("java.util.Timer::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -61,7 +61,7 @@ impl Timer {
         delay: i64,
         period: i64,
     ) -> Result<()> {
-        tracing::debug!("java.util.Timer::schedule({:?}, {:?}, {:?}, {:?})", &this, &task, delay, period);
+        tracing::debug!("java.util.Timer::schedule({this:?}, {task:?}, {delay:?}, {period:?})");
 
         let now: i64 = context.now() as i64;
         let next_execution_time = now + delay;
@@ -77,13 +77,7 @@ impl Timer {
         delay: i64,
         period: i64,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.util.Timer::scheduleAtFixedRate({:?}, {:?}, {:?}, {:?})",
-            &this,
-            &task,
-            delay,
-            period
-        );
+        tracing::debug!("java.util.Timer::scheduleAtFixedRate({this:?}, {task:?}, {delay:?}, {period:?})");
         // FIXME: fixed rate is not different from normal rate
 
         let now: i64 = context.now() as i64;

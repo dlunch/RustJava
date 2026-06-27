@@ -43,7 +43,7 @@ impl JarFile {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
-        tracing::debug!("java.util.jar.JarFile::<init>({:?}, {:?})", &this, &file,);
+        tracing::debug!("java.util.jar.JarFile::<init>({this:?}, {file:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/util/zip/ZipFile", "<init>", "(Ljava/io/File;)V", (file,))
@@ -53,7 +53,7 @@ impl JarFile {
     }
 
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.util.jar.JarFile::<init>({:?}, {:?})", &this, &name,);
+        tracing::debug!("java.util.jar.JarFile::<init>({this:?}, {name:?})");
 
         let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
 
@@ -70,7 +70,7 @@ impl JarFile {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<JarEntry>> {
-        tracing::debug!("java.util.jar.JarFile::getJarEntry({:?}, {:?})", &this, &name);
+        tracing::debug!("java.util.jar.JarFile::getJarEntry({this:?}, {name:?})");
 
         let zip_entry: ClassInstanceRef<ZipEntry> = jvm
             .invoke_virtual(&this, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name,))
@@ -88,7 +88,7 @@ impl JarFile {
     }
 
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
-        tracing::debug!("java.util.jar.JarFile::entries({:?})", &this);
+        tracing::debug!("java.util.jar.JarFile::entries({this:?})");
 
         let zip_entries: ClassInstanceRef<Enumeration> = jvm
             .invoke_special(&this, "java/util/zip/ZipFile", "entries", "()Ljava/util/Enumeration;", ())
@@ -102,7 +102,7 @@ impl JarFile {
     }
 
     async fn get_manifest(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Manifest>> {
-        tracing::debug!("java.util.jar.JarFile::getManifest({:?})", &this);
+        tracing::debug!("java.util.jar.JarFile::getManifest({this:?})");
 
         let manifest_name = JavaLangString::from_rust_string(jvm, "META-INF/MANIFEST.MF").await?;
         let manifest_file: ClassInstanceRef<JarEntry> = jvm

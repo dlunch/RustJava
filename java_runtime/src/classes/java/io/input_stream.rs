@@ -32,7 +32,7 @@ impl InputStream {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.InputStream::<init>({:?})", &this);
+        tracing::debug!("java.io.InputStream::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -40,7 +40,7 @@ impl InputStream {
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
-        tracing::debug!("java.io.InputStream::read({:?}, {:?})", &this, &b);
+        tracing::debug!("java.io.InputStream::read({this:?}, {b:?})");
 
         let array_length = jvm.array_length(&b).await? as i32;
 
@@ -48,7 +48,7 @@ impl InputStream {
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
-        tracing::debug!("java.io.InputStream::skip({:?}, {:?})", &this, n);
+        tracing::debug!("java.io.InputStream::skip({this:?}, {n:?})");
 
         if n <= 0 {
             return Ok(0);
@@ -72,13 +72,13 @@ impl InputStream {
     }
 
     async fn mark(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
-        tracing::debug!("java.io.InputStream::mark({:?}, {:?})", &this, readlimit);
+        tracing::debug!("java.io.InputStream::mark({this:?}, {readlimit:?})");
 
         Ok(())
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.InputStream::reset({:?})", &this);
+        tracing::debug!("java.io.InputStream::reset({this:?})");
 
         Err(jvm.exception("java/io/IOException", "reset not supported").await)
     }

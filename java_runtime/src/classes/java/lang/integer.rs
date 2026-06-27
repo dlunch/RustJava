@@ -30,7 +30,7 @@ impl Integer {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        tracing::debug!("java.lang.Integer::<init>({:?}, {:?})", &this, value);
+        tracing::debug!("java.lang.Integer::<init>({this:?}, {value:?})");
 
         jvm.put_field(&mut this, "value", "I", value).await?;
 
@@ -38,7 +38,7 @@ impl Integer {
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.lang.Integer::intValue({:?})", &this);
+        tracing::debug!("java.lang.Integer::intValue({this:?})");
 
         let value = jvm.get_field(&this, "value", "I").await?;
 
@@ -46,7 +46,7 @@ impl Integer {
     }
 
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
-        tracing::debug!("java.lang.Integer::valueOf({:?})", value);
+        tracing::debug!("java.lang.Integer::valueOf({value:?})");
 
         let instance = jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?;
 
@@ -54,7 +54,7 @@ impl Integer {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.Integer::toString({:?})", &this);
+        tracing::debug!("java.lang.Integer::toString({this:?})");
 
         let value: i32 = jvm.get_field(&this, "value", "I").await?;
 
@@ -64,7 +64,7 @@ impl Integer {
     }
 
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.Integer::toString({:?})", value);
+        tracing::debug!("java.lang.Integer::toString({value:?})");
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
 
@@ -72,7 +72,7 @@ impl Integer {
     }
 
     async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, s: ClassInstanceRef<String>) -> Result<i32> {
-        tracing::debug!("java.lang.Integer::parseInt({:?})", &s);
+        tracing::debug!("java.lang.Integer::parseInt({s:?})");
 
         let s = JavaLangString::to_rust_string(jvm, &s).await?;
 
@@ -85,7 +85,7 @@ impl Integer {
     }
 
     async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.Integer::toHexString({:?})", value);
+        tracing::debug!("java.lang.Integer::toHexString({value:?})");
 
         let string = JavaLangString::from_rust_string(jvm, &format!("{value:x}")).await?;
 

@@ -72,7 +72,7 @@ impl URL {
     }
 
     async fn init_with_spec(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, spec: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.net.URL::<init>({:?}, {:?})", &this, &spec);
+        tracing::debug!("java.net.URL::<init>({this:?}, {spec:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/net/URL", "<init>", "(Ljava/net/URL;Ljava/lang/String;)V", (None, spec))
@@ -88,7 +88,7 @@ impl URL {
         context: ClassInstanceRef<URL>,
         spec: ClassInstanceRef<String>,
     ) -> Result<()> {
-        tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?})", &this, &context, &spec);
+        tracing::debug!("java.net.URL::<init>({this:?}, {context:?}, {spec:?})");
 
         let _: () = jvm
             .invoke_special(
@@ -111,7 +111,7 @@ impl URL {
         spec: ClassInstanceRef<String>,
         handler: ClassInstanceRef<URLStreamHandler>,
     ) -> Result<()> {
-        tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?}, {:?})", &this, &context, &spec, &handler);
+        tracing::debug!("java.net.URL::<init>({this:?}, {context:?}, {spec:?}, {handler:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -144,7 +144,7 @@ impl URL {
         host: ClassInstanceRef<String>,
         file: ClassInstanceRef<String>,
     ) -> Result<()> {
-        tracing::debug!("java.net.URL::<init>({:?}, {:?}, {:?}, {:?})", &this, &protocol, &host, &file);
+        tracing::debug!("java.net.URL::<init>({this:?}, {protocol:?}, {host:?}, {file:?})");
 
         let _: () = jvm
             .invoke_special(
@@ -170,15 +170,7 @@ impl URL {
         file: ClassInstanceRef<String>,
         handler: ClassInstanceRef<URLStreamHandler>,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.net.URL::<init>({:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
-            &this,
-            &protocol,
-            &host,
-            &port,
-            &file,
-            &handler
-        );
+        tracing::debug!("java.net.URL::<init>({this:?}, {protocol:?}, {host:?}, {port:?}, {file:?}, {handler:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -215,15 +207,7 @@ impl URL {
         file: ClassInstanceRef<String>,
         r#ref: ClassInstanceRef<String>,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.net.URL::set({:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
-            &this,
-            &protocol,
-            &host,
-            &port,
-            &file,
-            &r#ref
-        );
+        tracing::debug!("java.net.URL::set({this:?}, {protocol:?}, {host:?}, {port:?}, {file:?}, {:?})", &r#ref);
 
         jvm.put_field(&mut this, "protocol", "Ljava/lang/String;", protocol).await?;
         jvm.put_field(&mut this, "host", "Ljava/lang/String;", host).await?;
@@ -234,7 +218,7 @@ impl URL {
     }
 
     async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
-        tracing::debug!("java.net.URL::openConnection({:?})", &this);
+        tracing::debug!("java.net.URL::openConnection({this:?})");
 
         let handler = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection = jvm
@@ -245,7 +229,7 @@ impl URL {
     }
 
     async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.net.URL::openStream({:?})", &this);
+        tracing::debug!("java.net.URL::openStream({this:?})");
 
         let connection = jvm.invoke_virtual(&this, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
 
@@ -255,7 +239,7 @@ impl URL {
     }
 
     async fn get_port(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.net.URL::getPort({:?})", &this);
+        tracing::debug!("java.net.URL::getPort({this:?})");
 
         let port = jvm.get_field(&this, "port", "I").await?;
 
@@ -263,7 +247,7 @@ impl URL {
     }
 
     async fn get_protocol(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.net.URL::getProtocol({:?})", &this);
+        tracing::debug!("java.net.URL::getProtocol({this:?})");
 
         let protocol = jvm.get_field(&this, "protocol", "Ljava/lang/String;").await?;
 
@@ -271,7 +255,7 @@ impl URL {
     }
 
     async fn get_host(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.net.URL::getHost({:?})", &this);
+        tracing::debug!("java.net.URL::getHost({this:?})");
 
         let host = jvm.get_field(&this, "host", "Ljava/lang/String;").await?;
 
@@ -279,7 +263,7 @@ impl URL {
     }
 
     async fn get_file(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.net.URL::getFile({:?})", &this);
+        tracing::debug!("java.net.URL::getFile({this:?})");
 
         let file = jvm.get_field(&this, "file", "Ljava/lang/String;").await?;
 

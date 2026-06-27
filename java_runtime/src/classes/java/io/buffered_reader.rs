@@ -34,7 +34,7 @@ impl BufferedReader {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<Reader>) -> Result<()> {
-        tracing::debug!("java.io.BufferedReader::<init>({:?}, {:?})", &this, &r#in);
+        tracing::debug!("java.io.BufferedReader::<init>({this:?}, {:?})", &r#in);
 
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
 
@@ -48,7 +48,7 @@ impl BufferedReader {
     }
 
     async fn read_line(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.io.BufferedReader::readLine({:?})", &this);
+        tracing::debug!("java.io.BufferedReader::readLine({this:?})");
 
         let buf: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
 

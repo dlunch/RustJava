@@ -33,7 +33,7 @@ impl Manifest {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
-        tracing::debug!("java.util.jar.Manifest::<init>({:?}, {:?})", &this, &is);
+        tracing::debug!("java.util.jar.Manifest::<init>({this:?}, {is:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -43,7 +43,7 @@ impl Manifest {
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
-        tracing::debug!("java.util.jar.Manifest::read({:?}, {:?})", &this, &is);
+        tracing::debug!("java.util.jar.Manifest::read({this:?}, {is:?})");
 
         // TODO we currently support only main attribute
 
@@ -85,7 +85,7 @@ impl Manifest {
     }
 
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
-        tracing::debug!("java.util.jar.Manifest::getMainAttributes({:?})", &this);
+        tracing::debug!("java.util.jar.Manifest::getMainAttributes({this:?})");
 
         jvm.get_field(&this, "attrs", "Ljava/util/jar/Attributes;").await
     }

@@ -46,7 +46,7 @@ impl URLClassLoader {
         urls: ClassInstanceRef<Array<URL>>,
         parent: ClassInstanceRef<ClassLoader>,
     ) -> Result<()> {
-        tracing::debug!("java.net.URLClassLoader::<init>({:?}, {:?}, {:?})", &this, &urls, &parent);
+        tracing::debug!("java.net.URLClassLoader::<init>({this:?}, {urls:?}, {parent:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
@@ -63,7 +63,7 @@ impl URLClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!("java.net.URLClassLoader::findClass({:?}, {:?})", &this, name);
+        tracing::debug!("java.net.URLClassLoader::findClass({this:?}, {name:?})");
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
@@ -120,7 +120,7 @@ impl URLClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.net.URLClassLoader::findResource({:?}, {:?})", &this, name);
+        tracing::debug!("java.net.URLClassLoader::findResource({this:?}, {name:?})");
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 

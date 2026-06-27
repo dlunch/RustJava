@@ -26,7 +26,7 @@ impl Writer {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.Writer::<init>({:?})", &this);
+        tracing::debug!("java.io.Writer::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -39,7 +39,7 @@ impl Writer {
         this: ClassInstanceRef<Self>,
         string: ClassInstanceRef<crate::classes::java::lang::String>,
     ) -> Result<()> {
-        tracing::debug!("java.io.Writer::write_string({:?}, {:?})", &this, &string);
+        tracing::debug!("java.io.Writer::write_string({this:?}, {string:?})");
 
         let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "toCharArray", "()[C", ()).await?;
         let length = jvm.array_length(&chars).await?;

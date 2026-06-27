@@ -30,7 +30,7 @@ impl ZipEntry {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipEntry::<init>({:?}, {:?})", &this, &name,);
+        tracing::debug!("java.util.zip.ZipEntry::<init>({this:?}, {name:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -45,7 +45,7 @@ impl ZipEntry {
         mut this: ClassInstanceRef<Self>,
         zip_entry: ClassInstanceRef<Self>,
     ) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipEntry::<init>({:?}, {:?})", &this, &zip_entry,);
+        tracing::debug!("java.util.zip.ZipEntry::<init>({this:?}, {zip_entry:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -59,13 +59,13 @@ impl ZipEntry {
     }
 
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.util.zip.ZipEntry::getName({:?})", &this);
+        tracing::debug!("java.util.zip.ZipEntry::getName({this:?})");
 
         jvm.get_field(&this, "name", "Ljava/lang/String;").await
     }
 
     async fn set_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i64) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipEntry::setSize({:?}, {:?})", &this, &size);
+        tracing::debug!("java.util.zip.ZipEntry::setSize({this:?}, {size:?})");
 
         jvm.put_field(&mut this, "size", "J", size).await?;
 
@@ -73,7 +73,7 @@ impl ZipEntry {
     }
 
     async fn get_size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        tracing::debug!("java.util.zip.ZipEntry::getSize({:?})", &this);
+        tracing::debug!("java.util.zip.ZipEntry::getSize({this:?})");
 
         jvm.get_field(&this, "size", "J").await
     }

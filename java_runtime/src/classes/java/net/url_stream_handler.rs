@@ -37,7 +37,7 @@ impl URLStreamHandler {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.net.URLStreamHandler::<init>({:?})", &this);
+        tracing::debug!("java.net.URLStreamHandler::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -57,14 +57,8 @@ impl URLStreamHandler {
         r#ref: ClassInstanceRef<String>,
     ) -> Result<()> {
         tracing::debug!(
-            "java.net.URLStreamHandler::setURL({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?})",
-            &this,
-            &url,
-            &protocol,
-            &host,
-            &port,
-            &file,
-            &r#ref,
+            "java.net.URLStreamHandler::setURL({this:?}, {url:?}, {protocol:?}, {host:?}, {port:?}, {file:?}, {:?})",
+            &r#ref
         );
 
         let _: () = jvm
@@ -88,14 +82,7 @@ impl URLStreamHandler {
         start: i32,
         limit: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            "java.net.URLStreamHandler::parseURL({:?}, {:?}, {:?}, {:?}, {:?})",
-            &this,
-            &url,
-            &spec,
-            &start,
-            &limit
-        );
+        tracing::debug!("java.net.URLStreamHandler::parseURL({this:?}, {url:?}, {spec:?}, {start:?}, {limit:?})");
 
         let spec_str = JavaLangString::to_rust_string(jvm, &spec).await?;
 

@@ -45,7 +45,7 @@ impl JarURLConnection {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
-        tracing::debug!("org.rustjava.net.JarURLConnection::<init>({:?}, {:?})", &this, &url);
+        tracing::debug!("org.rustjava.net.JarURLConnection::<init>({this:?}, {url:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/net/JarURLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
@@ -55,7 +55,7 @@ impl JarURLConnection {
     }
 
     async fn get_jar_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<JarFile>> {
-        tracing::debug!("org.rustjava.net.JarURLConnection::getJarFile({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLConnection::getJarFile({this:?})");
 
         let url = jvm.invoke_virtual(&this, "getJarFileURL", "()Ljava/net/URL;", ()).await?;
         let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
@@ -94,7 +94,7 @@ impl JarURLConnection {
     }
 
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("org.rustjava.net.JarURLConnection::getInputStream({:?})", &this);
+        tracing::debug!("org.rustjava.net.JarURLConnection::getInputStream({this:?})");
 
         let entry: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getEntryName", "()Ljava/lang/String;", ()).await?;
         let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;

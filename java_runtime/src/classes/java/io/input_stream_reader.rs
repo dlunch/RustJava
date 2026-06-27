@@ -42,7 +42,7 @@ impl InputStreamReader {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
-        tracing::debug!("java.io.InputStreamReader::<init>({:?}, {:?})", &this, &r#in);
+        tracing::debug!("java.io.InputStreamReader::<init>({this:?}, {:?})", &r#in);
 
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
 
@@ -71,7 +71,7 @@ impl InputStreamReader {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.io.InputStreamReader::read({:?}, {:?}, {:?}, {:?})", &this, &buf, &offset, &length);
+        tracing::debug!("java.io.InputStreamReader::read({this:?}, {buf:?}, {offset:?}, {length:?})");
 
         let write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
 
@@ -170,7 +170,7 @@ impl InputStreamReader {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.InputStreamReader::close({:?})", &this);
+        tracing::debug!("java.io.InputStreamReader::close({this:?})");
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;

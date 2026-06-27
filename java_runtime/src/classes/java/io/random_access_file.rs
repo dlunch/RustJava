@@ -48,7 +48,7 @@ impl RandomAccessFile {
         name: ClassInstanceRef<String>,
         mode: ClassInstanceRef<String>,
     ) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::<init>({:?}, {:?}, {:?})", &this, &name, &mode);
+        tracing::debug!("java.io.RandomAccessFile::<init>({this:?}, {name:?}, {mode:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -74,7 +74,7 @@ impl RandomAccessFile {
         file: ClassInstanceRef<File>,
         mode: ClassInstanceRef<String>,
     ) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::<init>({:?}, {:?}, {:?})", &this, &file, &mode);
+        tracing::debug!("java.io.RandomAccessFile::<init>({this:?}, {file:?}, {mode:?})");
 
         let name: ClassInstanceRef<String> = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
 
@@ -92,7 +92,7 @@ impl RandomAccessFile {
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
-        tracing::debug!("java.io.RandomAccessFile::read({:?}, {:?})", &this, &buf);
+        tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?})");
 
         let length = jvm.array_length(&buf).await?;
         let read = jvm.invoke_virtual(&this, "read", "([BII)I", (buf, 0, length as i32)).await?;
@@ -108,7 +108,7 @@ impl RandomAccessFile {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.io.RandomAccessFile::read({:?}, {:?}, {:?}, {:?})", &this, &buf, &offset, &length);
+        tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?}, {offset:?}, {length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -122,7 +122,7 @@ impl RandomAccessFile {
     }
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::write({:?}, {:?})", &this, &buf);
+        tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?})");
 
         let length = jvm.array_length(&buf).await?;
         let _: () = jvm.invoke_virtual(&this, "write", "([BII)V", (buf, 0, length as i32)).await?;
@@ -138,7 +138,7 @@ impl RandomAccessFile {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::write({:?}, {:?}, {:?}, {:?})", &this, &buf, &offset, &length);
+        tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?}, {offset:?}, {length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -151,7 +151,7 @@ impl RandomAccessFile {
     }
 
     async fn seek(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, pos: i64) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::seek({:?}, {:?})", &this, &pos);
+        tracing::debug!("java.io.RandomAccessFile::seek({this:?}, {pos:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -162,7 +162,7 @@ impl RandomAccessFile {
     }
 
     async fn set_length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, new_length: i64) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::setLength({:?}, {:?})", &this, &new_length);
+        tracing::debug!("java.io.RandomAccessFile::setLength({this:?}, {new_length:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -173,7 +173,7 @@ impl RandomAccessFile {
     }
 
     async fn length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        tracing::debug!("java.io.RandomAccessFile::length({:?})", &this);
+        tracing::debug!("java.io.RandomAccessFile::length({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -184,7 +184,7 @@ impl RandomAccessFile {
     }
 
     async fn get_file_pointer(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        tracing::debug!("java.io.RandomAccessFile::getFilePointer({:?})", &this);
+        tracing::debug!("java.io.RandomAccessFile::getFilePointer({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -195,7 +195,7 @@ impl RandomAccessFile {
     }
 
     async fn get_fd(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<File>> {
-        tracing::debug!("java.io.RandomAccessFile::getFD({:?})", &this);
+        tracing::debug!("java.io.RandomAccessFile::getFD({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
 
@@ -203,7 +203,7 @@ impl RandomAccessFile {
     }
 
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.RandomAccessFile::close({:?})", &this);
+        tracing::debug!("java.io.RandomAccessFile::close({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         FileDescriptor::close(jvm, context, fd).await?;

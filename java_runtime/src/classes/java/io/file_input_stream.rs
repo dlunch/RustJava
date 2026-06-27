@@ -38,7 +38,7 @@ impl FileInputStream {
     }
 
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
-        tracing::debug!("java.io.FileInputStream::<init>({:?}, {:?})", &this, &file);
+        tracing::debug!("java.io.FileInputStream::<init>({this:?}, {file:?})");
 
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -63,7 +63,7 @@ impl FileInputStream {
         mut this: ClassInstanceRef<Self>,
         fd: ClassInstanceRef<FileDescriptor>,
     ) -> Result<()> {
-        tracing::debug!("java.io.FileInputStream::<init>({:?}, {:?})", &this, &fd);
+        tracing::debug!("java.io.FileInputStream::<init>({this:?}, {fd:?})");
 
         let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
@@ -73,7 +73,7 @@ impl FileInputStream {
     }
 
     async fn available(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.FileInputStream::available({:?})", &this);
+        tracing::debug!("java.io.FileInputStream::available({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -112,7 +112,7 @@ impl FileInputStream {
     }
 
     async fn read_byte(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.FileInputStream::read({:?})", &this);
+        tracing::debug!("java.io.FileInputStream::read({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -127,7 +127,7 @@ impl FileInputStream {
     }
 
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.FileInputStream::close({:?})", &this);
+        tracing::debug!("java.io.FileInputStream::close({this:?})");
 
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         FileDescriptor::close(jvm, context, fd).await?;

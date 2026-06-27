@@ -55,7 +55,7 @@ impl Calendar {
         _: &mut RuntimeContext,
         time_zone: ClassInstanceRef<TimeZone>,
     ) -> Result<ClassInstanceRef<Calendar>> {
-        tracing::debug!("java.util.Calendar::getInstance({:?})", &time_zone);
+        tracing::debug!("java.util.Calendar::getInstance({time_zone:?})");
 
         let instance = jvm
             .new_class("java/util/GregorianCalendar", "(Ljava/util/TimeZone;)V", (time_zone,))
@@ -65,7 +65,7 @@ impl Calendar {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Calendar::<init>({:?})", &this);
+        tracing::debug!("java.util.Calendar::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -77,7 +77,7 @@ impl Calendar {
     }
 
     async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, date: ClassInstanceRef<Date>) -> Result<()> {
-        tracing::debug!("java.util.Calendar::setTime({:?}, {:?})", &this, &date);
+        tracing::debug!("java.util.Calendar::setTime({this:?}, {date:?})");
 
         let time: i64 = jvm.invoke_virtual(&date, "getTime", "()J", ()).await?;
         jvm.put_field(&mut this, "time", "J", time).await?;
@@ -88,7 +88,7 @@ impl Calendar {
     }
 
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Date>> {
-        tracing::debug!("java.util.Calendar::getTime({:?})", &this);
+        tracing::debug!("java.util.Calendar::getTime({this:?})");
 
         let time: i64 = jvm.get_field(&this, "time", "J").await?;
         let date = jvm.new_class("java/util/Date", "(J)V", (time,)).await?;
@@ -97,7 +97,7 @@ impl Calendar {
     }
 
     async fn set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32, value: i32) -> Result<()> {
-        tracing::debug!("java.util.Calendar::set({:?}, {:?}, {:?})", &this, field, value);
+        tracing::debug!("java.util.Calendar::set({this:?}, {field:?}, {value:?})");
 
         let mut fields = jvm.get_field(&this, "fields", "[I").await?;
         jvm.store_array(&mut fields, field as usize, vec![value]).await?;
@@ -109,7 +109,7 @@ impl Calendar {
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32) -> Result<i32> {
-        tracing::debug!("java.util.Calendar::get({:?}, {:?})", &this, field);
+        tracing::debug!("java.util.Calendar::get({this:?}, {field:?})");
 
         let fields = jvm.get_field(&this, "fields", "[I").await?;
         let value = jvm.load_array(&fields, field as usize, 1).await?[0];

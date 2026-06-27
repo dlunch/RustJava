@@ -26,7 +26,7 @@ impl JarEntry {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, entry: ClassInstanceRef<ZipEntry>) -> Result<()> {
-        tracing::debug!("java.util.zip.ZipEntry::<init>({:?}, {:?})", &this, &entry,);
+        tracing::debug!("java.util.zip.ZipEntry::<init>({this:?}, {entry:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/util/zip/ZipEntry", "<init>", "(Ljava/util/zip/ZipEntry;)V", (entry,))

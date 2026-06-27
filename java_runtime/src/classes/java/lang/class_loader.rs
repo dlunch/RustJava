@@ -71,7 +71,7 @@ impl ClassLoader {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.ClassLoader::<init>({:?}, {:?})", &this, parent);
+        tracing::debug!("java.lang.ClassLoader::<init>({this:?}, {parent:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -158,7 +158,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!("java.lang.ClassLoader::loadClass({:?}, {:?})", &this, name);
+        tracing::debug!("java.lang.ClassLoader::loadClass({this:?}, {name:?})");
 
         let class: ClassInstanceRef<Class> = jvm
             .invoke_virtual(&this, "findLoadedClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
@@ -203,7 +203,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!("java.lang.ClassLoader::findClass({:?}, {:?})", &this, name);
+        tracing::debug!("java.lang.ClassLoader::findClass({this:?}, {name:?})");
 
         // TODO raise ClassNotFoundException
 
@@ -216,7 +216,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!("java.lang.ClassLoader::findLoadedClass({:?}, {:?})", &this, name);
+        tracing::debug!("java.lang.ClassLoader::findLoadedClass({this:?}, {name:?})");
 
         let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
         if !jvm.has_class(&rust_name) {
@@ -234,7 +234,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.lang.ClassLoader::getResource({:?})", &this);
+        tracing::debug!("java.lang.ClassLoader::getResource({this:?})");
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
 
@@ -262,7 +262,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.lang.ClassLoader::getResourceAsStream({:?})", &this);
+        tracing::debug!("java.lang.ClassLoader::getResourceAsStream({this:?})");
 
         let resource_url: ClassInstanceRef<URL> = jvm
             .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
@@ -283,7 +283,7 @@ impl ClassLoader {
         this: ClassInstanceRef<Self>,
         _: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
-        tracing::debug!("java.lang.ClassLoader::findResource({:?})", &this);
+        tracing::debug!("java.lang.ClassLoader::findResource({this:?})");
 
         Ok(None.into())
     }
@@ -297,14 +297,7 @@ impl ClassLoader {
         offset: i32,
         length: i32,
     ) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!(
-            "java.lang.ClassLoader::defineClass({:?}, {:?}, {:?}, {:?}, {:?})",
-            &this,
-            name,
-            bytes,
-            offset,
-            length
-        );
+        tracing::debug!("java.lang.ClassLoader::defineClass({this:?}, {name:?}, {bytes:?}, {offset:?}, {length:?})");
 
         let mut data = vec![0; length as usize];
         jvm.array_raw_buffer(&bytes).await?.read(offset as _, &mut data)?;

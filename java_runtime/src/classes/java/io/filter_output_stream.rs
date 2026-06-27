@@ -26,7 +26,7 @@ impl FilterOutputStream {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
-        tracing::debug!("java.io.FilterOutputStream::<init>({:?}, {:?})", &this, &out);
+        tracing::debug!("java.io.FilterOutputStream::<init>({this:?}, {out:?})");
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
@@ -43,13 +43,7 @@ impl FilterOutputStream {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        tracing::debug!(
-            " java.io.FilterOutputStream::write({:?}, {:?}, {:?}, {:?})",
-            &this,
-            &bytes,
-            &offset,
-            &length
-        );
+        tracing::debug!(" java.io.FilterOutputStream::write({this:?}, {bytes:?}, {offset:?}, {length:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "([BII)V", (bytes, offset, length)).await?;
@@ -58,7 +52,7 @@ impl FilterOutputStream {
     }
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
-        tracing::debug!("java.io.FilterOutputStream::write({:?}, {:?})", &this, &byte);
+        tracing::debug!("java.io.FilterOutputStream::write({this:?}, {byte:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "write", "(I)V", (byte,)).await?;

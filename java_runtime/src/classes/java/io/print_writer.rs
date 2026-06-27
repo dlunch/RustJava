@@ -28,7 +28,7 @@ impl PrintWriter {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, out: ClassInstanceRef<Writer>) -> Result<()> {
-        tracing::debug!("java.io.PrintWriter::<init>({:?})", &this);
+        tracing::debug!("java.io.PrintWriter::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
 
@@ -45,7 +45,7 @@ impl PrintWriter {
         off: i32,
         len: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.io.PrintWriter::write({:?}, {:?}, {:?}, {:?})", &this, &chars, &off, &len);
+        tracing::debug!("java.io.PrintWriter::write({this:?}, {chars:?}, {off:?}, {len:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
 
@@ -55,7 +55,7 @@ impl PrintWriter {
     }
 
     async fn println(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.io.PrintWriter::println({:?}, {:?})", &this, &string);
+        tracing::debug!("java.io.PrintWriter::println({this:?}, {string:?})");
 
         let string = format!("{}\n", JavaLangString::to_rust_string(jvm, &string).await?);
         let string = JavaLangString::from_rust_string(jvm, &string).await?;

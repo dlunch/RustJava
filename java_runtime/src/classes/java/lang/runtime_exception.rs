@@ -34,7 +34,7 @@ impl RuntimeException {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.RuntimeException::<init>({:?})", &this);
+        tracing::debug!("java.lang.RuntimeException::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Exception", "<init>", "()V", ()).await?;
 
@@ -42,7 +42,7 @@ impl RuntimeException {
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.lang.RuntimeException::<init>({:?}, {:?})", &this, &message);
+        tracing::debug!("java.lang.RuntimeException::<init>({this:?}, {message:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/lang/Exception", "<init>", "(Ljava/lang/String;)V", (message,))
@@ -52,7 +52,7 @@ impl RuntimeException {
     }
 
     async fn init_with_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, cause: ClassInstanceRef<Throwable>) -> Result<()> {
-        tracing::debug!("java.lang.RuntimeException::<init>({:?}, {:?})", &this, &cause);
+        tracing::debug!("java.lang.RuntimeException::<init>({this:?}, {cause:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/lang/Exception", "<init>", "(Ljava/lang/Throwable;)V", (cause,))
@@ -68,7 +68,7 @@ impl RuntimeException {
         message: ClassInstanceRef<String>,
         cause: ClassInstanceRef<Throwable>,
     ) -> Result<()> {
-        tracing::debug!("java.lang.RuntimeException::<init>({:?}, {:?}, {:?})", &this, &message, &cause);
+        tracing::debug!("java.lang.RuntimeException::<init>({this:?}, {message:?}, {cause:?})");
 
         let _: () = jvm
             .invoke_special(

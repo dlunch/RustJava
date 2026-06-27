@@ -28,7 +28,7 @@ impl TimerTask {
     }
 
     async fn init(jvm: &Jvm, _context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.TimerTask::<init>({:?})", &this);
+        tracing::debug!("java.util.TimerTask::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

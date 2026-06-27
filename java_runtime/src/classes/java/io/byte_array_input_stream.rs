@@ -67,7 +67,7 @@ impl ByteArrayInputStream {
     }
 
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.ByteArrayInputStream::available({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::available({this:?})");
 
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
@@ -83,7 +83,7 @@ impl ByteArrayInputStream {
         off: i32,
         len: i32,
     ) -> Result<i32> {
-        tracing::debug!("java.io.ByteArrayInputStream::read({:?}, {:?}, {}, {})", &this, &b, off, len);
+        tracing::debug!("java.io.ByteArrayInputStream::read({this:?}, {b:?}, {off}, {len})");
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let buf_length = jvm.array_length(&buf).await?;
@@ -110,7 +110,7 @@ impl ByteArrayInputStream {
     }
 
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        tracing::debug!("java.io.ByteArrayInputStream::readByte({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::readByte({this:?})");
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let buf_length = jvm.array_length(&buf).await?;
@@ -128,13 +128,13 @@ impl ByteArrayInputStream {
     }
 
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayInputStream::close({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::close({this:?})");
 
         Ok(())
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
-        tracing::debug!("java.io.ByteArrayInputStream::skip({:?}, {:?})", &this, n);
+        tracing::debug!("java.io.ByteArrayInputStream::skip({this:?}, {n:?})");
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
         let buf_length = jvm.array_length(&buf).await?;
@@ -149,7 +149,7 @@ impl ByteArrayInputStream {
     }
 
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayInputStream::mark({:?}, {:?})", &this, readlimit);
+        tracing::debug!("java.io.ByteArrayInputStream::mark({this:?}, {readlimit:?})");
 
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
         jvm.put_field(&mut this, "mark", "I", pos).await?;
@@ -158,7 +158,7 @@ impl ByteArrayInputStream {
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.ByteArrayInputStream::reset({:?})", &this);
+        tracing::debug!("java.io.ByteArrayInputStream::reset({this:?})");
 
         let mark: i32 = jvm.get_field(&this, "mark", "I").await?;
         jvm.put_field(&mut this, "pos", "I", mark).await?;

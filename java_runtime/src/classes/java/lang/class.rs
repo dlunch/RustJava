@@ -52,7 +52,7 @@ impl Class {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.lang.Class::<init>({:?})", &this);
+        tracing::debug!("java.lang.Class::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -60,7 +60,7 @@ impl Class {
     }
 
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.lang.Class::getName({:?})", &this);
+        tracing::debug!("java.lang.Class::getName({this:?})");
 
         let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
         let result = JavaLangString::from_rust_string(jvm, &rust_class.name().replace('/', ".")).await?;
@@ -69,7 +69,7 @@ impl Class {
     }
 
     async fn is_assignable_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
-        tracing::debug!("java.lang.Class::isAssignableFrom({:?}, {:?})", &this, &other);
+        tracing::debug!("java.lang.Class::isAssignableFrom({this:?}, {other:?})");
 
         let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
         let other_rust_class = JavaLangClass::to_rust_class(jvm, &other).await?;
@@ -83,7 +83,7 @@ impl Class {
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<InputStream>> {
-        tracing::debug!("java.lang.Class::getResourceAsStream({:?}, {:?})", &this, &name);
+        tracing::debug!("java.lang.Class::getResourceAsStream({this:?}, {name:?})");
 
         let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
 
@@ -99,7 +99,7 @@ impl Class {
     }
 
     async fn for_name(jvm: &Jvm, _context: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Class>> {
-        tracing::debug!("java.lang.Class::forName({:?})", &name);
+        tracing::debug!("java.lang.Class::forName({name:?})");
 
         let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
         let qualified_name = rust_name.replace('.', "/");

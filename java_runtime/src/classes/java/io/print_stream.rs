@@ -38,7 +38,7 @@ impl PrintStream {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::<init>({:?}, {:?})", &this, &out);
+        tracing::debug!("java.io.PrintStream::<init>({this:?}, {out:?})");
 
         let _: () = jvm
             .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
@@ -48,7 +48,7 @@ impl PrintStream {
     }
 
     async fn println_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, obj: ClassInstanceRef<Object>) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &obj);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {obj:?})");
 
         let result = if obj.is_null() {
             "null\n".into()
@@ -69,7 +69,7 @@ impl PrintStream {
     }
 
     async fn println_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &str);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {str:?})");
 
         let result = if str.is_null() {
             "null\n".into()
@@ -88,7 +88,7 @@ impl PrintStream {
     }
 
     async fn println_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, int: i32) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &int);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {int:?})");
 
         let java_string = JavaLangString::from_rust_string(jvm, &int.to_string()).await?;
 
@@ -98,7 +98,7 @@ impl PrintStream {
     }
 
     async fn println_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, long: i64) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &long);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {long:?})");
 
         let java_string = JavaLangString::from_rust_string(jvm, &long.to_string()).await?;
 
@@ -108,7 +108,7 @@ impl PrintStream {
     }
 
     async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, char: JavaChar) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &char);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {char:?})");
 
         let char = char::from_u32(char as _).unwrap();
 
@@ -120,7 +120,7 @@ impl PrintStream {
     }
 
     async fn println_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i8) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &byte);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {byte:?})");
 
         let java_string = JavaLangString::from_rust_string(jvm, &byte.to_string()).await?;
 
@@ -130,7 +130,7 @@ impl PrintStream {
     }
 
     async fn println_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, short: i16) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &short);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {short:?})");
 
         let java_string = JavaLangString::from_rust_string(jvm, &short.to_string()).await?;
 
@@ -140,7 +140,7 @@ impl PrintStream {
     }
 
     async fn println_bool(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, bool: bool) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &bool);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {bool:?})");
 
         let java_string = JavaLangString::from_rust_string(jvm, &bool.to_string()).await?;
 
@@ -150,7 +150,7 @@ impl PrintStream {
     }
 
     async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, double: f64) -> Result<()> {
-        tracing::debug!("java.io.PrintStream::println({:?}, {:?})", &this, &double);
+        tracing::debug!("java.io.PrintStream::println({this:?}, {double:?})");
 
         let string = format!("{double:.1}");
 

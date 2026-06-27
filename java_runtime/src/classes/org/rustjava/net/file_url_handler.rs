@@ -35,7 +35,7 @@ impl FileURLHandler {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("org.rustjava.net.FileURLHandler::<init>({:?})", &this);
+        tracing::debug!("org.rustjava.net.FileURLHandler::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/net/URLStreamHandler", "<init>", "()V", ()).await?;
 
@@ -48,7 +48,7 @@ impl FileURLHandler {
         this: ClassInstanceRef<Self>,
         url: ClassInstanceRef<URL>,
     ) -> Result<ClassInstanceRef<URLConnection>> {
-        tracing::debug!("org.rustjava.net.FileURLHandler::openConnection({:?}, {:?})", &this, &url);
+        tracing::debug!("org.rustjava.net.FileURLHandler::openConnection({this:?}, {url:?})");
 
         let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
         let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;

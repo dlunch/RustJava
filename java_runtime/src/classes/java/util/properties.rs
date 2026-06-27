@@ -38,7 +38,7 @@ impl Properties {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.Properties::<init>({:?})", &this);
+        tracing::debug!("java.util.Properties::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Hashtable", "<init>", "()V", ()).await?;
 
@@ -51,7 +51,7 @@ impl Properties {
         this: ClassInstanceRef<Self>,
         key: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<String>> {
-        tracing::debug!("java.util.Properties::getProperty({:?}, {:?})", &this, &key);
+        tracing::debug!("java.util.Properties::getProperty({this:?}, {key:?})");
 
         let result = jvm.invoke_virtual(&this, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,)).await?;
 
@@ -67,7 +67,7 @@ impl Properties {
         key: ClassInstanceRef<String>,
         value: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Properties::setProperty({:?}, {:?}, {:?})", &this, &key, &value);
+        tracing::debug!("java.util.Properties::setProperty({this:?}, {key:?}, {value:?})");
 
         let old = jvm
             .invoke_virtual(&this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))

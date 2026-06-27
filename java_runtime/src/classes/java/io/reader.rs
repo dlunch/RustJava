@@ -27,7 +27,7 @@ impl Reader {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.Reader::<init>({:?})", &this);
+        tracing::debug!("java.io.Reader::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -35,7 +35,7 @@ impl Reader {
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<JavaChar>) -> Result<i32> {
-        tracing::debug!("java.io.Reader::read({:?}, {:?})", &this, &buf);
+        tracing::debug!("java.io.Reader::read({this:?}, {buf:?})");
 
         let len = jvm.array_length(&buf).await? as i32;
         let result = jvm.invoke_virtual(&this, "read", "([CII)I", (buf, 0, len)).await?;
