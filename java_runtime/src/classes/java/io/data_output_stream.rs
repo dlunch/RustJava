@@ -136,7 +136,7 @@ impl DataOutputStream {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::close({this:?})");
+        tracing::debug!("java.io.DataOutputStream::close({this:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "close", "()V", []).await?;
@@ -145,7 +145,7 @@ impl DataOutputStream {
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.io.DataInputStream::flush({this:?})");
+        tracing::debug!("java.io.DataOutputStream::flush({this:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
         let _: () = jvm.invoke_virtual(&out, "flush", "()V", []).await?;

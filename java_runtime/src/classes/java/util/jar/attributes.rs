@@ -30,7 +30,7 @@ impl Attributes {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.util.jar.Manifest::<init>({this:?})");
+        tracing::debug!("java.util.jar.Attributes::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
