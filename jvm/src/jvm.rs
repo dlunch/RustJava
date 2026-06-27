@@ -589,36 +589,38 @@ impl Jvm {
         self.is_assignable(&instance.class_definition().name(), class_name)
     }
 
-    // aastore: whether value may be stored into array (JVMS 6.5 aastore); array component is always a reference type
+    // aastore: whether value may be stored into array (JVMS 6.5 aastore)
     pub fn array_store_allowed(&self, array: &dyn ClassInstance, value: &dyn ClassInstance) -> bool {
-        let component = component_name(&array.class_definition().name()[1..]);
+        let JavaType::Array(component) = JavaType::parse(&array.class_definition().name()) else {
+            return true;
+        };
 
-        self.is_assignable(&value.class_definition().name(), &component)
+        self.is_type_assignable(&name_to_type(&value.class_definition().name()), &component)
     }
 
     // JVMS 4.10.3 subtyping, including array covariance. Names are in internal form: classes as
     // binary names (java/lang/String), arrays as descriptors ([Ljava/lang/String;, [I).
     pub fn is_assignable(&self, source: &str, target: &str) -> bool {
+        self.is_type_assignable(&name_to_type(source), &name_to_type(target))
+    }
+
+    fn is_type_assignable(&self, source: &JavaType, target: &JavaType) -> bool {
         if source == target {
             return true;
         }
 
-        // a primitive array component only matches its exact type
-        if is_primitive_descriptor(source) {
-            return false;
-        }
-
-        if let Some(source_component) = source.strip_prefix('[') {
-            if target == "java/lang/Object" || target == "java/lang/Cloneable" || target == "java/io/Serializable" {
-                return true;
+        match (source, target) {
+            (JavaType::Array(source_component), JavaType::Array(target_component)) => self.is_type_assignable(source_component, target_component),
+            // every array type is a subtype of Object, Cloneable, and java.io.Serializable (JLS 4.10.3)
+            (JavaType::Array(_), JavaType::Class(name)) => {
+                name == "java/lang/Object" || name == "java/lang/Cloneable" || name == "java/io/Serializable"
             }
-
-            return match target.strip_prefix('[') {
-                Some(target_component) => self.is_assignable(&component_name(source_component), &component_name(target_component)),
-                None => false,
-            };
+            (JavaType::Class(source), JavaType::Class(target)) => self.is_class_assignable(source, target),
+            _ => false,
         }
+    }
 
+    fn is_class_assignable(&self, source: &str, target: &str) -> bool {
         match self.get_class(source) {
             Some(class) => self.is_inherited_from(&*class.definition, target),
             None => false,
@@ -949,15 +951,11 @@ impl Jvm {
     }
 }
 
-fn is_primitive_descriptor(name: &str) -> bool {
-    matches!(name, "B" | "C" | "D" | "F" | "I" | "J" | "S" | "Z")
-}
-
-// converts an array component descriptor to internal name form: Lfoo/Bar; -> foo/Bar, [X and primitives unchanged
-fn component_name(descriptor: &str) -> String {
-    if let Some(class) = descriptor.strip_prefix('L').and_then(|x| x.strip_suffix(';')) {
-        class.to_owned()
+// a class binary name (java/lang/String) or an array descriptor ([Ljava/lang/String;, [I) as a JavaType
+fn name_to_type(name: &str) -> JavaType {
+    if name.starts_with('[') {
+        JavaType::parse(name)
     } else {
-        descriptor.to_owned()
+        JavaType::Class(name.to_owned())
     }
 }
