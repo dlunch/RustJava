@@ -933,9 +933,6 @@ impl Interpreter {
                 stack_frame.operand_stack.push(value1);
                 stack_frame.operand_stack.push(value2);
             }
-            Opcode::Wide => {
-                todo!()
-            }
         }
 
         Ok(ExecuteNext::Continue)

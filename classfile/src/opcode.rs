@@ -15,11 +15,11 @@ pub enum Opcode {
     Aaload,
     Aastore,
     AconstNull,
-    Aload(u8),
+    Aload(u16),
     Anewarray(ConstantPoolReference),
     Areturn,
     Arraylength,
-    Astore(u8),
+    Astore(u16),
     Athrow,
     Baload,
     Bastore,
@@ -37,12 +37,12 @@ pub enum Opcode {
     Dcmpl,
     Dconst(u8),
     Ddiv,
-    Dload(u8),
+    Dload(u16),
     Dmul,
     Dneg,
     Drem,
     Dreturn,
-    Dstore(u8),
+    Dstore(u16),
     Dsub,
     Dup,
     DupX1,
@@ -60,12 +60,12 @@ pub enum Opcode {
     Fcmpl,
     Fconst(u8),
     Fdiv,
-    Fload(u8),
+    Fload(u16),
     Fmul,
     Fneg,
     Frem,
     Freturn,
-    Fstore(u8),
+    Fstore(u16),
     Fsub,
     Getfield(ConstantPoolReference),
     Getstatic(ConstantPoolReference),
@@ -99,8 +99,8 @@ pub enum Opcode {
     Ifle(i16),
     Ifnonnull(i16),
     Ifnull(i16),
-    Iinc(u8, i8),
-    Iload(u8),
+    Iinc(u16, i16),
+    Iload(u16),
     Imul,
     Ineg,
     Instanceof(ConstantPoolReference),
@@ -114,7 +114,7 @@ pub enum Opcode {
     Ireturn,
     Ishl,
     Ishr,
-    Istore(u8),
+    Istore(u16),
     Isub,
     Iushr,
     Ixor,
@@ -133,7 +133,7 @@ pub enum Opcode {
     LdcW(ConstantPoolReference),
     Ldc2W(ConstantPoolReference),
     Ldiv,
-    Lload(u8),
+    Lload(u16),
     Lmul,
     Lneg,
     Lookupswitch(i32, Vec<(i32, i32)>),
@@ -142,7 +142,7 @@ pub enum Opcode {
     Lreturn,
     Lshl,
     Lshr,
-    Lstore(u8),
+    Lstore(u16),
     Lsub,
     Lushr,
     Lxor,
@@ -156,14 +156,13 @@ pub enum Opcode {
     Pop2,
     Putfield(ConstantPoolReference),
     Putstatic(ConstantPoolReference),
-    Ret(u8),
+    Ret(u16),
     Return,
     Saload,
     Sastore,
     Sipush(i16),
     Swap,
     Tableswitch(i32, Vec<(i32, i32)>),
-    Wide,
 }
 
 impl Opcode {
@@ -176,7 +175,7 @@ impl Opcode {
             0x32 => success(Opcode::Aaload).parse(data),
             0x53 => success(Opcode::Aastore).parse(data),
             0x01 => success(Opcode::AconstNull).parse(data),
-            0x19 => map(u8, Opcode::Aload).parse(data),
+            0x19 => map(u8, |x| Opcode::Aload(x as u16)).parse(data),
             0x2a => success(Opcode::Aload(0)).parse(data),
             0x2b => success(Opcode::Aload(1)).parse(data),
             0x2c => success(Opcode::Aload(2)).parse(data),
@@ -187,7 +186,7 @@ impl Opcode {
             .parse(data),
             0xb0 => success(Opcode::Areturn).parse(data),
             0xbe => success(Opcode::Arraylength).parse(data),
-            0x3a => map(u8, Opcode::Astore).parse(data),
+            0x3a => map(u8, |x| Opcode::Astore(x as u16)).parse(data),
             0x4b => success(Opcode::Astore(0)).parse(data),
             0x4c => success(Opcode::Astore(1)).parse(data),
             0x4d => success(Opcode::Astore(2)).parse(data),
@@ -213,7 +212,7 @@ impl Opcode {
             0x0e => success(Opcode::Dconst(0)).parse(data),
             0x0f => success(Opcode::Dconst(1)).parse(data),
             0x6f => success(Opcode::Ddiv).parse(data),
-            0x18 => map(u8, Opcode::Dload).parse(data),
+            0x18 => map(u8, |x| Opcode::Dload(x as u16)).parse(data),
             0x26 => success(Opcode::Dload(0)).parse(data),
             0x27 => success(Opcode::Dload(1)).parse(data),
             0x28 => success(Opcode::Dload(2)).parse(data),
@@ -222,7 +221,7 @@ impl Opcode {
             0x77 => success(Opcode::Dneg).parse(data),
             0x73 => success(Opcode::Drem).parse(data),
             0xaf => success(Opcode::Dreturn).parse(data),
-            0x39 => map(u8, Opcode::Dstore).parse(data),
+            0x39 => map(u8, |x| Opcode::Dstore(x as u16)).parse(data),
             0x47 => success(Opcode::Dstore(0)).parse(data),
             0x48 => success(Opcode::Dstore(1)).parse(data),
             0x49 => success(Opcode::Dstore(2)).parse(data),
@@ -246,7 +245,7 @@ impl Opcode {
             0x0c => success(Opcode::Fconst(1)).parse(data),
             0x0d => success(Opcode::Fconst(2)).parse(data),
             0x6e => success(Opcode::Fdiv).parse(data),
-            0x17 => map(u8, Opcode::Fload).parse(data),
+            0x17 => map(u8, |x| Opcode::Fload(x as u16)).parse(data),
             0x22 => success(Opcode::Fload(0)).parse(data),
             0x23 => success(Opcode::Fload(1)).parse(data),
             0x24 => success(Opcode::Fload(2)).parse(data),
@@ -255,7 +254,7 @@ impl Opcode {
             0x76 => success(Opcode::Fneg).parse(data),
             0x72 => success(Opcode::Frem).parse(data),
             0xae => success(Opcode::Freturn).parse(data),
-            0x38 => map(u8, Opcode::Fstore).parse(data),
+            0x38 => map(u8, |x| Opcode::Fstore(x as u16)).parse(data),
             0x43 => success(Opcode::Fstore(0)).parse(data),
             0x44 => success(Opcode::Fstore(1)).parse(data),
             0x45 => success(Opcode::Fstore(2)).parse(data),
@@ -305,8 +304,8 @@ impl Opcode {
             0x9e => map(be_i16, Opcode::Ifle).parse(data),
             0xc7 => map(be_i16, Opcode::Ifnonnull).parse(data),
             0xc6 => map(be_i16, Opcode::Ifnull).parse(data),
-            0x84 => map((u8, i8), |(index, constant)| Opcode::Iinc(index, constant)).parse(data),
-            0x15 => map(u8, Opcode::Iload).parse(data),
+            0x84 => map((u8, i8), |(index, constant)| Opcode::Iinc(index as u16, constant as i16)).parse(data),
+            0x15 => map(u8, |x| Opcode::Iload(x as u16)).parse(data),
             0x1a => success(Opcode::Iload(0)).parse(data),
             0x1b => success(Opcode::Iload(1)).parse(data),
             0x1c => success(Opcode::Iload(2)).parse(data),
@@ -342,7 +341,7 @@ impl Opcode {
             0xac => success(Opcode::Ireturn).parse(data),
             0x78 => success(Opcode::Ishl).parse(data),
             0x7a => success(Opcode::Ishr).parse(data),
-            0x36 => map(u8, Opcode::Istore).parse(data),
+            0x36 => map(u8, |x| Opcode::Istore(x as u16)).parse(data),
             0x3b => success(Opcode::Istore(0)).parse(data),
             0x3c => success(Opcode::Istore(1)).parse(data),
             0x3d => success(Opcode::Istore(2)).parse(data),
@@ -369,7 +368,7 @@ impl Opcode {
             })
             .parse(data),
             0x6d => success(Opcode::Ldiv).parse(data),
-            0x16 => map(u8, Opcode::Lload).parse(data),
+            0x16 => map(u8, |x| Opcode::Lload(x as u16)).parse(data),
             0x1e => success(Opcode::Lload(0)).parse(data),
             0x1f => success(Opcode::Lload(1)).parse(data),
             0x20 => success(Opcode::Lload(2)).parse(data),
@@ -385,7 +384,7 @@ impl Opcode {
             0xad => success(Opcode::Lreturn).parse(data),
             0x79 => success(Opcode::Lshl).parse(data),
             0x7b => success(Opcode::Lshr).parse(data),
-            0x37 => map(u8, Opcode::Lstore).parse(data),
+            0x37 => map(u8, |x| Opcode::Lstore(x as u16)).parse(data),
             0x3f => success(Opcode::Lstore(0)).parse(data),
             0x40 => success(Opcode::Lstore(1)).parse(data),
             0x41 => success(Opcode::Lstore(2)).parse(data),
@@ -412,7 +411,7 @@ impl Opcode {
                 Opcode::Putstatic(ConstantPoolReference::from_constant_pool(constant_pool, x as _))
             })
             .parse(data),
-            0xa9 => map(u8, Opcode::Ret).parse(data),
+            0xa9 => map(u8, |x| Opcode::Ret(x as u16)).parse(data),
             0xb1 => success(Opcode::Return).parse(data),
             0x35 => success(Opcode::Saload).parse(data),
             0x56 => success(Opcode::Sastore).parse(data),
@@ -427,8 +426,29 @@ impl Opcode {
                 }
             })
             .parse(data),
-            0xc4 => success(Opcode::Wide).parse(data),
+            0xc4 => Self::parse_wide(data),
             _ => panic!("Unknown opcode: {:02x}", opcode),
+        }
+    }
+
+    // wide (0xc4): widens the local variable index of the following instruction to 16 bits
+    fn parse_wide(data: &[u8]) -> IResult<&[u8], Self> {
+        let (data, opcode) = u8(data)?;
+
+        match opcode {
+            0x84 => map((be_u16, be_i16), |(index, constant)| Opcode::Iinc(index, constant)).parse(data),
+            0x15 => map(be_u16, Opcode::Iload).parse(data),
+            0x16 => map(be_u16, Opcode::Lload).parse(data),
+            0x17 => map(be_u16, Opcode::Fload).parse(data),
+            0x18 => map(be_u16, Opcode::Dload).parse(data),
+            0x19 => map(be_u16, Opcode::Aload).parse(data),
+            0x36 => map(be_u16, Opcode::Istore).parse(data),
+            0x37 => map(be_u16, Opcode::Lstore).parse(data),
+            0x38 => map(be_u16, Opcode::Fstore).parse(data),
+            0x39 => map(be_u16, Opcode::Dstore).parse(data),
+            0x3a => map(be_u16, Opcode::Astore).parse(data),
+            0xa9 => map(be_u16, Opcode::Ret).parse(data),
+            _ => panic!("Invalid wide opcode: {:02x}", opcode),
         }
     }
 }
@@ -486,5 +506,23 @@ mod test {
 
         assert!(remaining.is_empty());
         assert!(matches!(opcode, Opcode::Invokedynamic(_)));
+    }
+
+    #[test]
+    fn test_wide_iload_reads_u16_index() {
+        // wide iload 0x0100, then nop — the trailing nop must not be misparsed
+        let (remaining, opcode) = Opcode::parse(&[0xc4, 0x15, 0x01, 0x00, 0x00], 0, &constant_pool()).unwrap();
+
+        assert!(matches!(opcode, Opcode::Iload(0x0100)));
+        assert_eq!(remaining, &[0x00]);
+    }
+
+    #[test]
+    fn test_wide_iinc_reads_u16_index_and_i16_const() {
+        // wide iinc 0x012c, 1000
+        let (remaining, opcode) = Opcode::parse(&[0xc4, 0x84, 0x01, 0x2c, 0x03, 0xe8], 0, &constant_pool()).unwrap();
+
+        assert!(matches!(opcode, Opcode::Iinc(0x012c, 1000)));
+        assert!(remaining.is_empty());
     }
 }
