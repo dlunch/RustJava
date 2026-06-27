@@ -118,6 +118,15 @@ impl Interpreter {
                     _ => value,
                 };
 
+                if matches!(opcode, Opcode::Aastore) {
+                    let stored: &Option<Box<dyn ClassInstance>> = (&value).into();
+                    if let Some(stored) = stored
+                        && !jvm.array_store_allowed(&**array.as_ref().unwrap(), &**stored)
+                    {
+                        return Err(jvm.exception("java/lang/ArrayStoreException", &stored.class_definition().name()).await);
+                    }
+                }
+
                 jvm.store_array(array.as_mut().unwrap(), index as usize, [value]).await?;
             }
             Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),

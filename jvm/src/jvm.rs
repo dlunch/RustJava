@@ -586,9 +586,43 @@ impl Jvm {
     }
 
     pub fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> bool {
-        let class = instance.class_definition();
+        self.is_assignable(&instance.class_definition().name(), class_name)
+    }
 
-        self.is_inherited_from(&*class, class_name)
+    // aastore: whether value may be stored into array (JVMS 6.5 aastore); array component is always a reference type
+    pub fn array_store_allowed(&self, array: &dyn ClassInstance, value: &dyn ClassInstance) -> bool {
+        let component = component_name(&array.class_definition().name()[1..]);
+
+        self.is_assignable(&value.class_definition().name(), &component)
+    }
+
+    // JVMS 4.10.3 subtyping, including array covariance. Names are in internal form: classes as
+    // binary names (java/lang/String), arrays as descriptors ([Ljava/lang/String;, [I).
+    pub fn is_assignable(&self, source: &str, target: &str) -> bool {
+        if source == target {
+            return true;
+        }
+
+        // a primitive array component only matches its exact type
+        if is_primitive_descriptor(source) {
+            return false;
+        }
+
+        if let Some(source_component) = source.strip_prefix('[') {
+            if target == "java/lang/Object" || target == "java/lang/Cloneable" || target == "java/io/Serializable" {
+                return true;
+            }
+
+            return match target.strip_prefix('[') {
+                Some(target_component) => self.is_assignable(&component_name(source_component), &component_name(target_component)),
+                None => false,
+            };
+        }
+
+        match self.get_class(source) {
+            Some(class) => self.is_inherited_from(&*class.definition, target),
+            None => false,
+        }
     }
 
     pub fn is_inherited_from(&self, class: &dyn ClassDefinition, class_name: &str) -> bool {
@@ -912,5 +946,18 @@ impl Jvm {
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
 
         result
+    }
+}
+
+fn is_primitive_descriptor(name: &str) -> bool {
+    matches!(name, "B" | "C" | "D" | "F" | "I" | "J" | "S" | "Z")
+}
+
+// converts an array component descriptor to internal name form: Lfoo/Bar; -> foo/Bar, [X and primitives unchanged
+fn component_name(descriptor: &str) -> String {
+    if let Some(class) = descriptor.strip_prefix('L').and_then(|x| x.strip_suffix(';')) {
+        class.to_owned()
+    } else {
+        descriptor.to_owned()
     }
 }
