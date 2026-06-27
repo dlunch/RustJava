@@ -52,6 +52,16 @@ impl JavaType {
         Self::parse_type(descriptor).unwrap().1
     }
 
+    // a CONSTANT_Class_info name (JVMS 4.4.1): a class binary name in internal form (java/lang/String)
+    // or an array type descriptor ([Ljava/lang/String;, [I)
+    pub fn from_class_name(name: &str) -> Self {
+        if name.starts_with('[') {
+            Self::parse(name)
+        } else {
+            Self::Class(name.to_string())
+        }
+    }
+
     pub fn as_method(&self) -> (&[Self], &Self) {
         if let Self::Method(params, return_type) = self {
             (params, return_type)

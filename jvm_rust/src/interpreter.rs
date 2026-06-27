@@ -106,6 +106,12 @@ impl Interpreter {
                     return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
                 }
 
+                // JVMS: aastore reports an out-of-bounds index before any ArrayStoreException type check
+                let length = jvm.array_length(array.as_ref().unwrap()).await?;
+                if index as usize >= length {
+                    return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
+                }
+
                 let element_type = jvm.array_element_type(array.as_ref().unwrap()).await?;
 
                 // operand stack has only integer, so convert it to the correct type
@@ -117,6 +123,15 @@ impl Interpreter {
                     JavaType::Int => JavaValue::Int(i32::from(value)),
                     _ => value,
                 };
+
+                if matches!(opcode, Opcode::Aastore) {
+                    let stored: &Option<Box<dyn ClassInstance>> = (&value).into();
+                    if let Some(stored) = stored
+                        && !jvm.array_store_allowed(&**array.as_ref().unwrap(), &**stored)
+                    {
+                        return Err(jvm.exception("java/lang/ArrayStoreException", &stored.class_definition().name()).await);
+                    }
+                }
 
                 jvm.store_array(array.as_mut().unwrap(), index as usize, [value]).await?;
             }

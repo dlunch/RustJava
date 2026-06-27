@@ -35,6 +35,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::lang::AbstractMethodError::as_proto(),
         crate::classes::java::lang::ArithmeticException::as_proto(),
         crate::classes::java::lang::ArrayIndexOutOfBoundsException::as_proto(),
+        crate::classes::java::lang::ArrayStoreException::as_proto(),
         crate::classes::java::lang::Class::as_proto(),
         crate::classes::java::lang::ClassCastException::as_proto(),
         crate::classes::java::lang::ClassLoader::as_proto(),

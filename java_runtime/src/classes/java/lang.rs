@@ -1,6 +1,7 @@
 mod abstract_method_error;
 mod arithmetic_exception;
 mod array_index_out_of_bounds_exception;
+mod array_store_exception;
 mod class;
 mod class_cast_exception;
 mod class_loader;
@@ -39,14 +40,15 @@ mod unsupported_operation_exception;
 
 pub use self::{
     abstract_method_error::AbstractMethodError, arithmetic_exception::ArithmeticException,
-    array_index_out_of_bounds_exception::ArrayIndexOutOfBoundsException, class::Class, class_cast_exception::ClassCastException,
-    class_loader::ClassLoader, clone_not_supported_exception::CloneNotSupportedException, cloneable::Cloneable, comparable::Comparable, error::Error,
-    exception::Exception, exception_in_initializer_error::ExceptionInInitializerError, illegal_argument_exception::IllegalArgumentException,
-    incompatible_class_change_error::IncompatibleClassChangeError, index_out_of_bounds_exception::IndexOutOfBoundsException,
-    instantiation_error::InstantiationError, integer::Integer, interrupted_exception::InterruptedException, linkage_error::LinkageError, math::Math,
-    negative_array_size_exception::NegativeArraySizeException, no_class_def_found_error::NoClassDefFoundError, no_such_field_error::NoSuchFieldError,
-    no_such_method_error::NoSuchMethodError, null_pointer_exception::NullPointerException, number_format_exception::NumberFormatException,
-    object::Object, runnable::Runnable, runtime::Runtime, runtime_exception::RuntimeException, security_exception::SecurityException, string::String,
-    string_buffer::StringBuffer, string_index_out_of_bounds_exception::StringIndexOutOfBoundsException, system::System, thread::Thread,
-    throwable::Throwable, unsupported_operation_exception::UnsupportedOperationException,
+    array_index_out_of_bounds_exception::ArrayIndexOutOfBoundsException, array_store_exception::ArrayStoreException, class::Class,
+    class_cast_exception::ClassCastException, class_loader::ClassLoader, clone_not_supported_exception::CloneNotSupportedException,
+    cloneable::Cloneable, comparable::Comparable, error::Error, exception::Exception, exception_in_initializer_error::ExceptionInInitializerError,
+    illegal_argument_exception::IllegalArgumentException, incompatible_class_change_error::IncompatibleClassChangeError,
+    index_out_of_bounds_exception::IndexOutOfBoundsException, instantiation_error::InstantiationError, integer::Integer,
+    interrupted_exception::InterruptedException, linkage_error::LinkageError, math::Math, negative_array_size_exception::NegativeArraySizeException,
+    no_class_def_found_error::NoClassDefFoundError, no_such_field_error::NoSuchFieldError, no_such_method_error::NoSuchMethodError,
+    null_pointer_exception::NullPointerException, number_format_exception::NumberFormatException, object::Object, runnable::Runnable,
+    runtime::Runtime, runtime_exception::RuntimeException, security_exception::SecurityException, string::String, string_buffer::StringBuffer,
+    string_index_out_of_bounds_exception::StringIndexOutOfBoundsException, system::System, thread::Thread, throwable::Throwable,
+    unsupported_operation_exception::UnsupportedOperationException,
 };

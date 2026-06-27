@@ -621,9 +621,43 @@ impl Jvm {
     }
 
     pub fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> bool {
-        let class = instance.class_definition();
+        self.is_type_assignable(
+            &JavaType::from_class_name(&instance.class_definition().name()),
+            &JavaType::from_class_name(class_name),
+        )
+    }
 
-        self.is_inherited_from(&*class, class_name)
+    // aastore: whether value may be stored into array (JVMS 6.5 aastore)
+    pub fn array_store_allowed(&self, array: &dyn ClassInstance, value: &dyn ClassInstance) -> bool {
+        let JavaType::Array(component) = JavaType::parse(&array.class_definition().name()) else {
+            return true;
+        };
+
+        self.is_type_assignable(&JavaType::from_class_name(&value.class_definition().name()), &component)
+    }
+
+    // JVMS 4.10.3 subtyping, including array covariance
+    fn is_type_assignable(&self, source: &JavaType, target: &JavaType) -> bool {
+        if source == target {
+            return true;
+        }
+
+        match (source, target) {
+            (JavaType::Array(source_component), JavaType::Array(target_component)) => self.is_type_assignable(source_component, target_component),
+            // every array type is a subtype of Object, Cloneable, and java.io.Serializable (JLS 4.10.3)
+            (JavaType::Array(_), JavaType::Class(name)) => {
+                name == "java/lang/Object" || name == "java/lang/Cloneable" || name == "java/io/Serializable"
+            }
+            (JavaType::Class(source), JavaType::Class(target)) => self.is_class_assignable(source, target),
+            _ => false,
+        }
+    }
+
+    fn is_class_assignable(&self, source: &str, target: &str) -> bool {
+        match self.get_class(source) {
+            Some(class) => self.is_inherited_from(&*class.definition, target),
+            None => false,
+        }
     }
 
     pub fn is_inherited_from(&self, class: &dyn ClassDefinition, class_name: &str) -> bool {
