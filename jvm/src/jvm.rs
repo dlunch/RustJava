@@ -586,7 +586,10 @@ impl Jvm {
     }
 
     pub fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> bool {
-        self.is_assignable(&instance.class_definition().name(), class_name)
+        self.is_type_assignable(
+            &JavaType::from_class_name(&instance.class_definition().name()),
+            &JavaType::from_class_name(class_name),
+        )
     }
 
     // aastore: whether value may be stored into array (JVMS 6.5 aastore)
@@ -595,15 +598,10 @@ impl Jvm {
             return true;
         };
 
-        self.is_type_assignable(&name_to_type(&value.class_definition().name()), &component)
+        self.is_type_assignable(&JavaType::from_class_name(&value.class_definition().name()), &component)
     }
 
-    // JVMS 4.10.3 subtyping, including array covariance. Names are in internal form: classes as
-    // binary names (java/lang/String), arrays as descriptors ([Ljava/lang/String;, [I).
-    pub fn is_assignable(&self, source: &str, target: &str) -> bool {
-        self.is_type_assignable(&name_to_type(source), &name_to_type(target))
-    }
-
+    // JVMS 4.10.3 subtyping, including array covariance
     fn is_type_assignable(&self, source: &JavaType, target: &JavaType) -> bool {
         if source == target {
             return true;
@@ -948,14 +946,5 @@ impl Jvm {
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
 
         result
-    }
-}
-
-// a class binary name (java/lang/String) or an array descriptor ([Ljava/lang/String;, [I) as a JavaType
-fn name_to_type(name: &str) -> JavaType {
-    if name.starts_with('[') {
-        JavaType::parse(name)
-    } else {
-        JavaType::Class(name.to_owned())
     }
 }
