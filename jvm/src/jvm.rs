@@ -36,6 +36,7 @@ struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
+    string_pool: RwLock<BTreeMap<Vec<u16>, Box<dyn ClassInstance>>>,
     monitors: RwLock<BTreeMap<u64, Arc<Event>>>,
     monitor_hasher: DefaultHashBuilder,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
@@ -59,6 +60,7 @@ impl Jvm {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
                 all_objects: RwLock::new(HashSet::new()),
+                string_pool: RwLock::new(BTreeMap::new()),
                 monitors: RwLock::new(BTreeMap::new()),
                 monitor_hasher: DefaultHashBuilder::default(),
                 get_current_thread_id: Box::new(get_current_thread_id),
@@ -475,6 +477,39 @@ impl Jvm {
         Ok(())
     }
 
+    // JVMS 5.1 string interning: equal string literals (and String.intern results) share one instance
+    pub async fn intern_string(&self, value: &str) -> Result<Box<dyn ClassInstance>> {
+        let key = value.encode_utf16().collect::<Vec<_>>();
+        if let Some(interned) = self.inner.string_pool.read().get(&key) {
+            return Ok(clone_box(&**interned));
+        }
+
+        let instance = JavaLangString::from_rust_string(self, value).await?;
+
+        Ok(self.intern_or_get(key, instance))
+    }
+
+    // String.intern(): the receiver itself is pooled and returned when it is the first with its value (JVMS String spec)
+    pub fn intern_string_instance(&self, instance: Box<dyn ClassInstance>, value: &[u16]) -> Box<dyn ClassInstance> {
+        if let Some(interned) = self.inner.string_pool.read().get(value) {
+            return clone_box(&**interned);
+        }
+
+        self.intern_or_get(value.to_owned(), instance)
+    }
+
+    // insert under the write lock, re-checking so concurrent interners converge on one canonical instance
+    fn intern_or_get(&self, key: Vec<u16>, instance: Box<dyn ClassInstance>) -> Box<dyn ClassInstance> {
+        let mut pool = self.inner.string_pool.write();
+        let interned = pool.entry(key).or_insert(instance);
+
+        clone_box(&**interned)
+    }
+
+    pub(crate) fn interned_strings(&self) -> Vec<Box<dyn ClassInstance>> {
+        self.inner.string_pool.read().values().map(|x| clone_box(&**x)).collect()
+    }
+
     pub fn has_class(&self, class_name: &str) -> bool {
         self.inner.classes.read().contains_key(class_name)
     }
@@ -652,8 +687,9 @@ impl Jvm {
             let threads = self.inner.threads.read();
             let all_objects = self.inner.all_objects.read();
             let classes = self.inner.classes.read();
+            let interned_strings = self.interned_strings();
 
-            determine_garbage(self, &threads, &all_objects, &classes)
+            determine_garbage(self, &threads, &all_objects, &classes, &interned_strings)
         };
 
         let garbage_count = garbage.len();

@@ -10,6 +10,7 @@ pub fn determine_garbage(
     threads: &BTreeMap<u64, JvmThread>,
     all_class_instances: &HashSet<Box<dyn ClassInstance>>,
     classes: &BTreeMap<String, Class>,
+    interned_strings: &[Box<dyn ClassInstance>],
 ) -> Vec<Box<dyn ClassInstance>> {
     let mut reachable_objects = HashSet::new();
 
@@ -24,6 +25,10 @@ pub fn determine_garbage(
         .for_each(|x| {
             find_reachable_objects(jvm, x, &mut reachable_objects);
         });
+
+    interned_strings.iter().for_each(|x| {
+        find_reachable_objects(jvm, x, &mut reachable_objects);
+    });
 
     all_class_instances.difference(&reachable_objects).cloned().collect()
 }

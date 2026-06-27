@@ -15,7 +15,7 @@ use parking_lot::RwLock;
 use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference};
 use java_class_proto::JavaClassProto;
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result, runtime::JavaLangString};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result};
 
 use crate::{class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl};
 
@@ -176,7 +176,7 @@ impl ClassDefinition for ClassDefinitionImpl {
                 ConstantPoolReference::Long(x) => JavaValue::Long(*x),
                 ConstantPoolReference::Float(x) => JavaValue::Float(*x),
                 ConstantPoolReference::Double(x) => JavaValue::Double(*x),
-                ConstantPoolReference::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
+                ConstantPoolReference::String(x) => JavaValue::Object(Some(jvm.intern_string(x).await?)),
                 _ => continue,
             };
 

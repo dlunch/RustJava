@@ -96,6 +96,7 @@ impl String {
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;)Z", Self::starts_with, Default::default()),
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;I)Z", Self::starts_with_offset, Default::default()),
                 JavaMethodProto::new("endsWith", "(Ljava/lang/String;)Z", Self::ends_with, Default::default()),
+                JavaMethodProto::new("intern", "()Ljava/lang/String;", Self::intern, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
             access_flags: Default::default(),
@@ -739,6 +740,18 @@ impl String {
         let suffix_string = JavaLangString::to_rust_string(jvm, &suffix).await?;
 
         Ok(this_string.ends_with(&suffix_string))
+    }
+
+    async fn intern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::intern({:?})", &this);
+
+        let chars = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&chars).await?;
+        let utf16: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
+
+        let receiver = this.instance.unwrap();
+
+        Ok(jvm.intern_string_instance(receiver, &utf16).into())
     }
 
     async fn value_of_boolean(jvm: &Jvm, _: &mut RuntimeContext, value: bool) -> Result<ClassInstanceRef<Self>> {

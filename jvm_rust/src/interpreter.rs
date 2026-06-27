@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec, vec::Vec};
 use core::iter;
 
 use classfile::{AttributeInfoCode, ConstantPoolReference, Opcode};
-use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result};
 
 use crate::stack_frame::StackFrame;
 
@@ -1033,7 +1033,7 @@ impl Interpreter {
             ConstantPoolReference::Float(x) => JavaValue::Float(*x),
             ConstantPoolReference::Long(x) => JavaValue::Long(*x),
             ConstantPoolReference::Double(x) => JavaValue::Double(*x),
-            ConstantPoolReference::String(x) => JavaValue::Object(Some(JavaLangString::from_rust_string(jvm, x).await?)),
+            ConstantPoolReference::String(x) => JavaValue::Object(Some(jvm.intern_string(x).await?)),
             ConstantPoolReference::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
             _ => unimplemented!(),
         })
