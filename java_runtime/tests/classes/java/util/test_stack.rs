@@ -69,6 +69,7 @@ async fn test_stack_search() -> Result<()> {
     let element2 = JavaLangString::from_rust_string(&jvm, "testValue2").await?;
     let element3 = JavaLangString::from_rust_string(&jvm, "testValue3").await?;
     let element4 = JavaLangString::from_rust_string(&jvm, "testValue3").await?;
+    let element5 = JavaLangString::from_rust_string(&jvm, "testValue4").await?;
 
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(&stack, "push", "(Ljava/lang/Object;)Ljava/lang/Object;", (element1.clone(),))
@@ -93,6 +94,9 @@ async fn test_stack_search() -> Result<()> {
     assert_eq!(peek, 1);
 
     let peek: i32 = jvm.invoke_virtual(&stack, "search", "(Ljava/lang/Object;)I", (element4.clone(),)).await?;
+    assert_eq!(peek, 2);
+
+    let peek: i32 = jvm.invoke_virtual(&stack, "search", "(Ljava/lang/Object;)I", (element5.clone(),)).await?;
     assert_eq!(peek, -1);
 
     Ok(())

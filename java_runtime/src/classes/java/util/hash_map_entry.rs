@@ -5,19 +5,19 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
-// class java.util.Hashtable$Entry
-pub struct HashtableEntry;
+// class java.util.HashMap$Entry
+pub struct HashMapEntry;
 
-impl HashtableEntry {
+impl HashMapEntry {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/util/Hashtable$Entry",
+            name: "java/util/HashMap$Entry",
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Map$Entry"],
             methods: vec![
                 JavaMethodProto::new(
                     "<init>",
-                    "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/Hashtable$Entry;)V",
+                    "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
                     Self::init,
                     Default::default(),
                 ),
@@ -29,7 +29,7 @@ impl HashtableEntry {
                 JavaFieldProto::new("hash", "I", Default::default()),
                 JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),
                 JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("next", "Ljava/util/Hashtable$Entry;", Default::default()),
+                JavaFieldProto::new("next", "Ljava/util/HashMap$Entry;", Default::default()),
             ],
             access_flags: Default::default(),
         }
@@ -42,28 +42,28 @@ impl HashtableEntry {
         hash: i32,
         key: ClassInstanceRef<Object>,
         value: ClassInstanceRef<Object>,
-        next: ClassInstanceRef<HashtableEntry>,
+        next: ClassInstanceRef<HashMapEntry>,
     ) -> Result<()> {
-        tracing::debug!("java.util.Hashtable$Entry::<init>({this:?}, {hash:?}, {key:?}, {value:?}, {next:?})");
+        tracing::debug!("java.util.HashMap$Entry::<init>({this:?}, {hash:?}, {key:?}, {value:?}, {next:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "hash", "I", hash).await?;
         jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
         jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "next", "Ljava/util/Hashtable$Entry;", next).await?;
+        jvm.put_field(&mut this, "next", "Ljava/util/HashMap$Entry;", next).await?;
 
         Ok(())
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Hashtable$Entry::getKey({this:?})");
+        tracing::debug!("java.util.HashMap$Entry::getKey({this:?})");
 
         jvm.get_field(&this, "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Hashtable$Entry::getValue({this:?})");
+        tracing::debug!("java.util.HashMap$Entry::getValue({this:?})");
 
         jvm.get_field(&this, "value", "Ljava/lang/Object;").await
     }
@@ -74,11 +74,7 @@ impl HashtableEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        tracing::debug!("java.util.Hashtable$Entry::setValue({this:?}, {value:?})");
-
-        if value.is_null() {
-            return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
-        }
+        tracing::debug!("java.util.HashMap$Entry::setValue({this:?}, {value:?})");
 
         let old_value = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
         jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;

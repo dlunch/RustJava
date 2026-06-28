@@ -34,8 +34,7 @@ impl Attributes {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        //XXX should be HashMap, but we don't have yet.
-        let map = jvm.new_class("java/util/Hashtable", "()V", ()).await?;
+        let map = jvm.new_class("java/util/HashMap", "()V", ()).await?;
         jvm.put_field(&mut this, "map", "Ljava/util/Map;", map).await?;
 
         Ok(())
