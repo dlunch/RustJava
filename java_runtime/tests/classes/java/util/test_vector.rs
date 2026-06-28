@@ -1,7 +1,22 @@
 use java_runtime::classes::java::lang::Object;
-use jvm::{Array, ClassInstanceRef, JavaError, JavaValue, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstanceRef, JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
+
+async fn assert_index_out_of_bounds_message<T>(jvm: &Jvm, result: Result<T>, expected_message: &str) -> Result<()> {
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("Expected JavaException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
+
+    let exception_string: ClassInstanceRef<Object> = jvm.invoke_virtual(&exception, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        JavaLangString::to_rust_string(jvm, &exception_string).await?,
+        format!("java.lang.IndexOutOfBoundsException: {expected_message}")
+    );
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_vector() -> Result<()> {
@@ -302,6 +317,11 @@ async fn test_vector_collection_and_list_wrappers() -> Result<()> {
     let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (first.clone(),)).await?;
     let _: bool = jvm.invoke_virtual(&vector, "add", "(Ljava/lang/Object;)Z", (second.clone(),)).await?;
     let _: () = jvm.invoke_virtual(&vector, "add", "(ILjava/lang/Object;)V", (1, middle.clone())).await?;
+
+    let result: Result<()> = jvm.invoke_virtual(&vector, "add", "(ILjava/lang/Object;)V", (-1, middle.clone())).await;
+    assert_index_out_of_bounds_message(&jvm, result, "Index: -1, Size: 3").await?;
+    let result: Result<()> = jvm.invoke_virtual(&vector, "add", "(ILjava/lang/Object;)V", (4, middle.clone())).await;
+    assert_index_out_of_bounds_message(&jvm, result, "Index: 4, Size: 3").await?;
 
     let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "get", "(I)Ljava/lang/Object;", (1,)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "middle");

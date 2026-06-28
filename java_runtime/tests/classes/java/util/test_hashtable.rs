@@ -304,12 +304,22 @@ async fn test_hashtable_legacy_null_and_snapshot_edges() -> Result<()> {
     assert_null_pointer_exception(&jvm, result).await?;
 
     let null_value_key = JavaLangString::from_rust_string(&jvm, "null-value-key").await?;
-    let old: ClassInstanceRef<Object> = jvm
+    let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &hashtable,
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (null_value_key.clone(), null_ref.clone()),
+        )
+        .await;
+    assert_null_pointer_exception(&jvm, result).await?;
+
+    let old: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &hashtable,
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (null_value_key.clone(), value.clone()),
         )
         .await?;
     assert!(old.is_null());
@@ -318,26 +328,30 @@ async fn test_hashtable_legacy_null_and_snapshot_edges() -> Result<()> {
         .invoke_virtual(&hashtable, "containsKey", "(Ljava/lang/Object;)Z", (null_value_key.clone(),))
         .await?;
     assert!(contains_key);
-    let contains_value: bool = jvm
+    let result: Result<bool> = jvm
         .invoke_virtual(&hashtable, "containsValue", "(Ljava/lang/Object;)Z", (null_ref.clone(),))
-        .await?;
-    assert!(contains_value);
+        .await;
+    assert_null_pointer_exception(&jvm, result).await?;
 
     let values: ClassInstanceRef<Object> = jvm.invoke_virtual(&hashtable, "values", "()Ljava/util/Collection;", ()).await?;
-    let contains_null: bool = jvm
+    let result: Result<bool> = jvm
         .invoke_virtual(&values, "contains", "(Ljava/lang/Object;)Z", (null_ref.clone(),))
-        .await?;
-    assert!(contains_null);
+        .await;
+    assert_null_pointer_exception(&jvm, result).await?;
 
     let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&hashtable, "entrySet", "()Ljava/util/Set;", ()).await?;
     let entry_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry_set, "iterator", "()Ljava/util/Iterator;", ()).await?;
     let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry_iterator, "next", "()Ljava/lang/Object;", ()).await?;
     assert!(jvm.is_instance(&**entry, "java/util/Map$Entry"));
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&entry, "setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", (null_ref.clone(),))
+        .await;
+    assert_null_pointer_exception(&jvm, result).await?;
     let replacement = JavaLangString::from_rust_string(&jvm, "replacement").await?;
     let old_value: ClassInstanceRef<Object> = jvm
         .invoke_virtual(&entry, "setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", (replacement.clone(),))
         .await?;
-    assert!(old_value.is_null());
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &old_value).await?, "value");
     let found: ClassInstanceRef<Object> = jvm
         .invoke_virtual(&hashtable, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (null_value_key.clone(),))
         .await?;

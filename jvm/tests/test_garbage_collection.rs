@@ -49,8 +49,8 @@ async fn test_garbage_collection() -> JvmResult<()> {
     // Temporaries used in class loading should be garbage collected. The exact
     // count depends on the loaded type hierarchy and interface graph.
     assert!(garbage_count > 0);
-    let garbage_count = jvm.collect_garbage()?;
-    assert_eq!(garbage_count, 0);
+    let remaining_garbage_count = jvm.collect_garbage()?;
+    assert_eq!(remaining_garbage_count, 0);
 
     // use loaded class
     jvm.push_native_frame();

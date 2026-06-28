@@ -109,6 +109,10 @@ impl Hashtable {
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::containsValue({this:?}, {value:?})");
 
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
+        }
+
         let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
         let table_len = jvm.array_length(&table).await?;
         for bucket_index in 0..table_len {
@@ -200,6 +204,10 @@ impl Hashtable {
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::put({this:?}, {key:?}, {value:?})");
+
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
+        }
 
         let key_hash = Self::key_hash(jvm, &key).await?;
         let mut table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;

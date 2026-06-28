@@ -105,7 +105,7 @@ impl Vector {
         let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
         if index < 0 || index > element_count {
             return Err(jvm
-                .exception("java/lang/IndexOutOfBoundsException", &format!("{index} > {element_count}"))
+                .exception("java/lang/IndexOutOfBoundsException", &format!("Index: {index}, Size: {element_count}"))
                 .await);
         }
 

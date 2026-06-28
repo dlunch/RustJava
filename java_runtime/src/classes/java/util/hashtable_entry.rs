@@ -76,6 +76,10 @@ impl HashtableEntry {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Entry::setValue({this:?}, {value:?})");
 
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
+        }
+
         let old_value = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
         jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
 
