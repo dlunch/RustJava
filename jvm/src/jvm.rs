@@ -756,7 +756,7 @@ impl Jvm {
     }
 
     #[async_recursion::async_recursion]
-    async fn ensure_initialized(&self, class: &Class) -> Result<()> {
+    pub async fn ensure_initialized(&self, class: &Class) -> Result<()> {
         if class.definition.name().starts_with('[') {
             return Ok(());
         }
