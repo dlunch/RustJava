@@ -4,6 +4,7 @@ mod test_gregorian_calendar;
 mod test_hash_map;
 mod test_hash_set;
 mod test_hashtable;
+mod test_locale;
 mod test_properties;
 mod test_random;
 mod test_stack;

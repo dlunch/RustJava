@@ -109,6 +109,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::HashtableValues::as_proto(),
         crate::classes::java::util::Iterator::as_proto(),
         crate::classes::java::util::List::as_proto(),
+        crate::classes::java::util::Locale::as_proto(),
         crate::classes::java::util::Map::as_proto(),
         crate::classes::java::util::MapEntry::as_proto(),
         crate::classes::java::util::NoSuchElementException::as_proto(),

@@ -32,6 +32,7 @@ mod hashtable_key_set;
 mod hashtable_values;
 mod iterator;
 mod list;
+mod locale;
 mod map;
 mod map_entry;
 mod no_such_element_exception;
@@ -55,7 +56,8 @@ pub use self::{
     hash_map_hash_iterator::HashMapHashIterator, hash_map_key_iterator::HashMapKeyIterator, hash_map_key_set::HashMapKeySet,
     hash_map_value_iterator::HashMapValueIterator, hash_map_values::HashMapValues, hash_set::HashSet, hashtable::Hashtable,
     hashtable_entry::HashtableEntry, hashtable_entry_set::HashtableEntrySet, hashtable_enumerator::HashtableEnumerator,
-    hashtable_key_set::HashtableKeySet, hashtable_values::HashtableValues, iterator::Iterator, list::List, map::Map, map_entry::MapEntry,
-    no_such_element_exception::NoSuchElementException, properties::Properties, random::Random, set::Set, simple_time_zone::SimpleTimeZone,
-    stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask, timer_thread::TimerThread, vector::Vector, vector_itr::VectorItr,
+    hashtable_key_set::HashtableKeySet, hashtable_values::HashtableValues, iterator::Iterator, list::List, locale::Locale, map::Map,
+    map_entry::MapEntry, no_such_element_exception::NoSuchElementException, properties::Properties, random::Random, set::Set,
+    simple_time_zone::SimpleTimeZone, stack::Stack, time_zone::TimeZone, timer::Timer, timer_task::TimerTask, timer_thread::TimerThread,
+    vector::Vector, vector_itr::VectorItr,
 };
