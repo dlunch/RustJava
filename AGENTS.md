@@ -15,6 +15,10 @@
 - **Error handling**: Use `Result<T>` (alias for `result::Result<T, JavaError>`), never panic in library code
 - **Async**: Use `#[async_trait::async_trait]` for async trait methods, `#[tokio::test]` for async tests
 
+## Git Workflow
+- **Never commit directly to `main`**: always work on a short-lived branch.
+- **Clean up merged branches (MANDATORY)**: once a branch's work is complete and merged into `main`, delete it — remote and local — and sync local `main`. Prefer `gh pr merge --delete-branch`; then `git branch -d <branch>` locally and `git fetch --prune`. Leave no stale merged branches behind. Never re-merge or re-PR an already-merged branch.
+
 ## Project Structure
 - `jvm/` - Core JVM implementation (`#![no_std]`)
 - `jvm_rust/` - Rust-based JVM interpreter
