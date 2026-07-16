@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{
     ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
@@ -11,7 +11,7 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::InputStream,
-        lang::{ClassLoader, String},
+        lang::{ClassLoader, Object, String},
     },
 };
 
@@ -28,7 +28,12 @@ impl Class {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
                 JavaMethodProto::new("isPrimitive", "()Z", Self::is_primitive, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isArray", "()Z", Self::is_array, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isInterface", "()Z", Self::is_interface, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isInstance", "(Ljava/lang/Object;)Z", Self::is_instance, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("isAssignableFrom", "(Ljava/lang/Class;)Z", Self::is_assignable_from, Default::default()),
+                JavaMethodProto::new("newInstance", "()Ljava/lang/Object;", Self::new_instance, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
@@ -75,6 +80,72 @@ impl Class {
             name.as_str(),
             "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double"
         ))
+    }
+
+    async fn is_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        let name = JavaLangClass::name(jvm, &this).await?;
+        Ok(name.starts_with('['))
+    }
+
+    async fn is_interface(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        let name = JavaLangClass::name(jvm, &this).await?;
+        if name.starts_with('[') || matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
+            return Ok(false);
+        }
+
+        let class = JavaLangClass::to_rust_class(jvm, &this).await?;
+        Ok(class.access_flags().contains(ClassAccessFlags::INTERFACE))
+    }
+
+    async fn is_instance(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, object: ClassInstanceRef<Object>) -> Result<bool> {
+        if object.is_null() {
+            return Ok(false);
+        }
+
+        let name = JavaLangClass::name(jvm, &this).await?;
+        if matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
+            return Ok(false);
+        }
+
+        Ok(jvm.is_instance(&**object, &name))
+    }
+
+    async fn new_instance(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let name = JavaLangClass::name(jvm, &this).await?;
+        if name.starts_with('[') || matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
+            return Err(jvm.exception("java/lang/InstantiationException", &name).await);
+        }
+
+        let class = JavaLangClass::to_rust_class(jvm, &this).await?;
+        let access_flags = class.access_flags();
+        if access_flags.contains(ClassAccessFlags::INTERFACE)
+            || access_flags.contains(ClassAccessFlags::ABSTRACT)
+            || class.method("<init>", "()V", false).is_none()
+        {
+            return Err(jvm.exception("java/lang/InstantiationException", &name).await);
+        }
+
+        let instance = jvm.instantiate_class(&name).await?;
+        let _: () = jvm.invoke_special(&instance, &name, "<init>", "()V", ()).await?;
+
+        Ok(instance.into())
+    }
+
+    async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        let name = JavaLangClass::name(jvm, &this).await?;
+        let text = if matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
+            name
+        } else {
+            let class = JavaLangClass::to_rust_class(jvm, &this).await?;
+            let prefix = if class.access_flags().contains(ClassAccessFlags::INTERFACE) {
+                "interface "
+            } else {
+                "class "
+            };
+            alloc::format!("{prefix}{}", name.replace('/', "."))
+        };
+
+        Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
 
     async fn is_assignable_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {

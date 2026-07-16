@@ -1,5 +1,6 @@
 mod jar;
 mod test_array_list;
+mod test_date;
 mod test_gregorian_calendar;
 mod test_hash_map;
 mod test_hash_set;

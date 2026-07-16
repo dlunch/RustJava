@@ -18,6 +18,9 @@ async fn test_to_string() -> Result<()> {
 
     assert_eq!(result, "java.lang.Throwable: test message");
 
+    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&throwable, "getMessage", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "test message");
+
     Ok(())
 }
 

@@ -19,6 +19,58 @@ async fn assert_index_out_of_bounds_message<T>(jvm: &Jvm, result: Result<T>, exp
 }
 
 #[tokio::test]
+async fn test_vector_cldc_legacy_api() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let vector = jvm.new_class("java/util/Vector", "(II)V", (2, 3)).await?;
+    let first = JavaLangString::from_rust_string(&jvm, "first").await?;
+    let second = JavaLangString::from_rust_string(&jvm, "second").await?;
+    let _: () = jvm.invoke_virtual(&vector, "addElement", "(Ljava/lang/Object;)V", (first,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&vector, "addElement", "(Ljava/lang/Object;)V", (second.clone(),))
+        .await?;
+
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&vector, "capacity", "()I", ()).await?, 2);
+    let _: () = jvm.invoke_virtual(&vector, "ensureCapacity", "(I)V", (5,)).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&vector, "capacity", "()I", ()).await?, 5);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&vector, "indexOf", "(Ljava/lang/Object;I)I", (second, 1))
+            .await?,
+        1
+    );
+
+    let destination: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/Object;", 2).await?.into();
+    let _: () = jvm
+        .invoke_virtual(&vector, "copyInto", "([Ljava/lang/Object;)V", (destination.clone(),))
+        .await?;
+    let copied: Vec<ClassInstanceRef<Object>> = jvm.load_array(&destination, 0, 2).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &copied[0]).await?, "first");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &copied[1]).await?, "second");
+
+    let elements: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "elements", "()Ljava/util/Enumeration;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&elements, "nextElement", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "first");
+
+    let replacement = JavaLangString::from_rust_string(&jvm, "replacement").await?;
+    let _: () = jvm
+        .invoke_virtual(&vector, "setElementAt", "(Ljava/lang/Object;I)V", (replacement, 1))
+        .await?;
+    let last: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "lastElement", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &last).await?, "replacement");
+
+    let _: () = jvm.invoke_virtual(&vector, "setSize", "(I)V", (4,)).await?;
+    let text: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "[first, replacement, null, null]");
+
+    let result = jvm.new_class("java/util/Vector", "(I)V", (-1,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("negative capacity must throw IllegalArgumentException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_vector() -> Result<()> {
     let jvm = test_jvm().await?;
 

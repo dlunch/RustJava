@@ -5,13 +5,13 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
-// class java.net.UnknownServiceException
-pub struct UnknownServiceException;
+// class java.io.UTFDataFormatException
+pub struct UTFDataFormatException;
 
-impl UnknownServiceException {
+impl UTFDataFormatException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/net/UnknownServiceException",
+            name: "java/io/UTFDataFormatException",
             parent_class: Some("java/io/IOException"),
             interfaces: vec![],
             methods: vec![
@@ -24,20 +24,13 @@ impl UnknownServiceException {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?})");
-
-        let _: () = jvm.invoke_special(&this, "java/io/IOException", "<init>", "()V", ()).await?;
-
-        Ok(())
+        tracing::debug!("java.io.UTFDataFormatException::<init>({this:?})");
+        jvm.invoke_special(&this, "java/io/IOException", "<init>", "()V", ()).await
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?}, {message:?})");
-
-        let _: () = jvm
-            .invoke_special(&this, "java/io/IOException", "<init>", "(Ljava/lang/String;)V", (message,))
-            .await?;
-
-        Ok(())
+        tracing::debug!("java.io.UTFDataFormatException::<init>({this:?}, {message:?})");
+        jvm.invoke_special(&this, "java/io/IOException", "<init>", "(Ljava/lang/String;)V", (message,))
+            .await
     }
 }

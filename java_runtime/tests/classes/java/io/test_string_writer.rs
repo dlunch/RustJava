@@ -15,15 +15,16 @@ async fn test_string_writer() -> Result<()> {
     jvm.store_array(&mut buf, 0, vec![b'a' as JavaChar, b'b' as JavaChar, b'c' as JavaChar])
         .await?;
 
-    let _: i32 = jvm.invoke_virtual(&string_writer, "write", "([CII)I", (buf.clone(), 0, 3)).await.unwrap();
+    let _: () = jvm.invoke_virtual(&string_writer, "write", "([CII)V", (buf.clone(), 0, 3)).await?;
 
-    let _: i32 = jvm.invoke_virtual(&string_writer, "write", "([CII)I", (buf, 1, 2)).await.unwrap();
+    let _: () = jvm.invoke_virtual(&string_writer, "write", "([CII)V", (buf, 1, 2)).await?;
+    let _: () = jvm.invoke_virtual(&string_writer, "write", "(I)V", ('d' as i32,)).await?;
 
     let string = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await.unwrap();
 
     let string = JavaLangString::to_rust_string(&jvm, &string).await?;
 
-    assert_eq!(string, "abcbc"); // cspell: disable-line
+    assert_eq!(string, "abcbcd"); // cspell: disable-line
 
     Ok(())
 }

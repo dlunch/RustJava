@@ -19,7 +19,9 @@ impl StringWriter {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "([CII)I", Self::write, Default::default()),
+                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
+                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("buf", "Ljava/lang/StringBuffer;", Default::default())],
@@ -45,7 +47,7 @@ impl StringWriter {
         chars: ClassInstanceRef<Array<JavaChar>>,
         off: i32,
         len: i32,
-    ) -> Result<i32> {
+    ) -> Result<()> {
         tracing::debug!("java.io.StringWriter::write({this:?}, {chars:?}, {off:?}, {len:?})");
 
         let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
@@ -54,7 +56,17 @@ impl StringWriter {
             .invoke_virtual(&buf, "append", "([CII)Ljava/lang/StringBuffer;", (chars, off, len))
             .await?;
 
-        Ok(len)
+        Ok(())
+    }
+
+    async fn flush(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.StringWriter::flush({this:?})");
+        Ok(())
+    }
+
+    async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.StringWriter::close({this:?})");
+        Ok(())
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {

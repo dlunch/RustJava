@@ -37,6 +37,6 @@ impl URLConnection {
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URLConnection::getInputStream({this:?})");
 
-        Err(jvm.exception("java/io/UnknownServiceException", "unsupported").await)
+        Err(jvm.exception("java/net/UnknownServiceException", "unsupported").await)
     }
 }

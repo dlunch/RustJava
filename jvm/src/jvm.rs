@@ -70,7 +70,7 @@ impl Jvm {
         };
 
         // load bootstrap classes
-        let bootstrap_classes = ["java/lang/Object", "java/lang/Thread", "[B", "java/lang/Class"];
+        let bootstrap_classes = ["java/lang/Object", "java/lang/Runnable", "java/lang/Thread", "[B", "java/lang/Class"];
         for class_name in bootstrap_classes.iter() {
             let class_definition = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
             let class = Class::new(class_definition, None);
@@ -848,6 +848,10 @@ impl Jvm {
     pub fn current_java_thread(&self) -> Box<dyn ClassInstance> {
         let thread_id = (self.inner.get_current_thread_id)();
         self.inner.threads.read().get(&thread_id).unwrap().java_thread().unwrap().clone()
+    }
+
+    pub fn active_thread_count(&self) -> usize {
+        self.inner.threads.read().len()
     }
 
     // TODO we need safe, ergonomic api..

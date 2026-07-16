@@ -24,6 +24,7 @@ impl DataInput {
                 JavaMethodProto::new_abstract("readInt", "()I", Default::default()),
                 JavaMethodProto::new_abstract("readLong", "()J", Default::default()),
                 JavaMethodProto::new_abstract("readShort", "()S", Default::default()),
+                JavaMethodProto::new_abstract("readUnsignedByte", "()I", Default::default()),
                 JavaMethodProto::new_abstract("readUnsignedShort", "()I", Default::default()),
                 JavaMethodProto::new_abstract("readUTF", "()Ljava/lang/String;", Default::default()),
                 JavaMethodProto::new_abstract("skipBytes", "(I)I", Default::default()),

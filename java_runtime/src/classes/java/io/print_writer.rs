@@ -19,7 +19,9 @@ impl PrintWriter {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/Writer;)V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "([CII)I", Self::write, Default::default()),
+                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
+                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/Writer;", Default::default())],
@@ -44,14 +46,26 @@ impl PrintWriter {
         chars: ClassInstanceRef<Array<JavaChar>>,
         off: i32,
         len: i32,
-    ) -> Result<i32> {
+    ) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {chars:?}, {off:?}, {len:?})");
 
         let out = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
 
-        let _: i32 = jvm.invoke_virtual(&out, "write", "([CII)I", (chars, off, len)).await?;
+        let _: () = jvm.invoke_virtual(&out, "write", "([CII)V", (chars, off, len)).await?;
 
-        Ok(len)
+        Ok(())
+    }
+
+    async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.PrintWriter::flush({this:?})");
+        let out = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+        jvm.invoke_virtual(&out, "flush", "()V", ()).await
+    }
+
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.PrintWriter::close({this:?})");
+        let out = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+        jvm.invoke_virtual(&out, "close", "()V", ()).await
     }
 
     async fn println(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {

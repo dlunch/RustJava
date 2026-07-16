@@ -1,11 +1,14 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 
 use bytemuck::cast_vec;
 
 use java_class_proto::JavaMethodProto;
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
+use crate::{
+    RuntimeClassProto, RuntimeContext,
+    classes::java::{io::OutputStream, lang::String},
+};
 
 // class java.io.DataOutputStream
 pub struct DataOutputStream;
@@ -23,7 +26,11 @@ impl DataOutputStream {
                 JavaMethodProto::new("writeBoolean", "(Z)V", Self::write_boolean, Default::default()),
                 JavaMethodProto::new("writeInt", "(I)V", Self::write_int, Default::default()),
                 JavaMethodProto::new("writeShort", "(I)V", Self::write_short, Default::default()),
+                JavaMethodProto::new("writeChar", "(I)V", Self::write_char, Default::default()),
                 JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
+                JavaMethodProto::new("writeFloat", "(F)V", Self::write_float, Default::default()),
+                JavaMethodProto::new("writeDouble", "(D)V", Self::write_double, Default::default()),
+                JavaMethodProto::new("writeBytes", "(Ljava/lang/String;)V", Self::write_bytes, Default::default()),
                 JavaMethodProto::new("writeChars", "(Ljava/lang/String;)V", Self::write_chars, Default::default()),
                 JavaMethodProto::new("writeUTF", "(Ljava/lang/String;)V", Self::write_utf, Default::default()),
                 JavaMethodProto::new("close", "()V", Self::close, Default::default()),
@@ -34,7 +41,7 @@ impl DataOutputStream {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<InputStream>) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::<init>({this:?}, {out:?})");
 
         let _: () = jvm
@@ -83,6 +90,11 @@ impl DataOutputStream {
         Ok(())
     }
 
+    async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeChar({this:?}, {value:?})");
+        jvm.invoke_virtual(&this, "writeShort", "(I)V", (value & 0xffff,)).await
+    }
+
     async fn write_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, i: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeInt({this:?}, {i:?})");
 
@@ -109,30 +121,79 @@ impl DataOutputStream {
         Ok(())
     }
 
-    async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<JavaChar>) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeChars({this:?}, {s:?})");
-
-        let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
-
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await?;
-
-        Ok(())
+    async fn write_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeFloat({this:?}, {value:?})");
+        jvm.invoke_virtual(&this, "writeInt", "(I)V", (value.to_bits() as i32,)).await
     }
 
-    async fn write_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<JavaChar>) -> Result<()> {
-        tracing::debug!("java.io.DataOutputStream::writeUTF({this:?}, {s:?})");
+    async fn write_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeDouble({this:?}, {value:?})");
+        jvm.invoke_virtual(&this, "writeLong", "(J)V", (value.to_bits() as i64,)).await
+    }
 
-        // TODO handle modified utf-8
-        let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&s, "getBytes", "()[B", ()).await?;
-        let length = jvm.array_length(&bytes).await?;
+    async fn write_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeBytes({this:?}, {s:?})");
 
-        let _: () = jvm.invoke_virtual(&this, "writeShort", "(I)V", (length as i32,)).await?;
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&s, "toCharArray", "()[C", ()).await?;
+        let length = jvm.array_length(&chars).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
+        let mut bytes = jvm.instantiate_array("B", chars.len()).await?;
+        jvm.store_array(&mut bytes, 0, chars.into_iter().map(|value| value as i8)).await?;
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let _: () = jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await?;
+        jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await
+    }
 
-        Ok(())
+    async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeChars({this:?}, {s:?})");
+
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&s, "toCharArray", "()[C", ()).await?;
+        let length = jvm.array_length(&chars).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
+        let mut data = Vec::with_capacity(chars.len() * 2);
+        for value in chars {
+            data.push((value >> 8) as i8);
+            data.push(value as i8);
+        }
+
+        let mut bytes = jvm.instantiate_array("B", data.len()).await?;
+        jvm.store_array(&mut bytes, 0, data).await?;
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await
+    }
+
+    async fn write_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
+        tracing::debug!("java.io.DataOutputStream::writeUTF({this:?}, {s:?})");
+
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&s, "toCharArray", "()[C", ()).await?;
+        let length = jvm.array_length(&chars).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
+        let mut data = Vec::new();
+        for value in chars {
+            if (0x0001..=0x007f).contains(&value) {
+                data.push(value as i8);
+            } else if value <= 0x07ff {
+                data.push((0xc0 | ((value >> 6) & 0x1f)) as i8);
+                data.push((0x80 | (value & 0x3f)) as i8);
+            } else {
+                data.push((0xe0 | ((value >> 12) & 0x0f)) as i8);
+                data.push((0x80 | ((value >> 6) & 0x3f)) as i8);
+                data.push((0x80 | (value & 0x3f)) as i8);
+            }
+        }
+
+        if data.len() > u16::MAX as usize {
+            return Err(jvm.exception("java/io/UTFDataFormatException", "encoded string is too long").await);
+        }
+
+        let _: () = jvm.invoke_virtual(&this, "writeShort", "(I)V", (data.len() as i32,)).await?;
+
+        let mut bytes = jvm.instantiate_array("B", data.len()).await?;
+        jvm.store_array(&mut bytes, 0, data).await?;
+
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        jvm.invoke_virtual(&out, "write", "([B)V", (bytes,)).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
