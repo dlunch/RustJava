@@ -1,7 +1,15 @@
+mod test_boolean;
+mod test_byte;
+mod test_character;
 mod test_class;
+mod test_double;
+mod test_float;
 mod test_integer;
+mod test_long;
 mod test_math;
+mod test_number;
 mod test_object;
+mod test_short;
 mod test_string;
 mod test_string_buffer;
 mod test_thread;
