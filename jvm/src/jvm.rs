@@ -631,7 +631,7 @@ impl Jvm {
     }
 
     // JVMS 4.10.3 subtyping, including array covariance
-    fn is_type_assignable(&self, source: &JavaType, target: &JavaType) -> bool {
+    pub fn is_type_assignable(&self, source: &JavaType, target: &JavaType) -> bool {
         if source == target {
             return true;
         }

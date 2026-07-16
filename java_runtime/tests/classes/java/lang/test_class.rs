@@ -41,6 +41,42 @@ async fn test_is_assignable_from() -> Result<()> {
         .await?;
     assert!(!result);
 
+    let string_array_class = jvm.resolve_class("[Ljava/lang/String;").await?.java_class();
+    let object_array_class = jvm.resolve_class("[Ljava/lang/Object;").await?.java_class();
+    let cloneable_class = jvm.resolve_class("java/lang/Cloneable").await?.java_class();
+    let serializable_class = jvm.resolve_class("java/io/Serializable").await?.java_class();
+
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &object_array_class,
+            "isAssignableFrom",
+            "(Ljava/lang/Class;)Z",
+            (string_array_class.clone(),),
+        )
+        .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&string_array_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (object_array_class,),)
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&object_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_array_class.clone(),),)
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &cloneable_class,
+            "isAssignableFrom",
+            "(Ljava/lang/Class;)Z",
+            (string_array_class.clone(),),
+        )
+        .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&serializable_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_array_class,),)
+            .await?
+    );
+
     Ok(())
 }
 

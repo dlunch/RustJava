@@ -120,9 +120,9 @@ impl InputStreamReader {
             return Ok(0);
         }
 
-        let write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+        let mut write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
 
-        if write_buf_size < length {
+        while write_buf_size < length {
             let read_buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "readBuf", "[B").await?;
             let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
 
@@ -202,14 +202,18 @@ impl InputStreamReader {
 
             // add to writeBuf
             let mut write_buf = jvm.get_field(&this, "writeBuf", "[C").await?;
-            let write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+            let buffered_chars: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
             jvm.store_array(
                 &mut write_buf,
-                write_buf_size as _,
+                buffered_chars as _,
                 cast_slice::<u16, JavaChar>(&decoded[..wrote]).to_vec(),
             )
             .await?;
-            jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size + wrote as i32).await?;
+            write_buf_size = buffered_chars + wrote as i32;
+            jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size).await?;
+            if write_buf_size > 0 {
+                break;
+            }
         }
 
         let write_buf: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "writeBuf", "[C").await?;

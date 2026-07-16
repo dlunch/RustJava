@@ -1,9 +1,76 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 
+use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_runtime::classes::java::lang::Object;
-use jvm::{ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use java_runtime::{RuntimeClassProto, RuntimeContext};
+use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm_rust::ClassDefinitionImpl;
 
-use test_utils::test_jvm;
+use test_utils::{TestRuntime, create_test_jvm, test_jvm};
+
+struct OneByteInputStream;
+
+impl OneByteInputStream {
+    fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
+            name: "OneByteInputStream",
+            parent_class: Some("java/io/InputStream"),
+            interfaces: vec![],
+            methods: vec![
+                JavaMethodProto::new("<init>", "([B)V", Self::init, Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, Default::default()),
+            ],
+            fields: vec![
+                JavaFieldProto::new("data", "[B", Default::default()),
+                JavaFieldProto::new("position", "I", Default::default()),
+            ],
+            access_flags: Default::default(),
+        }
+    }
+
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
+        let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
+        jvm.put_field(&mut this, "data", "[B", data).await?;
+        jvm.put_field(&mut this, "position", "I", 0).await?;
+
+        Ok(())
+    }
+
+    async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
+        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B").await?;
+        let position: i32 = jvm.get_field(&this, "position", "I").await?;
+        if position == jvm.array_length(&data).await? as i32 {
+            return Ok(-1);
+        }
+
+        let value = jvm.load_array::<i8>(&data, position as usize, 1).await?[0];
+        jvm.put_field(&mut this, "position", "I", position + 1).await?;
+
+        Ok(value as u8 as i32)
+    }
+
+    async fn read_offset_length(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        mut target: ClassInstanceRef<Array<i8>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<i32> {
+        if length == 0 {
+            return Ok(0);
+        }
+
+        let value: i32 = jvm.invoke_virtual(&this, "read", "()I", ()).await?;
+        if value == -1 {
+            return Ok(-1);
+        }
+
+        jvm.store_array(&mut target, offset as usize, [value as i8]).await?;
+        Ok(1)
+    }
+}
 
 #[tokio::test]
 async fn test_isr() -> Result<()> {
@@ -51,6 +118,33 @@ async fn test_input_stream_reader_preserves_split_multibyte_and_buffered_eof() -
         panic!("invalid range must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_input_stream_reader_does_not_return_zero_for_split_multibyte_input() -> Result<()> {
+    let runtime = TestRuntime::new(BTreeMap::new());
+    let jvm = create_test_jvm(runtime.clone()).await?;
+    jvm.register_class(
+        Box::new(ClassDefinitionImpl::from_class_proto(
+            OneByteInputStream::as_proto(),
+            Box::new(runtime) as Box<_>,
+        )),
+        None,
+    )
+    .await?;
+
+    let value = "한";
+    let mut bytes = jvm.instantiate_array("B", value.len()).await?;
+    jvm.store_array(&mut bytes, 0, value.as_bytes().iter().map(|byte| *byte as i8)).await?;
+    let input = jvm.new_class("OneByteInputStream", "([B)V", (bytes,)).await?;
+    let reader = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let chars = jvm.instantiate_array("C", 1).await?;
+
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 1)).await?, 1);
+    assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 1).await?, ['한' as JavaChar]);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars, 0, 1)).await?, -1);
 
     Ok(())
 }

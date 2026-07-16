@@ -3,7 +3,7 @@ use alloc::vec;
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{
-    ClassInstanceRef, Jvm, Result,
+    ClassInstanceRef, JavaType, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
 };
 
@@ -170,10 +170,7 @@ impl Class {
             return Ok(class_name == other_name);
         }
 
-        let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
-        let other_rust_class = JavaLangClass::to_rust_class(jvm, &other).await?;
-
-        Ok(jvm.is_inherited_from(&*other_rust_class, &rust_class.name()))
+        Ok(jvm.is_type_assignable(&JavaType::from_class_name(&other_name), &JavaType::from_class_name(&class_name)))
     }
 
     async fn get_resource_as_stream(
