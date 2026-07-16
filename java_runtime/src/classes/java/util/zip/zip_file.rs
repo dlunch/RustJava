@@ -53,8 +53,12 @@ impl ZipFile {
         let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "zipData", "[B").await?;
         let length = jvm.array_length(&zip_data).await?;
         let mut buf = vec![0u8; length];
-        jvm.array_raw_buffer(&zip_data).await?.read(0, &mut buf).unwrap();
-        Ok(ZipArchive::new(Cursor::new(buf)).unwrap())
+        jvm.array_raw_buffer(&zip_data).await?.read(0, &mut buf)?;
+
+        match ZipArchive::new(Cursor::new(buf)) {
+            Ok(x) => Ok(x),
+            Err(err) => Err(jvm.exception("java/util/zip/ZipException", &err.to_string()).await),
+        }
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
@@ -69,6 +73,9 @@ impl ZipFile {
         let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
 
         jvm.put_field(&mut this, "zipData", "[B", buf).await?;
+
+        // the constructor throws ZipException for a malformed archive
+        let _ = Self::get_zip_archive(jvm, &this).await?;
 
         Ok(())
     }
@@ -132,17 +139,22 @@ impl ZipFile {
 
         let data = {
             let mut zip = Self::get_zip_archive(jvm, &this).await?;
-            let mut file = zip.by_name(&entry_name).unwrap();
+            let file = zip.by_name(&entry_name);
+            let Ok(mut file) = file else {
+                // getInputStream returns null when the entry is not in this zip
+                return Ok(None.into());
+            };
 
             let mut buf = Vec::new();
-            file.read_to_end(&mut buf).unwrap();
-
-            buf
+            file.read_to_end(&mut buf).map(|_| buf)
+        };
+        let Ok(data) = data else {
+            return Err(jvm.exception("java/util/zip/ZipException", "invalid entry data").await);
         };
 
         // TODO do we have to use InflaterInputStream?
         let mut java_buf = jvm.instantiate_array("B", data.len() as _).await?;
-        jvm.array_raw_buffer_mut(&mut java_buf).await?.write(0, &data).unwrap();
+        jvm.array_raw_buffer_mut(&mut java_buf).await?.write(0, &data)?;
 
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (java_buf,)).await?;
 

@@ -19,6 +19,7 @@ impl FileDescriptorId {
 pub enum IOError {
     Unsupported,
     NotFound,
+    Io,
 }
 
 pub type IOResult<T> = Result<T, IOError>;

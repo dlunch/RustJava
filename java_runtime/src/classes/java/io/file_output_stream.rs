@@ -42,8 +42,12 @@ impl FileOutputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let fd = context.open(&path, true).await.unwrap();
-        let fd = FileDescriptor::from_fd(jvm, fd).await?;
+        let fd = context.open(&path, true).await;
+        if fd.is_err() {
+            return Err(jvm.exception("java/io/FileNotFoundException", "File not found").await);
+        }
+
+        let fd = FileDescriptor::from_fd(jvm, fd.unwrap()).await?;
 
         let _: () = jvm
             .invoke_special(&this, "java/io/FileOutputStream", "<init>", "(Ljava/io/FileDescriptor;)V", (fd,))
@@ -81,9 +85,9 @@ impl FileOutputStream {
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut buf = vec![0; length as _];
-        jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut buf).unwrap();
+        jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut buf)?;
 
-        file.write(cast_slice(&buf)).await.unwrap();
+        super::checked(jvm, file.write(cast_slice(&buf)).await).await?;
 
         Ok(())
     }
@@ -94,7 +98,7 @@ impl FileOutputStream {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
-        file.write(&[byte as u8]).await.unwrap();
+        super::checked(jvm, file.write(&[byte as u8]).await).await?;
 
         Ok(())
     }

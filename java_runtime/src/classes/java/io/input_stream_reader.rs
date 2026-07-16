@@ -103,7 +103,7 @@ impl InputStreamReader {
 
             let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
             let mut read_buf_data = vec![0; read_buf_size as _];
-            jvm.array_raw_buffer(&read_buf).await?.read(0, &mut read_buf_data).unwrap();
+            jvm.array_raw_buffer(&read_buf).await?.read(0, &mut read_buf_data)?;
 
             let charset_ref = jvm.get_field(&this, "charset", "Ljava/lang/String;").await?;
             let charset = JavaLangString::to_rust_string(jvm, &charset_ref).await?;

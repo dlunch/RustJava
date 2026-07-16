@@ -114,7 +114,7 @@ impl RandomAccessFile {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as usize];
-        let read = rust_file.read(&mut rust_buf).await.unwrap();
+        let read = super::checked(jvm, rust_file.read(&mut rust_buf).await).await?;
 
         jvm.array_raw_buffer_mut(&mut buf).await?.write(offset as _, &rust_buf)?;
 
@@ -144,8 +144,8 @@ impl RandomAccessFile {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as usize];
-        jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf).unwrap();
-        rust_file.write(&cast_vec(rust_buf)).await.unwrap();
+        jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf)?;
+        super::checked(jvm, rust_file.write(&cast_vec(rust_buf)).await).await?;
 
         Ok(())
     }
@@ -156,7 +156,7 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        rust_file.seek(pos as _).await.unwrap();
+        super::checked(jvm, rust_file.seek(pos as _).await).await?;
 
         Ok(())
     }
@@ -167,7 +167,7 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        rust_file.set_len(new_length as _).await.unwrap();
+        super::checked(jvm, rust_file.set_len(new_length as _).await).await?;
 
         Ok(())
     }
@@ -178,7 +178,7 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        let len = rust_file.metadata().await.unwrap().size;
+        let len = super::checked(jvm, rust_file.metadata().await).await?.size;
 
         Ok(len as i64)
     }
@@ -189,7 +189,7 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        let pos = rust_file.tell().await.unwrap();
+        let pos = super::checked(jvm, rust_file.tell().await).await?;
 
         Ok(pos as i64)
     }
