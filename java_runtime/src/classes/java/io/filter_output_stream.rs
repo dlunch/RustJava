@@ -19,6 +19,8 @@ impl FilterOutputStream {
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
+                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PROTECTED)],
             access_flags: Default::default(),
@@ -58,5 +60,17 @@ impl FilterOutputStream {
         let _: () = jvm.invoke_virtual(&out, "write", "(I)V", (byte,)).await?;
 
         Ok(())
+    }
+
+    async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.FilterOutputStream::flush({this:?})");
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        jvm.invoke_virtual(&out, "flush", "()V", ()).await
+    }
+
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.FilterOutputStream::close({this:?})");
+        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        jvm.invoke_virtual(&out, "close", "()V", ()).await
     }
 }

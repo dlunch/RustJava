@@ -5,14 +5,14 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
-// class java.net.UnknownServiceException
-pub struct UnknownServiceException;
+// class java.lang.IllegalMonitorStateException
+pub struct IllegalMonitorStateException;
 
-impl UnknownServiceException {
+impl IllegalMonitorStateException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/net/UnknownServiceException",
-            parent_class: Some("java/io/IOException"),
+            name: "java/lang/IllegalMonitorStateException",
+            parent_class: Some("java/lang/RuntimeException"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
@@ -24,20 +24,13 @@ impl UnknownServiceException {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?})");
-
-        let _: () = jvm.invoke_special(&this, "java/io/IOException", "<init>", "()V", ()).await?;
-
-        Ok(())
+        tracing::debug!("java.lang.IllegalMonitorStateException::<init>({this:?})");
+        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "()V", ()).await
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?}, {message:?})");
-
-        let _: () = jvm
-            .invoke_special(&this, "java/io/IOException", "<init>", "(Ljava/lang/String;)V", (message,))
-            .await?;
-
-        Ok(())
+        tracing::debug!("java.lang.IllegalMonitorStateException::<init>({this:?}, {message:?})");
+        jvm.invoke_special(&this, "java/lang/RuntimeException", "<init>", "(Ljava/lang/String;)V", (message,))
+            .await
     }
 }

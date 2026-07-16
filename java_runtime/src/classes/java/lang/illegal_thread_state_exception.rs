@@ -5,14 +5,14 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
-// class java.net.UnknownServiceException
-pub struct UnknownServiceException;
+// class java.lang.IllegalThreadStateException
+pub struct IllegalThreadStateException;
 
-impl UnknownServiceException {
+impl IllegalThreadStateException {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/net/UnknownServiceException",
-            parent_class: Some("java/io/IOException"),
+            name: "java/lang/IllegalThreadStateException",
+            parent_class: Some("java/lang/IllegalArgumentException"),
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
@@ -24,20 +24,13 @@ impl UnknownServiceException {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?})");
-
-        let _: () = jvm.invoke_special(&this, "java/io/IOException", "<init>", "()V", ()).await?;
-
-        Ok(())
+        tracing::debug!("java.lang.IllegalThreadStateException::<init>({this:?})");
+        jvm.invoke_special(&this, "java/lang/IllegalArgumentException", "<init>", "()V", ()).await
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        tracing::debug!("java.net.UnknownServiceException::<init>({this:?}, {message:?})");
-
-        let _: () = jvm
-            .invoke_special(&this, "java/io/IOException", "<init>", "(Ljava/lang/String;)V", (message,))
-            .await?;
-
-        Ok(())
+        tracing::debug!("java.lang.IllegalThreadStateException::<init>({this:?}, {message:?})");
+        jvm.invoke_special(&this, "java/lang/IllegalArgumentException", "<init>", "(Ljava/lang/String;)V", (message,))
+            .await
     }
 }

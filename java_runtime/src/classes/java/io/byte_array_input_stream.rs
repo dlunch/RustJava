@@ -24,6 +24,7 @@ impl ByteArrayInputStream {
                 JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
                 JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("buf", "[B", Default::default()),
@@ -57,11 +58,17 @@ impl ByteArrayInputStream {
     ) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::<init>({this:?}, {data:?}, {offset}, {length})");
 
+        let data_length = jvm.array_length(&data).await? as i32;
+        if offset < 0 || length < 0 || offset > data_length {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
+        }
+
         let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "buf", "[B", data).await?;
         jvm.put_field(&mut this, "pos", "I", offset).await?;
-        jvm.put_field(&mut this, "count", "I", length).await?;
+        jvm.put_field(&mut this, "count", "I", (offset + length).min(data_length)).await?;
+        jvm.put_field(&mut this, "mark", "I", offset).await?;
 
         Ok(())
     }
@@ -85,15 +92,23 @@ impl ByteArrayInputStream {
     ) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayInputStream::read({this:?}, {b:?}, {off}, {len})");
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf_length = jvm.array_length(&buf).await?;
+        let buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let count: i32 = jvm.get_field(&this, "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
-        let available = (buf_length as i32 - pos) as _;
-        let len_to_read = if len > available { available } else { len };
-        if len_to_read == 0 {
+        let target_length = jvm.array_length(&b).await? as i32;
+        if off < 0 || len < 0 || off > target_length - len {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
+        }
+        if len == 0 {
+            return Ok(0);
+        }
+
+        let available = count - pos;
+        if available <= 0 {
             return Ok(-1);
         }
+        let len_to_read = if len > available { available } else { len };
 
         let _: () = jvm
             .invoke_static(
@@ -113,10 +128,10 @@ impl ByteArrayInputStream {
         tracing::debug!("java.io.ByteArrayInputStream::readByte({this:?})");
 
         let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf_length = jvm.array_length(&buf).await?;
+        let count: i32 = jvm.get_field(&this, "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
-        if pos as usize >= buf_length {
+        if pos >= count {
             return Ok(-1);
         }
 
@@ -136,12 +151,11 @@ impl ByteArrayInputStream {
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.ByteArrayInputStream::skip({this:?}, {n:?})");
 
-        let buf = jvm.get_field(&this, "buf", "[B").await?;
-        let buf_length = jvm.array_length(&buf).await?;
+        let count: i32 = jvm.get_field(&this, "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "pos", "I").await?;
 
-        let available = (buf_length as i32 - pos) as i64;
-        let len_to_skip = if n > available { available } else { n };
+        let available = (count - pos) as i64;
+        let len_to_skip = n.max(0).min(available);
 
         jvm.put_field(&mut this, "pos", "I", pos + len_to_skip as i32).await?;
 
@@ -164,5 +178,10 @@ impl ByteArrayInputStream {
         jvm.put_field(&mut this, "pos", "I", mark).await?;
 
         Ok(())
+    }
+
+    async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.io.ByteArrayInputStream::markSupported({this:?})");
+        Ok(true)
     }
 }

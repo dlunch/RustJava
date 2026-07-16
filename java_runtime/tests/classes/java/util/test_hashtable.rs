@@ -13,6 +13,49 @@ async fn object_to_optional_string(jvm: &Jvm, value: &ClassInstanceRef<Object>) 
     Ok(Some(JavaLangString::to_rust_string(jvm, value).await?))
 }
 
+#[tokio::test]
+async fn test_hashtable_cldc_legacy_api() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let hashtable = jvm.new_class("java/util/Hashtable", "(I)V", (1,)).await?;
+    let key = JavaLangString::from_rust_string(&jvm, "key").await?;
+    let value = JavaLangString::from_rust_string(&jvm, "value").await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &hashtable,
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key.clone(), value.clone()),
+        )
+        .await?;
+
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&hashtable, "contains", "(Ljava/lang/Object;)Z", (value,))
+            .await?
+    );
+    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&hashtable, "keys", "()Ljava/util/Enumeration;", ()).await?;
+    let enumerated_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "nextElement", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &enumerated_key).await?, "key");
+    let elements: ClassInstanceRef<Object> = jvm.invoke_virtual(&hashtable, "elements", "()Ljava/util/Enumeration;", ()).await?;
+    let enumerated_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&elements, "nextElement", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &enumerated_value).await?, "value");
+
+    let _: () = jvm.invoke_virtual(&hashtable, "rehash", "()V", ()).await?;
+    let found: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&hashtable, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &found).await?, "value");
+    let text: ClassInstanceRef<Object> = jvm.invoke_virtual(&hashtable, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "{key=value}");
+
+    let result = jvm.new_class("java/util/Hashtable", "(I)V", (-1,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("negative capacity must throw IllegalArgumentException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
+
+    Ok(())
+}
+
 async fn iterator_to_optional_strings(jvm: &Jvm, iterator: &ClassInstanceRef<Object>) -> Result<Vec<Option<String>>> {
     let mut values = Vec::new();
     loop {

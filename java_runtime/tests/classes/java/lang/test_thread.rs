@@ -2,7 +2,7 @@ use alloc::{boxed::Box, collections::BTreeMap, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_runtime::{RuntimeClassProto, RuntimeContext};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
 
 use test_utils::{TestRuntime, create_test_jvm};
@@ -58,6 +58,48 @@ async fn test_thread() -> Result<()> {
 
     let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
     assert!(ran);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_thread_cldc_metadata_and_state() -> Result<()> {
+    let runtime = TestRuntime::new(BTreeMap::new());
+    let jvm = create_test_jvm(runtime.clone()).await?;
+
+    let class = Box::new(ClassDefinitionImpl::from_class_proto(
+        TestClass::as_proto(),
+        Box::new(runtime.clone()) as Box<_>,
+    ));
+    jvm.register_class(class, None).await?;
+    let target = jvm.new_class("TestClass", "()V", ()).await?;
+    let name = JavaLangString::from_rust_string(&jvm, "worker").await?;
+    let thread = jvm
+        .new_class("java/lang/Thread", "(Ljava/lang/Runnable;Ljava/lang/String;)V", (target, name))
+        .await?;
+
+    assert!(jvm.is_instance(&*thread, "java/lang/Runnable"));
+    let name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "worker");
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&thread, "getPriority", "()I", ()).await?, 5);
+    assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "MIN_PRIORITY", "I").await?, 1);
+    assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "NORM_PRIORITY", "I").await?, 5);
+    assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "MAX_PRIORITY", "I").await?, 10);
+
+    let _: () = jvm.invoke_virtual(&thread, "setPriority", "(I)V", (7,)).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&thread, "getPriority", "()I", ()).await?, 7);
+    let text = jvm.invoke_virtual(&thread, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "Thread[worker,7]");
+
+    let _: () = jvm.invoke_virtual(&thread, "interrupt", "()V", ()).await?;
+    assert!(jvm.get_field::<bool>(&thread, "interrupted", "Z").await?);
+    assert!(jvm.invoke_static::<_, i32>("java/lang/Thread", "activeCount", "()I", ()).await? >= 1);
+
+    let result: Result<()> = jvm.invoke_virtual(&thread, "setPriority", "(I)V", (11,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("invalid priority must throw IllegalArgumentException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
 
     Ok(())
 }

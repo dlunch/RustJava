@@ -5,6 +5,8 @@ mod test_data_input_stream;
 mod test_data_output_stream;
 mod test_file_input_stream;
 mod test_input_stream_reader;
+mod test_output_stream_writer;
+mod test_print_stream;
 mod test_print_writer;
 mod test_random_access_file;
 mod test_string_writer;

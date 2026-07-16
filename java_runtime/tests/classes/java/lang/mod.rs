@@ -2,6 +2,7 @@ mod test_boolean;
 mod test_byte;
 mod test_character;
 mod test_class;
+mod test_cldc11_exceptions;
 mod test_double;
 mod test_float;
 mod test_integer;

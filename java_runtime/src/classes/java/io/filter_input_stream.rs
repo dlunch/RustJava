@@ -22,7 +22,10 @@ impl FilterInputStream {
                 JavaMethodProto::new("read", "()I", Self::read_byte_int, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
                 JavaMethodProto::new("read", "([BII)I", Self::read_with_offset_length, Default::default()),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
             ],
             fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", FieldAccessFlags::PROTECTED)],
             access_flags: Default::default(),
@@ -64,6 +67,24 @@ impl FilterInputStream {
         let _: () = jvm.invoke_virtual(&r#in, "reset", "()V", ()).await?;
 
         Ok(())
+    }
+
+    async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
+        tracing::debug!("java.io.FilterInputStream::skip({this:?}, {n})");
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        jvm.invoke_virtual(&r#in, "skip", "(J)J", (n,)).await
+    }
+
+    async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
+        tracing::debug!("java.io.FilterInputStream::mark({this:?}, {readlimit})");
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        jvm.invoke_virtual(&r#in, "mark", "(I)V", (readlimit,)).await
+    }
+
+    async fn mark_supported(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.io.FilterInputStream::markSupported({this:?})");
+        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        jvm.invoke_virtual(&r#in, "markSupported", "()Z", ()).await
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {

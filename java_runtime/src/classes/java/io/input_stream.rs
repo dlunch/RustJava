@@ -17,14 +17,15 @@ impl InputStream {
             interfaces: vec![],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new_abstract("available", "()I", Default::default()),
-                JavaMethodProto::new_abstract("read", "([BII)I", Default::default()),
+                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset, Default::default()),
                 JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
                 JavaMethodProto::new_abstract("read", "()I", Default::default()),
-                JavaMethodProto::new_abstract("close", "()V", Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
                 JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
                 JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
                 JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
             ],
             fields: vec![],
             access_flags: ClassAccessFlags::ABSTRACT,
@@ -45,6 +46,53 @@ impl InputStream {
         let array_length = jvm.array_length(&b).await? as i32;
 
         jvm.invoke_virtual(&this, "read", "([BII)I", (b, 0, array_length)).await
+    }
+
+    async fn read_offset(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        mut b: ClassInstanceRef<Array<i8>>,
+        off: i32,
+        len: i32,
+    ) -> Result<i32> {
+        tracing::debug!("java.io.InputStream::read({this:?}, {b:?}, {off}, {len})");
+
+        let array_length = jvm.array_length(&b).await? as i32;
+        if off < 0 || len < 0 || off > array_length - len {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
+        }
+        if len == 0 {
+            return Ok(0);
+        }
+
+        let first: i32 = jvm.invoke_virtual(&this, "read", "()I", ()).await?;
+        if first == -1 {
+            return Ok(-1);
+        }
+        jvm.store_array(&mut b, off as usize, [first as i8]).await?;
+
+        let mut count = 1;
+        while count < len {
+            let value: i32 = jvm.invoke_virtual(&this, "read", "()I", ()).await?;
+            if value == -1 {
+                break;
+            }
+            jvm.store_array(&mut b, (off + count) as usize, [value as i8]).await?;
+            count += 1;
+        }
+
+        Ok(count)
+    }
+
+    async fn available(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.io.InputStream::available({this:?})");
+        Ok(0)
+    }
+
+    async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        tracing::debug!("java.io.InputStream::close({this:?})");
+        Ok(())
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
@@ -81,5 +129,10 @@ impl InputStream {
         tracing::debug!("java.io.InputStream::reset({this:?})");
 
         Err(jvm.exception("java/io/IOException", "reset not supported").await)
+    }
+
+    async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.io.InputStream::markSupported({this:?})");
+        Ok(false)
     }
 }

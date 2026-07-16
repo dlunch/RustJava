@@ -41,6 +41,42 @@ async fn test_is_assignable_from() -> Result<()> {
         .await?;
     assert!(!result);
 
+    let string_array_class = jvm.resolve_class("[Ljava/lang/String;").await?.java_class();
+    let object_array_class = jvm.resolve_class("[Ljava/lang/Object;").await?.java_class();
+    let cloneable_class = jvm.resolve_class("java/lang/Cloneable").await?.java_class();
+    let serializable_class = jvm.resolve_class("java/io/Serializable").await?.java_class();
+
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &object_array_class,
+            "isAssignableFrom",
+            "(Ljava/lang/Class;)Z",
+            (string_array_class.clone(),),
+        )
+        .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&string_array_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (object_array_class,),)
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&object_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_array_class.clone(),),)
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &cloneable_class,
+            "isAssignableFrom",
+            "(Ljava/lang/Class;)Z",
+            (string_array_class.clone(),),
+        )
+        .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&serializable_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (string_array_class,),)
+            .await?
+    );
+
     Ok(())
 }
 
@@ -163,6 +199,48 @@ async fn test_wrapper_type_fields_survive_gc() -> Result<()> {
         let typ = jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await?;
         assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_cldc_class_queries_and_new_instance() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let string_class = jvm.resolve_class("java/lang/String").await?.java_class();
+    let runnable_class = jvm.resolve_class("java/lang/Runnable").await?.java_class();
+    let array_class = jvm.resolve_class("[Ljava/lang/String;").await?.java_class();
+
+    assert!(!jvm.invoke_virtual::<_, bool>(&string_class, "isArray", "()Z", ()).await?);
+    assert!(jvm.invoke_virtual::<_, bool>(&array_class, "isArray", "()Z", ()).await?);
+    assert!(jvm.invoke_virtual::<_, bool>(&runnable_class, "isInterface", "()Z", ()).await?);
+
+    let value = JavaLangString::from_rust_string(&jvm, "value").await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&string_class, "isInstance", "(Ljava/lang/Object;)Z", (value,))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&string_class, "isInstance", "(Ljava/lang/Object;)Z", (None,))
+            .await?
+    );
+
+    let object_class = jvm.resolve_class("java/lang/Object").await?.java_class();
+    let instance: ClassInstanceRef<java_runtime::classes::java::lang::Object> =
+        jvm.invoke_virtual(&object_class, "newInstance", "()Ljava/lang/Object;", ()).await?;
+    assert!(jvm.is_instance(&**instance, "java/lang/Object"));
+
+    let result: Result<ClassInstanceRef<java_runtime::classes::java::lang::Object>> =
+        jvm.invoke_virtual(&runnable_class, "newInstance", "()Ljava/lang/Object;", ()).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("interface instantiation must throw InstantiationException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/InstantiationException"));
+
+    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&string_class, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "class java.lang.String");
+    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&runnable_class, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "interface java.lang.Runnable");
 
     Ok(())
 }
