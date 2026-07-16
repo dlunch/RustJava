@@ -34,10 +34,3 @@ pub use self::{
     output_stream::OutputStream, print_stream::PrintStream, print_writer::PrintWriter, random_access_file::RandomAccessFile, reader::Reader,
     serializable::Serializable, string_writer::StringWriter, writer::Writer,
 };
-
-pub(crate) async fn checked<T>(jvm: &jvm::Jvm, result: crate::IOResult<T>) -> jvm::Result<T> {
-    match result {
-        Ok(x) => Ok(x),
-        Err(_) => Err(jvm.exception("java/io/IOException", "I/O error").await),
-    }
-}

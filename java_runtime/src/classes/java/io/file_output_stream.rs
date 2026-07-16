@@ -87,7 +87,9 @@ impl FileOutputStream {
         let mut buf = vec![0; length as _];
         jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut buf)?;
 
-        super::checked(jvm, file.write(cast_slice(&buf)).await).await?;
+        if file.write(cast_slice(&buf)).await.is_err() {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        }
 
         Ok(())
     }
@@ -98,7 +100,9 @@ impl FileOutputStream {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
-        super::checked(jvm, file.write(&[byte as u8]).await).await?;
+        if file.write(&[byte as u8]).await.is_err() {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        }
 
         Ok(())
     }
