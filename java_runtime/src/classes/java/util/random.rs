@@ -75,7 +75,7 @@ impl Random {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "n must be positive").await);
         }
 
-        if bound & -bound == bound {
+        if (bound as u32).is_power_of_two() {
             let bits: i32 = jvm.invoke_virtual(&this, "next", "(I)I", (31,)).await?;
             return Ok(((bound as i64 * bits as i64) >> 31) as i32);
         }
