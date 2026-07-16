@@ -79,7 +79,7 @@ impl Jvm {
         }
 
         // init startup thread
-        jvm.attach_thread()?;
+        jvm.attach_thread(None).await?;
 
         // set java class for bootstrap classes
         let classes = jvm.inner.classes.read().values().cloned().collect::<Vec<_>>();
@@ -822,10 +822,18 @@ impl Jvm {
         Ok(())
     }
 
-    pub fn attach_thread(&self) -> Result<()> {
+    // every attached thread owns a java/lang/Thread instance; pass the instance for threads
+    // started from java (Thread.start), or None to create one
+    pub async fn attach_thread(&self, java_thread: Option<Box<dyn ClassInstance>>) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
         self.inner.threads.write().insert(thread_id, JvmThread::new());
         self.push_native_frame();
+
+        let java_thread = match java_thread {
+            Some(x) => x,
+            None => self.new_class("java/lang/Thread", "(Z)V", (true,)).await?,
+        };
+        self.inner.threads.write().get_mut(&thread_id).unwrap().set_java_thread(java_thread);
 
         Ok(())
     }
@@ -835,6 +843,11 @@ impl Jvm {
         self.inner.threads.write().remove(&thread_id);
 
         Ok(())
+    }
+
+    pub fn current_java_thread(&self) -> Box<dyn ClassInstance> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        self.inner.threads.read().get(&thread_id).unwrap().java_thread().unwrap().clone()
     }
 
     // TODO we need safe, ergonomic api..

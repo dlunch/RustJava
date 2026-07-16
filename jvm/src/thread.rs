@@ -29,11 +29,24 @@ impl StackFrame {
 
 pub struct JvmThread {
     stack: Vec<StackFrame>,
+    java_thread: Option<Box<dyn ClassInstance>>,
 }
 
 impl JvmThread {
     pub fn new() -> Self {
-        Self { stack: Vec::new() }
+        Self {
+            stack: Vec::new(),
+            java_thread: None,
+        }
+    }
+
+    #[allow(clippy::borrowed_box)] // same as jvm.rs; callers pass it to &Box-taking apis
+    pub fn java_thread(&self) -> Option<&Box<dyn ClassInstance>> {
+        self.java_thread.as_ref()
+    }
+
+    pub fn set_java_thread(&mut self, java_thread: Box<dyn ClassInstance>) {
+        self.java_thread = Some(java_thread);
     }
 
     pub fn push_java_frame(&mut self, class: &Class, class_instance: Option<Box<dyn ClassInstance>>, method: &str) {

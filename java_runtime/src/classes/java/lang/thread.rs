@@ -91,7 +91,7 @@ impl Thread {
             async fn call(&self) -> Result<()> {
                 tracing::trace!("Thread start");
 
-                self.jvm.attach_thread()?;
+                self.jvm.attach_thread(self.this.instance.clone()).await?;
 
                 let result: Result<()> = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await;
 
@@ -202,10 +202,8 @@ impl Thread {
     }
 
     async fn current_thread(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
-        tracing::warn!("stub java.lang.Thread::currentThread()");
+        tracing::debug!("java.lang.Thread::currentThread()");
 
-        let thread = jvm.new_class("java/lang/Thread", "(Z)V", (true,)).await?;
-
-        Ok(thread.into())
+        Ok(jvm.current_java_thread().into())
     }
 }

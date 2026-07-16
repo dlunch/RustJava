@@ -146,6 +146,7 @@ pub enum AttributeInfo {
     MethodParameters(Vec<u8>), // TODO
     NestMembers(Vec<u8>),      // TODO
     NestHost(Vec<u8>),         // TODO
+    Unknown(Arc<String>, Vec<u8>),
 }
 
 impl AttributeInfo {
@@ -170,7 +171,8 @@ impl AttributeInfo {
                     "MethodParameters" => AttributeInfo::MethodParameters(info.to_vec()),
                     "NestMembers" => AttributeInfo::NestMembers(info.to_vec()),
                     "NestHost" => AttributeInfo::NestHost(info.to_vec()),
-                    _ => return Err(nom::Err::Error(nom::error_position!(info, nom::error::ErrorKind::Switch))),
+                    // unrecognized attributes must be silently ignored (JVMS 4.7.1)
+                    _ => AttributeInfo::Unknown(name.clone(), info.to_vec()),
                 })
             },
         )
