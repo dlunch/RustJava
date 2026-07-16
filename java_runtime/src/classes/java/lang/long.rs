@@ -12,73 +12,69 @@ use crate::{
     classes::java::lang::{Character, Object, String},
 };
 
-// public final class java.lang.Integer
-pub struct Integer;
+// public final class java.lang.Long
+pub struct Long;
 
-impl Integer {
+impl Long {
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
-            name: "java/lang/Integer",
+            name: "java/lang/Long",
             parent_class: Some("java/lang/Number"),
             interfaces: vec!["java/lang/Comparable"],
             methods: vec![
                 JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(J)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
-                    "parseInt",
-                    "(Ljava/lang/String;)I",
-                    Self::parse_int,
+                    "parseLong",
+                    "(Ljava/lang/String;)J",
+                    Self::parse_long,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
-                    "parseInt",
-                    "(Ljava/lang/String;I)I",
-                    Self::parse_int_radix,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(I)Ljava/lang/Integer;",
-                    Self::value_of,
+                    "parseLong",
+                    "(Ljava/lang/String;I)J",
+                    Self::parse_long_radix,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
+                    "(Ljava/lang/String;)Ljava/lang/Long;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "valueOf",
-                    "(Ljava/lang/String;I)Ljava/lang/Integer;",
+                    "(Ljava/lang/String;I)Ljava/lang/Long;",
                     Self::value_of_string_radix,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "decode",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
+                    "(Ljava/lang/String;)Ljava/lang/Long;",
                     Self::decode,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
-                    Self::get_integer,
+                    "getLong",
+                    "(Ljava/lang/String;)Ljava/lang/Long;",
+                    Self::get_long,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;I)Ljava/lang/Integer;",
-                    Self::get_integer_value_default,
+                    "getLong",
+                    "(Ljava/lang/String;J)Ljava/lang/Long;",
+                    Self::get_long_value_default,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;Ljava/lang/Integer;)Ljava/lang/Integer;",
-                    Self::get_integer_object_default,
+                    "getLong",
+                    "(Ljava/lang/String;Ljava/lang/Long;)Ljava/lang/Long;",
+                    Self::get_long_object_default,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
+                JavaMethodProto::new("byteValue", "()B", Self::byte_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("shortValue", "()S", Self::short_value, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("longValue", "()J", Self::long_value, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("floatValue", "()F", Self::float_value, MethodAccessFlags::PUBLIC),
@@ -86,48 +82,48 @@ impl Integer {
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "toString",
-                    "(I)Ljava/lang/String;",
+                    "(J)Ljava/lang/String;",
                     Self::to_string_static,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "toString",
-                    "(II)Ljava/lang/String;",
-                    Self::to_string_radix_static,
+                    "(JI)Ljava/lang/String;",
+                    Self::to_string_radix,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "toBinaryString",
-                    "(I)Ljava/lang/String;",
+                    "(J)Ljava/lang/String;",
                     Self::to_binary_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "toOctalString",
-                    "(I)Ljava/lang/String;",
+                    "(J)Ljava/lang/String;",
                     Self::to_octal_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "toHexString",
-                    "(I)Ljava/lang/String;",
+                    "(J)Ljava/lang/String;",
                     Self::to_hex_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Integer;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("compareTo", "(Ljava/lang/Long;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
                 JavaFieldProto::new(
                     "MIN_VALUE",
-                    "I",
+                    "J",
                     FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
                 ),
                 JavaFieldProto::new(
                     "MAX_VALUE",
-                    "I",
+                    "J",
                     FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
                 ),
                 JavaFieldProto::new(
@@ -135,123 +131,98 @@ impl Integer {
                     "Ljava/lang/Class;",
                     FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
                 ),
-                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
+                JavaFieldProto::new("value", "J", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
             ],
             access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
         }
     }
 
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
-        jvm.put_static_field("java/lang/Integer", "MIN_VALUE", "I", i32::MIN).await?;
-        jvm.put_static_field("java/lang/Integer", "MAX_VALUE", "I", i32::MAX).await?;
+        jvm.put_static_field("java/lang/Long", "MIN_VALUE", "J", i64::MIN).await?;
+        jvm.put_static_field("java/lang/Long", "MAX_VALUE", "J", i64::MAX).await?;
         jvm.put_static_field(
-            "java/lang/Integer",
+            "java/lang/Long",
             "TYPE",
             "Ljava/lang/Class;",
-            JavaLangClass::from_rust_primitive(jvm, "int").await?,
+            JavaLangClass::from_rust_primitive(jvm, "long").await?,
         )
         .await
     }
-
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await
+        jvm.put_field(&mut this, "value", "J", value).await
     }
-
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
+        let value: i64 = jvm
+            .invoke_static("java/lang/Long", "parseLong", "(Ljava/lang/String;)J", (value,))
+            .await?;
+        let mut this = this;
+        let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
+        jvm.put_field(&mut this, "value", "J", value).await
+    }
+    fn parse_raw(value: &str, radix: u32) -> Option<i64> {
+        if !(2..=36).contains(&radix) || value.is_empty() {
+            return None;
+        }
+        let negative = value.starts_with('-');
+        let body = value.strip_prefix('-').or_else(|| value.strip_prefix('+')).unwrap_or(value);
+        if body.is_empty() {
+            return None;
+        }
+        let limit = if negative { i128::from(i64::MIN) } else { -i128::from(i64::MAX) };
+        let mut result = 0i128;
+        for value in body.chars() {
+            let value = JavaChar::try_from(u32::from(value)).ok()?;
+            let digit = i128::from(Character::digit_value(value, radix as i32));
+            if digit < 0 {
+                return None;
+            }
+            if result < (limit + digit) / i128::from(radix) {
+                return None;
+            }
+            result = result * i128::from(radix) - digit;
+        }
+        if !negative && result == i128::from(i64::MIN) {
+            return None;
+        }
+        Some(if negative { result as i64 } else { -result as i64 })
+    }
+    async fn parse_long(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i64> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
         }
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
-        let value = Self::parse_value(jvm, &value, 10).await?;
-        let mut this = this;
-        let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await
-    }
-
-    fn parse_value_raw(value: &str, radix: u32) -> Option<i32> {
-        if !(2..=36).contains(&radix) || value.is_empty() {
-            return None;
-        }
-        let mut chars = value.chars();
-        let negative = match chars.next() {
-            Some('-') => true,
-            Some('+') => false,
-            Some(first) => {
-                chars = value.chars();
-                let _ = first;
-                false
-            }
-            None => return None,
-        };
-        let limit = if negative { i64::from(i32::MIN) } else { -i64::from(i32::MAX) };
-        let mut result = 0i64;
-        let mut count = 0;
-        for value in chars {
-            let value = JavaChar::try_from(u32::from(value)).ok()?;
-            let digit = i64::from(Character::digit_value(value, radix as i32));
-            if digit < 0 {
-                return None;
-            }
-            if result < (limit + digit) / i64::from(radix) {
-                return None;
-            }
-            result = result * i64::from(radix) - digit;
-            count += 1;
-        }
-        if count == 0 || (!negative && result == i64::from(i32::MIN)) {
-            return None;
-        }
-        Some(if negative { result as i32 } else { -result as i32 })
-    }
-
-    async fn parse_value(jvm: &Jvm, value: &str, radix: u32) -> Result<i32> {
-        match Self::parse_value_raw(value, radix) {
+        match Self::parse_raw(&value, 10) {
             Some(value) => Ok(value),
             None => Err(jvm
                 .exception("java/lang/NumberFormatException", &format!("For input string: \"{value}\""))
                 .await),
         }
     }
-
-    async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i32> {
+    async fn parse_long_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<i64> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
         }
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
-        Self::parse_value(jvm, &value, 10).await
-    }
-
-    async fn parse_int_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<i32> {
-        if value.is_null() {
-            return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
+        match Self::parse_raw(&value, radix as u32) {
+            Some(value) => Ok(value),
+            None => Err(jvm
+                .exception("java/lang/NumberFormatException", &format!("For input string: \"{value}\""))
+                .await),
         }
-        let value = JavaLangString::to_rust_string(jvm, &value).await?;
-        Self::parse_value(jvm, &value, radix as u32).await
     }
-
-    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
-        Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
-    }
-
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
-        if value.is_null() {
-            return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
-        }
-        let value = JavaLangString::to_rust_string(jvm, &value).await?;
-        let value = Self::parse_value(jvm, &value, 10).await?;
-        Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
+        let value: i64 = jvm
+            .invoke_static("java/lang/Long", "parseLong", "(Ljava/lang/String;)J", (value,))
+            .await?;
+        Ok(jvm.new_class("java/lang/Long", "(J)V", (value,)).await?.into())
     }
-
     async fn value_of_string_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<ClassInstanceRef<Self>> {
-        if value.is_null() {
-            return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
-        }
-        let value = JavaLangString::to_rust_string(jvm, &value).await?;
-        let value = Self::parse_value(jvm, &value, radix as u32).await?;
-        Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
+        let value: i64 = jvm
+            .invoke_static("java/lang/Long", "parseLong", "(Ljava/lang/String;I)J", (value, radix))
+            .await?;
+        Ok(jvm.new_class("java/lang/Long", "(J)V", (value,)).await?.into())
     }
-
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -280,38 +251,38 @@ impl Integer {
         }
         let mut signed = RustString::from(sign);
         signed.push_str(body);
-        let parsed = Self::parse_value(jvm, &signed, radix).await?;
-        Ok(jvm.new_class("java/lang/Integer", "(I)V", (parsed,)).await?.into())
+        let value = match Self::parse_raw(&signed, radix) {
+            Some(value) => value,
+            None => return Err(jvm.exception("java/lang/NumberFormatException", "invalid long").await),
+        };
+        Ok(jvm.new_class("java/lang/Long", "(J)V", (value,)).await?.into())
     }
-
-    async fn get_integer(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
+    async fn get_long(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let default: ClassInstanceRef<Self> = None.into();
         jvm.invoke_static(
-            "java/lang/Integer",
-            "getInteger",
-            "(Ljava/lang/String;Ljava/lang/Integer;)Ljava/lang/Integer;",
+            "java/lang/Long",
+            "getLong",
+            "(Ljava/lang/String;Ljava/lang/Long;)Ljava/lang/Long;",
             (key, default),
         )
         .await
     }
-
-    async fn get_integer_value_default(
+    async fn get_long_value_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
         key: ClassInstanceRef<String>,
-        default: i32,
+        default: i64,
     ) -> Result<ClassInstanceRef<Self>> {
-        let default = jvm.new_class("java/lang/Integer", "(I)V", (default,)).await?;
+        let default = jvm.new_class("java/lang/Long", "(J)V", (default,)).await?;
         jvm.invoke_static(
-            "java/lang/Integer",
-            "getInteger",
-            "(Ljava/lang/String;Ljava/lang/Integer;)Ljava/lang/Integer;",
+            "java/lang/Long",
+            "getLong",
+            "(Ljava/lang/String;Ljava/lang/Long;)Ljava/lang/Long;",
             (key, default),
         )
         .await
     }
-
-    async fn get_integer_object_default(
+    async fn get_long_object_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
         key: ClassInstanceRef<String>,
@@ -327,7 +298,7 @@ impl Integer {
             return Ok(default);
         }
         match jvm
-            .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (value,))
+            .invoke_static("java/lang/Long", "decode", "(Ljava/lang/String;)Ljava/lang/Long;", (value,))
             .await
         {
             Ok(value) => Ok(value),
@@ -335,26 +306,24 @@ impl Integer {
             Err(error) => Err(error),
         }
     }
-
+    async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
+        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i8)
+    }
+    async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
+        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i16)
+    }
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "value", "I").await
+        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i32)
     }
-
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        Ok(value as i64)
+        jvm.get_field(&this, "value", "J").await
     }
-
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        Ok(value as f32)
+        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as f32)
     }
-
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        Ok(value as f64)
+        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as f64)
     }
-
     fn format_value(value: i64, radix: u32) -> RustString {
         let radix = if (2..=36).contains(&radix) { radix } else { 10 };
         if value == 0 {
@@ -364,8 +333,7 @@ impl Integer {
         let mut magnitude = value.unsigned_abs();
         let mut result = RustString::new();
         while magnitude != 0 {
-            let digit = (magnitude % u64::from(radix)) as u32;
-            result.push(char::from_digit(digit, radix).unwrap_or('0'));
+            result.push(char::from_digit((magnitude % u64::from(radix)) as u32, radix).unwrap_or('0'));
             magnitude /= u64::from(radix);
         }
         if negative {
@@ -373,81 +341,73 @@ impl Integer {
         }
         result.chars().rev().collect()
     }
-
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, 10)).await?.into())
+        let value: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value, 10)).await?.into())
     }
-
-    async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
-        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, 10)).await?.into())
+    async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<String>> {
+        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value, 10)).await?.into())
     }
-
-    async fn to_string_radix_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32, radix: i32) -> Result<ClassInstanceRef<String>> {
-        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, radix as u32))
+    async fn to_string_radix(jvm: &Jvm, _: &mut RuntimeContext, value: i64, radix: i32) -> Result<ClassInstanceRef<String>> {
+        Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value, radix as u32))
             .await?
             .into())
     }
-
-    async fn to_binary_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
+    async fn to_binary_string(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
-            format!("{:032b}", value as u32)
+            format!("{:064b}", value as u64)
         } else {
-            Self::format_value(value as i64, 2)
+            Self::format_value(value, 2)
         };
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
-
-    async fn to_octal_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
+    async fn to_octal_string(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
-            format!("{:011o}", value as u32)
+            format!("{:022o}", value as u64)
         } else {
-            Self::format_value(value as i64, 8)
+            Self::format_value(value, 8)
         };
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
-
-    async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
+    async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
-            format!("{:08x}", value as u32)
+            format!("{:016x}", value as u64)
         } else {
-            Self::format_value(value as i64, 16)
+            Self::format_value(value, 16)
         };
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
-
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "value", "I").await
+        let value: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        Ok((value ^ (value >> 32)) as i32)
     }
-
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
-        if other.is_null() || !jvm.is_instance(&**other, "java/lang/Integer") {
+        if other.is_null() || !jvm.is_instance(&**other, "java/lang/Long") {
             return Ok(false);
         }
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
-        Ok(this_value == other_value)
+        Ok(
+            jvm.invoke_virtual::<_, i64>(&this, "longValue", "()J", ()).await?
+                == jvm.invoke_virtual::<_, i64>(&other, "longValue", "()J", ()).await?,
+        )
     }
-
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
-        Ok(this_value.cmp(&other_value) as i32)
+        let left: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        let right: i64 = jvm.invoke_virtual(&other, "longValue", "()J", ()).await?;
+        Ok(left.cmp(&right) as i32)
     }
-
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        if !jvm.is_instance(&**other, "java/lang/Integer") {
-            return Err(jvm.exception("java/lang/ClassCastException", "java/lang/Object is not Integer").await);
+        if !jvm.is_instance(&**other, "java/lang/Long") {
+            return Err(jvm.exception("java/lang/ClassCastException", "not Long").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
-        Ok(this_value.cmp(&other_value) as i32)
+        let left: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        let right: i64 = jvm.invoke_virtual(&other, "longValue", "()J", ()).await?;
+        Ok(left.cmp(&right) as i32)
     }
 }

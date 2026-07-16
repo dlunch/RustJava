@@ -27,6 +27,7 @@ impl Class {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
+                JavaMethodProto::new("isPrimitive", "()Z", Self::is_primitive, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("isAssignableFrom", "(Ljava/lang/Class;)Z", Self::is_assignable_from, Default::default()),
                 JavaMethodProto::new(
                     "getResourceAsStream",
@@ -62,14 +63,41 @@ impl Class {
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Class::getName({this:?})");
 
-        let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
-        let result = JavaLangString::from_rust_string(jvm, &rust_class.name().replace('/', ".")).await?;
+        let class_name = JavaLangClass::name(jvm, &this).await?;
+        let result = JavaLangString::from_rust_string(jvm, &class_name.replace('/', ".")).await?;
 
         Ok(result.into())
     }
 
+    async fn is_primitive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        let name = JavaLangClass::name(jvm, &this).await?;
+        Ok(matches!(
+            name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double"
+        ))
+    }
+
     async fn is_assignable_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Class::isAssignableFrom({this:?}, {other:?})");
+
+        if other.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "other").await);
+        }
+
+        let class_name = JavaLangClass::name(jvm, &this).await?;
+        let other_name = JavaLangClass::name(jvm, &other).await?;
+        let class_is_primitive = matches!(
+            class_name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double"
+        );
+        let other_is_primitive = matches!(
+            other_name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double"
+        );
+
+        if class_is_primitive || other_is_primitive {
+            return Ok(class_name == other_name);
+        }
 
         let rust_class = JavaLangClass::to_rust_class(jvm, &this).await?;
         let other_rust_class = JavaLangClass::to_rust_class(jvm, &other).await?;
@@ -100,6 +128,10 @@ impl Class {
 
     async fn for_name(jvm: &Jvm, _context: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.Class::forName({name:?})");
+
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name").await);
+        }
 
         let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
         let qualified_name = rust_name.replace('.', "/");
