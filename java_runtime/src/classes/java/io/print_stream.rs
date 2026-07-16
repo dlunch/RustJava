@@ -110,7 +110,8 @@ impl PrintStream {
     async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, char: JavaChar) -> Result<()> {
         tracing::debug!("java.io.PrintStream::println({this:?}, {char:?})");
 
-        let char = char::from_u32(char as _).unwrap();
+        // an unpaired surrogate is not a valid char; the JDK charset encoder replaces it with '?'
+        let char = char::from_u32(char as _).unwrap_or('?');
 
         let java_string = JavaLangString::from_rust_string(jvm, &char.to_string()).await?;
 

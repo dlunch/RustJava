@@ -379,9 +379,11 @@ impl String {
     async fn value_of_char(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::valueOf({value})");
 
-        let string = RustString::from_utf16(&[value]).unwrap();
+        // build through [C so an unpaired surrogate is preserved
+        let mut chars = jvm.instantiate_array("C", 1).await?;
+        jvm.store_array(&mut chars, 0, [value]).await?;
 
-        Ok(JavaLangString::from_rust_string(jvm, &string).await?.into())
+        Ok(jvm.new_class("java/lang/String", "([C)V", (chars,)).await?.into())
     }
 
     async fn value_of_integer(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {

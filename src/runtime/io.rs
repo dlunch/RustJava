@@ -35,7 +35,7 @@ where
     }
 
     async fn write(&mut self, buf: &[u8]) -> IOResult<usize> {
-        let written = self.write.lock().unwrap().write(buf).unwrap();
+        let written = self.write.lock().unwrap().write(buf).map_err(|_| IOError::Io)?;
 
         Ok(written)
     }
@@ -90,7 +90,7 @@ where
     R: Read + Send + Sync + 'static,
 {
     async fn read(&mut self, buf: &mut [u8]) -> IOResult<usize> {
-        let read = self.read.lock().unwrap().read(buf).unwrap();
+        let read = self.read.lock().unwrap().read(buf).map_err(|_| IOError::Io)?;
 
         Ok(read)
     }
@@ -131,50 +131,50 @@ pub struct FileImpl {
 }
 
 impl FileImpl {
-    pub fn new(path: &str, write: bool) -> Self {
+    pub fn new(path: &str, write: bool) -> io::Result<Self> {
         let mut options = OpenOptions::new();
-        let file = options.read(true).write(write).create(write).open(path).unwrap();
+        let file = options.read(true).write(write).create(write).open(path)?;
 
-        Self {
+        Ok(Self {
             file: Arc::new(Mutex::new(file)),
-        }
+        })
     }
 }
 
 #[async_trait::async_trait]
 impl File for FileImpl {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
-        let read = self.file.lock().unwrap().read(buf).unwrap();
+        let read = self.file.lock().unwrap().read(buf).map_err(|_| IOError::Io)?;
 
         Ok(read)
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<usize, IOError> {
-        let write = self.file.lock().unwrap().write(buf).unwrap();
+        let write = self.file.lock().unwrap().write(buf).map_err(|_| IOError::Io)?;
 
         Ok(write)
     }
 
     async fn seek(&mut self, pos: FileSize) -> Result<(), IOError> {
-        self.file.lock().unwrap().seek(io::SeekFrom::Start(pos)).unwrap();
+        self.file.lock().unwrap().seek(io::SeekFrom::Start(pos)).map_err(|_| IOError::Io)?;
 
         Ok(())
     }
 
     async fn tell(&self) -> Result<FileSize, IOError> {
-        let pos = self.file.lock().unwrap().seek(io::SeekFrom::Current(0)).unwrap();
+        let pos = self.file.lock().unwrap().seek(io::SeekFrom::Current(0)).map_err(|_| IOError::Io)?;
 
         Ok(pos as FileSize)
     }
 
     async fn set_len(&mut self, len: FileSize) -> Result<(), IOError> {
-        self.file.lock().unwrap().set_len(len).unwrap();
+        self.file.lock().unwrap().set_len(len).map_err(|_| IOError::Io)?;
 
         Ok(())
     }
 
     async fn metadata(&self) -> Result<FileStat, IOError> {
-        let metadata = self.file.lock().unwrap().metadata().unwrap();
+        let metadata = self.file.lock().unwrap().metadata().map_err(|_| IOError::Io)?;
         let size = metadata.len();
 
         Ok(FileStat {

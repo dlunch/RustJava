@@ -59,12 +59,7 @@ impl File {
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let stat = context.metadata(&path).await;
-        if stat.is_err() {
-            return Ok(false);
-        }
-
-        Ok(stat.unwrap().r#type == FileType::Directory)
+        Ok(context.metadata(&path).await.is_ok_and(|x| x.r#type == FileType::Directory))
     }
 
     async fn is_file(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -73,12 +68,7 @@ impl File {
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let stat = context.metadata(&path).await;
-        if stat.is_err() {
-            return Ok(false);
-        }
-
-        Ok(stat.unwrap().r#type == FileType::File)
+        Ok(context.metadata(&path).await.is_ok_and(|x| x.r#type == FileType::File))
     }
 
     async fn delete(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -96,8 +86,7 @@ impl File {
         let path = jvm.invoke_virtual(&this, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let stat = context.metadata(&path).await.unwrap();
-
-        Ok(stat.size as _)
+        // File.length() is 0 when the file does not exist
+        Ok(context.metadata(&path).await.map_or(0, |x| x.size as _))
     }
 }

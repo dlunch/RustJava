@@ -79,8 +79,12 @@ impl FileInputStream {
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         // TODO get os buffer size
-        let stat = rust_file.metadata().await.unwrap();
-        let tell = rust_file.tell().await.unwrap();
+        let Ok(stat) = rust_file.metadata().await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
+        let Ok(tell) = rust_file.tell().await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
 
         let available = stat.size - tell;
 
@@ -101,7 +105,9 @@ impl FileInputStream {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as _];
-        let read = rust_file.read(&mut rust_buf).await.unwrap();
+        let Ok(read) = rust_file.read(&mut rust_buf).await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
         if read == 0 {
             return Ok(-1);
         }
@@ -118,7 +124,9 @@ impl FileInputStream {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut buf = [0; 1];
-        let read = rust_file.read(&mut buf).await.unwrap();
+        let Ok(read) = rust_file.read(&mut buf).await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
         if read == 0 {
             return Ok(-1);
         }

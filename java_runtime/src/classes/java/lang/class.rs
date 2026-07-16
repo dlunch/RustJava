@@ -103,8 +103,10 @@ impl Class {
 
         let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
         let qualified_name = rust_name.replace('.', "/");
-        let class = jvm.get_class(&qualified_name).unwrap().java_class();
 
-        Ok(class.into())
+        match jvm.resolve_class(&qualified_name).await {
+            Ok(class) => Ok(class.java_class().into()),
+            Err(_) => Err(jvm.exception("java/lang/ClassNotFoundException", &rust_name).await),
+        }
     }
 }

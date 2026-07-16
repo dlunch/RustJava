@@ -1,8 +1,4 @@
-use alloc::{
-    string::{String as RustString, ToString},
-    vec,
-    vec::Vec,
-};
+use alloc::{string::ToString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
@@ -162,9 +158,7 @@ impl StringBuffer {
     async fn append_character(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: u16) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value:?})");
 
-        let value = RustString::from_utf16(&[value]).unwrap();
-
-        Self::append(jvm, &mut this, &value).await?;
+        Self::append_utf16(jvm, &mut this, vec![value]).await?;
 
         Ok(this)
     }
@@ -180,9 +174,8 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {array:?}, {offset:?}, {length:?})");
 
         let value: Vec<JavaChar> = jvm.load_array(&array, offset as _, length as _).await?;
-        let string = RustString::from_utf16(&value).unwrap();
 
-        Self::append(jvm, &mut this, &string).await?;
+        Self::append_utf16(jvm, &mut this, value).await?;
 
         Ok(this)
     }
@@ -237,9 +230,12 @@ impl StringBuffer {
     }
 
     async fn append(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, string: &str) -> Result<()> {
+        Self::append_utf16(jvm, this, string.encode_utf16().collect()).await
+    }
+
+    async fn append_utf16(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, value_to_add: Vec<JavaChar>) -> Result<()> {
         let current_count: i32 = jvm.get_field(this, "count", "I").await?;
 
-        let value_to_add = string.encode_utf16().collect::<Vec<_>>();
         let count_to_add = value_to_add.len() as i32;
 
         StringBuffer::ensure_capacity(jvm, this, (current_count + count_to_add) as _).await?;

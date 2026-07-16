@@ -114,7 +114,9 @@ impl RandomAccessFile {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as usize];
-        let read = rust_file.read(&mut rust_buf).await.unwrap();
+        let Ok(read) = rust_file.read(&mut rust_buf).await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
 
         jvm.array_raw_buffer_mut(&mut buf).await?.write(offset as _, &rust_buf)?;
 
@@ -144,8 +146,10 @@ impl RandomAccessFile {
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut rust_buf = vec![0; length as usize];
-        jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf).unwrap();
-        rust_file.write(&cast_vec(rust_buf)).await.unwrap();
+        jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf)?;
+        if rust_file.write(&cast_vec(rust_buf)).await.is_err() {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        }
 
         Ok(())
     }
@@ -156,7 +160,9 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        rust_file.seek(pos as _).await.unwrap();
+        if rust_file.seek(pos as _).await.is_err() {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        }
 
         Ok(())
     }
@@ -167,7 +173,9 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        rust_file.set_len(new_length as _).await.unwrap();
+        if rust_file.set_len(new_length as _).await.is_err() {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        }
 
         Ok(())
     }
@@ -178,7 +186,10 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        let len = rust_file.metadata().await.unwrap().size;
+        let Ok(metadata) = rust_file.metadata().await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
+        let len = metadata.size;
 
         Ok(len as i64)
     }
@@ -189,7 +200,9 @@ impl RandomAccessFile {
         let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
         let rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
-        let pos = rust_file.tell().await.unwrap();
+        let Ok(pos) = rust_file.tell().await else {
+            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        };
 
         Ok(pos as i64)
     }

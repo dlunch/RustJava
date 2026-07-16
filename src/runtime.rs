@@ -130,8 +130,8 @@ where
     }
 
     async fn open(&self, path: &str, write: bool) -> IOResult<FileDescriptorId> {
-        let file = Box::new(FileImpl::new(path, write));
-        Ok(self.register_file(file))
+        let file = FileImpl::new(path, write).map_err(|_| IOError::NotFound)?;
+        Ok(self.register_file(Box::new(file)))
     }
 
     fn get_file(&self, fd: FileDescriptorId) -> IOResult<Box<dyn File>> {
