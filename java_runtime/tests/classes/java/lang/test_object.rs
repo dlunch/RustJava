@@ -30,7 +30,7 @@ async fn test_wait() -> Result<()> {
     #[async_trait::async_trait]
     impl SpawnCallback for Notifier {
         async fn call(&self) -> Result<()> {
-            self.jvm.attach_thread()?;
+            self.jvm.attach_thread(None).await?;
 
             self.runtime.sleep(Duration::from_millis(100)).await;
             self.notified.store(true, Ordering::Relaxed);
@@ -77,7 +77,7 @@ async fn test_wait_timeout() -> Result<()> {
     #[async_trait::async_trait]
     impl SpawnCallback for Notifier {
         async fn call(&self) -> Result<()> {
-            self.jvm.attach_thread()?;
+            self.jvm.attach_thread(None).await?;
 
             self.runtime.sleep(Duration::from_millis(1000)).await;
             self.notified.store(true, Ordering::Relaxed);

@@ -26,6 +26,10 @@ pub fn determine_garbage(
             find_reachable_objects(jvm, x, &mut reachable_objects);
         });
 
+    threads.values().filter_map(|thread| thread.java_thread()).for_each(|x| {
+        find_reachable_objects(jvm, x, &mut reachable_objects);
+    });
+
     interned_strings.iter().for_each(|x| {
         find_reachable_objects(jvm, x, &mut reachable_objects);
     });
