@@ -14,7 +14,12 @@ async fn test_long_api() -> Result<()> {
     assert_eq!(jvm.invoke_virtual::<_, f32>(&value, "floatValue", "()F", ()).await?, i64::MIN as f32);
     assert_eq!(jvm.invoke_virtual::<_, f64>(&value, "doubleValue", "()D", ()).await?, i64::MIN as f64);
 
-    for (input, radix, expected) in [("7fffffffffffffff", 16, i64::MAX), ("-8000000000000000", 16, i64::MIN)] {
+    for (input, radix, expected) in [
+        ("7fffffffffffffff", 16, i64::MAX),
+        ("-8000000000000000", 16, i64::MIN),
+        ("\u{ff21}", 16, 10),
+        ("\u{0661}\u{0662}\u{0663}", 10, 123),
+    ] {
         let string = JavaLangString::from_rust_string(&jvm, input).await?;
         let parsed: i64 = jvm
             .invoke_static("java/lang/Long", "parseLong", "(Ljava/lang/String;I)J", (string, radix))

@@ -3,13 +3,13 @@ use alloc::{format, string::String as RustString, vec};
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{
-    ClassInstanceRef, JavaError, Jvm, Result,
+    ClassInstanceRef, JavaChar, JavaError, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    classes::java::lang::{Character, Object, String},
 };
 
 // public final class java.lang.Integer
@@ -188,7 +188,11 @@ impl Integer {
         let mut result = 0i64;
         let mut count = 0;
         for value in chars {
-            let digit = i64::from(value.to_digit(radix)?);
+            let value = JavaChar::try_from(u32::from(value)).ok()?;
+            let digit = i64::from(Character::digit_value(value, radix as i32));
+            if digit < 0 {
+                return None;
+            }
             if result < (limit + digit) / i64::from(radix) {
                 return None;
             }

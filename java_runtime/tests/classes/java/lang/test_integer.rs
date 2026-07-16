@@ -41,7 +41,13 @@ async fn test_parse_int_invalid() -> Result<()> {
 async fn test_integer_strict_api() -> Result<()> {
     let jvm = test_jvm().await?;
 
-    for (text, radix, expected) in [("7fffffff", 16, i32::MAX), ("-80000000", 16, i32::MIN), ("z", 36, 35)] {
+    for (text, radix, expected) in [
+        ("7fffffff", 16, i32::MAX),
+        ("-80000000", 16, i32::MIN),
+        ("z", 36, 35),
+        ("\u{ff21}", 16, 10),
+        ("\u{0661}\u{0662}\u{0663}", 10, 123),
+    ] {
         let string = JavaLangString::from_rust_string(&jvm, text).await?;
         let value: i32 = jvm
             .invoke_static("java/lang/Integer", "parseInt", "(Ljava/lang/String;I)I", (string, radix))

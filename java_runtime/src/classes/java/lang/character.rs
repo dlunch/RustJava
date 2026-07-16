@@ -577,8 +577,12 @@ impl Character {
     }
 
     async fn digit(_: &Jvm, _: &mut RuntimeContext, value: JavaChar, radix: i32) -> Result<i32> {
+        Ok(Self::digit_value(value, radix))
+    }
+
+    pub(crate) fn digit_value(value: JavaChar, radix: i32) -> i32 {
         if !(2..=36).contains(&radix) {
-            return Ok(-1);
+            return -1;
         }
 
         let numeric = if let Some(value) = Self::decimal_digit_value(value) {
@@ -592,10 +596,10 @@ impl Character {
         } else if (0xff21..=0xff3a).contains(&value) {
             i32::from(value - 0xff21) + 10
         } else {
-            return Ok(-1);
+            return -1;
         };
 
-        Ok(if numeric < radix { numeric } else { -1 })
+        if numeric < radix { numeric } else { -1 }
     }
 
     async fn for_digit(_: &Jvm, _: &mut RuntimeContext, digit: i32, radix: i32) -> Result<JavaChar> {

@@ -3,13 +3,13 @@ use alloc::{format, string::String as RustString, vec};
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{
-    ClassInstanceRef, JavaError, Jvm, Result,
+    ClassInstanceRef, JavaChar, JavaError, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    classes::java::lang::{Character, Object, String},
 };
 
 // public final class java.lang.Long
@@ -172,7 +172,11 @@ impl Long {
         let limit = if negative { i128::from(i64::MIN) } else { -i128::from(i64::MAX) };
         let mut result = 0i128;
         for value in body.chars() {
-            let digit = i128::from(value.to_digit(radix)?);
+            let value = JavaChar::try_from(u32::from(value)).ok()?;
+            let digit = i128::from(Character::digit_value(value, radix as i32));
+            if digit < 0 {
+                return None;
+            }
             if result < (limit + digit) / i128::from(radix) {
                 return None;
             }
