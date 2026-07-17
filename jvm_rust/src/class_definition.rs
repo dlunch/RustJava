@@ -164,10 +164,17 @@ impl ClassDefinitionImpl {
                         }
                         Opcode::Invokeinterface(ConstantPoolReference::InterfaceMethodref(reference), _, _)
                         | Opcode::Invokespecial(ConstantPoolReference::Method(reference))
-                        | Opcode::Invokestatic(ConstantPoolReference::Method(reference))
-                        | Opcode::Invokevirtual(ConstantPoolReference::Method(reference)) => {
+                        | Opcode::Invokestatic(ConstantPoolReference::Method(reference)) => {
                             if reference.class.is_empty()
                                 || reference.class.starts_with('[')
+                                || !matches!(JavaType::try_parse(&reference.descriptor), Some(JavaType::Method(_, _)))
+                            {
+                                return Err(ClassFileError::InvalidFormat);
+                            }
+                        }
+                        Opcode::Invokevirtual(ConstantPoolReference::Method(reference)) => {
+                            if reference.class.is_empty()
+                                || (reference.class.starts_with('[') && !matches!(JavaType::try_parse(&reference.class), Some(JavaType::Array(_))))
                                 || !matches!(JavaType::try_parse(&reference.descriptor), Some(JavaType::Method(_, _)))
                             {
                                 return Err(ClassFileError::InvalidFormat);

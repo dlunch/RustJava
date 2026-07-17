@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use java_constants::ClassAccessFlags;
 
 use classfile::{AttributeInfo, ClassFileError, ClassInfo, ConstantPoolReference, Opcode};
@@ -112,6 +114,16 @@ fn test_switch() {
             code_attribute.code.get(&75).unwrap(),
             Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]));
     }
+}
+
+#[test]
+fn test_switch_rejects_entry_counts_larger_than_remaining_input() {
+    let constant_pool = BTreeMap::new();
+    let lookup_switch = [0xab, 0, 0, 0, 0, 0, 0, 0, 0x7f, 0xff, 0xff, 0xff];
+    assert!(Opcode::parse(&lookup_switch, 0, &constant_pool).is_err());
+
+    let table_switch = [0xaa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7f, 0xff, 0xff, 0xff];
+    assert!(Opcode::parse(&table_switch, 0, &constant_pool).is_err());
 }
 
 #[test]

@@ -406,8 +406,8 @@ impl Opcode {
             0x69 => success(Opcode::Lmul).parse(data),
             0x75 => success(Opcode::Lneg).parse(data),
             0xab => flat_map((take((4 - (offset + 1) % 4) % 4), be_i32, be_i32), |(_, default, npairs)| {
-                move |x| {
-                    if npairs < 0 {
+                move |x: &'a [u8]| {
+                    if npairs < 0 || npairs as usize > x.len() / 8 {
                         return Err(nom::Err::Error(Error::new(x, ErrorKind::Verify)));
                     }
                     map(count((be_i32, be_i32), npairs as usize), |offsets| Opcode::Lookupswitch(default, offsets)).parse(x)
@@ -469,11 +469,11 @@ impl Opcode {
             0x11 => map(be_i16, Opcode::Sipush).parse(data),
             0x5f => success(Opcode::Swap).parse(data),
             0xaa => flat_map((take((4 - (offset + 1) % 4) % 4), be_i32, be_i32, be_i32), |(_, default, low, high)| {
-                move |x| {
+                move |x: &'a [u8]| {
                     let Some(entry_count) = high.checked_sub(low).and_then(|range| range.checked_add(1)) else {
                         return Err(nom::Err::Error(Error::new(x, ErrorKind::Verify)));
                     };
-                    if entry_count < 0 {
+                    if entry_count <= 0 || entry_count as usize > x.len() / 4 {
                         return Err(nom::Err::Error(Error::new(x, ErrorKind::Verify)));
                     }
                     map(count(be_i32, entry_count as usize), |offsets| {
