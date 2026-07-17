@@ -15,7 +15,7 @@ use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
 use crate::{
     Result,
-    array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
+    array_class_instance::{ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
     class_loader::{
@@ -451,7 +451,7 @@ impl Jvm {
         let array = array.as_array_instance();
 
         if let Some(array) = array {
-            let class = ArrayClassInstance::class_definition(array);
+            let class = array.class_definition();
 
             let type_name = &class.name()[1..]; // TODO can we store JavaType on class?
 

@@ -6,7 +6,9 @@ use core::{
 
 use parking_lot::RwLock;
 
-use jvm::{ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut, ClassDefinition, ClassInstance, JavaType, JavaValue, Result};
+use jvm::{
+    ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut, ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Result,
+};
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
@@ -112,7 +114,9 @@ impl ArrayClassInstanceImpl {
 }
 
 #[async_trait::async_trait]
-impl ArrayClassInstance for ArrayClassInstanceImpl {
+impl ClassInstance for ArrayClassInstanceImpl {
+    fn destroy(self: Box<Self>) {}
+
     fn identity(&self) -> usize {
         Arc::as_ptr(&self.inner) as usize
     }
@@ -132,8 +136,6 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         self.inner.class.clone()
     }
 
-    fn destroy(self: Box<Self>) {}
-
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
         let other = other.as_any().downcast_ref::<ArrayClassInstanceImpl>();
         if other.is_none() {
@@ -144,6 +146,24 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         Ok(Arc::ptr_eq(&self.inner, &other.inner))
     }
 
+    fn as_array_instance(&self) -> Option<&dyn ArrayClassInstance> {
+        Some(self)
+    }
+
+    fn as_array_instance_mut(&mut self) -> Option<&mut dyn ArrayClassInstance> {
+        Some(self)
+    }
+
+    fn get_field(&self, _field: &dyn Field) -> Result<JavaValue> {
+        panic!("Array classes do not have fields")
+    }
+
+    fn put_field(&mut self, _field: &dyn Field, _value: JavaValue) -> Result<()> {
+        panic!("Array classes do not have fields")
+    }
+}
+
+impl ArrayClassInstance for ArrayClassInstanceImpl {
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()> {
         match &mut *self.inner.elements.write() {
             ArrayElements::Primitive(x) => {
