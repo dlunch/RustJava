@@ -573,6 +573,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytemuck",
+ "classfile",
  "java_class_proto",
  "java_runtime",
  "jvm",
@@ -643,6 +644,7 @@ name = "test_utils"
 version = "0.0.1"
 dependencies = [
  "async-trait",
+ "classfile",
  "java_runtime",
  "jvm",
  "jvm_rust",

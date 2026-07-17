@@ -12,9 +12,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use classfile::ClassFileError;
 use java_runtime::{File, FileDescriptorId, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto};
 use jvm::{ClassDefinition, Jvm};
-use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl, ClassFileError};
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl};
 
 use self::io::{FileImpl, InputStreamFile, WriteStreamFile};
 

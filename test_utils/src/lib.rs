@@ -11,8 +11,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use classfile::ClassFileError;
 use jvm::{ClassDefinition, Jvm, Result};
-use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl, ClassFileError};
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl};
 
 use java_runtime::{
     File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader,

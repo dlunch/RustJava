@@ -19,4 +19,3 @@ pub use self::{
     field::FieldImpl,
     method::{MethodBody, MethodImpl},
 };
-pub use classfile::ClassFileError;
