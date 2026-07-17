@@ -47,7 +47,6 @@ tracing-subscriber = { version = "^0.3", features = ["env-filter"] }
 
 jvm = { workspace = true }
 jvm_rust = { workspace = true }
-classfile = { workspace = true }
 java_class_proto = { workspace = true }
 java_runtime = { workspace = true }
 

@@ -11,7 +11,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use classfile::ClassFileError;
 use jvm::{ClassDefinition, Jvm, Result};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl};
 
@@ -164,10 +163,8 @@ impl Runtime for TestRuntime {
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
         match ClassDefinitionImpl::from_classfile(data) {
             Ok(class) => Ok(Box::new(class)),
-            Err(ClassDefinitionError::ClassFile(ClassFileError::InvalidFormat)) => {
-                Err(jvm.exception("java/lang/ClassFormatError", "Invalid class file").await)
-            }
-            Err(ClassDefinitionError::ClassFile(ClassFileError::UnsupportedVersion(version))) => Err(jvm
+            Err(ClassDefinitionError::InvalidClassFile) => Err(jvm.exception("java/lang/ClassFormatError", "Invalid class file").await),
+            Err(ClassDefinitionError::UnsupportedClassVersion(version)) => Err(jvm
                 .exception(
                     "java/lang/UnsupportedClassVersionError",
                     &format!("Unsupported class file version {version}"),
