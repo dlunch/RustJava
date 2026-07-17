@@ -11,6 +11,7 @@ async fn test_cldc11_exception_and_error_hierarchy() -> Result<()> {
         ("java/lang/IllegalMonitorStateException", "java/lang/RuntimeException"),
         ("java/lang/IllegalThreadStateException", "java/lang/IllegalArgumentException"),
         ("java/lang/InstantiationException", "java/lang/Exception"),
+        ("java/lang/VerifyError", "java/lang/LinkageError"),
         ("java/lang/VirtualMachineError", "java/lang/Error"),
         ("java/lang/OutOfMemoryError", "java/lang/VirtualMachineError"),
         ("java/io/InterruptedIOException", "java/io/IOException"),

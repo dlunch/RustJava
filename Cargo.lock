@@ -573,12 +573,14 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytemuck",
+ "classfile",
  "java_class_proto",
  "java_runtime",
  "jvm",
  "jvm_rust",
  "test_utils",
  "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 
@@ -642,10 +644,12 @@ name = "test_utils"
 version = "0.0.1"
 dependencies = [
  "async-trait",
+ "classfile",
  "java_runtime",
  "jvm",
  "jvm_rust",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

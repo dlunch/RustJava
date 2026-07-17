@@ -31,5 +31,10 @@ class Array {
         System.out.println(char_array.length);
         System.out.println(boolean_array.length);
         System.out.println(string_array.length);
+
+        int[] cloned_int_array = (int[]) int_array.clone();
+        cloned_int_array[0] = 654321;
+        System.out.println(int_array[0]);
+        System.out.println(cloned_int_array[0]);
     }
 }

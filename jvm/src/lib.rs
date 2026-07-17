@@ -13,6 +13,7 @@ mod garbage_collector;
 mod invoke_arg;
 mod jvm;
 mod method;
+mod monitor;
 mod thread;
 mod r#type;
 mod value;
@@ -39,6 +40,7 @@ pub use self::{
     field::Field,
     jvm::Jvm,
     method::Method,
+    monitor::{MonitorWait, MonitorWaitTimeout},
     r#type::JavaType,
     value::{JavaChar, JavaValue},
 };

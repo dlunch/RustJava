@@ -13,5 +13,6 @@ mod test_object;
 mod test_short;
 mod test_string;
 mod test_string_buffer;
+mod test_system;
 mod test_thread;
 mod test_throwable;

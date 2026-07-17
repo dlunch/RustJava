@@ -152,9 +152,10 @@ impl System {
         Ok(value)
     }
 
-    async fn exit(_jvm: &Jvm, _: &mut RuntimeContext, status: i32) -> Result<()> {
-        tracing::warn!("stub java.lang.System::exit({status})");
+    async fn exit(_jvm: &Jvm, context: &mut RuntimeContext, status: i32) -> Result<()> {
+        tracing::debug!("java.lang.System::exit({status})");
 
+        context.exit(status);
         Ok(())
     }
 

@@ -6,6 +6,8 @@ use crate::{Result, class_definition::ClassDefinition, class_instance::ClassInst
 pub trait ArrayClassInstance: ClassInstance {
     fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn destroy(self: Box<Self>);
+    fn identity(&self) -> usize;
+    fn shallow_clone(&self) -> Result<Box<dyn ClassInstance>>;
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool>;
     fn store(&mut self, offset: usize, values: Box<[JavaValue]>) -> Result<()>;
     fn load(&self, offset: usize, count: usize) -> Result<Vec<JavaValue>>;
@@ -18,6 +20,14 @@ pub trait ArrayClassInstance: ClassInstance {
 impl<T: ArrayClassInstance> ClassInstance for T {
     fn destroy(self: Box<Self>) {
         ArrayClassInstance::destroy(self)
+    }
+
+    fn identity(&self) -> usize {
+        ArrayClassInstance::identity(self)
+    }
+
+    fn shallow_clone(&self) -> Result<Box<dyn ClassInstance>> {
+        ArrayClassInstance::shallow_clone(self)
     }
 
     fn class_definition(&self) -> Box<dyn ClassDefinition> {

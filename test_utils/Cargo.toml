@@ -6,8 +6,10 @@ license.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+tracing = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
 
+classfile = { workspace = true }
 jvm = { workspace = true }
 jvm_rust = { workspace = true }
 java_runtime = { workspace = true }

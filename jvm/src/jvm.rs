@@ -3,14 +3,12 @@
 use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     fmt::Debug,
-    hash::BuildHasher,
     iter,
     sync::atomic::{AtomicBool, Ordering},
 };
 
 use dyn_clone::clone_box;
-use event_listener::{Event, EventListener};
-use hashbrown::{DefaultHashBuilder, HashSet};
+use hashbrown::HashSet;
 use parking_lot::RwLock;
 
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
@@ -20,12 +18,15 @@ use crate::{
     array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::ClassInstance,
-    class_loader::{BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, InitState, JavaClassLoaderWrapper},
+    class_loader::{
+        BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, InitState, InitializationAction, JavaClassLoaderWrapper,
+    },
     error::JavaError,
     field::Field,
     garbage_collector::determine_garbage,
     invoke_arg::InvokeArg,
     method::Method,
+    monitor::{Monitor, MonitorWait, MonitorWaitTimeout},
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::JvmThread,
     r#type::JavaType,
@@ -37,8 +38,7 @@ struct JvmInner {
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
     string_pool: RwLock<BTreeMap<Vec<u16>, Box<dyn ClassInstance>>>,
-    monitors: RwLock<BTreeMap<u64, Arc<Event>>>,
-    monitor_hasher: DefaultHashBuilder,
+    monitors: RwLock<BTreeMap<usize, Arc<Monitor>>>,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
     bootstrapping: AtomicBool,
@@ -62,7 +62,6 @@ impl Jvm {
                 all_objects: RwLock::new(HashSet::new()),
                 string_pool: RwLock::new(BTreeMap::new()),
                 monitors: RwLock::new(BTreeMap::new()),
-                monitor_hasher: DefaultHashBuilder::default(),
                 get_current_thread_id: Box::new(get_current_thread_id),
                 bootstrap_class_loader: Box::new(bootstrap_class_loader),
                 bootstrapping: AtomicBool::new(true),
@@ -465,10 +464,26 @@ impl Jvm {
     pub fn destroy(&self, instance: Box<dyn ClassInstance>) -> Result<()> {
         tracing::debug!("Destroy {}", instance.class_definition().name());
 
+        self.inner.monitors.write().remove(&instance.identity());
         self.inner.all_objects.write().remove(&instance);
         instance.destroy();
 
         Ok(())
+    }
+
+    pub fn shallow_clone(&self, instance: &Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
+        let cloned = instance.shallow_clone()?;
+        let thread_id = (self.inner.get_current_thread_id)();
+        self.inner
+            .threads
+            .write()
+            .get_mut(&thread_id)
+            .unwrap()
+            .top_frame_mut()
+            .local_variables_mut()
+            .push(cloned.clone());
+        self.inner.all_objects.write().insert(cloned.clone());
+        Ok(cloned)
     }
 
     // JVMS 5.1 string interning: equal string literals (and String.intern results) share one instance
@@ -512,19 +527,45 @@ impl Jvm {
         self.inner.classes.read().get(class_name).cloned()
     }
 
-    pub fn object_listen(&self, obj: &Box<dyn ClassInstance>) -> EventListener {
-        self.get_or_create_monitor(obj).listen()
-    }
-
-    pub async fn object_wait(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
-        self.object_listen(obj).await;
-
+    pub async fn monitor_enter(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        self.get_or_create_monitor(obj).enter(thread_id).await;
         Ok(())
     }
 
-    pub fn object_notify(&self, obj: &Box<dyn ClassInstance>, count: usize) {
-        let monitor = self.get_or_create_monitor(obj);
-        monitor.notify(count);
+    pub async fn monitor_exit(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        match self.get_or_create_monitor(obj).exit(thread_id) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(self
+                .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
+                .await),
+        }
+    }
+
+    pub async fn object_wait_prepare(&self, obj: &Box<dyn ClassInstance>) -> Result<(MonitorWait, MonitorWaitTimeout)> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        match self.get_or_create_monitor(obj).prepare_wait(thread_id) {
+            Ok(wait) => Ok(wait),
+            Err(_) => Err(self
+                .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
+                .await),
+        }
+    }
+
+    pub async fn object_wait(&self, wait: MonitorWait) -> Result<()> {
+        wait.wait().await;
+        Ok(())
+    }
+
+    pub async fn object_notify(&self, obj: &Box<dyn ClassInstance>, count: usize) -> Result<()> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        match self.get_or_create_monitor(obj).notify(thread_id, count) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(self
+                .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
+                .await),
+        }
     }
 
     #[async_recursion::async_recursion]
@@ -681,6 +722,11 @@ impl Jvm {
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         tracing::info!("throwing java exception: {} {message}", r#type);
 
+        if !self.has_class(r#type) {
+            self.resolve_class_internal(r#type, Some(&BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)))
+                .await
+                .unwrap();
+        }
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
         let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
 
@@ -734,7 +780,7 @@ impl Jvm {
         Ok(garbage_count)
     }
 
-    async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
+    pub(crate) async fn register_class_internal(&self, class: Class, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<()> {
         if !class.definition.name().starts_with('[') {
             // ensure superclass and superinterfaces are loaded
             if let Some(super_class) = class.definition.super_class_name()
@@ -750,7 +796,7 @@ impl Jvm {
             }
         }
 
-        self.inner.classes.write().insert(class.definition.name().to_owned(), class.clone());
+        self.inner.classes.write().entry(class.definition.name().to_owned()).or_insert(class);
 
         Ok(())
     }
@@ -761,39 +807,41 @@ impl Jvm {
             return Ok(());
         }
 
-        match class.init_state() {
-            InitState::Initialized | InitState::InProgress => return Ok(()),
-            InitState::Erroneous => {
-                return Err(self
-                    .exception(
-                        "java/lang/NoClassDefFoundError",
-                        &format!("Could not initialize class {}", class.definition.name()),
-                    )
-                    .await);
+        let thread_id = (self.inner.get_current_thread_id)();
+        loop {
+            match class.initialization_action(thread_id) {
+                InitializationAction::Initialize => break,
+                InitializationAction::Recursive | InitializationAction::Initialized => return Ok(()),
+                InitializationAction::Wait(listener) => listener.await,
+                InitializationAction::Erroneous => {
+                    return Err(self
+                        .exception(
+                            "java/lang/NoClassDefFoundError",
+                            &format!("Could not initialize class {}", class.definition.name()),
+                        )
+                        .await);
+                }
             }
-            InitState::NotInitialized => {}
         }
-
-        class.set_init_state(InitState::InProgress);
 
         if let Some(super_name) = class.definition.super_class_name() {
             // resolution failure is not an initialization failure, so initialization may be retried
             let super_class = match self.resolve_class(&super_name).await {
                 Ok(x) => x,
                 Err(err) => {
-                    class.set_init_state(InitState::NotInitialized);
+                    class.finish_initialization(InitState::NotInitialized);
                     return Err(err);
                 }
             };
 
             if let Err(err) = self.ensure_initialized(&super_class).await {
-                class.set_init_state(InitState::Erroneous);
+                class.finish_initialization(InitState::Erroneous);
                 return Err(err);
             }
         }
 
         if let Err(err) = class.definition.prepare(self).await {
-            class.set_init_state(InitState::Erroneous);
+            class.finish_initialization(InitState::Erroneous);
             return Err(err);
         }
 
@@ -801,7 +849,7 @@ impl Jvm {
             tracing::debug!("Calling <clinit> for {}", class.definition.name());
 
             if let Err(err) = self.execute_method(class, None, &clinit, Box::new([])).await {
-                class.set_init_state(InitState::Erroneous);
+                class.finish_initialization(InitState::Erroneous);
 
                 let JavaError::JavaException(exception) = &err;
                 if self.is_instance(&**exception, "java/lang/Error") {
@@ -817,7 +865,7 @@ impl Jvm {
             }
         }
 
-        class.set_init_state(InitState::Initialized);
+        class.finish_initialization(InitState::Initialized);
 
         Ok(())
     }
@@ -890,8 +938,8 @@ impl Jvm {
         }
     }
 
-    fn get_or_create_monitor(&self, obj: &Box<dyn ClassInstance>) -> Arc<Event> {
-        let key = self.inner.monitor_hasher.hash_one(obj);
+    fn get_or_create_monitor(&self, obj: &Box<dyn ClassInstance>) -> Arc<Monitor> {
+        let key = obj.identity();
 
         let monitors = self.inner.monitors.read();
         if let Some(monitor) = monitors.get(&key) {
@@ -900,7 +948,7 @@ impl Jvm {
         drop(monitors);
 
         let mut monitors = self.inner.monitors.write();
-        monitors.entry(key).or_insert_with(|| Arc::new(Event::new())).clone()
+        monitors.entry(key).or_insert_with(|| Arc::new(Monitor::new())).clone()
     }
 
     // JVMS 5.4.3.2 field resolution: search the class, then its superinterfaces, then its superclass.
@@ -979,6 +1027,15 @@ impl Jvm {
         let thread_id = (self.inner.get_current_thread_id)();
         let method_str = format!("{}{}", method.name(), method.descriptor());
 
+        let synchronized_object = if method.access_flags().contains(MethodAccessFlags::SYNCHRONIZED) {
+            Some(class_instance.clone().unwrap_or_else(|| class.java_class()))
+        } else {
+            None
+        };
+        if let Some(object) = &synchronized_object {
+            self.monitor_enter(object).await?;
+        }
+
         self.inner
             .threads
             .write()
@@ -991,6 +1048,15 @@ impl Jvm {
         tracing::trace!("Execute result: {result:?}");
 
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
+
+        if let Some(object) = &synchronized_object
+            && let Err(error) = self.monitor_exit(object).await
+        {
+            if result.is_ok() {
+                return Err(error);
+            }
+            tracing::error!(?error, "failed to release synchronized method monitor");
+        }
 
         result
     }

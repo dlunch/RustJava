@@ -1,6 +1,6 @@
-use java_runtime::classes::java::lang::{Class, String};
+use java_runtime::classes::java::lang::{Class, ClassLoader, String};
 use jvm::{
-    ClassInstanceRef, JavaError, Result,
+    Array, ClassInstanceRef, JavaError, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 
@@ -241,6 +241,102 @@ async fn test_cldc_class_queries_and_new_instance() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "class java.lang.String");
     let text: ClassInstanceRef<String> = jvm.invoke_virtual(&runnable_class, "toString", "()Ljava/lang/String;", ()).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "interface java.lang.Runnable");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_base_class_loader_find_class_throws() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let loader = jvm.new_class("java/lang/ClassLoader", "(Ljava/lang/ClassLoader;)V", (None,)).await?;
+    let name = JavaLangString::from_rust_string(&jvm, "missing.Type").await?;
+
+    let result: Result<ClassInstanceRef<Class>> = jvm
+        .invoke_virtual(&loader, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("ClassLoader.findClass must throw ClassNotFoundException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/ClassNotFoundException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_define_class_translates_parser_errors_to_java_errors() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let loader: ClassInstanceRef<ClassLoader> = jvm
+        .new_class("java/lang/ClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
+        .await?
+        .into();
+    let name: ClassInstanceRef<String> = None.into();
+
+    let mut unsupported_version = include_bytes!("../../../../../test_data/Hello.class").to_vec();
+    unsupported_version[6..8].copy_from_slice(&71u16.to_be_bytes());
+
+    let mut verification_error = include_bytes!("../../../../../test_data/MultiArray.class").to_vec();
+    let multianewarray = [0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0xc5, 0x00, 0x07, 0x05];
+    let multianewarray_offset = verification_error
+        .windows(multianewarray.len())
+        .position(|window| window == multianewarray)
+        .expect("MultiArray fixture must contain the expected multianewarray instruction");
+    verification_error[multianewarray_offset + multianewarray.len() - 1] = 6;
+
+    for (data, expected_exception) in [
+        (vec![0, 1, 2, 3], "java/lang/ClassFormatError"),
+        (unsupported_version, "java/lang/UnsupportedClassVersionError"),
+        (verification_error, "java/lang/VerifyError"),
+    ] {
+        let length = data.len() as i32;
+        let mut bytes = jvm.instantiate_array("B", data.len()).await?;
+        jvm.store_array(&mut bytes, 0, data.into_iter().map(|byte| byte as i8).collect::<Vec<_>>())
+            .await?;
+
+        let result: Result<ClassInstanceRef<Class>> = jvm
+            .invoke_virtual(
+                &loader,
+                "defineClass",
+                "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                (name.clone(), bytes, 0, length),
+            )
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("ClassLoader.defineClass must translate malformed class files to Java errors");
+        };
+        assert!(jvm.is_instance(&*exception, expected_exception));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_define_class_validates_the_byte_range() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let loader: ClassInstanceRef<ClassLoader> = jvm
+        .new_class("java/lang/ClassLoader", "(Ljava/lang/ClassLoader;)V", (None,))
+        .await?
+        .into();
+    let name: ClassInstanceRef<String> = None.into();
+    let bytes: ClassInstanceRef<Array<i8>> = jvm.instantiate_array("B", 4).await?.into();
+
+    for (bytes, offset, length, expected_exception) in [
+        (bytes.clone(), -1, 1, "java/lang/IndexOutOfBoundsException"),
+        (bytes, 2, 3, "java/lang/IndexOutOfBoundsException"),
+        (ClassInstanceRef::new(None), 0, 0, "java/lang/NullPointerException"),
+    ] {
+        let result: Result<ClassInstanceRef<Class>> = jvm
+            .invoke_virtual(
+                &loader,
+                "defineClass",
+                "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                (name.clone(), bytes, offset, length),
+            )
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("ClassLoader.defineClass must validate its byte range");
+        };
+        assert!(jvm.is_instance(&*exception, expected_exception));
+    }
 
     Ok(())
 }

@@ -8,7 +8,7 @@ use nom::{
     IResult, Parser,
     bytes::complete::{take, take_until},
     character::complete::anychar,
-    multi::many0,
+    error::{Error, ErrorKind},
     sequence::terminated,
 };
 
@@ -49,7 +49,12 @@ impl JavaType {
     }
 
     pub fn parse(descriptor: &str) -> Self {
-        Self::parse_type(descriptor).unwrap().1
+        Self::try_parse(descriptor).expect("invalid Java type descriptor")
+    }
+
+    pub fn try_parse(descriptor: &str) -> Option<Self> {
+        let (remaining, r#type) = Self::parse_type(descriptor).ok()?;
+        if remaining.is_empty() { Some(r#type) } else { None }
     }
 
     // a CONSTANT_Class_info name (JVMS 4.4.1): a class binary name in internal form (java/lang/String)
@@ -85,21 +90,39 @@ impl JavaType {
             'D' => Ok((remaining, Self::Double)),
             'L' => {
                 let (remaining, class_name) = terminated(take_until(";"), take(1usize)).parse(remaining)?;
+                if class_name.is_empty() || class_name.contains(['.', '[', ';']) {
+                    return Err(nom::Err::Error(Error::new(descriptor, ErrorKind::Verify)));
+                }
                 Ok((remaining, Self::Class(class_name.to_string())))
             }
             '[' => {
                 let (remaining, element_type) = Self::parse_type(remaining)?;
+                if matches!(element_type, Self::Void | Self::Method(_, _)) {
+                    return Err(nom::Err::Error(Error::new(descriptor, ErrorKind::Verify)));
+                }
                 Ok((remaining, Self::Array(Box::new(element_type))))
             }
             '(' => {
                 let (remaining, params) = terminated(take_until(")"), take(1usize)).parse(remaining)?;
-                let param_types = many0(Self::parse_type).parse(params)?.1;
+                let mut param_types = Vec::new();
+                let mut params = params;
+                while !params.is_empty() {
+                    let (remaining_params, param_type) = Self::parse_type(params)?;
+                    if remaining_params.len() >= params.len() || matches!(param_type, Self::Void | Self::Method(_, _)) {
+                        return Err(nom::Err::Error(Error::new(descriptor, ErrorKind::Verify)));
+                    }
+                    param_types.push(param_type);
+                    params = remaining_params;
+                }
 
                 let (remaining, return_type) = Self::parse_type(remaining)?;
+                if matches!(return_type, Self::Method(_, _)) {
+                    return Err(nom::Err::Error(Error::new(descriptor, ErrorKind::Verify)));
+                }
 
                 Ok((remaining, Self::Method(param_types, Box::new(return_type))))
             }
-            _ => panic!("Invalid type descriptor: {}", descriptor),
+            _ => Err(nom::Err::Error(Error::new(descriptor, ErrorKind::Verify))),
         }
     }
 }
@@ -139,5 +162,15 @@ mod test {
             JavaType::parse("[[Ljava/lang/String;")
                 == JavaType::Array(Box::new(JavaType::Array(Box::new(JavaType::Class("java/lang/String".into())))))
         );
+    }
+
+    #[test]
+    fn test_try_parse_rejects_malformed_descriptors() {
+        assert!(JavaType::try_parse("").is_none());
+        assert!(JavaType::try_parse("Igarbage").is_none());
+        assert!(JavaType::try_parse("[V").is_none());
+        assert!(JavaType::try_parse("(V)V").is_none());
+        assert!(JavaType::try_parse("(I").is_none());
+        assert!(JavaType::try_parse("L;").is_none());
     }
 }

@@ -8,7 +8,7 @@ use alloc::{boxed::Box, format, vec};
 use dyn_clone::clone_box;
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, MonitorWaitTimeout, Result, runtime::JavaLangString};
 
 use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::String};
 
@@ -105,13 +105,13 @@ impl Object {
     }
 
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
-        tracing::warn!("stub java.lang.Object::clone({this:?})");
+        tracing::debug!("java.lang.Object::clone({this:?})");
 
         if !jvm.is_instance(&**this, "java/lang/Cloneable") {
             return Err(jvm.exception("java/lang/CloneNotSupportedException", "Cannot clone this object").await);
         }
 
-        Ok(None.into())
+        Ok(jvm.shallow_clone(&this)?.into())
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
@@ -131,7 +131,7 @@ impl Object {
     async fn notify(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notify({this:?})");
 
-        jvm.object_notify(&this, 1);
+        jvm.object_notify(&this, 1).await?;
 
         Ok(())
     }
@@ -139,7 +139,7 @@ impl Object {
     async fn notify_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notifyAll({this:?})");
 
-        jvm.object_notify(&this, usize::MAX);
+        jvm.object_notify(&this, usize::MAX).await?;
 
         Ok(())
     }
@@ -155,36 +155,39 @@ impl Object {
     async fn wait_long_int(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?}, {millis:?}, {nanos:?})");
 
+        if millis < 0 || !(0..=999_999).contains(&nanos) {
+            return Err(jvm.exception("java/lang/IllegalArgumentException", "invalid wait timeout").await);
+        }
+
         struct TimeoutNotifier {
-            timeout: i64,
-            jvm: Jvm,
-            this: Box<dyn ClassInstance>,
+            timeout: u64,
+            waiter: MonitorWaitTimeout,
             context: Box<dyn Runtime>,
         }
 
         #[async_trait::async_trait]
         impl SpawnCallback for TimeoutNotifier {
             async fn call(&self) -> Result<()> {
-                self.context.sleep(Duration::from_millis(self.timeout as _)).await;
-                self.jvm.object_notify(&self.this, 1); // TODO this may wake an unrelated waiter
+                self.context.sleep(Duration::from_millis(self.timeout)).await;
+                self.waiter.clone().notify();
                 Ok(())
             }
         }
 
-        let timeout = millis; // TODO nanos
+        let (waiter, timeout_notifier) = jvm.object_wait_prepare(&this).await?;
+        let timeout = millis as u64 + u64::from(nanos > 0);
         if timeout != 0 {
             context.spawn(
                 jvm,
                 Box::new(TimeoutNotifier {
                     timeout,
-                    jvm: jvm.clone(),
-                    this: this.clone().into(),
+                    waiter: timeout_notifier,
                     context: clone_box(context),
                 }),
             );
         }
 
-        jvm.object_wait(&this).await?;
+        jvm.object_wait(waiter).await?;
 
         Ok(())
     }

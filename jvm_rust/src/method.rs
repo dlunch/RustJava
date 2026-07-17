@@ -133,7 +133,14 @@ impl Method for MethodImpl {
     }
 
     async fn run(&self, jvm: &Jvm, args: Box<[JavaValue]>) -> Result<JavaValue> {
-        Ok(match &self.inner.body.as_ref().unwrap() {
+        let Some(body) = self.inner.body.as_ref() else {
+            if self.inner.access_flags.contains(MethodAccessFlags::NATIVE) {
+                return Err(jvm.exception("java/lang/UnsatisfiedLinkError", &self.inner.name).await);
+            }
+            return Err(jvm.exception("java/lang/AbstractMethodError", &self.inner.name).await);
+        };
+
+        Ok(match body {
             MethodBody::ByteCode(x) => {
                 let r#type = JavaType::parse(&self.inner.descriptor);
                 Interpreter::run(jvm, x, args, r#type.as_method().1).await?

@@ -858,12 +858,18 @@ impl Interpreter {
                 return Ok(ExecuteNext::Jump((current_offset as i32 + *default) as u32));
             }
             Opcode::Monitorenter => {
-                let stack_value = stack_frame.operand_stack.pop().unwrap();
-                tracing::warn!("Unimplemented monitorenter{stack_value:?}");
+                let object: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                let Some(object) = object else {
+                    return Err(jvm.exception("java/lang/NullPointerException", "monitorenter on null").await);
+                };
+                jvm.monitor_enter(&object).await?;
             }
             Opcode::Monitorexit => {
-                let stack_value = stack_frame.operand_stack.pop().unwrap();
-                tracing::warn!("Unimplemented monitorexit{stack_value:?}");
+                let object: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                let Some(object) = object else {
+                    return Err(jvm.exception("java/lang/NullPointerException", "monitorexit on null").await);
+                };
+                jvm.monitor_exit(&object).await?;
             }
             Opcode::Multianewarray(x, d) => {
                 let mut dimensions: Vec<i32> = (0..*d).map(|_| stack_frame.operand_stack.pop().unwrap().into()).collect();
