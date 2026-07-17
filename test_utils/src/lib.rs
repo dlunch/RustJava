@@ -12,7 +12,7 @@ use std::{
 };
 
 use jvm::{ClassDefinition, Jvm, Result};
-use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl, ClassFileError};
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl, ClassFileError};
 
 use java_runtime::{
     File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader,
@@ -163,11 +163,20 @@ impl Runtime for TestRuntime {
     async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
         match ClassDefinitionImpl::from_classfile(data) {
             Ok(class) => Ok(Box::new(class)),
-            Err(ClassFileError::InvalidFormat) => Err(jvm.exception("java/lang/ClassFormatError", "Invalid class file").await),
-            Err(ClassFileError::UnsupportedVersion(version)) => Err(jvm
+            Err(ClassDefinitionError::ClassFile(ClassFileError::InvalidFormat)) => {
+                Err(jvm.exception("java/lang/ClassFormatError", "Invalid class file").await)
+            }
+            Err(ClassDefinitionError::ClassFile(ClassFileError::UnsupportedVersion(version))) => Err(jvm
                 .exception(
                     "java/lang/UnsupportedClassVersionError",
                     &format!("Unsupported class file version {version}"),
+                )
+                .await),
+            Err(ClassDefinitionError::Verification) => Err(jvm.exception("java/lang/VerifyError", "Bytecode verification failed").await),
+            Err(ClassDefinitionError::UnsupportedFeature(feature)) => Err(jvm
+                .exception(
+                    "java/lang/UnsupportedOperationException",
+                    &format!("Unsupported class file feature: {feature}"),
                 )
                 .await),
         }

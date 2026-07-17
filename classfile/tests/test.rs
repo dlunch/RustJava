@@ -176,3 +176,25 @@ fn test_malformed_class_files_return_structured_errors() {
     invalid_constant_pool_type[44..46].copy_from_slice(&1u16.to_be_bytes());
     assert_eq!(ClassInfo::parse(&invalid_constant_pool_type).err(), Some(ClassFileError::InvalidFormat));
 }
+
+#[test]
+fn test_class_info_validation_rejects_invalid_names_descriptors_and_code_layout() {
+    let hello = include_bytes!("../../test_data/Hello.class");
+
+    let mut invalid_name = ClassInfo::parse(hello).unwrap();
+    invalid_name.this_class = "[I".to_string().into();
+    assert_eq!(invalid_name.validate(), Err(ClassFileError::InvalidFormat));
+
+    let mut invalid_descriptor = ClassInfo::parse(hello).unwrap();
+    invalid_descriptor.methods[0].descriptor = "(V)V".to_string().into();
+    assert_eq!(invalid_descriptor.validate(), Err(ClassFileError::InvalidFormat));
+
+    let mut missing_code = ClassInfo::parse(hello).unwrap();
+    missing_code.methods[0].attributes.clear();
+    assert_eq!(missing_code.validate(), Err(ClassFileError::InvalidFormat));
+}
+
+#[test]
+fn test_array_clone_method_owner_is_a_valid_class_constant() {
+    assert!(ClassInfo::parse(include_bytes!("../../test_data/Array.class")).is_ok());
+}

@@ -9,6 +9,7 @@ mod field;
 mod interface;
 mod method;
 mod opcode;
+mod validation;
 
 pub use {
     attribute::{AttributeInfo, AttributeInfoCode},

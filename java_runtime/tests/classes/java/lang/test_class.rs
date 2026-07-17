@@ -274,9 +274,18 @@ async fn test_define_class_translates_parser_errors_to_java_errors() -> Result<(
     let mut unsupported_version = include_bytes!("../../../../../test_data/Hello.class").to_vec();
     unsupported_version[6..8].copy_from_slice(&71u16.to_be_bytes());
 
+    let mut verification_error = include_bytes!("../../../../../test_data/MultiArray.class").to_vec();
+    let multianewarray = [0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0x10, 0x0a, 0xc5, 0x00, 0x07, 0x05];
+    let multianewarray_offset = verification_error
+        .windows(multianewarray.len())
+        .position(|window| window == multianewarray)
+        .expect("MultiArray fixture must contain the expected multianewarray instruction");
+    verification_error[multianewarray_offset + multianewarray.len() - 1] = 6;
+
     for (data, expected_exception) in [
         (vec![0, 1, 2, 3], "java/lang/ClassFormatError"),
         (unsupported_version, "java/lang/UnsupportedClassVersionError"),
+        (verification_error, "java/lang/VerifyError"),
     ] {
         let length = data.len() as i32;
         let mut bytes = jvm.instantiate_array("B", data.len()).await?;

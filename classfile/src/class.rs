@@ -11,6 +11,7 @@ use java_constants::ClassAccessFlags;
 
 use crate::{
     ClassFileError, attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo,
+    validation::validate_class,
 };
 
 fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Arc<String>> {
@@ -109,7 +110,12 @@ impl ClassInfo {
         if result.major_version > 70 {
             return Err(ClassFileError::UnsupportedVersion(result.major_version));
         }
+        validate_class(&result)?;
 
         Ok(result)
+    }
+
+    pub fn validate(&self) -> Result<(), ClassFileError> {
+        validate_class(self)
     }
 }

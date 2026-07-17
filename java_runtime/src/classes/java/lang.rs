@@ -54,6 +54,7 @@ mod throwable;
 mod unsatisfied_link_error;
 mod unsupported_class_version_error;
 mod unsupported_operation_exception;
+mod verify_error;
 mod virtual_machine_error;
 
 pub use self::{
@@ -73,5 +74,5 @@ pub use self::{
     runtime_exception::RuntimeException, security_exception::SecurityException, short::Short, string::String, string_buffer::StringBuffer,
     string_index_out_of_bounds_exception::StringIndexOutOfBoundsException, system::System, thread::Thread, throwable::Throwable,
     unsatisfied_link_error::UnsatisfiedLinkError, unsupported_class_version_error::UnsupportedClassVersionError,
-    unsupported_operation_exception::UnsupportedOperationException, virtual_machine_error::VirtualMachineError,
+    unsupported_operation_exception::UnsupportedOperationException, verify_error::VerifyError, virtual_machine_error::VirtualMachineError,
 };
