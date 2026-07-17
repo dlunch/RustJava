@@ -1,9 +1,9 @@
 extern crate alloc;
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     cmp::min,
-    sync::atomic::{AtomicU32, AtomicU64, Ordering},
+    sync::atomic::{AtomicI64, AtomicU32, AtomicU64, Ordering},
     time::Duration,
 };
 use std::{
@@ -12,7 +12,7 @@ use std::{
 };
 
 use jvm::{ClassDefinition, Jvm, Result};
-use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl};
+use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionImpl, ClassFileError};
 
 use java_runtime::{
     File, FileDescriptorId, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_bootstrap_class_loader,
@@ -23,6 +23,7 @@ pub struct TestRuntime {
     filesystem: BTreeMap<String, Vec<u8>>,
     file_table: Arc<Mutex<BTreeMap<u32, Box<dyn File>>>>,
     next_fd: Arc<AtomicU32>,
+    exit_status: Arc<AtomicI64>,
 }
 
 impl Clone for TestRuntime {
@@ -31,6 +32,7 @@ impl Clone for TestRuntime {
             filesystem: self.filesystem.clone(),
             file_table: self.file_table.clone(),
             next_fd: self.next_fd.clone(),
+            exit_status: self.exit_status.clone(),
         }
     }
 }
@@ -41,7 +43,13 @@ impl TestRuntime {
             filesystem,
             file_table: Arc::new(Mutex::new(BTreeMap::new())),
             next_fd: Arc::new(AtomicU32::new(1)),
+            exit_status: Arc::new(AtomicI64::new(i64::MIN)),
         }
+    }
+
+    pub fn exit_status(&self) -> Option<i32> {
+        let status = self.exit_status.load(Ordering::SeqCst);
+        (status != i64::MIN).then_some(status as i32)
     }
 
     fn register_file(&self, file: Box<dyn File>) -> FileDescriptorId {
@@ -64,7 +72,7 @@ impl Runtime for TestRuntime {
     }
 
     async fn r#yield(&self) {
-        todo!()
+        tokio::task::yield_now().await;
     }
 
     fn spawn(&self, _jvm: &Jvm, callback: Box<dyn SpawnCallback>) {
@@ -72,10 +80,16 @@ impl Runtime for TestRuntime {
         tokio::spawn(async move {
             TASK_ID
                 .scope(task_id, async move {
-                    callback.call().await.unwrap();
+                    if let Err(error) = callback.call().await {
+                        tracing::error!(?error, "spawned Java test task failed");
+                    }
                 })
                 .await;
         });
+    }
+
+    fn exit(&self, status: i32) {
+        self.exit_status.store(status as i64, Ordering::SeqCst);
     }
 
     fn now(&self) -> u64 {
@@ -146,8 +160,17 @@ impl Runtime for TestRuntime {
         Ok(None)
     }
 
-    async fn define_class(&self, _jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
-        ClassDefinitionImpl::from_classfile(data).map(|x| Box::new(x) as Box<_>)
+    async fn define_class(&self, jvm: &Jvm, data: &[u8]) -> jvm::Result<Box<dyn ClassDefinition>> {
+        match ClassDefinitionImpl::from_classfile(data) {
+            Ok(class) => Ok(Box::new(class)),
+            Err(ClassFileError::InvalidFormat) => Err(jvm.exception("java/lang/ClassFormatError", "Invalid class file").await),
+            Err(ClassFileError::UnsupportedVersion(version)) => Err(jvm
+                .exception(
+                    "java/lang/UnsupportedClassVersionError",
+                    &format!("Unsupported class file version {version}"),
+                )
+                .await),
+        }
     }
 
     async fn define_array_class(&self, _jvm: &Jvm, element_type_name: &str) -> jvm::Result<Box<dyn ClassDefinition>> {

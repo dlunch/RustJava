@@ -2,27 +2,45 @@ use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use nom::{
     IResult, Parser,
+    error::{Error, ErrorKind},
     multi::length_count,
     number::complete::{be_u16, be_u32},
 };
 
 use java_constants::ClassAccessFlags;
 
-use crate::{attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo};
+use crate::{
+    ClassFileError, attribute::AttributeInfo, constant_pool::ConstantPoolItem, field::FieldInfo, interface::parse_interface, method::MethodInfo,
+};
 
 fn parse_this_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Arc<String>> {
     let (data, this_class) = be_u16(data)?;
-    let class_name_index = constant_pool.get(&this_class).unwrap().class_name_index();
+    let class_name_index = constant_pool
+        .get(&this_class)
+        .and_then(ConstantPoolItem::class_name_index)
+        .ok_or_else(|| nom::Err::Error(Error::new(data, ErrorKind::Verify)))?;
+    let class_name = constant_pool
+        .get(&class_name_index)
+        .and_then(ConstantPoolItem::utf8)
+        .ok_or_else(|| nom::Err::Error(Error::new(data, ErrorKind::Verify)))?;
 
-    Ok((data, constant_pool.get(&class_name_index).unwrap().utf8()))
+    Ok((data, class_name))
 }
 
 fn parse_super_class<'a>(data: &'a [u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> IResult<&'a [u8], Option<Arc<String>>> {
     let (data, super_class) = be_u16(data)?;
 
     let super_class = if super_class != 0 {
-        let class_name_index = constant_pool.get(&super_class).unwrap().class_name_index();
-        Some(constant_pool.get(&class_name_index).unwrap().utf8())
+        let class_name_index = constant_pool
+            .get(&super_class)
+            .and_then(ConstantPoolItem::class_name_index)
+            .ok_or_else(|| nom::Err::Error(Error::new(data, ErrorKind::Verify)))?;
+        Some(
+            constant_pool
+                .get(&class_name_index)
+                .and_then(ConstantPoolItem::utf8)
+                .ok_or_else(|| nom::Err::Error(Error::new(data, ErrorKind::Verify)))?,
+        )
     } else {
         None
     };
@@ -80,12 +98,18 @@ impl ClassInfo {
         ))
     }
 
-    pub fn parse(file: &[u8]) -> Option<Self> {
-        let (remaining, result) = Self::parse_info(file).ok()?;
+    pub fn parse(file: &[u8]) -> Result<Self, ClassFileError> {
+        let (remaining, result) = Self::parse_info(file).map_err(|_| ClassFileError::InvalidFormat)?;
         if !remaining.is_empty() {
-            return None;
+            return Err(ClassFileError::InvalidFormat);
+        }
+        if result.major_version < 45 {
+            return Err(ClassFileError::InvalidFormat);
+        }
+        if result.major_version > 70 {
+            return Err(ClassFileError::UnsupportedVersion(result.major_version));
         }
 
-        Some(result)
+        Ok(result)
     }
 }

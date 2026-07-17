@@ -42,6 +42,7 @@ async-trait = { workspace = true }
 bytemuck = { workspace = true }
 
 anyhow = { workspace = true }
+tracing = { workspace = true }
 tracing-subscriber = { version = "^0.3", features = ["env-filter"] }
 
 jvm = { workspace = true }
@@ -53,7 +54,7 @@ java_runtime = { workspace = true }
 test_utils = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["rt", "time"] }

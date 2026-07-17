@@ -166,7 +166,7 @@ impl String {
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = System::get_charset(jvm).await?;
-        let string = Self::decode_str(&charset, cast_slice(&bytes));
+        let string = Self::decode_str(&charset, cast_slice(&bytes)).unwrap_or_else(|| RustString::from_utf8_lossy(cast_slice(&bytes)).into_owned());
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -280,7 +280,7 @@ impl String {
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let charset = System::get_charset(jvm).await?;
-        let bytes = cast_vec(Self::encode_str(&charset, &string));
+        let bytes = cast_vec(Self::encode_str(&charset, &string).unwrap_or_else(|| string.as_bytes().to_vec()));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
@@ -413,15 +413,20 @@ impl String {
     async fn index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({this:?}, {ch:?}, {from_index:?})");
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+        if !(0..=u16::MAX as i32).contains(&ch) {
+            return Ok(-1);
+        }
 
-        let index = this_string
-            .chars()
-            .skip(from_index as usize)
-            .position(|x| x as u32 == ch as u32)
-            .map(|x| x as i32 + from_index);
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let from_index = from_index.max(0) as usize;
+        let index = chars
+            .get(from_index..)
+            .and_then(|chars| chars.iter().position(|&value| value == ch as u16))
+            .map(|index| index + from_index);
 
-        Ok(index.unwrap_or(-1))
+        Ok(index.map(|index| index as i32).unwrap_or(-1))
     }
 
     async fn index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
@@ -439,30 +444,41 @@ impl String {
     ) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({this:?}, {str:?}, {from_index})");
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
-        let str_string = JavaLangString::to_rust_string(jvm, &str.clone()).await?;
+        if str.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
+        }
 
-        tracing::trace!("this_string: {this_string:?}");
-        tracing::trace!("str_string: {str_string:?}");
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let pattern = jvm.get_field(&str, "value", "[C").await?;
+        let pattern_length = jvm.array_length(&pattern).await?;
+        let pattern: Vec<JavaChar> = jvm.load_array(&pattern, 0, pattern_length).await?;
+        let from_index = (from_index.max(0) as usize).min(chars.len());
 
-        let chars = this_string.chars().skip(from_index as usize).collect::<Vec<_>>();
-        let str_chars = str_string.chars().collect::<Vec<_>>();
-        let index = chars.windows(str_chars.len()).position(|x| x == str_chars).map(|x| x as i32 + from_index);
+        if pattern.is_empty() {
+            return Ok(from_index as i32);
+        }
 
-        Ok(index.unwrap_or(-1))
+        let index = chars[from_index..]
+            .windows(pattern.len())
+            .position(|window| window == pattern)
+            .map(|index| index + from_index);
+
+        Ok(index.map(|index| index as i32).unwrap_or(-1))
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
         tracing::debug!("java.lang.String::lastIndexOf({this:?}, {ch:?})");
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+        if !(0..=u16::MAX as i32).contains(&ch) {
+            return Ok(-1);
+        }
 
-        let index = this_string
-            .chars()
-            .collect::<Vec<_>>() // TODO i think we don't need collect..
-            .into_iter()
-            .rposition(|x| x as u32 == ch as u32)
-            .map(|x| x as i32);
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let index = chars.iter().rposition(|&value| value == ch as u16).map(|index| index as i32);
 
         Ok(index.unwrap_or(-1))
     }
@@ -470,11 +486,18 @@ impl String {
     async fn trim(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::trim({this:?})");
 
-        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let start = chars.iter().position(|&value| value > 0x20).unwrap_or(chars.len());
+        let end = chars.iter().rposition(|&value| value > 0x20).map(|index| index + 1).unwrap_or(start);
+        if start == 0 && end == chars.len() {
+            return Ok(this);
+        }
+        let mut array = jvm.instantiate_array("C", end - start).await?;
+        jvm.store_array(&mut array, 0, chars[start..end].iter().copied()).await?;
 
-        let trimmed = string.trim().to_string();
-
-        Ok(JavaLangString::from_rust_string(jvm, &trimmed).await?.into()) // TODO buffer sharing
+        Ok(jvm.new_class("java/lang/String", "([C)V", (array,)).await?.into())
     }
 
     async fn to_upper_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
@@ -502,14 +525,21 @@ impl String {
     ) -> Result<bool> {
         tracing::debug!("java.lang.String::startsWith({this:?}, {prefix:?}, {offset})");
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this.clone())
-            .await?
-            .chars()
-            .skip(offset as usize)
-            .collect::<RustString>();
-        let prefix_string = JavaLangString::to_rust_string(jvm, &prefix.clone()).await?;
+        if prefix.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "prefix is null").await);
+        }
+        if offset < 0 {
+            return Ok(false);
+        }
 
-        Ok(this_string.starts_with(&prefix_string))
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let prefix_value = jvm.get_field(&prefix, "value", "[C").await?;
+        let prefix_length = jvm.array_length(&prefix_value).await?;
+        let prefix: Vec<JavaChar> = jvm.load_array(&prefix_value, 0, prefix_length).await?;
+
+        Ok(chars.get(offset as usize..).is_some_and(|chars| chars.starts_with(&prefix)))
     }
 
     async fn init_empty(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
@@ -565,7 +595,9 @@ impl String {
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
-        let string = Self::decode_str(&charset, cast_slice(&bytes));
+        let Some(string) = Self::decode_str(&charset, cast_slice(&bytes)) else {
+            return Err(jvm.exception("java/io/UnsupportedEncodingException", &charset).await);
+        };
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -605,7 +637,10 @@ impl String {
         let string = JavaLangString::to_rust_string(jvm, &this).await?;
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
 
-        let bytes = cast_vec(Self::encode_str(&charset, &string));
+        let Some(bytes) = Self::encode_str(&charset, &string) else {
+            return Err(jvm.exception("java/io/UnsupportedEncodingException", &charset).await);
+        };
+        let bytes = cast_vec(bytes);
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
@@ -700,11 +735,16 @@ impl String {
             return Ok(-1);
         }
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
-        let chars: Vec<char> = this_string.chars().collect();
+        if !(0..=u16::MAX as i32).contains(&ch) {
+            return Ok(-1);
+        }
+
+        let value = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
         let end = (from_index as usize + 1).min(chars.len());
 
-        let index = chars[..end].iter().rposition(|&c| c as u32 == ch as u32).map(|x| x as i32);
+        let index = chars[..end].iter().rposition(|&value| value == ch as u16).map(|index| index as i32);
 
         Ok(index.unwrap_or(-1))
     }
@@ -781,22 +821,22 @@ impl String {
         Ok(new_string.into())
     }
 
-    fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
-        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
+    fn decode_str(charset: &str, bytes: &[u8]) -> Option<RustString> {
+        Some(match charset.to_ascii_uppercase().replace('_', "-").as_str() {
             "UTF-8" | "UTF8" => RustString::from_utf8_lossy(bytes).into_owned(),
             "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
             "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => bytes.iter().map(|&b| b as char).collect(),
-            _ => unimplemented!("unsupported charset: {}", charset),
-        }
+            _ => return None,
+        })
     }
 
-    fn encode_str(charset: &str, string: &str) -> Vec<u8> {
-        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
+    fn encode_str(charset: &str, string: &str) -> Option<Vec<u8>> {
+        Some(match charset.to_ascii_uppercase().replace('_', "-").as_str() {
             "UTF-8" | "UTF8" => string.as_bytes().to_vec(),
             "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
             "ISO-8859-1" | "LATIN1" => string.chars().map(|c| if (c as u32) <= 0xff { c as u8 } else { b'?' }).collect(),
             "US-ASCII" | "ASCII" => string.chars().map(|c| if c.is_ascii() { c as u8 } else { b'?' }).collect(),
-            _ => unimplemented!("unsupported charset: {}", charset),
-        }
+            _ => return None,
+        })
     }
 }

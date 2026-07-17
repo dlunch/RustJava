@@ -7,6 +7,7 @@ mod byte;
 mod character;
 mod class;
 mod class_cast_exception;
+mod class_format_error;
 mod class_loader;
 mod class_not_found_exception;
 mod clone_not_supported_exception;
@@ -50,13 +51,15 @@ mod string_index_out_of_bounds_exception;
 mod system;
 mod thread;
 mod throwable;
+mod unsatisfied_link_error;
+mod unsupported_class_version_error;
 mod unsupported_operation_exception;
 mod virtual_machine_error;
 
 pub use self::{
     abstract_method_error::AbstractMethodError, arithmetic_exception::ArithmeticException,
     array_index_out_of_bounds_exception::ArrayIndexOutOfBoundsException, array_store_exception::ArrayStoreException, boolean::Boolean, byte::Byte,
-    character::Character, class::Class, class_cast_exception::ClassCastException, class_loader::ClassLoader,
+    character::Character, class::Class, class_cast_exception::ClassCastException, class_format_error::ClassFormatError, class_loader::ClassLoader,
     class_not_found_exception::ClassNotFoundException, clone_not_supported_exception::CloneNotSupportedException, cloneable::Cloneable,
     comparable::Comparable, double::Double, error::Error, exception::Exception, exception_in_initializer_error::ExceptionInInitializerError,
     float::Float, illegal_access_exception::IllegalAccessException, illegal_argument_exception::IllegalArgumentException,
@@ -69,5 +72,6 @@ pub use self::{
     number_format_exception::NumberFormatException, object::Object, out_of_memory_error::OutOfMemoryError, runnable::Runnable, runtime::Runtime,
     runtime_exception::RuntimeException, security_exception::SecurityException, short::Short, string::String, string_buffer::StringBuffer,
     string_index_out_of_bounds_exception::StringIndexOutOfBoundsException, system::System, thread::Thread, throwable::Throwable,
+    unsatisfied_link_error::UnsatisfiedLinkError, unsupported_class_version_error::UnsupportedClassVersionError,
     unsupported_operation_exception::UnsupportedOperationException, virtual_machine_error::VirtualMachineError,
 };

@@ -13,6 +13,8 @@ use crate::{ArrayClassInstance, ClassDefinition, Field, Result, as_any::AsAny, v
 #[async_trait::async_trait]
 pub trait ClassInstance: Sync + Send + AsAny + Debug + DynHash + DynClone + 'static {
     fn destroy(self: Box<Self>);
+    fn identity(&self) -> usize;
+    fn shallow_clone(&self) -> Result<Box<dyn ClassInstance>>;
     fn class_definition(&self) -> Box<dyn ClassDefinition>;
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool>;
     fn get_field(&self, field: &dyn Field) -> Result<JavaValue>;

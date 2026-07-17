@@ -12,7 +12,7 @@ use core::{
 
 use parking_lot::RwLock;
 
-use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference};
+use classfile::{AttributeInfo, ClassFileError, ClassInfo, ConstantPoolReference, Opcode};
 use java_class_proto::JavaClassProto;
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result};
@@ -96,9 +96,128 @@ impl ClassDefinitionImpl {
         )
     }
 
-    pub fn from_classfile(data: &[u8]) -> Result<Self> {
-        let class = ClassInfo::parse(data).unwrap(); // TODO ClassFormatError
-        assert_eq!(class.magic, 0xCAFEBABE);
+    pub fn from_classfile(data: &[u8]) -> core::result::Result<Self, ClassFileError> {
+        let class = ClassInfo::parse(data)?;
+
+        if class.this_class.is_empty()
+            || class.this_class.starts_with('[')
+            || class.super_class.as_ref().is_some_and(|name| name.is_empty() || name.starts_with('['))
+            || class.interfaces.iter().any(|name| name.is_empty() || name.starts_with('['))
+        {
+            return Err(ClassFileError::InvalidFormat);
+        }
+        for field in &class.fields {
+            let Some(r#type) = JavaType::try_parse(&field.descriptor) else {
+                return Err(ClassFileError::InvalidFormat);
+            };
+            if matches!(r#type, JavaType::Void | JavaType::Method(_, _)) {
+                return Err(ClassFileError::InvalidFormat);
+            }
+
+            let constant_values = field
+                .attributes
+                .iter()
+                .filter_map(|attribute| match attribute {
+                    AttributeInfo::ConstantValue(value) => Some(value),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            if constant_values.len() > 1
+                || constant_values.first().is_some_and(|value| {
+                    !matches!(
+                        (field.descriptor.as_str(), *value),
+                        ("Z" | "B" | "C" | "S" | "I", ConstantPoolReference::Integer(_))
+                            | ("J", ConstantPoolReference::Long(_))
+                            | ("F", ConstantPoolReference::Float(_))
+                            | ("D", ConstantPoolReference::Double(_))
+                            | ("Ljava/lang/String;", ConstantPoolReference::String(_))
+                    )
+                })
+            {
+                return Err(ClassFileError::InvalidFormat);
+            }
+        }
+        for method in &class.methods {
+            if !matches!(JavaType::try_parse(&method.descriptor), Some(JavaType::Method(_, _))) {
+                return Err(ClassFileError::InvalidFormat);
+            }
+
+            for attribute in &method.attributes {
+                let AttributeInfo::Code(code) = attribute else {
+                    continue;
+                };
+                for opcode in code.code.values() {
+                    match opcode {
+                        Opcode::Getfield(ConstantPoolReference::Field(reference))
+                        | Opcode::Getstatic(ConstantPoolReference::Field(reference))
+                        | Opcode::Putfield(ConstantPoolReference::Field(reference))
+                        | Opcode::Putstatic(ConstantPoolReference::Field(reference)) => {
+                            let Some(r#type) = JavaType::try_parse(&reference.descriptor) else {
+                                return Err(ClassFileError::InvalidFormat);
+                            };
+                            if reference.class.is_empty()
+                                || reference.class.starts_with('[')
+                                || matches!(r#type, JavaType::Void | JavaType::Method(_, _))
+                            {
+                                return Err(ClassFileError::InvalidFormat);
+                            }
+                        }
+                        Opcode::Invokeinterface(ConstantPoolReference::InterfaceMethodref(reference), _, _)
+                        | Opcode::Invokespecial(ConstantPoolReference::Method(reference))
+                        | Opcode::Invokestatic(ConstantPoolReference::Method(reference))
+                        | Opcode::Invokevirtual(ConstantPoolReference::Method(reference)) => {
+                            if reference.class.is_empty()
+                                || reference.class.starts_with('[')
+                                || !matches!(JavaType::try_parse(&reference.descriptor), Some(JavaType::Method(_, _)))
+                            {
+                                return Err(ClassFileError::InvalidFormat);
+                            }
+                        }
+                        Opcode::Anewarray(ConstantPoolReference::Class(name))
+                        | Opcode::Checkcast(ConstantPoolReference::Class(name))
+                        | Opcode::Instanceof(ConstantPoolReference::Class(name))
+                        | Opcode::Ldc(ConstantPoolReference::Class(name))
+                        | Opcode::LdcW(ConstantPoolReference::Class(name))
+                        | Opcode::New(ConstantPoolReference::Class(name)) => {
+                            if name.is_empty()
+                                || (name.starts_with('[') && !matches!(JavaType::try_parse(name), Some(JavaType::Array(_))))
+                                || (!name.starts_with('[') && name.contains(['.', ';', '[']))
+                            {
+                                return Err(ClassFileError::InvalidFormat);
+                            }
+                        }
+                        Opcode::Multianewarray(ConstantPoolReference::Class(name), dimensions) => {
+                            let Some(mut r#type) = JavaType::try_parse(name) else {
+                                return Err(ClassFileError::InvalidFormat);
+                            };
+                            let mut available_dimensions = 0;
+                            while let JavaType::Array(element) = r#type {
+                                available_dimensions += 1;
+                                r#type = *element;
+                            }
+                            if available_dimensions < *dimensions as usize {
+                                return Err(ClassFileError::InvalidFormat);
+                            }
+                        }
+                        Opcode::Invokedynamic(_) => return Err(ClassFileError::InvalidFormat),
+                        _ => {}
+                    }
+                }
+            }
+
+            let code_attributes = method
+                .attributes
+                .iter()
+                .filter(|attribute| matches!(attribute, AttributeInfo::Code(_)))
+                .count();
+            if method.access_flags.intersects(MethodAccessFlags::ABSTRACT | MethodAccessFlags::NATIVE) {
+                if code_attributes != 0 {
+                    return Err(ClassFileError::InvalidFormat);
+                }
+            } else if code_attributes != 1 {
+                return Err(ClassFileError::InvalidFormat);
+            }
+        }
 
         let mut constant_values = Vec::new();
         let fields = class

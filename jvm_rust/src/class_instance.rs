@@ -35,6 +35,19 @@ impl ClassInstanceImpl {
 impl ClassInstance for ClassInstanceImpl {
     fn destroy(self: Box<Self>) {}
 
+    fn identity(&self) -> usize {
+        Arc::as_ptr(&self.inner) as usize
+    }
+
+    fn shallow_clone(&self) -> Result<Box<dyn ClassInstance>> {
+        Ok(Box::new(Self {
+            inner: Arc::new(ClassInstanceInner {
+                class: self.inner.class.clone(),
+                storage: RwLock::new(self.inner.storage.read().clone()),
+            }),
+        }))
+    }
+
     fn class_definition(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }

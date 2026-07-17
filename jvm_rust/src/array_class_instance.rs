@@ -10,6 +10,7 @@ use jvm::{ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBuff
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
+#[derive(Clone)]
 enum ArrayElements {
     Primitive(Vec<u8>),
     NonPrimitive(Vec<JavaValue>),
@@ -112,6 +113,21 @@ impl ArrayClassInstanceImpl {
 
 #[async_trait::async_trait]
 impl ArrayClassInstance for ArrayClassInstanceImpl {
+    fn identity(&self) -> usize {
+        Arc::as_ptr(&self.inner) as usize
+    }
+
+    fn shallow_clone(&self) -> Result<Box<dyn ClassInstance>> {
+        Ok(Box::new(Self {
+            inner: Arc::new(ArrayClassInstanceInner {
+                class: self.inner.class.clone(),
+                length: self.inner.length,
+                element_type: self.inner.element_type.clone(),
+                elements: RwLock::new(self.inner.elements.read().clone()),
+            }),
+        }))
+    }
+
     fn class_definition(&self) -> Box<dyn ClassDefinition> {
         self.inner.class.clone()
     }

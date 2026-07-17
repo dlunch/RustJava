@@ -413,3 +413,76 @@ async fn test_get_bytes_ascii_replaces_non_ascii() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_index_of_uses_utf16_indices_and_handles_empty_patterns() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let string = JavaLangString::from_rust_string(&jvm, "a😀b").await?;
+    let empty = JavaLangString::from_rust_string(&jvm, "").await?;
+    let emoji = JavaLangString::from_rust_string(&jvm, "😀").await?;
+    let tail = JavaLangString::from_rust_string(&jvm, "b").await?;
+
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "indexOf", "(Ljava/lang/String;)I", (emoji,))
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "indexOf", "(Ljava/lang/String;)I", (tail,)).await?,
+        3
+    );
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&string, "indexOf", "(II)I", (b'b' as i32, -10)).await?, 3);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(I)I", (b'b' as i32,)).await?, 3);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "indexOf", "(Ljava/lang/String;I)I", (empty.clone(), -10))
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "indexOf", "(Ljava/lang/String;I)I", (empty, 99))
+            .await?,
+        4
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_unknown_string_charset_throws_unsupported_encoding() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let string = JavaLangString::from_rust_string(&jvm, "value").await?;
+    let charset = JavaLangString::from_rust_string(&jvm, "not-a-charset").await?;
+
+    let result: Result<ClassInstanceRef<jvm::Array<i8>>> = jvm
+        .invoke_virtual(&string, "getBytes", "(Ljava/lang/String;)[B", (charset.clone(),))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("unknown charset must throw UnsupportedEncodingException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/io/UnsupportedEncodingException"));
+
+    let mut bytes = jvm.instantiate_array("B", 1).await?;
+    jvm.store_array(&mut bytes, 0, [b'a' as i8]).await?;
+    let result = jvm.new_class("java/lang/String", "([BLjava/lang/String;)V", (bytes, charset)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("unknown constructor charset must throw UnsupportedEncodingException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/io/UnsupportedEncodingException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_trim_uses_java_control_character_boundary() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let string = JavaLangString::from_rust_string(&jvm, " \t\u{a0}value\u{a0}\n ").await?;
+    let trimmed: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&string, "trim", "()Ljava/lang/String;", ()).await?;
+
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &trimmed).await?, "\u{a0}value\u{a0}");
+
+    let unchanged = JavaLangString::from_rust_string(&jvm, "value").await?;
+    let same: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&unchanged, "trim", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(unchanged.identity(), same.identity());
+
+    Ok(())
+}

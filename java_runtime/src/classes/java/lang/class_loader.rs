@@ -198,16 +198,14 @@ impl ClassLoader {
     }
 
     async fn find_class(
-        _: &Jvm,
+        jvm: &Jvm,
         _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findClass({this:?}, {name:?})");
 
-        // TODO raise ClassNotFoundException
-
-        Ok(None.into())
+        Err(jvm.exception("java/lang/ClassNotFoundException", "class not found").await)
     }
 
     async fn find_loaded_class(
@@ -298,6 +296,14 @@ impl ClassLoader {
         length: i32,
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::defineClass({this:?}, {name:?}, {bytes:?}, {offset:?}, {length:?})");
+
+        if bytes.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "class bytes").await);
+        }
+        let array_length = jvm.array_length(&bytes).await?;
+        if offset < 0 || length < 0 || (offset as usize).checked_add(length as usize).is_none_or(|end| end > array_length) {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "invalid class byte range").await);
+        }
 
         let mut data = vec![0; length as usize];
         jvm.array_raw_buffer(&bytes).await?.read(offset as _, &mut data)?;

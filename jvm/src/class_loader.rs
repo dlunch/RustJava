@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, sync::Arc};
 
-use parking_lot::RwLock;
+use event_listener::{Event, EventListener};
+use parking_lot::{Mutex, RwLock};
 
 use crate::{
     ClassDefinition, ClassInstance, Jvm, Result,
@@ -15,11 +16,29 @@ pub(crate) enum InitState {
     Erroneous,
 }
 
+pub(crate) enum InitializationAction {
+    Initialize,
+    Recursive,
+    Wait(EventListener),
+    Initialized,
+    Erroneous,
+}
+
+struct ClassInitializationState {
+    status: InitState,
+    owner: Option<u64>,
+}
+
+struct ClassInitialization {
+    state: Mutex<ClassInitializationState>,
+    completed: Event,
+}
+
 #[derive(Clone)]
 pub struct Class {
     pub definition: Box<dyn ClassDefinition>,
     java_class: Arc<RwLock<Option<Box<dyn ClassInstance>>>>,
-    init_state: Arc<RwLock<InitState>>,
+    initialization: Arc<ClassInitialization>,
 }
 
 impl Class {
@@ -27,16 +46,40 @@ impl Class {
         Self {
             definition,
             java_class: Arc::new(RwLock::new(java_class)),
-            init_state: Arc::new(RwLock::new(InitState::NotInitialized)),
+            initialization: Arc::new(ClassInitialization {
+                state: Mutex::new(ClassInitializationState {
+                    status: InitState::NotInitialized,
+                    owner: None,
+                }),
+                completed: Event::new(),
+            }),
         }
     }
 
-    pub(crate) fn init_state(&self) -> InitState {
-        *self.init_state.read()
+    pub(crate) fn initialization_action(&self, thread_id: u64) -> InitializationAction {
+        let listener = self.initialization.completed.listen();
+        let mut state = self.initialization.state.lock();
+
+        match state.status {
+            InitState::NotInitialized => {
+                state.status = InitState::InProgress;
+                state.owner = Some(thread_id);
+                InitializationAction::Initialize
+            }
+            InitState::InProgress if state.owner == Some(thread_id) => InitializationAction::Recursive,
+            InitState::InProgress => InitializationAction::Wait(listener),
+            InitState::Initialized => InitializationAction::Initialized,
+            InitState::Erroneous => InitializationAction::Erroneous,
+        }
     }
 
-    pub(crate) fn set_init_state(&self, state: InitState) {
-        *self.init_state.write() = state;
+    pub(crate) fn finish_initialization(&self, status: InitState) {
+        {
+            let mut state = self.initialization.state.lock();
+            state.status = status;
+            state.owner = None;
+        }
+        self.initialization.completed.notify(usize::MAX);
     }
 
     pub fn set_java_class(&self, java_class: Box<dyn ClassInstance>) {
@@ -73,9 +116,11 @@ impl ClassLoaderWrapper for BootstrapClassLoaderWrapper<'_> {
     async fn load_class(&self, jvm: &Jvm, name: &str) -> Result<Option<Class>> {
         let definition = self.bootstrap_class_loader.load_class(jvm, name).await?;
         if let Some(definition) = definition {
-            let java_class = jvm.register_class(definition.clone(), None).await?;
+            let java_class = JavaLangClass::from_rust_class(jvm, definition.clone(), None).await?;
+            let class = Class::new(definition, Some(java_class));
+            jvm.register_class_internal(class.clone(), Some(self)).await?;
 
-            Ok(Some(Class::new(definition, java_class)))
+            Ok(Some(class))
         } else {
             Ok(None)
         }

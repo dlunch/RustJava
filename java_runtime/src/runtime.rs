@@ -19,6 +19,7 @@ pub trait Runtime: Sync + Send + DynClone {
     async fn sleep(&self, duration: Duration);
     async fn r#yield(&self);
     fn spawn(&self, jvm: &Jvm, callback: Box<dyn SpawnCallback>);
+    fn exit(&self, status: i32);
 
     fn now(&self) -> u64; // unix time in millis
     fn current_task_id(&self) -> u64;

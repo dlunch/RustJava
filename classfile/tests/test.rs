@@ -1,6 +1,6 @@
 use java_constants::ClassAccessFlags;
 
-use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference, Opcode};
+use classfile::{AttributeInfo, ClassFileError, ClassInfo, ConstantPoolReference, Opcode};
 
 #[test]
 fn test_hello() {
@@ -131,4 +131,36 @@ fn test_invokeinterface() {
     } else {
         panic!("Expected code attribute");
     }
+}
+
+#[test]
+fn test_malformed_class_files_return_structured_errors() {
+    let hello = include_bytes!("../../test_data/Hello.class");
+
+    assert_eq!(ClassInfo::parse(&[]).err(), Some(ClassFileError::InvalidFormat));
+
+    let mut invalid_magic = hello.to_vec();
+    invalid_magic[0] = 0;
+    assert_eq!(ClassInfo::parse(&invalid_magic).err(), Some(ClassFileError::InvalidFormat));
+
+    let mut unsupported_version = hello.to_vec();
+    unsupported_version[6..8].copy_from_slice(&71u16.to_be_bytes());
+    assert_eq!(ClassInfo::parse(&unsupported_version).err(), Some(ClassFileError::UnsupportedVersion(71)));
+
+    assert_eq!(ClassInfo::parse(&hello[..hello.len() / 2]).err(), Some(ClassFileError::InvalidFormat));
+
+    let minimal_class = vec![
+        0xca, 0xfe, 0xba, 0xbe, 0x00, 0x00, 0x00, 0x2d, 0x00, 0x05, 0x01, 0x00, 0x04, b'T', b'e', b's', b't', 0x07, 0x00, 0x01, 0x01, 0x00, 0x10,
+        b'j', b'a', b'v', b'a', b'/', b'l', b'a', b'n', b'g', b'/', b'O', b'b', b'j', b'e', b'c', b't', 0x07, 0x00, 0x03, 0x00, 0x21, 0x00, 0x02,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    assert!(ClassInfo::parse(&minimal_class).is_ok());
+
+    let mut invalid_constant_pool_index = minimal_class.clone();
+    invalid_constant_pool_index[44..46].copy_from_slice(&99u16.to_be_bytes());
+    assert_eq!(ClassInfo::parse(&invalid_constant_pool_index).err(), Some(ClassFileError::InvalidFormat));
+
+    let mut invalid_constant_pool_type = minimal_class;
+    invalid_constant_pool_type[44..46].copy_from_slice(&1u16.to_be_bytes());
+    assert_eq!(ClassInfo::parse(&invalid_constant_pool_type).err(), Some(ClassFileError::InvalidFormat));
 }

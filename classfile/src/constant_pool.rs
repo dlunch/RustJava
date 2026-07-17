@@ -3,15 +3,14 @@ use alloc::{collections::BTreeMap, string::String, sync::Arc};
 use nom::{
     IResult, Parser,
     bytes::complete::take,
+    combinator::map_res,
     error::{Error, ErrorKind},
     number::complete::{be_f32, be_f64, be_i32, be_i64, be_u16, u8},
 };
 
 fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
     let (data, length) = be_u16(data)?;
-    let (data, utf8) = take(length as usize).parse(data)?;
-
-    Ok((data, Arc::new(String::from_utf8(utf8.to_vec()).unwrap())))
+    map_res(take(length as usize), |utf8: &[u8]| String::from_utf8(utf8.to_vec()).map(Arc::new)).parse(data)
 }
 
 #[derive(Debug)]
@@ -110,6 +109,12 @@ impl ConstantPoolItem {
 
     pub fn parse_all(data: &[u8]) -> IResult<&[u8], BTreeMap<u16, Self>> {
         let (remaining, count) = be_u16(data)?;
+        if count == 0 {
+            return Err(nom::Err::Error(Error::new(remaining, ErrorKind::Verify)));
+        }
+        if count == 1 {
+            return Ok((remaining, BTreeMap::new()));
+        }
 
         let mut data = remaining;
         let mut result = BTreeMap::new();
@@ -131,7 +136,10 @@ impl ConstantPoolItem {
                 i += 1;
             }
 
-            if i >= count {
+            if i > count {
+                return Err(nom::Err::Error(Error::new(data, ErrorKind::Verify)));
+            }
+            if i == count {
                 break;
             }
         }
@@ -144,31 +152,27 @@ impl ConstantPoolItem {
         Self::parse_tagged(data, tag)
     }
 
-    pub fn utf8(&self) -> Arc<String> {
-        if let ConstantPoolItem::Utf8(x) = self {
-            x.clone()
-        } else {
-            panic!("Invalid constant pool item");
-        }
+    pub fn utf8(&self) -> Option<Arc<String>> {
+        if let ConstantPoolItem::Utf8(x) = self { Some(x.clone()) } else { None }
     }
 
-    pub fn class_name_index(&self) -> u16 {
+    pub fn class_name_index(&self) -> Option<u16> {
         if let ConstantPoolItem::Class { name_index } = self {
-            *name_index
+            Some(*name_index)
         } else {
-            panic!("Invalid constant pool item");
+            None
         }
     }
 
-    pub fn name_and_type(&self) -> (u16, u16) {
+    pub fn name_and_type(&self) -> Option<(u16, u16)> {
         if let ConstantPoolItem::NameAndType {
             name_index,
             descriptor_index,
         } = self
         {
-            (*name_index, *descriptor_index)
+            Some((*name_index, *descriptor_index))
         } else {
-            panic!("Invalid constant pool item");
+            None
         }
     }
 }
@@ -187,40 +191,39 @@ pub enum ConstantPoolReference {
 }
 
 impl ConstantPoolReference {
-    pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Self {
-        match &constant_pool.get(&index).unwrap() {
-            ConstantPoolItem::Integer(x) => Self::Integer(*x),
-            ConstantPoolItem::Float(x) => Self::Float(*x),
-            ConstantPoolItem::Long(x) => Self::Long(*x),
-            ConstantPoolItem::Double(x) => Self::Double(*x),
-            ConstantPoolItem::String { string_index } => Self::String(constant_pool.get(string_index).unwrap().utf8()),
-            ConstantPoolItem::Class { name_index } => Self::Class(constant_pool.get(name_index).unwrap().utf8()),
-            ConstantPoolItem::Utf8(x) => Self::String(x.clone()),
+    pub fn from_constant_pool(constant_pool: &BTreeMap<u16, ConstantPoolItem>, index: u16) -> Option<Self> {
+        match constant_pool.get(&index)? {
+            ConstantPoolItem::Integer(x) => Some(Self::Integer(*x)),
+            ConstantPoolItem::Float(x) => Some(Self::Float(*x)),
+            ConstantPoolItem::Long(x) => Some(Self::Long(*x)),
+            ConstantPoolItem::Double(x) => Some(Self::Double(*x)),
+            ConstantPoolItem::String { string_index } => Some(Self::String(constant_pool.get(string_index)?.utf8()?)),
+            ConstantPoolItem::Class { name_index } => Some(Self::Class(constant_pool.get(name_index)?.utf8()?)),
             ConstantPoolItem::Methodref {
                 class_index,
                 name_and_type_index,
-            } => Self::Method(FieldMethodref::from_reference_info(
+            } => Some(Self::Method(FieldMethodref::from_reference_info(
                 constant_pool,
-                *class_index as _,
-                *name_and_type_index as _,
-            )),
+                *class_index,
+                *name_and_type_index,
+            )?)),
             ConstantPoolItem::Fieldref {
                 class_index,
                 name_and_type_index,
-            } => Self::Field(FieldMethodref::from_reference_info(
+            } => Some(Self::Field(FieldMethodref::from_reference_info(
                 constant_pool,
-                *class_index as _,
-                *name_and_type_index as _,
-            )),
+                *class_index,
+                *name_and_type_index,
+            )?)),
             ConstantPoolItem::InterfaceMethodref {
                 class_index,
                 name_and_type_index,
-            } => Self::InterfaceMethodref(FieldMethodref::from_reference_info(
+            } => Some(Self::InterfaceMethodref(FieldMethodref::from_reference_info(
                 constant_pool,
-                *class_index as _,
-                *name_and_type_index as _,
-            )),
-            _ => panic!("Invalid constant pool item {:?}", constant_pool.get(&index).unwrap()),
+                *class_index,
+                *name_and_type_index,
+            )?)),
+            _ => None,
         }
     }
 
@@ -265,18 +268,36 @@ pub struct FieldMethodref {
 }
 
 impl FieldMethodref {
-    pub fn from_reference_info(constant_pool: &BTreeMap<u16, ConstantPoolItem>, class_index: u16, name_and_type_index: u16) -> Self {
-        let class_name_index = constant_pool.get(&class_index).unwrap().class_name_index();
-        let class_name = constant_pool.get(&class_name_index).unwrap().utf8();
+    pub fn from_reference_info(constant_pool: &BTreeMap<u16, ConstantPoolItem>, class_index: u16, name_and_type_index: u16) -> Option<Self> {
+        let class_name_index = constant_pool.get(&class_index)?.class_name_index()?;
+        let class_name = constant_pool.get(&class_name_index)?.utf8()?;
 
-        let (name_index, descriptor_index) = constant_pool.get(&name_and_type_index).unwrap().name_and_type();
-        let name = constant_pool.get(&name_index).unwrap().utf8();
-        let descriptor = constant_pool.get(&descriptor_index).unwrap().utf8();
+        let (name_index, descriptor_index) = constant_pool.get(&name_and_type_index)?.name_and_type()?;
+        let name = constant_pool.get(&name_index)?.utf8()?;
+        let descriptor = constant_pool.get(&descriptor_index)?.utf8()?;
 
-        Self {
+        Some(Self {
             class: class_name,
             name,
             descriptor,
-        }
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConstantPoolItem;
+
+    #[test]
+    fn empty_constant_pool_is_valid() {
+        let (remaining, constant_pool) = ConstantPoolItem::parse_all(&[0x00, 0x01, 0xff]).unwrap();
+
+        assert!(constant_pool.is_empty());
+        assert_eq!(remaining, &[0xff]);
+    }
+
+    #[test]
+    fn long_must_fit_in_two_constant_pool_slots() {
+        assert!(ConstantPoolItem::parse_all(&[0x00, 0x02, 0x05, 0, 0, 0, 0, 0, 0, 0, 0]).is_err());
     }
 }
