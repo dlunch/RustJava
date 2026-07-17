@@ -183,7 +183,7 @@ impl ClassLoader {
             jvm.invoke_virtual(&parent, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
                 .await?
         } else {
-            None.into()
+            jvm.load_bootstrap_class(&name_str).await?.into()
         };
 
         if !class.is_null() {

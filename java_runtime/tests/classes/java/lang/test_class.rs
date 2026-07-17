@@ -246,9 +246,16 @@ async fn test_cldc_class_queries_and_new_instance() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_base_class_loader_find_class_throws() -> Result<()> {
+async fn test_base_class_loader_delegates_to_bootstrap_and_find_class_throws() -> Result<()> {
     let jvm = test_jvm().await?;
     let loader = jvm.new_class("java/lang/ClassLoader", "(Ljava/lang/ClassLoader;)V", (None,)).await?;
+
+    let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
+    let class: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(&loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .await?;
+    assert!(!class.is_null());
+
     let name = JavaLangString::from_rust_string(&jvm, "missing.Type").await?;
 
     let result: Result<ClassInstanceRef<Class>> = jvm

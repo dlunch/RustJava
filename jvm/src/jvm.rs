@@ -573,6 +573,13 @@ impl Jvm {
         self.resolve_class_internal(class_name, None).await
     }
 
+    pub async fn load_bootstrap_class(&self, class_name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
+        let class = BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)
+            .load_class(self, class_name)
+            .await?;
+        Ok(class.map(|class| class.java_class()))
+    }
+
     #[async_recursion::async_recursion]
     async fn resolve_class_internal(&self, class_name: &str, class_loader_wrapper: Option<&dyn ClassLoaderWrapper>) -> Result<Class> {
         tracing::trace!("Resolving class {class_name}");
@@ -722,11 +729,6 @@ impl Jvm {
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         tracing::info!("throwing java exception: {} {message}", r#type);
 
-        if !self.has_class(r#type) {
-            self.resolve_class_internal(r#type, Some(&BootstrapClassLoaderWrapper::new(&*self.inner.bootstrap_class_loader)))
-                .await
-                .unwrap();
-        }
         let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
         let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
 
