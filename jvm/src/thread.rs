@@ -4,7 +4,7 @@ use alloc::{
     vec::Vec,
 };
 
-use crate::{ClassInstance, class_loader::Class};
+use crate::{ClassInstance, JavaValue, class_loader::Class};
 
 pub enum StackFrame {
     Java(JavaStackFrame),
@@ -49,12 +49,18 @@ impl JvmThread {
         self.java_thread = Some(java_thread);
     }
 
-    pub fn push_java_frame(&mut self, class: &Class, class_instance: Option<Box<dyn ClassInstance>>, method: &str) {
+    pub fn push_java_frame(&mut self, class: &Class, class_instance: Option<Box<dyn ClassInstance>>, method: &str, args: &[JavaValue]) {
         self.stack.push(StackFrame::Java(JavaStackFrame {
             class: class.clone(),
             class_instance,
             method: method.to_string(),
-            local_variables: Vec::new(),
+            local_variables: args
+                .iter()
+                .filter_map(|arg| match arg {
+                    JavaValue::Object(Some(instance)) => Some(instance.clone()),
+                    _ => None,
+                })
+                .collect(),
         }));
     }
 
