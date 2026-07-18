@@ -10,6 +10,7 @@ mod class_loader;
 mod error;
 mod field;
 mod garbage_collector;
+mod global_ref;
 mod invoke_arg;
 mod jvm;
 mod method;
@@ -38,6 +39,7 @@ pub use self::{
     class_loader::BootstrapClassLoader,
     error::JavaError,
     field::Field,
+    global_ref::GlobalRef,
     jvm::Jvm,
     method::Method,
     monitor::{MonitorWait, MonitorWaitTimeout},

@@ -4,7 +4,7 @@ use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::
 use core::{
     fmt::Debug,
     iter,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
 use dyn_clone::clone_box;
@@ -17,13 +17,14 @@ use crate::{
     Result,
     array_class_instance::{ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
-    class_instance::ClassInstance,
+    class_instance::{ClassInstance, ClassInstanceRef},
     class_loader::{
         BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, InitState, InitializationAction, JavaClassLoaderWrapper,
     },
     error::JavaError,
     field::Field,
     garbage_collector::determine_garbage,
+    global_ref::{GlobalRef, GlobalReferences},
     invoke_arg::InvokeArg,
     method::Method,
     monitor::{Monitor, MonitorWait, MonitorWaitTimeout},
@@ -36,6 +37,7 @@ use crate::{
 struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
+    global_references: Arc<GlobalReferences>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
     string_pool: RwLock<BTreeMap<Vec<u16>, Box<dyn ClassInstance>>>,
     monitors: RwLock<BTreeMap<usize, Arc<Monitor>>>,
@@ -59,6 +61,10 @@ impl Jvm {
             inner: Arc::new(JvmInner {
                 classes: RwLock::new(BTreeMap::new()),
                 threads: RwLock::new(BTreeMap::new()),
+                global_references: Arc::new(GlobalReferences {
+                    next_id: AtomicU64::new(0),
+                    objects: RwLock::new(BTreeMap::new()),
+                }),
                 all_objects: RwLock::new(HashSet::new()),
                 string_pool: RwLock::new(BTreeMap::new()),
                 monitors: RwLock::new(BTreeMap::new()),
@@ -106,6 +112,16 @@ impl Jvm {
         JavaLangClassLoader::get_system_class_loader(&jvm).await?;
 
         jvm.inner.bootstrapping.store(false, Ordering::Relaxed);
+
+        let thread_id = (jvm.inner.get_current_thread_id)();
+        jvm.inner
+            .threads
+            .write()
+            .get_mut(&thread_id)
+            .unwrap()
+            .top_frame_mut()
+            .local_variables_mut()
+            .clear();
 
         Ok(jvm)
     }
@@ -188,7 +204,19 @@ impl Jvm {
 
             self.ensure_initialized(&declaring_class).await?;
 
-            Ok(declaring_class.definition.get_static_field(&*field)?.into())
+            let value = declaring_class.definition.get_static_field(&*field)?;
+            if let JavaValue::Object(Some(instance)) = &value {
+                let thread_id = (self.inner.get_current_thread_id)();
+                self.inner
+                    .threads
+                    .write()
+                    .get_mut(&thread_id)
+                    .unwrap()
+                    .top_frame_mut()
+                    .local_variables_mut()
+                    .push(instance.clone());
+            }
+            Ok(value.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
@@ -230,7 +258,19 @@ impl Jvm {
         let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
 
         if let Some(field) = field {
-            Ok(instance.get_field(&*field)?.into())
+            let value = instance.get_field(&*field)?;
+            if let JavaValue::Object(Some(instance)) = &value {
+                let thread_id = (self.inner.get_current_thread_id)();
+                self.inner
+                    .threads
+                    .write()
+                    .get_mut(&thread_id)
+                    .unwrap()
+                    .top_frame_mut()
+                    .local_variables_mut()
+                    .push(instance.clone());
+            }
+            Ok(value.into())
         } else {
             Err(self
                 .exception(
@@ -406,6 +446,15 @@ impl Jvm {
 
         if let Some(array) = array {
             let values = array.load(offset, count)?;
+
+            let thread_id = (self.inner.get_current_thread_id)();
+            let mut threads = self.inner.threads.write();
+            let local_variables = threads.get_mut(&thread_id).unwrap().top_frame_mut().local_variables_mut();
+            values.iter().for_each(|value| {
+                if let JavaValue::Object(Some(instance)) = value {
+                    local_variables.push(instance.clone());
+                }
+            });
 
             Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
         } else {
@@ -761,11 +810,12 @@ impl Jvm {
 
         let garbage = {
             let threads = self.inner.threads.read();
+            let global_references = self.inner.global_references.objects.read();
             let all_objects = self.inner.all_objects.read();
             let classes = self.inner.classes.read();
             let interned_strings = self.interned_strings();
 
-            determine_garbage(self, &threads, &all_objects, &classes, &interned_strings)
+            determine_garbage(self, &threads, &global_references, &all_objects, &classes, &interned_strings)
         };
 
         let garbage_count = garbage.len();
@@ -886,6 +936,18 @@ impl Jvm {
         self.inner.threads.write().get_mut(&thread_id).unwrap().set_java_thread(java_thread);
 
         Ok(())
+    }
+
+    pub fn new_global_ref<T>(&self, reference: &ClassInstanceRef<T>) -> Option<GlobalRef<T>> {
+        let instance = reference.instance.as_ref()?.clone();
+        let id = self.inner.global_references.next_id.fetch_add(1, Ordering::Relaxed);
+        self.inner.global_references.objects.write().insert(id, instance);
+
+        Some(GlobalRef {
+            references: self.inner.global_references.clone(),
+            id,
+            reference: reference.clone(),
+        })
     }
 
     pub fn detach_thread(&self) -> Result<()> {
@@ -1043,13 +1105,25 @@ impl Jvm {
             .write()
             .get_mut(&thread_id)
             .unwrap()
-            .push_java_frame(class, class_instance, &method_str);
+            .push_java_frame(class, class_instance, &method_str, &args);
 
         let result = method.run(self, args).await;
 
         tracing::trace!("Execute result: {result:?}");
 
-        self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
+        let returned_reference = match &result {
+            Ok(JavaValue::Object(Some(instance))) => Some(instance.clone()),
+            Err(JavaError::JavaException(exception)) => Some(exception.clone()),
+            _ => None,
+        };
+        {
+            let mut threads = self.inner.threads.write();
+            let thread = threads.get_mut(&thread_id).unwrap();
+            thread.pop_frame();
+            if let Some(returned_reference) = returned_reference {
+                thread.top_frame_mut().local_variables_mut().push(returned_reference);
+            }
+        }
 
         if let Some(object) = &synchronized_object
             && let Err(error) = self.monitor_exit(object).await

@@ -8,6 +8,7 @@ use crate::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, class_loader:
 pub fn determine_garbage(
     jvm: &Jvm,
     threads: &BTreeMap<u64, JvmThread>,
+    global_references: &BTreeMap<u64, Box<dyn ClassInstance>>,
     all_class_instances: &HashSet<Box<dyn ClassInstance>>,
     classes: &BTreeMap<String, Class>,
     interned_strings: &[Box<dyn ClassInstance>],
@@ -28,6 +29,10 @@ pub fn determine_garbage(
 
     threads.values().filter_map(|thread| thread.java_thread()).for_each(|x| {
         find_reachable_objects(jvm, x, &mut reachable_objects);
+    });
+
+    global_references.values().for_each(|object| {
+        find_reachable_objects(jvm, object, &mut reachable_objects);
     });
 
     interned_strings.iter().for_each(|x| {

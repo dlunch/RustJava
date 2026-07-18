@@ -19,11 +19,14 @@ use java_runtime::{
     get_runtime_class_proto,
 };
 
+type SpawnCallbacks = Arc<Mutex<Vec<Box<dyn SpawnCallback>>>>;
+
 pub struct TestRuntime {
     filesystem: BTreeMap<String, Vec<u8>>,
     file_table: Arc<Mutex<BTreeMap<u32, Box<dyn File>>>>,
     next_fd: Arc<AtomicU32>,
     exit_status: Arc<AtomicI64>,
+    spawn_callbacks: Option<SpawnCallbacks>,
 }
 
 impl Clone for TestRuntime {
@@ -33,6 +36,7 @@ impl Clone for TestRuntime {
             file_table: self.file_table.clone(),
             next_fd: self.next_fd.clone(),
             exit_status: self.exit_status.clone(),
+            spawn_callbacks: self.spawn_callbacks.clone(),
         }
     }
 }
@@ -44,7 +48,22 @@ impl TestRuntime {
             file_table: Arc::new(Mutex::new(BTreeMap::new())),
             next_fd: Arc::new(AtomicU32::new(1)),
             exit_status: Arc::new(AtomicI64::new(i64::MIN)),
+            spawn_callbacks: None,
         }
+    }
+
+    pub fn new_with_queued_spawns(filesystem: BTreeMap<String, Vec<u8>>) -> Self {
+        Self {
+            filesystem,
+            file_table: Arc::new(Mutex::new(BTreeMap::new())),
+            next_fd: Arc::new(AtomicU32::new(1)),
+            exit_status: Arc::new(AtomicI64::new(i64::MIN)),
+            spawn_callbacks: Some(Arc::new(Mutex::new(Vec::new()))),
+        }
+    }
+
+    pub fn take_spawn_callback(&self) -> Option<Box<dyn SpawnCallback>> {
+        self.spawn_callbacks.as_ref()?.lock().unwrap().pop()
     }
 
     pub fn exit_status(&self) -> Option<i32> {
@@ -76,6 +95,11 @@ impl Runtime for TestRuntime {
     }
 
     fn spawn(&self, _jvm: &Jvm, callback: Box<dyn SpawnCallback>) {
+        if let Some(spawn_callbacks) = &self.spawn_callbacks {
+            spawn_callbacks.lock().unwrap().push(callback);
+            return;
+        }
+
         let task_id = LAST_TASK_ID.fetch_add(1, Ordering::SeqCst);
         tokio::spawn(async move {
             TASK_ID
