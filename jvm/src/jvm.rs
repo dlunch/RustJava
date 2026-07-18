@@ -17,7 +17,7 @@ use crate::{
     Result,
     array_class_instance::{ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
-    class_instance::{ClassInstance, ClassInstanceRef},
+    class_instance::{AsClassInstance, ClassInstance, ClassInstanceRef},
     class_loader::{
         BootstrapClassLoader, BootstrapClassLoaderWrapper, Class, ClassLoaderWrapper, InitState, InitializationAction, JavaClassLoaderWrapper,
     },
@@ -576,15 +576,15 @@ impl Jvm {
         self.inner.classes.read().get(class_name).cloned()
     }
 
-    pub async fn monitor_enter(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
+    pub async fn monitor_enter(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.get_or_create_monitor(obj).enter(thread_id).await;
+        self.get_or_create_monitor(obj.as_class_instance()).enter(thread_id).await;
         Ok(())
     }
 
-    pub async fn monitor_exit(&self, obj: &Box<dyn ClassInstance>) -> Result<()> {
+    pub async fn monitor_exit(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        match self.get_or_create_monitor(obj).exit(thread_id) {
+        match self.get_or_create_monitor(obj.as_class_instance()).exit(thread_id) {
             Ok(()) => Ok(()),
             Err(_) => Err(self
                 .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
@@ -592,9 +592,9 @@ impl Jvm {
         }
     }
 
-    pub async fn object_wait_prepare(&self, obj: &Box<dyn ClassInstance>) -> Result<(MonitorWait, MonitorWaitTimeout)> {
+    pub async fn object_wait_prepare(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<(MonitorWait, MonitorWaitTimeout)> {
         let thread_id = (self.inner.get_current_thread_id)();
-        match self.get_or_create_monitor(obj).prepare_wait(thread_id) {
+        match self.get_or_create_monitor(obj.as_class_instance()).prepare_wait(thread_id) {
             Ok(wait) => Ok(wait),
             Err(_) => Err(self
                 .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
@@ -607,9 +607,9 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn object_notify(&self, obj: &Box<dyn ClassInstance>, count: usize) -> Result<()> {
+    pub async fn object_notify(&self, obj: &(impl AsClassInstance + ?Sized), count: usize) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        match self.get_or_create_monitor(obj).notify(thread_id, count) {
+        match self.get_or_create_monitor(obj.as_class_instance()).notify(thread_id, count) {
             Ok(()) => Ok(()),
             Err(_) => Err(self
                 .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
@@ -1002,7 +1002,7 @@ impl Jvm {
         }
     }
 
-    fn get_or_create_monitor(&self, obj: &Box<dyn ClassInstance>) -> Arc<Monitor> {
+    fn get_or_create_monitor(&self, obj: &dyn ClassInstance) -> Arc<Monitor> {
         let key = obj.identity();
 
         let monitors = self.inner.monitors.read();

@@ -3,7 +3,7 @@ use core::{ops::Deref, sync::atomic::AtomicU64};
 
 use parking_lot::RwLock;
 
-use crate::{ClassInstance, ClassInstanceRef};
+use crate::{AsClassInstance, ClassInstance, ClassInstanceRef};
 
 pub(crate) struct GlobalReferences {
     pub(crate) next_id: AtomicU64,
@@ -21,6 +21,12 @@ impl<T> Deref for GlobalRef<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.reference
+    }
+}
+
+impl<T> AsClassInstance for GlobalRef<T> {
+    fn as_class_instance(&self) -> &dyn ClassInstance {
+        self.reference.as_class_instance()
     }
 }
 

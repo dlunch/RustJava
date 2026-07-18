@@ -27,6 +27,28 @@ pub trait ClassInstance: Sync + Send + AsAny + Debug + DynHash + DynClone + 'sta
     }
 }
 
+pub trait AsClassInstance {
+    fn as_class_instance(&self) -> &dyn ClassInstance;
+}
+
+impl<T: ClassInstance> AsClassInstance for T {
+    fn as_class_instance(&self) -> &dyn ClassInstance {
+        self
+    }
+}
+
+impl AsClassInstance for dyn ClassInstance {
+    fn as_class_instance(&self) -> &dyn ClassInstance {
+        self
+    }
+}
+
+impl AsClassInstance for Box<dyn ClassInstance> {
+    fn as_class_instance(&self) -> &dyn ClassInstance {
+        self.as_ref()
+    }
+}
+
 clone_trait_object!(ClassInstance);
 hash_trait_object!(ClassInstance);
 
@@ -90,6 +112,12 @@ impl<T> Deref for ClassInstanceRef<T> {
 impl<T> DerefMut for ClassInstanceRef<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.instance.as_mut().unwrap()
+    }
+}
+
+impl<T> AsClassInstance for ClassInstanceRef<T> {
+    fn as_class_instance(&self) -> &dyn ClassInstance {
+        self.instance.as_deref().unwrap()
     }
 }
 

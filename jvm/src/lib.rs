@@ -35,7 +35,7 @@ pub use self::{
     array_class_definition::ArrayClassDefinition,
     array_class_instance::{ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
-    class_instance::{Array, ClassInstance, ClassInstanceRef},
+    class_instance::{Array, AsClassInstance, ClassInstance, ClassInstanceRef},
     class_loader::BootstrapClassLoader,
     error::JavaError,
     field::Field,
