@@ -35,6 +35,9 @@ impl Calendar {
                 JavaMethodProto::new("setTimeInMillis", "(J)V", Self::set_time_in_millis, Default::default()),
                 JavaMethodProto::new("getTimeInMillis", "()J", Self::get_time_in_millis, Default::default()),
                 JavaMethodProto::new("getTimeZone", "()Ljava/util/TimeZone;", Self::get_time_zone, Default::default()),
+                JavaMethodProto::new("setTimeZone", "(Ljava/util/TimeZone;)V", Self::set_time_zone, Default::default()),
+                JavaMethodProto::new("isLenient", "()Z", Self::is_lenient, Default::default()),
+                JavaMethodProto::new("setLenient", "(Z)V", Self::set_lenient, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("before", "(Ljava/lang/Object;)Z", Self::before, Default::default()),
@@ -48,6 +51,7 @@ impl Calendar {
                 JavaFieldProto::new("time", "J", Default::default()),
                 JavaFieldProto::new("fields", "[I", Default::default()),
                 JavaFieldProto::new("timeZone", "Ljava/util/TimeZone;", Default::default()),
+                JavaFieldProto::new("lenient", "Z", Default::default()),
             ],
             access_flags: ClassAccessFlags::ABSTRACT,
         }
@@ -91,6 +95,7 @@ impl Calendar {
             .invoke_static("java/util/TimeZone", "getDefault", "()Ljava/util/TimeZone;", ())
             .await?;
         jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
+        jvm.put_field(&mut this, "lenient", "Z", true).await?;
 
         Ok(())
     }
@@ -136,6 +141,25 @@ impl Calendar {
         jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await
     }
 
+    async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
+        tracing::debug!("java.util.Calendar::setTimeZone({this:?}, {time_zone:?})");
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
+        jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
+        jvm.invoke_virtual(&this, "computeFields", "()V", ()).await
+    }
+
+    async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.util.Calendar::isLenient({this:?})");
+        jvm.get_field(&this, "lenient", "Z").await
+    }
+
+    async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
+        tracing::debug!("java.util.Calendar::setLenient({this:?}, {lenient:?})");
+        jvm.put_field(&mut this, "lenient", "Z", lenient).await
+    }
+
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::equals({this:?}, {other:?})");
 
@@ -147,6 +171,12 @@ impl Calendar {
         let time: i64 = jvm.get_field(&this, "time", "J").await?;
         let other_time: i64 = jvm.get_field(&other, "time", "J").await?;
         if time != other_time {
+            return Ok(false);
+        }
+
+        let lenient: bool = jvm.get_field(&this, "lenient", "Z").await?;
+        let other_lenient: bool = jvm.get_field(&other, "lenient", "Z").await?;
+        if lenient != other_lenient {
             return Ok(false);
         }
 
@@ -171,7 +201,8 @@ impl Calendar {
         let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
         let id: ClassInstanceRef<String> = jvm.invoke_virtual(&time_zone, "getID", "()Ljava/lang/String;", ()).await?;
         let id_hash: i32 = jvm.invoke_virtual(&id, "hashCode", "()I", ()).await?;
-        Ok((time ^ ((time as u64 >> 32) as i64)) as i32 ^ raw_offset ^ id_hash)
+        let lenient: bool = jvm.get_field(&this, "lenient", "Z").await?;
+        Ok((time ^ ((time as u64 >> 32) as i64)) as i32 ^ raw_offset ^ id_hash ^ if lenient { 1 } else { 0 })
     }
 
     async fn before(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
