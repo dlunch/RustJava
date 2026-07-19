@@ -97,29 +97,45 @@ impl ClassLoader {
                 )
                 .await?;
 
-            let url_array = if !class_path.is_null() {
+            let (class_paths, urls) = if !class_path.is_null() {
                 let class_path = JavaLangString::to_rust_string(jvm, &class_path).await?;
                 let path_separator: ClassInstanceRef<String> = jvm.get_static_field("java/io/File", "pathSeparator", "Ljava/lang/String;").await?;
                 let path_separator = JavaLangString::to_rust_string(jvm, &path_separator).await?;
 
+                let mut class_paths = Vec::new();
                 let mut urls = Vec::new();
                 for path in class_path.split(path_separator.as_str()) {
+                    class_paths.push(JavaLangString::from_rust_string(jvm, path).await?);
+
                     let path = JavaLangString::from_rust_string(jvm, &format!("file:{path}")).await?;
                     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (path,)).await?;
-
                     urls.push(url);
                 }
 
-                let mut url_array = jvm.instantiate_array("Ljava/net/URL;", urls.len()).await?;
-                jvm.store_array(&mut url_array, 0, urls).await?;
-
-                url_array
+                (class_paths, urls)
             } else {
-                jvm.instantiate_array("Ljava/net/URL;", 0).await?
+                (Vec::new(), Vec::new())
             };
 
+            let mut class_path_array = jvm.instantiate_array("Ljava/lang/String;", class_paths.len()).await?;
+            jvm.store_array(&mut class_path_array, 0, class_paths).await?;
+            let rustjar_class_loader = jvm
+                .new_class(
+                    "org/rustjava/lang/RustJarClassLoader",
+                    "([Ljava/lang/String;Ljava/lang/ClassLoader;)V",
+                    (class_path_array, None),
+                )
+                .await?;
+
+            let mut url_array = jvm.instantiate_array("Ljava/net/URL;", urls.len()).await?;
+            jvm.store_array(&mut url_array, 0, urls).await?;
+
             let url_class_loader = jvm
-                .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (url_array, None))
+                .new_class(
+                    "java/net/URLClassLoader",
+                    "([Ljava/net/URL;Ljava/lang/ClassLoader;)V",
+                    (url_array, rustjar_class_loader),
+                )
                 .await?;
 
             let class_loader_type: ClassInstanceRef<String> = jvm

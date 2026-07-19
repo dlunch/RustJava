@@ -2,9 +2,9 @@ extern crate alloc;
 
 mod runtime;
 
-use std::{env, ffi::OsStr, io::Write, path::Path};
+use std::{env, io::Write, path::Path};
 
-use java_runtime::{RT_RUSTJAR, Runtime, get_bootstrap_class_loader};
+use java_runtime::{Runtime, get_bootstrap_class_loader};
 use jvm::{JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
 
 use runtime::RuntimeImpl;
@@ -61,7 +61,7 @@ where
 }
 
 fn build_class_path(start_type: &StartType<'_>, class_path: &[&Path]) -> anyhow::Result<String> {
-    let mut entries = vec![OsStr::new(RT_RUSTJAR)];
+    let mut entries = Vec::new();
     if let StartType::Jar(path) = start_type {
         entries.push(path.as_os_str());
     }
@@ -122,8 +122,6 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
 mod tests {
     use std::{env, path::Path};
 
-    use java_runtime::RT_RUSTJAR;
-
     use super::{StartType, build_class_path};
 
     #[test]
@@ -134,30 +132,26 @@ mod tests {
                 &[Path::new("classes"), Path::new(""), Path::new("lib/dependency.jar")],
             )
             .unwrap(),
-            env::join_paths([RT_RUSTJAR, "classes", "", "lib/dependency.jar"])
-                .unwrap()
-                .into_string()
-                .unwrap()
+            env::join_paths(["classes", "", "lib/dependency.jar"]).unwrap().into_string().unwrap()
         );
     }
 
     #[test]
     fn jar_launch_classpath_has_no_trailing_separator_without_user_entries() {
-        assert_eq!(
-            build_class_path(&StartType::Jar(Path::new("app.jar")), &[]).unwrap(),
-            env::join_paths([RT_RUSTJAR, "app.jar"]).unwrap().into_string().unwrap()
-        );
+        assert_eq!(build_class_path(&StartType::Jar(Path::new("app.jar")), &[]).unwrap(), "app.jar");
     }
 
     #[test]
     fn jar_library_api_preserves_explicit_user_classpath() {
         assert_eq!(
             build_class_path(&StartType::Jar(Path::new("app.jar")), &[Path::new("lib/dependency.jar")]).unwrap(),
-            env::join_paths([RT_RUSTJAR, "app.jar", "lib/dependency.jar"])
-                .unwrap()
-                .into_string()
-                .unwrap()
+            env::join_paths(["app.jar", "lib/dependency.jar"]).unwrap().into_string().unwrap()
         );
+    }
+
+    #[test]
+    fn empty_class_launch_has_no_bootstrap_entry_in_application_classpath() {
+        assert_eq!(build_class_path(&StartType::Class(Path::new("Main")), &[]).unwrap(), "");
     }
 
     #[cfg(unix)]

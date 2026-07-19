@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_runtime::classes::java::net::URL;
+use java_runtime::classes::java::{lang::Class, net::URL};
 use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm_filesystem;
@@ -176,6 +176,28 @@ async fn test_missing_url_does_not_prevent_later_jar_lookup() -> Result<()> {
         .await?;
 
     assert!(!resource.is_null());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_url_class_loader_does_not_load_rustjar_classes() -> Result<()> {
+    let jvm = test_jvm_filesystem(Default::default()).await?;
+
+    let url = JavaLangString::from_rust_string(&jvm, "file:rt.rustjar").await?;
+    let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url,)).await?;
+    let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
+    jvm.store_array(&mut urls, 0, vec![url]).await?;
+    let class_loader = jvm
+        .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+        .await?;
+
+    let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
+    let class: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(&class_loader, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .await?;
+
+    assert!(class.is_null());
 
     Ok(())
 }

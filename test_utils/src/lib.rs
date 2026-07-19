@@ -270,7 +270,7 @@ where
 {
     let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
 
-    let properties = [("java.class.path", RT_RUSTJAR)].into_iter().collect();
+    let properties = [("java.class.path", ".")].into_iter().collect();
 
     Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await
 }

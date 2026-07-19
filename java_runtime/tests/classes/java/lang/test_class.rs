@@ -1,10 +1,17 @@
-use java_runtime::classes::java::lang::{Class, ClassLoader, String};
+use java_runtime::{
+    Runtime,
+    classes::java::{
+        lang::{Class, ClassLoader, String},
+        net::URL,
+    },
+    get_bootstrap_class_loader,
+};
 use jvm::{
-    Array, ClassInstanceRef, JavaError, Result,
+    Array, ClassInstanceRef, JavaError, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 
-use test_utils::test_jvm;
+use test_utils::{TestRuntime, test_jvm};
 
 #[tokio::test]
 async fn test_class() -> Result<()> {
@@ -265,6 +272,38 @@ async fn test_base_class_loader_delegates_to_bootstrap_and_find_class_throws() -
         panic!("ClassLoader.findClass must throw ClassNotFoundException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/ClassNotFoundException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_system_class_loader_uses_rustjar_parent() -> Result<()> {
+    let runtime = TestRuntime::new(Default::default());
+    let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
+    let class_path = std::env::join_paths(["external.rustjar", "classes"]).unwrap().into_string().unwrap();
+    let properties = [("java.class.path", class_path.as_str())].into_iter().collect();
+    let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?;
+
+    let system_class_loader: ClassInstanceRef<ClassLoader> = jvm
+        .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
+        .await?;
+    let rustjar_class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&system_class_loader, "parent", "Ljava/lang/ClassLoader;").await?;
+
+    assert!(jvm.is_instance(&**rustjar_class_loader, "org/rustjava/lang/RustJarClassLoader"));
+
+    let class_paths: ClassInstanceRef<Array<String>> = jvm.get_field(&rustjar_class_loader, "classPaths", "[Ljava/lang/String;").await?;
+    assert_eq!(jvm.array_length(&class_paths).await?, 2);
+    let class_paths: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_paths, 0, 2).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &class_paths[0]).await?, "external.rustjar");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &class_paths[1]).await?, "classes");
+
+    let urls: ClassInstanceRef<Array<URL>> = jvm.get_field(&system_class_loader, "urls", "[Ljava/net/URL;").await?;
+    assert_eq!(jvm.array_length(&urls).await?, 2);
+    let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, 2).await?;
+    let rustjar_file: ClassInstanceRef<String> = jvm.invoke_virtual(&urls[0], "getFile", "()Ljava/lang/String;", ()).await?;
+    let classes_file: ClassInstanceRef<String> = jvm.invoke_virtual(&urls[1], "getFile", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &rustjar_file).await?, "external.rustjar");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &classes_file).await?, "classes");
 
     Ok(())
 }
