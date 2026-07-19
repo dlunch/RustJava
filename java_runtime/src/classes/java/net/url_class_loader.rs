@@ -130,10 +130,6 @@ impl URLClassLoader {
         for url in urls {
             let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
-            if file.ends_with(".rustjar") {
-                // TODO rustjar resource
-                continue;
-            }
 
             let metadata = runtime.metadata(&file).await;
             if file.ends_with('/') || file.is_empty() || metadata.as_ref().is_ok_and(|metadata| metadata.r#type == FileType::Directory) {
