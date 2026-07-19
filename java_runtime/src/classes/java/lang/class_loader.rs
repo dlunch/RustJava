@@ -101,8 +101,7 @@ impl ClassLoader {
                 let class_path = JavaLangString::to_rust_string(jvm, &class_path).await?;
 
                 let mut urls = Vec::new();
-                for path in class_path.split(':') {
-                    // TODO File.pathSeparator
+                for path in class_path.split(if cfg!(windows) { ';' } else { ':' }) {
                     let path = JavaLangString::from_rust_string(jvm, &format!("file:{path}")).await?;
                     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (path,)).await?;
 

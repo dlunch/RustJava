@@ -1,10 +1,13 @@
-use std::process::Command;
+use std::{env, process::Command};
 
 #[test]
 fn cli_classpath_options_load_classes_from_directories_and_jars() {
+    let class_path = env::join_paths(["missing", "test_data"]).unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
         .env_remove("CLASSPATH")
-        .args(["-cp", "missing:test_data", "Hello"])
+        .arg("-cp")
+        .arg(class_path)
+        .arg("Hello")
         .output()
         .unwrap();
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
@@ -13,6 +16,32 @@ fn cli_classpath_options_load_classes_from_directories_and_jars() {
     let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
         .env_remove("CLASSPATH")
         .args(["-classpath", "test_data/test.jar", "JarTest"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(String::from_utf8(output.stdout).unwrap().starts_with("test content\n"));
+}
+
+#[test]
+fn cli_classpath_loads_from_absolute_entries() {
+    let working_directory = env::current_dir().unwrap();
+    let class_path = working_directory.join("test_data");
+    let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
+        .env_remove("CLASSPATH")
+        .arg("-cp")
+        .arg(class_path)
+        .arg("Hello")
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "Hello, world!\n");
+
+    let class_path = working_directory.join("test_data/test.jar");
+    let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
+        .env_remove("CLASSPATH")
+        .arg("-classpath")
+        .arg(class_path)
+        .arg("JarTest")
         .output()
         .unwrap();
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));

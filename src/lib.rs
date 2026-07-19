@@ -2,7 +2,7 @@ extern crate alloc;
 
 mod runtime;
 
-use std::{io::Write, path::Path};
+use std::{env, ffi::OsStr, io::Write, path::Path};
 
 use java_runtime::{RT_RUSTJAR, Runtime, get_bootstrap_class_loader};
 use jvm::{JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
@@ -46,7 +46,7 @@ where
     }
 }
 
-async fn create_jvm<T>(stdout: T, start_type: &StartType<'_>, class_path: &[&Path]) -> Result<Jvm>
+async fn create_jvm<T>(stdout: T, start_type: &StartType<'_>, class_path: &[&Path]) -> anyhow::Result<Jvm>
 where
     T: Sync + Send + Write + 'static,
 {
@@ -54,19 +54,22 @@ where
 
     let bootstrap_class_loader = get_bootstrap_class_loader(runtime.clone());
 
-    let class_path_str = build_class_path(start_type, class_path);
+    let class_path_str = build_class_path(start_type, class_path)?;
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
-    Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await
+    Ok(Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?)
 }
 
-fn build_class_path(start_type: &StartType<'_>, class_path: &[&Path]) -> String {
-    let mut entries = vec![RT_RUSTJAR];
+fn build_class_path(start_type: &StartType<'_>, class_path: &[&Path]) -> anyhow::Result<String> {
+    let mut entries = vec![OsStr::new(RT_RUSTJAR)];
     if let StartType::Jar(path) = start_type {
-        entries.push(path.to_str().unwrap());
+        entries.push(path.as_os_str());
     }
-    entries.extend(class_path.iter().map(|path| path.to_str().unwrap()));
-    entries.join(":")
+    entries.extend(class_path.iter().map(|path| path.as_os_str()));
+
+    env::join_paths(entries)?
+        .into_string()
+        .map_err(|_| anyhow::anyhow!("Class path contains a non-UTF-8 path"))
 }
 
 async fn invoke_entrypoint<S>(jvm: &Jvm, start_type: &StartType<'_>, args: &[S]) -> Result<()>
@@ -117,7 +120,7 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{env, path::Path};
 
     use java_runtime::RT_RUSTJAR;
 
@@ -129,24 +132,42 @@ mod tests {
             build_class_path(
                 &StartType::Class(Path::new("Main")),
                 &[Path::new("classes"), Path::new(""), Path::new("lib/dependency.jar")],
-            ),
-            format!("{RT_RUSTJAR}:classes::lib/dependency.jar")
+            )
+            .unwrap(),
+            env::join_paths([RT_RUSTJAR, "classes", "", "lib/dependency.jar"])
+                .unwrap()
+                .into_string()
+                .unwrap()
         );
     }
 
     #[test]
     fn jar_launch_classpath_has_no_trailing_separator_without_user_entries() {
         assert_eq!(
-            build_class_path(&StartType::Jar(Path::new("app.jar")), &[]),
-            format!("{RT_RUSTJAR}:app.jar")
+            build_class_path(&StartType::Jar(Path::new("app.jar")), &[]).unwrap(),
+            env::join_paths([RT_RUSTJAR, "app.jar"]).unwrap().into_string().unwrap()
         );
     }
 
     #[test]
     fn jar_library_api_preserves_explicit_user_classpath() {
         assert_eq!(
-            build_class_path(&StartType::Jar(Path::new("app.jar")), &[Path::new("lib/dependency.jar")]),
-            format!("{RT_RUSTJAR}:app.jar:lib/dependency.jar")
+            build_class_path(&StartType::Jar(Path::new("app.jar")), &[Path::new("lib/dependency.jar")]).unwrap(),
+            env::join_paths([RT_RUSTJAR, "app.jar", "lib/dependency.jar"])
+                .unwrap()
+                .into_string()
+                .unwrap()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn classpath_rejects_non_utf8_entries() {
+        use std::{ffi::OsString, os::unix::ffi::OsStringExt, path::PathBuf};
+
+        let path = PathBuf::from(OsString::from_vec(vec![0xff]));
+        let error = build_class_path(&StartType::Class(Path::new("Main")), &[&path]).unwrap_err();
+
+        assert_eq!(error.to_string(), "Class path contains a non-UTF-8 path");
     }
 }

@@ -95,8 +95,11 @@ impl URLStreamHandler {
 
         let protocol = parsed_url.scheme();
         let path = parsed_url.path().to_owned() + &parsed_url.query().map(|x| "?".to_owned() + x).unwrap_or("".into());
-        // TODO handle more elegantly..
-        let file = if protocol == "file" { path.trim_start_matches('/') } else { &path };
+        let file = if protocol == "file" && spec_str.strip_prefix("file:").is_some_and(|file| !file.starts_with('/')) {
+            path.trim_start_matches('/')
+        } else {
+            &path
+        };
 
         let protocol = JavaLangString::from_rust_string(jvm, parsed_url.scheme()).await?;
         let host = JavaLangString::from_rust_string(jvm, parsed_url.host_str().unwrap_or("")).await?;

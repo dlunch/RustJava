@@ -94,16 +94,24 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{ffi::OsString, path::PathBuf};
+    use std::{env, ffi::OsString, path::PathBuf};
 
     use super::parse_args_from;
 
     #[test]
     fn classpath_options_override_environment_and_preserve_application_args() {
+        let first_class_path = env::join_paths(["first", "second"]).unwrap().into_string().unwrap();
+        let last_class_path = env::join_paths(["third", "fourth"]).unwrap().into_string().unwrap();
         let opts = parse_args_from(
-            ["-cp", "first:second", "-classpath", "third:fourth", "Main", "-cp", "application-value"]
-                .into_iter()
-                .map(String::from),
+            vec![
+                "-cp".into(),
+                first_class_path,
+                "-classpath".into(),
+                last_class_path,
+                "Main".into(),
+                "-cp".into(),
+                "application-value".into(),
+            ],
             Some(OsString::from("environment")),
         )
         .unwrap();
@@ -115,7 +123,8 @@ mod tests {
 
     #[test]
     fn classpath_uses_environment_then_current_directory() {
-        let opts = parse_args_from(["Main"].into_iter().map(String::from), Some(OsString::from("environment:lib"))).unwrap();
+        let environment_class_path = env::join_paths(["environment", "lib"]).unwrap();
+        let opts = parse_args_from(["Main"].into_iter().map(String::from), Some(environment_class_path)).unwrap();
         assert_eq!(opts.class_path, vec![PathBuf::from("environment"), PathBuf::from("lib")]);
 
         let opts = parse_args_from(["Main"].into_iter().map(String::from), None).unwrap();
@@ -124,7 +133,8 @@ mod tests {
 
     #[test]
     fn classpath_preserves_explicit_empty_entries() {
-        let opts = parse_args_from(["-cp", ":classes::", "Main"].into_iter().map(String::from), None).unwrap();
+        let class_path = env::join_paths(["", "classes", "", ""]).unwrap().into_string().unwrap();
+        let opts = parse_args_from(vec!["-cp".into(), class_path, "Main".into()], None).unwrap();
         assert_eq!(
             opts.class_path,
             vec![PathBuf::from(""), PathBuf::from("classes"), PathBuf::from(""), PathBuf::from("")]
