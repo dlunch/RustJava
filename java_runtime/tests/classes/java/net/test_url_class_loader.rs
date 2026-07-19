@@ -153,3 +153,29 @@ async fn test_load_from_dir_no_file() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_missing_url_does_not_prevent_later_jar_lookup() -> Result<()> {
+    let jar = include_bytes!("../../../../../test_data/test.jar");
+    let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
+    let jvm = test_jvm_filesystem(filesystem).await?;
+
+    let missing = JavaLangString::from_rust_string(&jvm, "file:missing.jar").await?;
+    let missing = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (missing,)).await?;
+    let existing = JavaLangString::from_rust_string(&jvm, "file:test.jar").await?;
+    let existing = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (existing,)).await?;
+    let mut urls = jvm.instantiate_array("Ljava/net/URL;", 2).await?;
+    jvm.store_array(&mut urls, 0, vec![missing, existing]).await?;
+
+    let class_loader = jvm
+        .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+        .await?;
+    let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
+    let resource: ClassInstanceRef<URL> = jvm
+        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .await?;
+
+    assert!(!resource.is_null());
+
+    Ok(())
+}

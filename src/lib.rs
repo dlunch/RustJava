@@ -54,17 +54,19 @@ where
 
     let bootstrap_class_loader = get_bootstrap_class_loader(runtime.clone());
 
-    let mut class_path_str = class_path.iter().map(|x| x.to_str().unwrap()).collect::<Vec<_>>().join(":");
-    if let StartType::Jar(x) = start_type {
-        class_path_str = format!("{}:{}", x.to_str().unwrap(), class_path_str);
-    }
-
-    // add rt.rustjar
-    // TODO do we need boot class path?
-    let class_path_str = format!("{RT_RUSTJAR}:{class_path_str}");
+    let class_path_str = build_class_path(start_type, class_path);
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
     Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await
+}
+
+fn build_class_path(start_type: &StartType<'_>, class_path: &[&Path]) -> String {
+    let mut entries = vec![RT_RUSTJAR];
+    if let StartType::Jar(path) = start_type {
+        entries.push(path.to_str().unwrap());
+    }
+    entries.extend(class_path.iter().map(|path| path.to_str().unwrap()));
+    entries.join(":")
 }
 
 async fn invoke_entrypoint<S>(jvm: &Jvm, start_type: &StartType<'_>, args: &[S]) -> Result<()>
@@ -111,4 +113,40 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
         .await?;
 
     JavaLangString::to_rust_string(jvm, &main_class).await
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use java_runtime::RT_RUSTJAR;
+
+    use super::{StartType, build_class_path};
+
+    #[test]
+    fn class_launch_classpath_preserves_order_and_empty_entries() {
+        assert_eq!(
+            build_class_path(
+                &StartType::Class(Path::new("Main")),
+                &[Path::new("classes"), Path::new(""), Path::new("lib/dependency.jar")],
+            ),
+            format!("{RT_RUSTJAR}:classes::lib/dependency.jar")
+        );
+    }
+
+    #[test]
+    fn jar_launch_classpath_has_no_trailing_separator_without_user_entries() {
+        assert_eq!(
+            build_class_path(&StartType::Jar(Path::new("app.jar")), &[]),
+            format!("{RT_RUSTJAR}:app.jar")
+        );
+    }
+
+    #[test]
+    fn jar_library_api_preserves_explicit_user_classpath() {
+        assert_eq!(
+            build_class_path(&StartType::Jar(Path::new("app.jar")), &[Path::new("lib/dependency.jar")]),
+            format!("{RT_RUSTJAR}:app.jar:lib/dependency.jar")
+        );
+    }
 }
