@@ -90,6 +90,18 @@ impl NumberFormat {
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
+                    "getIntegerInstance",
+                    "()Ljava/text/NumberFormat;",
+                    Self::get_integer_instance,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "getIntegerInstance",
+                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
+                    Self::get_integer_instance_with_locale,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
                     "getCurrencyInstance",
                     "()Ljava/text/NumberFormat;",
                     Self::get_currency_instance,
@@ -366,6 +378,30 @@ impl NumberFormat {
             .new_class("java/text/DecimalFormat", "(Ljava/lang/String;)V", (pattern,))
             .await?
             .into())
+    }
+
+    async fn get_integer_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
+        let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
+        jvm.invoke_static(
+            "java/text/NumberFormat",
+            "getIntegerInstance",
+            "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
+            (locale,),
+        )
+        .await
+    }
+
+    async fn get_integer_instance_with_locale(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Locale>) -> Result<ClassInstanceRef<Self>> {
+        if locale.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "locale").await);
+        }
+        let pattern = JavaLangString::from_rust_string(jvm, "#,##0").await?;
+        let format: ClassInstanceRef<Self> = jvm
+            .new_class("java/text/DecimalFormat", "(Ljava/lang/String;)V", (pattern,))
+            .await?
+            .into();
+        let _: () = jvm.invoke_virtual(&format, "setParseIntegerOnly", "(Z)V", (true,)).await?;
+        Ok(format)
     }
 
     async fn get_currency_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {

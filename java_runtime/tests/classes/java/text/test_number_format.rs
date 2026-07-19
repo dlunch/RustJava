@@ -1,6 +1,7 @@
 use java_runtime::classes::java::{
     lang::{Double, Long, Number, String, StringBuffer},
     text::{DecimalFormat, FieldPosition, NumberFormat, ParsePosition},
+    util::Locale,
 };
 use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 
@@ -29,6 +30,37 @@ async fn test_number_format_factories_format_values() -> Result<()> {
         .await?;
     let text: ClassInstanceRef<String> = jvm.invoke_virtual(&currency, "format", "(D)Ljava/lang/String;", (1234.5f64,)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "$1,234.50");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_number_format_integer_factories() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let default: ClassInstanceRef<NumberFormat> = jvm
+        .invoke_static("java/text/NumberFormat", "getIntegerInstance", "()Ljava/text/NumberFormat;", ())
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&default, "getMaximumFractionDigits", "()I", ()).await?, 0);
+    assert!(jvm.invoke_virtual::<_, bool>(&default, "isParseIntegerOnly", "()Z", ()).await?);
+
+    let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
+    let integer: ClassInstanceRef<NumberFormat> = jvm
+        .invoke_static(
+            "java/text/NumberFormat",
+            "getIntegerInstance",
+            "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
+            (locale,),
+        )
+        .await?;
+    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&integer, "format", "(D)Ljava/lang/String;", (1234.6f64,)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1,235");
+
+    let source = JavaLangString::from_rust_string(&jvm, "1,234.5").await?;
+    let parsed: ClassInstanceRef<Long> = jvm
+        .invoke_virtual(&integer, "parse", "(Ljava/lang/String;)Ljava/lang/Number;", (source,))
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i64>(&parsed, "longValue", "()J", ()).await?, 1234);
 
     Ok(())
 }
