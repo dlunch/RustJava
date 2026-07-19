@@ -1,7 +1,8 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{FileType, RuntimeClassProto, RuntimeContext, classes::java::lang::String};
 
@@ -15,6 +16,7 @@ impl File {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
+                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
                 JavaMethodProto::new("getPath", "()Ljava/lang/String;", Self::get_path, Default::default()),
                 JavaMethodProto::new("exists", "()Z", Self::exists, Default::default()),
@@ -23,9 +25,61 @@ impl File {
                 JavaMethodProto::new("delete", "()Z", Self::delete, Default::default()),
                 JavaMethodProto::new("length", "()J", Self::length, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("path", "Ljava/lang/String;", Default::default())],
+            fields: vec![
+                JavaFieldProto::new(
+                    "separatorChar",
+                    "C",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new(
+                    "separator",
+                    "Ljava/lang/String;",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new(
+                    "pathSeparatorChar",
+                    "C",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new(
+                    "pathSeparator",
+                    "Ljava/lang/String;",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new("path", "Ljava/lang/String;", Default::default()),
+            ],
             access_flags: Default::default(),
         }
+    }
+
+    async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
+        tracing::debug!("java.io.File::<clinit>()");
+
+        let separator_char = if cfg!(windows) { '\\' } else { '/' };
+        let separator = if cfg!(windows) { "\\" } else { "/" };
+        let path_separator_char = if cfg!(windows) { ';' } else { ':' };
+        let path_separator = if cfg!(windows) { ";" } else { ":" };
+
+        jvm.put_static_field("java/io/File", "separatorChar", "C", separator_char as JavaChar)
+            .await?;
+        jvm.put_static_field(
+            "java/io/File",
+            "separator",
+            "Ljava/lang/String;",
+            JavaLangString::from_rust_string(jvm, separator).await?,
+        )
+        .await?;
+        jvm.put_static_field("java/io/File", "pathSeparatorChar", "C", path_separator_char as JavaChar)
+            .await?;
+        jvm.put_static_field(
+            "java/io/File",
+            "pathSeparator",
+            "Ljava/lang/String;",
+            JavaLangString::from_rust_string(jvm, path_separator).await?,
+        )
+        .await?;
+
+        Ok(())
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pathname: ClassInstanceRef<String>) -> Result<()> {

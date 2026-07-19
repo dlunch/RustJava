@@ -99,9 +99,11 @@ impl ClassLoader {
 
             let url_array = if !class_path.is_null() {
                 let class_path = JavaLangString::to_rust_string(jvm, &class_path).await?;
+                let path_separator: ClassInstanceRef<String> = jvm.get_static_field("java/io/File", "pathSeparator", "Ljava/lang/String;").await?;
+                let path_separator = JavaLangString::to_rust_string(jvm, &path_separator).await?;
 
                 let mut urls = Vec::new();
-                for path in class_path.split(if cfg!(windows) { ';' } else { ':' }) {
+                for path in class_path.split(path_separator.as_str()) {
                     let path = JavaLangString::from_rust_string(jvm, &format!("file:{path}")).await?;
                     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (path,)).await?;
 
