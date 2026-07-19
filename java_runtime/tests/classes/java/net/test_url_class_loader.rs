@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use java_runtime::classes::java::net::URL;
+use java_runtime::classes::java::{lang::Class, net::URL};
 use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm_filesystem;
@@ -150,6 +150,54 @@ async fn test_load_from_dir_no_file() -> Result<()> {
         .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
         .await?;
     assert!(resource.is_null());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_missing_url_does_not_prevent_later_jar_lookup() -> Result<()> {
+    let jar = include_bytes!("../../../../../test_data/test.jar");
+    let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
+    let jvm = test_jvm_filesystem(filesystem).await?;
+
+    let missing = JavaLangString::from_rust_string(&jvm, "file:missing.jar").await?;
+    let missing = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (missing,)).await?;
+    let existing = JavaLangString::from_rust_string(&jvm, "file:test.jar").await?;
+    let existing = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (existing,)).await?;
+    let mut urls = jvm.instantiate_array("Ljava/net/URL;", 2).await?;
+    jvm.store_array(&mut urls, 0, vec![missing, existing]).await?;
+
+    let class_loader = jvm
+        .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+        .await?;
+    let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
+    let resource: ClassInstanceRef<URL> = jvm
+        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .await?;
+
+    assert!(!resource.is_null());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_url_class_loader_does_not_load_rustjar_classes() -> Result<()> {
+    let jvm = test_jvm_filesystem(Default::default()).await?;
+
+    let url = JavaLangString::from_rust_string(&jvm, "file:rt.rustjar").await?;
+    let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url,)).await?;
+    let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
+    jvm.store_array(&mut urls, 0, vec![url]).await?;
+    let class_loader = jvm
+        .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+        .await?;
+
+    let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
+    let class: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(&class_loader, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .await?;
+
+    assert!(class.is_null());
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use jvm::{
 };
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    FileType, RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, ClassLoader, String},
         net::{JarURLConnection, URL},
@@ -59,31 +59,13 @@ impl URLClassLoader {
 
     async fn find_class(
         jvm: &Jvm,
-        context: &mut RuntimeContext,
+        _: &mut RuntimeContext,
         this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.net.URLClassLoader::findClass({this:?}, {name:?})");
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
-
-        // find rustjar first
-        let urls = jvm.get_field(&this, "urls", "[Ljava/net/URL;").await?;
-        let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
-
-        for url in urls {
-            let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
-            let file = JavaLangString::to_rust_string(jvm, &file).await?;
-
-            if file.ends_with(".rustjar") {
-                let class = context.find_rustjar_class(jvm, &file, &name_str).await?;
-                if let Some(class) = class {
-                    let java_class = jvm.register_class(class, Some(this.into())).await?.unwrap();
-
-                    return Ok(java_class.into());
-                }
-            }
-        }
 
         let resource_name = format!("{}.class", name_str.replace('.', "/"));
         let resource_name = JavaLangString::from_rust_string(jvm, &resource_name).await?;
@@ -130,12 +112,16 @@ impl URLClassLoader {
         for url in urls {
             let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
-            if file.ends_with('/') || file.is_empty() {
+
+            let metadata = runtime.metadata(&file).await;
+            if file.ends_with('/') || file.is_empty() || metadata.as_ref().is_ok_and(|metadata| metadata.r#type == FileType::Directory) {
                 // directory
-                let final_path = if file.ends_with('/') {
+                let final_path = if file.is_empty() {
+                    name_str.clone()
+                } else if file.ends_with('/') {
                     format!("{file}{name_str}")
                 } else {
-                    name_str.clone()
+                    format!("{file}/{name_str}")
                 };
 
                 if runtime.metadata(&final_path).await.is_ok() {
@@ -153,8 +139,8 @@ impl URLClassLoader {
 
                     return Ok(new_url.into());
                 }
-            } else if file.ends_with(".rustjar") {
-                // TODO rustjar resource
+            } else if metadata.is_err() {
+                continue;
             } else {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
