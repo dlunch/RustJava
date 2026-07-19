@@ -463,7 +463,7 @@ impl SimpleDateFormat {
             match token {
                 DateToken::Literal(value) => formatted.push_str(&value),
                 DateToken::Field(character, count) => {
-                    let begin = formatted.chars().count() as i32;
+                    let begin = formatted.encode_utf16().count() as i32;
                     match character {
                         'G' => formatted.push_str(if date_time.year() <= 0 { "BC" } else { "AD" }),
                         'y' => {
@@ -512,7 +512,7 @@ impl SimpleDateFormat {
                     if !field_position_set && Self::date_field(character) == Some(requested_field) {
                         let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (base + begin,)).await?;
                         let _: () = jvm
-                            .invoke_virtual(&position, "setEndIndex", "(I)V", (base + formatted.chars().count() as i32,))
+                            .invoke_virtual(&position, "setEndIndex", "(I)V", (base + formatted.encode_utf16().count() as i32,))
                             .await?;
                         field_position_set = true;
                     }
@@ -541,22 +541,35 @@ impl SimpleDateFormat {
         };
         let source = JavaLangString::to_rust_string(jvm, &source).await?;
         let characters: Vec<char> = source.chars().collect();
+        let mut utf16_indices = Vec::with_capacity(characters.len() + 1);
+        let mut utf16_index = 0;
+        for character in &characters {
+            utf16_indices.push(utf16_index);
+            utf16_index += character.len_utf16();
+        }
+        utf16_indices.push(utf16_index);
         let start: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
-        if start < 0 || start as usize > characters.len() {
+        if start < 0 {
             let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
             return Ok(ClassInstanceRef::new(None));
         }
+        let Some(start_index) = utf16_indices.iter().position(|index| *index == start as usize) else {
+            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            return Ok(ClassInstanceRef::new(None));
+        };
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm.invoke_virtual(&calendar, "getTimeZone", "()Ljava/util/TimeZone;", ()).await?;
         let offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
-        match Self::parse_timestamp(&tokens, &characters, start as usize, offset) {
+        match Self::parse_timestamp(&tokens, &characters, start_index, offset) {
             Ok((timestamp, index)) => {
-                let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (index as i32,)).await?;
+                let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (utf16_indices[index] as i32,)).await?;
                 let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (-1,)).await?;
                 Ok(jvm.new_class("java/util/Date", "(J)V", (timestamp,)).await?.into())
             }
             Err(error_index) => {
-                let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (error_index as i32,)).await?;
+                let _: () = jvm
+                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[error_index] as i32,))
+                    .await?;
                 Ok(ClassInstanceRef::new(None))
             }
         }

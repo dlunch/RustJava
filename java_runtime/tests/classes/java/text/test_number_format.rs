@@ -56,11 +56,18 @@ async fn test_number_format_integer_factories() -> Result<()> {
     let text: ClassInstanceRef<String> = jvm.invoke_virtual(&integer, "format", "(D)Ljava/lang/String;", (1234.6f64,)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1,235");
 
-    let source = JavaLangString::from_rust_string(&jvm, "1,234.5").await?;
+    let source = JavaLangString::from_rust_string(&jvm, "1,234.5rest").await?;
+    let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (0,)).await?.into();
     let parsed: ClassInstanceRef<Long> = jvm
-        .invoke_virtual(&integer, "parse", "(Ljava/lang/String;)Ljava/lang/Number;", (source,))
+        .invoke_virtual(
+            &integer,
+            "parse",
+            "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
+            (source, position.clone()),
+        )
         .await?;
     assert_eq!(jvm.invoke_virtual::<_, i64>(&parsed, "longValue", "()J", ()).await?, 1234);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 5);
 
     Ok(())
 }
@@ -198,6 +205,95 @@ async fn test_decimal_format_quoted_affixes_and_integer_boundaries() -> Result<(
         .invoke_virtual(&format, "parse", "(Ljava/lang/String;)Ljava/lang/Number;", (overflow,))
         .await?;
     assert!(jvm.is_instance(&**parsed, "java/lang/Double"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_decimal_format_uses_utf16_positions_and_negative_suffixes() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let pattern = JavaLangString::from_rust_string(&jvm, "'\u{1f600}'0.0").await?;
+    let format: ClassInstanceRef<DecimalFormat> = jvm
+        .new_class("java/text/DecimalFormat", "(Ljava/lang/String;)V", (pattern,))
+        .await?
+        .into();
+
+    let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
+    let integer_position: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (0,)).await?.into();
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(
+            &format,
+            "format",
+            "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
+            (12.3f64, buffer, integer_position.clone()),
+        )
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&integer_position, "getBeginIndex", "()I", ()).await?, 2);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&integer_position, "getEndIndex", "()I", ()).await?, 4);
+
+    let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
+    let fraction_position: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (1,)).await?.into();
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(
+            &format,
+            "format",
+            "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
+            (12.3f64, buffer, fraction_position.clone()),
+        )
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&fraction_position, "getBeginIndex", "()I", ()).await?, 5);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&fraction_position, "getEndIndex", "()I", ()).await?, 6);
+
+    let plain_pattern = JavaLangString::from_rust_string(&jvm, "0").await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (plain_pattern,))
+        .await?;
+    let source = JavaLangString::from_rust_string(&jvm, "\u{1f600}12").await?;
+    let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (2,)).await?.into();
+    let parsed: ClassInstanceRef<Long> = jvm
+        .invoke_virtual(
+            &format,
+            "parse",
+            "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
+            (source, position.clone()),
+        )
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i64>(&parsed, "longValue", "()J", ()).await?, 12);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 4);
+
+    let prefix_pattern = JavaLangString::from_rust_string(&jvm, "'\u{1f600}'0x").await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (prefix_pattern,))
+        .await?;
+    let source = JavaLangString::from_rust_string(&jvm, "\u{1f600}12y").await?;
+    let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (0,)).await?.into();
+    let parsed: ClassInstanceRef<Number> = jvm
+        .invoke_virtual(
+            &format,
+            "parse",
+            "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
+            (source, position.clone()),
+        )
+        .await?;
+    assert!(parsed.is_null());
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getErrorIndex", "()I", ()).await?, 4);
+
+    let suffix_pattern = JavaLangString::from_rust_string(&jvm, "0;0-").await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (suffix_pattern,))
+        .await?;
+    let source = JavaLangString::from_rust_string(&jvm, "12-").await?;
+    let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (0,)).await?.into();
+    let parsed: ClassInstanceRef<Long> = jvm
+        .invoke_virtual(
+            &format,
+            "parse",
+            "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
+            (source, position.clone()),
+        )
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, i64>(&parsed, "longValue", "()J", ()).await?, -12);
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 3);
 
     Ok(())
 }

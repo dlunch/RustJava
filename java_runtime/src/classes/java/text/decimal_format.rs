@@ -341,16 +341,16 @@ impl DecimalFormat {
         let base: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
         let field: i32 = jvm.invoke_virtual(&position, "getField", "()I", ()).await?;
         if field == 0 {
-            let begin = base + prefix.chars().count() as i32;
+            let begin = base + prefix.encode_utf16().count() as i32;
             let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (begin,)).await?;
             let _: () = jvm
-                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + integer.chars().count() as i32,))
+                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + integer.encode_utf16().count() as i32,))
                 .await?;
         } else if field == 1 && !fraction.is_empty() {
-            let begin = base + prefix.chars().count() as i32 + integer.chars().count() as i32 + 1;
+            let begin = base + prefix.encode_utf16().count() as i32 + integer.encode_utf16().count() as i32 + 1;
             let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (begin,)).await?;
             let _: () = jvm
-                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + fraction.chars().count() as i32,))
+                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + fraction.encode_utf16().count() as i32,))
                 .await?;
         }
 
@@ -428,11 +428,22 @@ impl DecimalFormat {
         }
         let source = JavaLangString::to_rust_string(jvm, &source).await?;
         let characters: Vec<char> = source.chars().collect();
+        let mut utf16_indices = Vec::with_capacity(characters.len() + 1);
+        let mut utf16_index = 0;
+        for character in &characters {
+            utf16_indices.push(utf16_index);
+            utf16_index += character.len_utf16();
+        }
+        utf16_indices.push(utf16_index);
         let start: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
-        if start < 0 || start as usize > characters.len() {
+        if start < 0 {
             let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
             return Ok(ClassInstanceRef::new(None));
         }
+        let Some(start_index) = utf16_indices.iter().position(|index| *index == start as usize) else {
+            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            return Ok(ClassInstanceRef::new(None));
+        };
 
         let positive_prefix: ClassInstanceRef<String> = jvm.get_field(&this, "positivePrefix", "Ljava/lang/String;").await?;
         let positive_suffix: ClassInstanceRef<String> = jvm.get_field(&this, "positiveSuffix", "Ljava/lang/String;").await?;
@@ -443,8 +454,8 @@ impl DecimalFormat {
         let negative_prefix: Vec<char> = JavaLangString::to_rust_string(jvm, &negative_prefix).await?.chars().collect();
         let negative_suffix: Vec<char> = JavaLangString::to_rust_string(jvm, &negative_suffix).await?.chars().collect();
 
-        let mut index = start as usize;
-        let negative = if characters[index..].starts_with(&negative_prefix) && negative_prefix != positive_prefix {
+        let mut index = start_index;
+        let prefix_negative = if characters[index..].starts_with(&negative_prefix) && negative_prefix != positive_prefix {
             index += negative_prefix.len();
             true
         } else if characters[index..].starts_with(&positive_prefix) {
@@ -457,9 +468,6 @@ impl DecimalFormat {
 
         let parse_integer_only: bool = jvm.get_field(&this, "parseIntegerOnly", "Z").await?;
         let mut normalized = RustString::new();
-        if negative {
-            normalized.push('-');
-        }
         let mut digits = 0;
         let mut decimal = false;
         while index < characters.len() {
@@ -478,12 +486,41 @@ impl DecimalFormat {
                 _ => break,
             }
         }
-        let suffix = if negative { &negative_suffix } else { &positive_suffix };
-        if digits == 0 || !characters[index..].starts_with(suffix) {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (index as i32,)).await?;
+        if digits == 0 {
+            let _: () = jvm
+                .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         }
-        index += suffix.len();
+        let negative = if negative_prefix == positive_prefix {
+            let positive_matches = characters[index..].starts_with(&positive_suffix);
+            let negative_matches = characters[index..].starts_with(&negative_suffix);
+            if negative_matches && (!positive_matches || negative_suffix.len() > positive_suffix.len()) {
+                index += negative_suffix.len();
+                true
+            } else if positive_matches {
+                index += positive_suffix.len();
+                false
+            } else {
+                let _: () = jvm
+                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                    .await?;
+                return Ok(ClassInstanceRef::new(None));
+            }
+        } else {
+            let suffix = if prefix_negative { &negative_suffix } else { &positive_suffix };
+            if !characters[index..].starts_with(suffix) {
+                let _: () = jvm
+                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                    .await?;
+                return Ok(ClassInstanceRef::new(None));
+            }
+            index += suffix.len();
+            prefix_negative
+        };
+        if negative {
+            normalized.insert(0, '-');
+        }
 
         let Ok(mut value) = normalized.parse::<f64>() else {
             let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
@@ -493,7 +530,7 @@ impl DecimalFormat {
         if multiplier != 0 {
             value /= f64::from(multiplier);
         }
-        let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (index as i32,)).await?;
+        let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (utf16_indices[index] as i32,)).await?;
         let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (-1,)).await?;
 
         if multiplier == 1
