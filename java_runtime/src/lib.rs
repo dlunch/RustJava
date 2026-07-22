@@ -1,6 +1,7 @@
 #![no_std]
 extern crate alloc;
 
+mod charset;
 pub mod classes;
 mod loader;
 mod runtime;

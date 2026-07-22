@@ -15,6 +15,7 @@ use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangStrin
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
+    charset::Charset,
     classes::java::lang::{Object, System},
 };
 
@@ -166,7 +167,7 @@ impl String {
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = System::get_charset(jvm).await?;
-        let string = Self::decode_str(&charset, cast_slice(&bytes));
+        let string = Charset::resolve(jvm, &charset).await?.decode(cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -280,7 +281,7 @@ impl String {
         let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
 
         let charset = System::get_charset(jvm).await?;
-        let bytes = cast_vec(Self::encode_str(&charset, &string));
+        let bytes = cast_vec(Charset::resolve(jvm, &charset).await?.encode(&string));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
@@ -563,7 +564,7 @@ impl String {
         let bytes: Vec<i8> = jvm.load_array(&value, offset as _, count as _).await?;
 
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
-        let string = Self::decode_str(&charset, cast_slice(&bytes));
+        let string = Charset::resolve(jvm, &charset).await?.decode(cast_slice(&bytes));
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
@@ -603,7 +604,7 @@ impl String {
         let string = JavaLangString::to_rust_string(jvm, &this).await?;
         let charset = JavaLangString::to_rust_string(jvm, &charset_name).await?;
 
-        let bytes = cast_vec(Self::encode_str(&charset, &string));
+        let bytes = cast_vec(Charset::resolve(jvm, &charset).await?.encode(&string));
 
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.array_raw_buffer_mut(&mut byte_array).await?.write(0, &bytes)?;
@@ -777,24 +778,5 @@ impl String {
         let new_string = jvm.new_class("java/lang/String", "([CII)V", (value, offset, count)).await?;
 
         Ok(new_string.into())
-    }
-
-    fn decode_str(charset: &str, bytes: &[u8]) -> RustString {
-        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
-            "UTF-8" | "UTF8" => RustString::from_utf8_lossy(bytes).into_owned(),
-            "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.decode(bytes).0.to_string(),
-            "ISO-8859-1" | "LATIN1" | "US-ASCII" | "ASCII" => bytes.iter().map(|&b| b as char).collect(),
-            _ => unimplemented!("unsupported charset: {}", charset),
-        }
-    }
-
-    fn encode_str(charset: &str, string: &str) -> Vec<u8> {
-        match charset.to_ascii_uppercase().replace('_', "-").as_str() {
-            "UTF-8" | "UTF8" => string.as_bytes().to_vec(),
-            "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949" => encoding_rs::EUC_KR.encode(string).0.to_vec(),
-            "ISO-8859-1" | "LATIN1" => string.chars().map(|c| if (c as u32) <= 0xff { c as u8 } else { b'?' }).collect(),
-            "US-ASCII" | "ASCII" => string.chars().map(|c| if c.is_ascii() { c as u8 } else { b'?' }).collect(),
-            _ => unimplemented!("unsupported charset: {}", charset),
-        }
     }
 }

@@ -23,6 +23,7 @@ mod random_access_file;
 mod reader;
 mod serializable;
 mod string_writer;
+mod unsupported_encoding_exception;
 mod writer;
 
 pub use self::{
@@ -32,5 +33,5 @@ pub use self::{
     file_not_found_exception::FileNotFoundException, file_output_stream::FileOutputStream, filter_input_stream::FilterInputStream,
     filter_output_stream::FilterOutputStream, input_stream::InputStream, input_stream_reader::InputStreamReader, io_exception::IOException,
     output_stream::OutputStream, print_stream::PrintStream, print_writer::PrintWriter, random_access_file::RandomAccessFile, reader::Reader,
-    serializable::Serializable, string_writer::StringWriter, writer::Writer,
+    serializable::Serializable, string_writer::StringWriter, unsupported_encoding_exception::UnsupportedEncodingException, writer::Writer,
 };

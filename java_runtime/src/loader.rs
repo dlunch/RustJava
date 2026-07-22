@@ -31,6 +31,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::io::Reader::as_proto(),
         crate::classes::java::io::Serializable::as_proto(),
         crate::classes::java::io::StringWriter::as_proto(),
+        crate::classes::java::io::UnsupportedEncodingException::as_proto(),
         crate::classes::java::io::Writer::as_proto(),
         crate::classes::java::lang::AbstractMethodError::as_proto(),
         crate::classes::java::lang::ArithmeticException::as_proto(),

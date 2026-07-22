@@ -30,6 +30,7 @@ impl Throwable {
                     Self::init_with_message_and_cause,
                     Default::default(),
                 ),
+                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, Default::default()),
                 JavaMethodProto::new("getCause", "()Ljava/lang/Throwable;", Self::get_cause, Default::default()),
                 JavaMethodProto::new(
                     "initCause",
@@ -124,6 +125,12 @@ impl Throwable {
         let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "fillInStackTrace", "()Ljava/lang/Throwable;", ()).await?;
 
         Ok(())
+    }
+
+    async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Throwable::getMessage({this:?})");
+
+        jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await
     }
 
     async fn get_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {

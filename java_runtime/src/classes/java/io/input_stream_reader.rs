@@ -3,13 +3,13 @@ use core::cmp::min;
 use alloc::vec;
 
 use bytemuck::{cast_slice, cast_vec};
-use encoding_rs::{EUC_KR, UTF_8};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
+    charset::Charset,
     classes::java::{io::InputStream, lang::System},
 };
 
@@ -107,16 +107,10 @@ impl InputStreamReader {
 
             let charset_ref = jvm.get_field(&this, "charset", "Ljava/lang/String;").await?;
             let charset = JavaLangString::to_rust_string(jvm, &charset_ref).await?;
-            let mut decoder = if charset == "UTF-8" {
-                UTF_8.new_decoder_without_bom_handling()
-            } else if charset == "EUC-KR" {
-                EUC_KR.new_decoder_without_bom_handling()
-            } else {
-                unimplemented!("unsupported charset: {}", charset)
-            };
+            let mut decoder = Charset::resolve(jvm, &charset).await?.new_stream_decoder();
 
             let mut decoded = vec![0; BUF_SIZE * 3];
-            let (_, read, wrote, _) = decoder.decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
+            let (read, wrote) = decoder.decode_to_utf16(&cast_vec(read_buf_data), &mut decoded, false);
 
             // advance readBuf
             let _: () = jvm

@@ -1,0 +1,8 @@
+Caught getBytes
+UTF-16
+Caught String ctor
+Shift_JIS
+3
+aéb
+Caught reader
+UTF-16
