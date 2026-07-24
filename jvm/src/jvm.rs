@@ -977,7 +977,7 @@ impl Jvm {
         self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
     }
 
-    pub async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
+    async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
         let calling_class = self.find_calling_class()?;
 
         if let Some((class, class_instance)) = calling_class {
