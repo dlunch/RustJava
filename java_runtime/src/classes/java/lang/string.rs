@@ -13,10 +13,13 @@ use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangStrin
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, System},
+    classes::java::{
+        lang::{Object, System},
+        util::regex::{Matcher, Pattern},
+    },
 };
 
-use super::StringBuffer;
+use super::{CharSequence, StringBuffer};
 
 // class java.lang.String
 pub struct String;
@@ -26,7 +29,7 @@ impl String {
         RuntimeClassProto {
             name: "java/lang/String",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Comparable"],
+            interfaces: vec!["java/io/Serializable", "java/lang/Comparable", "java/lang/CharSequence"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init_empty, Default::default()),
                 JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, Default::default()),
@@ -83,7 +86,33 @@ impl String {
                 JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
                 JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
                 JavaMethodProto::new("substring", "(II)Ljava/lang/String;", Self::substring_with_end, Default::default()),
+                JavaMethodProto::new(
+                    "subSequence",
+                    "(II)Ljava/lang/CharSequence;",
+                    Self::sub_sequence,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("replace", "(CC)Ljava/lang/String;", Self::replace, Default::default()),
+                JavaMethodProto::new("matches", "(Ljava/lang/String;)Z", Self::matches, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "replaceFirst",
+                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                    Self::replace_first,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "replaceAll",
+                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                    Self::replace_all,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("split", "(Ljava/lang/String;)[Ljava/lang/String;", Self::split, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "split",
+                    "(Ljava/lang/String;I)[Ljava/lang/String;",
+                    Self::split_with_limit,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new(
                     "regionMatches",
                     "(ILjava/lang/String;II)Z",
@@ -600,6 +629,19 @@ impl String {
         Ok(new_string.into())
     }
 
+    async fn sub_sequence(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        begin_index: i32,
+        end_index: i32,
+    ) -> Result<ClassInstanceRef<CharSequence>> {
+        tracing::debug!("java.lang.String::subSequence({this:?}, {begin_index}, {end_index})");
+
+        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (begin_index, end_index))
+            .await
+    }
+
     async fn value_of_char(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::valueOf({value})");
 
@@ -924,6 +966,112 @@ impl String {
         let new_string = jvm.new_class("java/lang/String", "(II[C)V", (0, length as i32, array)).await?;
 
         Ok(new_string.into())
+    }
+
+    async fn matches(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, regex: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.lang.String::matches({this:?}, {regex:?})");
+
+        let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
+        jvm.invoke_static(
+            "java/util/regex/Pattern",
+            "matches",
+            "(Ljava/lang/String;Ljava/lang/CharSequence;)Z",
+            (regex, input),
+        )
+        .await
+    }
+
+    async fn replace_first(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        regex: ClassInstanceRef<Self>,
+        replacement: ClassInstanceRef<Self>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::replaceFirst({this:?}, {regex:?}, {replacement:?})");
+
+        let pattern: ClassInstanceRef<Pattern> = jvm
+            .invoke_static(
+                "java/util/regex/Pattern",
+                "compile",
+                "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+                (regex,),
+            )
+            .await?;
+        let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
+        let matcher: ClassInstanceRef<Matcher> = jvm
+            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .await?;
+        jvm.invoke_virtual(&matcher, "replaceFirst", "(Ljava/lang/String;)Ljava/lang/String;", (replacement,))
+            .await
+    }
+
+    async fn replace_all(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        regex: ClassInstanceRef<Self>,
+        replacement: ClassInstanceRef<Self>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::replaceAll({this:?}, {regex:?}, {replacement:?})");
+
+        let pattern: ClassInstanceRef<Pattern> = jvm
+            .invoke_static(
+                "java/util/regex/Pattern",
+                "compile",
+                "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+                (regex,),
+            )
+            .await?;
+        let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
+        let matcher: ClassInstanceRef<Matcher> = jvm
+            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .await?;
+        jvm.invoke_virtual(&matcher, "replaceAll", "(Ljava/lang/String;)Ljava/lang/String;", (replacement,))
+            .await
+    }
+
+    async fn split(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        regex: ClassInstanceRef<Self>,
+    ) -> Result<ClassInstanceRef<Array<Self>>> {
+        tracing::debug!("java.lang.String::split({this:?}, {regex:?})");
+
+        let pattern: ClassInstanceRef<Pattern> = jvm
+            .invoke_static(
+                "java/util/regex/Pattern",
+                "compile",
+                "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+                (regex,),
+            )
+            .await?;
+        let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
+        jvm.invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;)[Ljava/lang/String;", (input,))
+            .await
+    }
+
+    async fn split_with_limit(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        regex: ClassInstanceRef<Self>,
+        limit: i32,
+    ) -> Result<ClassInstanceRef<Array<Self>>> {
+        tracing::debug!("java.lang.String::split({this:?}, {regex:?}, {limit})");
+
+        let pattern: ClassInstanceRef<Pattern> = jvm
+            .invoke_static(
+                "java/util/regex/Pattern",
+                "compile",
+                "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+                (regex,),
+            )
+            .await?;
+        let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
+        jvm.invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, limit))
+            .await
     }
 
     #[allow(clippy::too_many_arguments)]

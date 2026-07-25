@@ -1,8 +1,36 @@
 use java_constants::MethodAccessFlags;
-use java_runtime::classes::java::lang::StringBuffer;
+use java_runtime::{
+    classes::java::lang::{CharSequence, String as JavaString, StringBuffer},
+    get_runtime_class_proto,
+};
 use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
+
+#[tokio::test]
+async fn string_buffer_char_sequence_sub_sequence_is_a_synchronized_snapshot() -> Result<()> {
+    let proto = get_runtime_class_proto("java/lang/StringBuffer").expect("StringBuffer must be registered");
+    assert_eq!(proto.interfaces, vec!["java/lang/CharSequence"]);
+    let method = proto
+        .methods
+        .iter()
+        .find(|method| method.name == "subSequence" && method.descriptor == "(II)Ljava/lang/CharSequence;")
+        .expect("StringBuffer.subSequence must be registered");
+    assert_eq!(method.access_flags, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED);
+
+    let jvm = test_jvm().await?;
+    let source = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (source,)).await?.into();
+    let subsequence: ClassInstanceRef<CharSequence> = jvm.invoke_virtual(&buffer, "subSequence", "(II)Ljava/lang/CharSequence;", (1, 4)).await?;
+    let text: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "ell");
+
+    let _: () = jvm.invoke_virtual(&buffer, "setCharAt", "(IC)V", (2, 'X' as JavaChar)).await?;
+    let text: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "ell");
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_string_buffer() -> Result<()> {

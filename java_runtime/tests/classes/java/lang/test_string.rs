@@ -1,8 +1,332 @@
 use java_constants::{ClassAccessFlags, MethodAccessFlags};
-use java_runtime::classes::java::lang::{Object, String as JavaString};
+use java_runtime::{
+    classes::java::{
+        lang::{CharSequence, Object, String as JavaString},
+        util::regex::{Matcher, Pattern},
+    },
+    get_runtime_class_proto,
+};
 use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
+
+#[tokio::test]
+async fn string_implements_char_sequence_and_sub_sequence_uses_utf16_indices() -> Result<()> {
+    let char_sequence = CharSequence::as_proto();
+    assert_eq!(
+        char_sequence.access_flags,
+        ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT
+    );
+    assert_eq!(char_sequence.parent_class, None);
+    assert!(char_sequence.interfaces.is_empty());
+    assert!(char_sequence.fields.is_empty());
+    assert_eq!(char_sequence.methods.len(), 4);
+    for (name, descriptor) in [
+        ("length", "()I"),
+        ("charAt", "(I)C"),
+        ("subSequence", "(II)Ljava/lang/CharSequence;"),
+        ("toString", "()Ljava/lang/String;"),
+    ] {
+        let method = char_sequence
+            .methods
+            .iter()
+            .find(|method| method.name == name && method.descriptor == descriptor)
+            .unwrap_or_else(|| panic!("missing CharSequence.{name}{descriptor}"));
+        assert_eq!(method.access_flags, MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT);
+    }
+
+    let string_proto = get_runtime_class_proto("java/lang/String").expect("String must be registered");
+    assert!(string_proto.interfaces.contains(&"java/lang/CharSequence"));
+    let method = string_proto
+        .methods
+        .iter()
+        .find(|method| method.name == "subSequence" && method.descriptor == "(II)Ljava/lang/CharSequence;")
+        .expect("String.subSequence must be registered");
+    assert_eq!(method.access_flags, MethodAccessFlags::PUBLIC);
+
+    let jvm = test_jvm().await?;
+    let string = JavaLangString::from_rust_string(&jvm, "a😀b").await?;
+    let subsequence: ClassInstanceRef<CharSequence> = jvm.invoke_virtual(&string, "subSequence", "(II)Ljava/lang/CharSequence;", (1, 3)).await?;
+    let text: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "😀");
+
+    let result: Result<ClassInstanceRef<CharSequence>> = jvm.invoke_virtual(&string, "subSequence", "(II)Ljava/lang/CharSequence;", (3, 2)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("String.subSequence must preserve substring range validation");
+    };
+    assert!(jvm.is_instance(exception.as_ref(), "java/lang/StringIndexOutOfBoundsException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn string_exposes_java_14_regex_convenience_methods() -> Result<()> {
+    let proto = get_runtime_class_proto("java/lang/String").expect("String must be registered");
+    for (name, descriptor) in [
+        ("matches", "(Ljava/lang/String;)Z"),
+        ("replaceFirst", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+        ("replaceAll", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"),
+        ("split", "(Ljava/lang/String;)[Ljava/lang/String;"),
+        ("split", "(Ljava/lang/String;I)[Ljava/lang/String;"),
+    ] {
+        let method = proto
+            .methods
+            .iter()
+            .find(|method| method.name == name && method.descriptor == descriptor)
+            .unwrap_or_else(|| panic!("missing String.{name}{descriptor}"));
+        assert_eq!(method.access_flags, MethodAccessFlags::PUBLIC);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn string_regex_methods_match_direct_pattern_and_matcher_results() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let value = JavaLangString::from_rust_string(&jvm, "ab12 cd345").await?;
+    let regex = JavaLangString::from_rust_string(&jvm, r"[a-z]+\d+(?: [a-z]+\d+)?").await?;
+    let input: ClassInstanceRef<CharSequence> = value.clone().into();
+    let direct_matches: bool = jvm
+        .invoke_static(
+            "java/util/regex/Pattern",
+            "matches",
+            "(Ljava/lang/String;Ljava/lang/CharSequence;)Z",
+            (regex.clone(), input),
+        )
+        .await?;
+    let string_matches: bool = jvm.invoke_virtual(&value, "matches", "(Ljava/lang/String;)Z", (regex,)).await?;
+    assert_eq!(string_matches, direct_matches);
+
+    let regex = JavaLangString::from_rust_string(&jvm, r"([a-z]+)(\d+)").await?;
+    let replacement = JavaLangString::from_rust_string(&jvm, "$2:$1").await?;
+    let pattern: ClassInstanceRef<Pattern> = jvm
+        .invoke_static(
+            "java/util/regex/Pattern",
+            "compile",
+            "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+            (regex.clone(),),
+        )
+        .await?;
+    let input: ClassInstanceRef<CharSequence> = value.clone().into();
+    let matcher: ClassInstanceRef<Matcher> = jvm
+        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .await?;
+    let direct_first: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&matcher, "replaceFirst", "(Ljava/lang/String;)Ljava/lang/String;", (replacement.clone(),))
+        .await?;
+    let string_first: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(
+            &value,
+            "replaceFirst",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (regex.clone(), replacement.clone()),
+        )
+        .await?;
+    assert_eq!(
+        JavaLangString::to_rust_string(&jvm, &string_first).await?,
+        JavaLangString::to_rust_string(&jvm, &direct_first).await?
+    );
+
+    let input: ClassInstanceRef<CharSequence> = value.clone().into();
+    let matcher: ClassInstanceRef<Matcher> = jvm
+        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .await?;
+    let direct_all: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&matcher, "replaceAll", "(Ljava/lang/String;)Ljava/lang/String;", (replacement.clone(),))
+        .await?;
+    let string_all: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(
+            &value,
+            "replaceAll",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (regex, replacement),
+        )
+        .await?;
+    assert_eq!(
+        JavaLangString::to_rust_string(&jvm, &string_all).await?,
+        JavaLangString::to_rust_string(&jvm, &direct_all).await?
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn string_split_overloads_match_direct_pattern_results() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let value = JavaLangString::from_rust_string(&jvm, "a::b::").await?;
+    let regex = JavaLangString::from_rust_string(&jvm, ":").await?;
+    let pattern: ClassInstanceRef<Pattern> = jvm
+        .invoke_static(
+            "java/util/regex/Pattern",
+            "compile",
+            "(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+            (regex.clone(),),
+        )
+        .await?;
+
+    let input: ClassInstanceRef<CharSequence> = value.clone().into();
+    let direct: ClassInstanceRef<Array<JavaString>> = jvm
+        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;)[Ljava/lang/String;", (input,))
+        .await?;
+    let convenient: ClassInstanceRef<Array<JavaString>> = jvm
+        .invoke_virtual(&value, "split", "(Ljava/lang/String;)[Ljava/lang/String;", (regex.clone(),))
+        .await?;
+    let direct = jvm
+        .load_array::<ClassInstanceRef<JavaString>>(&direct, 0, jvm.array_length(&direct).await?)
+        .await?;
+    let convenient = jvm
+        .load_array::<ClassInstanceRef<JavaString>>(&convenient, 0, jvm.array_length(&convenient).await?)
+        .await?;
+    assert_eq!(direct.len(), convenient.len());
+    for (direct, convenient) in direct.into_iter().zip(convenient) {
+        assert_eq!(
+            JavaLangString::to_rust_string(&jvm, &direct).await?,
+            JavaLangString::to_rust_string(&jvm, &convenient).await?
+        );
+    }
+
+    let input: ClassInstanceRef<CharSequence> = value.clone().into();
+    let direct: ClassInstanceRef<Array<JavaString>> = jvm
+        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, -1))
+        .await?;
+    let convenient: ClassInstanceRef<Array<JavaString>> = jvm
+        .invoke_virtual(&value, "split", "(Ljava/lang/String;I)[Ljava/lang/String;", (regex, -1))
+        .await?;
+    let direct = jvm
+        .load_array::<ClassInstanceRef<JavaString>>(&direct, 0, jvm.array_length(&direct).await?)
+        .await?;
+    let convenient = jvm
+        .load_array::<ClassInstanceRef<JavaString>>(&convenient, 0, jvm.array_length(&convenient).await?)
+        .await?;
+    assert_eq!(direct.len(), convenient.len());
+    for (direct, convenient) in direct.into_iter().zip(convenient) {
+        assert_eq!(
+            JavaLangString::to_rust_string(&jvm, &direct).await?,
+            JavaLangString::to_rust_string(&jvm, &convenient).await?
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn string_regex_methods_preserve_compile_and_replacement_exception_order() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let value = JavaLangString::from_rust_string(&jvm, "aaa").await?;
+    let invalid = JavaLangString::from_rust_string(&jvm, "(").await?;
+    let null_regex: ClassInstanceRef<JavaString> = None.into();
+    let null_replacement: ClassInstanceRef<JavaString> = None.into();
+
+    for result in [
+        jvm.invoke_virtual::<_, bool>(&value, "matches", "(Ljava/lang/String;)Z", (invalid.clone(),))
+            .await
+            .map(|_| ()),
+        jvm.invoke_virtual::<_, ClassInstanceRef<Array<JavaString>>>(&value, "split", "(Ljava/lang/String;)[Ljava/lang/String;", (invalid.clone(),))
+            .await
+            .map(|_| ()),
+        jvm.invoke_virtual::<_, ClassInstanceRef<JavaString>>(
+            &value,
+            "replaceAll",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (invalid.clone(), null_replacement.clone()),
+        )
+        .await
+        .map(|_| ()),
+    ] {
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("an invalid regex must throw PatternSyntaxException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/util/regex/PatternSyntaxException"));
+    }
+
+    for result in [
+        jvm.invoke_virtual::<_, bool>(&value, "matches", "(Ljava/lang/String;)Z", (null_regex.clone(),))
+            .await
+            .map(|_| ()),
+        jvm.invoke_virtual::<_, ClassInstanceRef<Array<JavaString>>>(
+            &value,
+            "split",
+            "(Ljava/lang/String;I)[Ljava/lang/String;",
+            (null_regex.clone(), 0),
+        )
+        .await
+        .map(|_| ()),
+        jvm.invoke_virtual::<_, ClassInstanceRef<JavaString>>(
+            &value,
+            "replaceFirst",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (null_regex.clone(), null_replacement.clone()),
+        )
+        .await
+        .map(|_| ()),
+    ] {
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("a null regex must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    }
+
+    let matching = JavaLangString::from_rust_string(&jvm, "a").await?;
+    let result: Result<ClassInstanceRef<JavaString>> = jvm
+        .invoke_virtual(
+            &value,
+            "replaceAll",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (matching, null_replacement.clone()),
+        )
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("a null replacement must throw when the regex matches");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    let no_match = JavaLangString::from_rust_string(&jvm, "z").await?;
+    for name in ["replaceFirst", "replaceAll"] {
+        let unchanged: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(
+                &value,
+                name,
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                (no_match.clone(), null_replacement.clone()),
+            )
+            .await?;
+        assert_eq!(unchanged.identity(), value.identity());
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn string_regex_methods_preserve_utf16_text() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let value = JavaLangString::from_rust_string(&jvm, "A😀12😀B").await?;
+    let digits = JavaLangString::from_rust_string(&jvm, r"(\d+)").await?;
+    let replacement = JavaLangString::from_rust_string(&jvm, "[$1😀]").await?;
+    let replaced: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(
+            &value,
+            "replaceAll",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (digits, replacement),
+        )
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &replaced).await?, "A😀[12😀]😀B");
+
+    let separator = JavaLangString::from_rust_string(&jvm, "😀").await?;
+    let parts: ClassInstanceRef<Array<JavaString>> = jvm
+        .invoke_virtual(&value, "split", "(Ljava/lang/String;I)[Ljava/lang/String;", (separator, -1))
+        .await?;
+    let parts = jvm
+        .load_array::<ClassInstanceRef<JavaString>>(&parts, 0, jvm.array_length(&parts).await?)
+        .await?;
+    let mut actual = Vec::new();
+    for part in parts {
+        actual.push(JavaLangString::to_rust_string(&jvm, &part).await?);
+    }
+    assert_eq!(actual, vec!["A", "12", "B"]);
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_string() -> Result<()> {

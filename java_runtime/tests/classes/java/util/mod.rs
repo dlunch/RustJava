@@ -1,4 +1,5 @@
 mod jar;
+mod regex;
 mod test_array_list;
 mod test_arrays;
 mod test_collection_contracts;

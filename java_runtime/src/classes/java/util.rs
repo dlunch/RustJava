@@ -1,4 +1,5 @@
 pub mod jar;
+pub mod regex;
 pub mod zip;
 
 mod abstract_collection;

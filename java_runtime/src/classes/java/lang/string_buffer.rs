@@ -6,7 +6,7 @@ use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangStrin
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    classes::java::lang::{CharSequence, Object, String},
 };
 
 // public final class java.lang.StringBuffer
@@ -17,7 +17,7 @@ impl StringBuffer {
         RuntimeClassProto {
             name: "java/lang/StringBuffer",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/CharSequence"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
@@ -164,6 +164,12 @@ impl StringBuffer {
                     "substring",
                     "(II)Ljava/lang/String;",
                     Self::substring_range,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "subSequence",
+                    "(II)Ljava/lang/CharSequence;",
+                    Self::sub_sequence,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
                 JavaMethodProto::new(
@@ -646,6 +652,18 @@ impl StringBuffer {
 
         let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
         Ok(jvm.new_class("java/lang/String", "([CII)V", (value, start, end - start)).await?.into())
+    }
+
+    async fn sub_sequence(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        start: i32,
+        end: i32,
+    ) -> Result<ClassInstanceRef<CharSequence>> {
+        tracing::debug!("java.lang.StringBuffer::subSequence({this:?}, {start}, {end})");
+
+        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (start, end)).await
     }
 
     async fn reverse(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
