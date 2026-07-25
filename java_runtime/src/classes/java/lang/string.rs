@@ -32,7 +32,7 @@ impl String {
                 JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, Default::default()),
                 JavaMethodProto::new("<init>", "([C)V", Self::init_with_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
-                JavaMethodProto::new("<init>", "(II[C)V", Self::init_shared, Default::default()),
+                JavaMethodProto::new("<init>", "(II[C)V", Self::init_with_shared_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
                 JavaMethodProto::new(
                     "<init>",
@@ -246,7 +246,7 @@ impl String {
     }
 
     // no validation; trusted internal callers pass a fresh array or an already-validated range
-    async fn init_shared(
+    async fn init_with_shared_char_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
         mut this: ClassInstanceRef<Self>,
