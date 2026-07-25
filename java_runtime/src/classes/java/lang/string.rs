@@ -922,16 +922,19 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "other is null").await);
         }
 
-        if toffset < 0 || ooffset < 0 || len < 0 {
+        if toffset < 0 || ooffset < 0 {
             return Ok(false);
         }
 
         let (this_value, this_offset, this_count) = Self::value_range(jvm, &this).await?;
         let (other_value, other_offset, other_count) = Self::value_range(jvm, &other).await?;
-        let end_t = toffset as usize + len as usize;
-        let end_o = ooffset as usize + len as usize;
-        if end_t > this_count || end_o > other_count {
+        // widened like the jdk does, so a len near i32::MAX fails the bounds test instead of overflowing
+        if toffset as i64 > this_count as i64 - len as i64 || ooffset as i64 > other_count as i64 - len as i64 {
             return Ok(false);
+        }
+        // the jdk's comparison loop never runs for a non-positive len, so an in-range region trivially matches
+        if len <= 0 {
+            return Ok(true);
         }
 
         let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, this_offset + toffset as usize, len as usize).await?;

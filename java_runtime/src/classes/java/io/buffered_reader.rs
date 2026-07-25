@@ -4,7 +4,7 @@ use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -336,11 +336,7 @@ impl BufferedReader {
                         return Ok(None.into());
                     }
 
-                    let line_length = line.len();
-                    let mut chars = jvm.instantiate_array("C", line_length).await?;
-                    jvm.store_array(&mut chars, 0, line).await?;
-                    let value = jvm.new_class("java/lang/String", "([CII)V", (chars, 0, line_length as i32)).await?;
-                    return Ok(value.into());
+                    return Ok(JavaLangString::from_utf16(jvm, line).await?.into());
                 }
                 next_char = jvm.get_field(&this, "nextChar", "I").await?;
                 n_chars = jvm.get_field(&this, "nChars", "I").await?;
@@ -367,11 +363,7 @@ impl BufferedReader {
                     jvm.put_field(&mut this, "skipLF", "Z", true).await?;
                 }
 
-                let line_length = line.len();
-                let mut chars = jvm.instantiate_array("C", line_length).await?;
-                jvm.store_array(&mut chars, 0, line).await?;
-                let value = jvm.new_class("java/lang/String", "([CII)V", (chars, 0, line_length as i32)).await?;
-                return Ok(value.into());
+                return Ok(JavaLangString::from_utf16(jvm, line).await?.into());
             }
 
             line.extend(buffered);

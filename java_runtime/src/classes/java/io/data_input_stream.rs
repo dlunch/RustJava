@@ -2,7 +2,7 @@ use alloc::{vec, vec::Vec};
 
 use java_class_proto::JavaMethodProto;
 use java_constants::MethodAccessFlags;
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -156,7 +156,7 @@ impl DataInputStream {
         tracing::debug!("java.io.DataInputStream::readUTF({this:?})");
 
         let length: i32 = jvm.invoke_virtual(&this, "readUnsignedShort", "()I", ()).await?;
-        let mut java_array = jvm.instantiate_array("B", length as usize).await?;
+        let java_array = jvm.instantiate_array("B", length as usize).await?;
         let _: () = jvm.invoke_virtual(&this, "readFully", "([BII)V", (java_array.clone(), 0, length)).await?;
         let bytes: Vec<i8> = jvm.load_array(&java_array, 0, length as usize).await?;
         let bytes: Vec<u8> = bytes.into_iter().map(|value| value as u8).collect();
@@ -192,9 +192,7 @@ impl DataInputStream {
             }
         }
 
-        java_array = jvm.instantiate_array("C", chars.len()).await?;
-        jvm.store_array(&mut java_array, 0, chars).await?;
-        Ok(jvm.new_class("java/lang/String", "([C)V", (java_array,)).await?.into())
+        Ok(JavaLangString::from_utf16(jvm, chars).await?.into())
     }
 
     async fn read_utf_from_input(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<DataInput>) -> Result<ClassInstanceRef<String>> {

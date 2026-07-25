@@ -1182,7 +1182,7 @@ async fn test_str_06_region_matches_without_ignore_case() -> Result<()> {
             .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, same, 1, -1))
+        jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, same, 1, -1))
             .await?
     );
 
@@ -1205,6 +1205,49 @@ async fn test_str_06_region_matches_without_ignore_case() -> Result<()> {
         panic!("regionMatches must reject null");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_region_matches_non_positive_len() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let source = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let other = JavaLangString::from_rust_string(&jvm, "World").await?;
+
+    for len in [0, -1, i32::MIN] {
+        assert!(
+            jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, other.clone(), 2, len))
+                .await?
+        );
+        assert!(
+            jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ZILjava/lang/String;II)Z", (true, 1, other.clone(), 2, len))
+                .await?
+        );
+    }
+
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (5, other.clone(), 5, 0))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (6, other.clone(), 0, 0))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (0, other.clone(), 0, i32::MAX))
+            .await?
+    );
+
+    let sub: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&source, "substring", "(II)Ljava/lang/String;", (1, 3)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&sub, "regionMatches", "(ILjava/lang/String;II)Z", (2, other, 0, -1))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&sub, "regionMatches", "(ILjava/lang/String;II)Z", (3, source, 0, 0))
+            .await?
+    );
 
     Ok(())
 }
