@@ -505,3 +505,125 @@ async fn test_sb_10_replace_clamps_end_and_checks_ranges() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_sb_11_string_arguments_backed_by_shared_substring() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let hello_parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
+    let hello: ClassInstanceRef<java_runtime::classes::java::lang::String> =
+        jvm.invoke_virtual(&hello_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+    let world_parent = JavaLangString::from_rust_string(&jvm, "zzWorldzz").await?;
+    let world: ClassInstanceRef<java_runtime::classes::java::lang::String> =
+        jvm.invoke_virtual(&world_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+
+    let buffer = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (hello.clone(),)).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&buffer, "length", "()I", ()).await?, 5);
+
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (hello.clone(),))
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "HelloHello");
+
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (0, world.clone()))
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "WorldHelloHello");
+
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "replace", "(IILjava/lang/String;)Ljava/lang/StringBuffer;", (5, 10, world))
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "WorldWorldHello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_sb_12_to_string_snapshot_is_exact_size_and_immutable() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let buffer = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?;
+    let hello = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (hello,))
+        .await?;
+
+    let string = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hello");
+
+    let buffer_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&buffer, "value", "[C").await?;
+    let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
+    assert_ne!(buffer_value.identity(), string_value.identity());
+    assert_eq!(jvm.array_length(&string_value).await?, 5);
+    assert_eq!(jvm.get_field::<i32>(&string, "offset", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&string, "count", "I").await?, 5);
+
+    let world = JavaLangString::from_rust_string(&jvm, "World").await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (world,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&buffer, "setCharAt", "(IC)V", (0, b'X' as JavaChar)).await?;
+
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_sb_13_insert_substring_then_reverse_and_delete() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
+    let sub: ClassInstanceRef<java_runtime::classes::java::lang::String> =
+        jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+
+    let buffer = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?;
+    let ab = JavaLangString::from_rust_string(&jvm, "ab").await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (ab,))
+        .await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (1, sub.clone()))
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "aHellob");
+
+    let _: ClassInstanceRef<StringBuffer> = jvm.invoke_virtual(&buffer, "reverse", "()Ljava/lang/StringBuffer;", ()).await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "bolleHa");
+
+    let _: ClassInstanceRef<StringBuffer> = jvm.invoke_virtual(&buffer, "delete", "(II)Ljava/lang/StringBuffer;", (1, 5)).await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "bHa");
+
+    // the buffer mutations must never leak into the shared parent
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &parent).await?, "xxHelloyy");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &sub).await?, "Hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_sb_14_append_surrogate_substring_preserves_code_unit() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut chars = jvm.instantiate_array("C", 3).await?;
+    jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0xd800, 0x62]).await?;
+    let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
+    let sub: ClassInstanceRef<java_runtime::classes::java::lang::String> =
+        jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (1, 2)).await?;
+
+    let buffer = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (sub,))
+        .await?;
+    let text: ClassInstanceRef<java_runtime::classes::java::lang::String> =
+        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&text, "length", "()I", ()).await?, 1);
+    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&text, "charAt", "(I)C", (0,)).await?, 0xd800);
+
+    Ok(())
+}

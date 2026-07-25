@@ -6,13 +6,17 @@ pub struct JavaLangString;
 
 impl JavaLangString {
     #[allow(clippy::borrowed_box)]
-    pub async fn to_rust_string(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<String> {
+    pub async fn to_utf16(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Vec<JavaChar>> {
         let value = jvm.get_field(this, "value", "[C").await?;
+        let offset: i32 = jvm.get_field(this, "offset", "I").await?;
+        let count: i32 = jvm.get_field(this, "count", "I").await?;
 
-        let length = jvm.array_length(&value).await?;
-        let string: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        jvm.load_array(&value, offset as _, count as _).await
+    }
 
-        Ok(String::from_utf16_lossy(&string))
+    #[allow(clippy::borrowed_box)]
+    pub async fn to_rust_string(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<String> {
+        Ok(String::from_utf16_lossy(&Self::to_utf16(jvm, this).await?))
     }
 
     pub async fn from_rust_string(jvm: &Jvm, string: &str) -> Result<Box<dyn ClassInstance>> {
@@ -21,12 +25,14 @@ impl JavaLangString {
         Self::from_utf16(jvm, utf16).await
     }
 
-    async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> Result<Box<dyn ClassInstance>> {
-        let mut java_value = jvm.instantiate_array("C", data.len()).await?;
+    pub async fn from_utf16(jvm: &Jvm, data: Vec<u16>) -> Result<Box<dyn ClassInstance>> {
+        let length = data.len();
+        let mut java_value = jvm.instantiate_array("C", length).await?;
 
-        jvm.store_array(&mut java_value, 0, data.to_vec()).await?;
+        jvm.store_array(&mut java_value, 0, data).await?;
 
-        let instance = jvm.new_class("java/lang/String", "([C)V", (java_value,)).await?;
+        // the array is fresh, so the package-private sharing constructor is safe and avoids a second copy
+        let instance = jvm.new_class("java/lang/String", "(II[C)V", (0, length as i32, java_value)).await?;
 
         Ok(instance)
     }

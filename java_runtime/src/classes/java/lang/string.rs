@@ -32,6 +32,7 @@ impl String {
                 JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, Default::default()),
                 JavaMethodProto::new("<init>", "([C)V", Self::init_with_char_array, Default::default()),
                 JavaMethodProto::new("<init>", "([CII)V", Self::init_with_partial_char_array, Default::default()),
+                JavaMethodProto::new("<init>", "(II[C)V", Self::init_shared, Default::default()),
                 JavaMethodProto::new("<init>", "([BII)V", Self::init_with_partial_byte_array, Default::default()),
                 JavaMethodProto::new(
                     "<init>",
@@ -155,9 +156,21 @@ impl String {
                 JavaMethodProto::new("endsWith", "(Ljava/lang/String;)Z", Self::ends_with, Default::default()),
                 JavaMethodProto::new("intern", "()Ljava/lang/String;", Self::intern, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("value", "[C", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL)],
+            fields: vec![
+                JavaFieldProto::new("value", "[C", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
+                JavaFieldProto::new("offset", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
+                JavaFieldProto::new("count", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
+            ],
             access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
         }
+    }
+
+    async fn value_range(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<(ClassInstanceRef<Array<JavaChar>>, usize, usize)> {
+        let value = jvm.get_field(this, "value", "[C").await?;
+        let offset: i32 = jvm.get_field(this, "offset", "I").await?;
+        let count: i32 = jvm.get_field(this, "count", "I").await?;
+
+        Ok((value, offset as _, count as _))
     }
 
     async fn init_with_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<i8>>) -> Result<()> {
@@ -215,10 +228,32 @@ impl String {
         }
 
         let mut array = jvm.instantiate_array("C", count as _).await?;
-        jvm.put_field(&mut this, "value", "[C", array.clone()).await?;
-
         let data: Vec<JavaChar> = jvm.load_array(&value, offset as _, count as _).await?;
-        jvm.store_array(&mut array, 0, data).await?; // TODO we should store value, offset, count like in java
+        jvm.store_array(&mut array, 0, data).await?;
+
+        jvm.put_field(&mut this, "value", "[C", array).await?;
+        jvm.put_field(&mut this, "offset", "I", 0).await?;
+        jvm.put_field(&mut this, "count", "I", count).await?;
+
+        Ok(())
+    }
+
+    // no validation; trusted internal callers pass a fresh array or an already-validated range
+    async fn init_shared(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        offset: i32,
+        count: i32,
+        value: ClassInstanceRef<Array<JavaChar>>,
+    ) -> Result<()> {
+        tracing::debug!("java.lang.String::<init>({this:?}, {offset}, {count}, {value:?})");
+
+        let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        jvm.put_field(&mut this, "value", "[C", value).await?;
+        jvm.put_field(&mut this, "offset", "I", offset).await?;
+        jvm.put_field(&mut this, "count", "I", count).await?;
 
         Ok(())
     }
@@ -240,10 +275,13 @@ impl String {
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
-        let mut array = jvm.instantiate_array("C", utf16.len()).await?;
+        let length = utf16.len();
+        let mut array = jvm.instantiate_array("C", length).await?;
         jvm.store_array(&mut array, 0, utf16).await?;
 
-        let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "(II[C)V", (0, length as i32, array))
+            .await?;
 
         Ok(())
     }
@@ -251,9 +289,23 @@ impl String {
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
-        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&value, "toCharArray", "()[C", ()).await?;
+        let (original_value, offset, count) = Self::value_range(jvm, &value).await?;
+        let length = jvm.array_length(&original_value).await?;
 
-        let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", (chars,)).await?;
+        // JDK 6 semantics: share a full-range original, but copy a substring so `new String(sub)` detaches from a large parent array
+        let value = if offset == 0 && count == length {
+            original_value
+        } else {
+            let chars: Vec<JavaChar> = jvm.load_array(&original_value, offset, count).await?;
+            let mut array = jvm.instantiate_array("C", count).await?;
+            jvm.store_array(&mut array, 0, chars).await?;
+
+            array.into()
+        };
+
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "(II[C)V", (0, count as i32, value))
+            .await?;
 
         Ok(())
     }
@@ -275,17 +327,26 @@ impl String {
         Ok(())
     }
 
-    async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
+    async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.lang.String::equals({this:?}, {other:?})");
 
-        if other.is_null() {
+        if other.is_null() || !jvm.is_instance(&**other, "java/lang/String") {
+            return Ok(false);
+        }
+        if this.identity() == other.identity() {
+            return Ok(true);
+        }
+
+        let this_count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let other_count: i32 = jvm.get_field(&other, "count", "I").await?;
+        if this_count != other_count {
             return Ok(false);
         }
 
-        let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
-        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
+        let this_chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let other_chars = JavaLangString::to_utf16(jvm, &other).await?;
 
-        if this_string == other_string { Ok(true) } else { Ok(false) }
+        Ok(this_chars == other_chars)
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
@@ -299,12 +360,8 @@ impl String {
         }
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
-        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
-        let this_length = jvm.array_length(&this_value).await?;
-        let other_length = jvm.array_length(&other_value).await?;
-        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, 0, this_length).await?;
-        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, 0, other_length).await?;
+        let this_chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let other_chars = JavaLangString::to_utf16(jvm, &other).await?;
 
         for (&this_char, &other_char) in this_chars.iter().zip(&other_chars) {
             if this_char != other_char {
@@ -312,7 +369,7 @@ impl String {
             }
         }
 
-        Ok(this_length as i32 - other_length as i32)
+        Ok(this_chars.len() as i32 - other_chars.len() as i32)
     }
 
     async fn compare_to_ignore_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
@@ -322,12 +379,8 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
 
-        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
-        let this_length = jvm.array_length(&this_value).await?;
-        let other_length = jvm.array_length(&other_value).await?;
-        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, 0, this_length).await?;
-        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, 0, other_length).await?;
+        let this_chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let other_chars = JavaLangString::to_utf16(jvm, &other).await?;
 
         for (&this_char, &other_char) in this_chars.iter().zip(&other_chars) {
             if this_char == other_char {
@@ -357,14 +410,13 @@ impl String {
             }
         }
 
-        Ok(this_length as i32 - other_length as i32)
+        Ok(this_chars.len() as i32 - other_chars.len() as i32)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::hashCode({this:?})");
 
-        let chars = jvm.get_field(&this, "value", "[C").await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, jvm.array_length(&chars).await? as _).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
 
         let hash = chars.iter().fold(0i32, |acc, &c| acc.wrapping_mul(31).wrapping_add(c as i32));
 
@@ -380,9 +432,14 @@ impl String {
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<u16> {
         tracing::debug!("java.lang.String::charAt({this:?}, {index})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        if index < 0 || index as usize >= count {
+            return Err(jvm
+                .exception("java/lang/StringIndexOutOfBoundsException", &format!("index {index}, length {count}"))
+                .await);
+        }
 
-        Ok(jvm.load_array(&value, index as _, 1).await?[0])
+        Ok(jvm.load_array(&value, offset + index as usize, 1).await?[0])
     }
 
     async fn concat(
@@ -426,10 +483,19 @@ impl String {
     ) -> Result<()> {
         tracing::debug!("java.lang.String::getChars({this:?}, {src_begin}, {src_end}, {dst:?}, {dst_begin})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        if src_begin < 0 || src_begin > src_end || src_end as usize > count {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("begin {src_begin}, end {src_end}, length {count}"),
+                )
+                .await);
+        }
 
-        let count = src_end - src_begin;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, src_begin as _, count as _).await?;
+        let chars: Vec<JavaChar> = jvm
+            .load_array(&value, offset + src_begin as usize, (src_end - src_begin) as usize)
+            .await?;
         jvm.store_array(&mut dst, dst_begin as _, chars).await?;
 
         Ok(())
@@ -438,40 +504,46 @@ impl String {
     async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
         tracing::debug!("java.lang.String::toCharArray({this:?})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, offset, count).await?;
 
-        Ok(value)
+        let mut array = jvm.instantiate_array("C", count).await?;
+        jvm.store_array(&mut array, 0, chars).await?;
+
+        Ok(array.into())
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::length({this:?})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-
-        Ok(jvm.array_length(&value).await? as _)
+        jvm.get_field(&this, "count", "I").await
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, begin_index: i32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::substring({this:?}, {begin_index})");
 
-        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
-
-        // java string indices are in utf-16 code units
-        let utf16 = string.encode_utf16().collect::<Vec<_>>();
-
-        let length = utf16.len() as i32;
-        if begin_index < 0 || begin_index > length {
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        if begin_index < 0 || begin_index as usize > count {
             return Err(jvm
                 .exception(
                     "java/lang/StringIndexOutOfBoundsException",
-                    &format!("begin {begin_index}, length {length}"),
+                    &format!("begin {begin_index}, length {count}"),
                 )
                 .await);
         }
+        if begin_index == 0 {
+            return Ok(this);
+        }
 
-        let substr = RustString::from_utf16_lossy(&utf16[begin_index as usize..]); // TODO buffer sharing
+        let new_string = jvm
+            .new_class(
+                "java/lang/String",
+                "(II[C)V",
+                ((offset + begin_index as usize) as i32, (count - begin_index as usize) as i32, value),
+            )
+            .await?;
 
-        Ok(JavaLangString::from_rust_string(jvm, &substr).await?.into())
+        Ok(new_string.into())
     }
 
     async fn substring_with_end(
@@ -483,24 +555,28 @@ impl String {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::substring({this:?}, {begin_index}, {end_index})");
 
-        let string = JavaLangString::to_rust_string(jvm, &this.clone()).await?;
-
-        // java string indices are in utf-16 code units
-        let utf16 = string.encode_utf16().collect::<Vec<_>>();
-
-        let length = utf16.len() as i32;
-        if begin_index < 0 || end_index > length || begin_index > end_index {
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        if begin_index < 0 || end_index as usize > count || begin_index > end_index {
             return Err(jvm
                 .exception(
                     "java/lang/StringIndexOutOfBoundsException",
-                    &format!("begin {begin_index}, end {end_index}, length {length}"),
+                    &format!("begin {begin_index}, end {end_index}, length {count}"),
                 )
                 .await);
         }
+        if begin_index == 0 && end_index as usize == count {
+            return Ok(this);
+        }
 
-        let substr = RustString::from_utf16_lossy(&utf16[begin_index as usize..end_index as usize]); // TODO buffer sharing
+        let new_string = jvm
+            .new_class(
+                "java/lang/String",
+                "(II[C)V",
+                ((offset + begin_index as usize) as i32, end_index - begin_index, value),
+            )
+            .await?;
 
-        Ok(JavaLangString::from_rust_string(jvm, &substr).await?.into())
+        Ok(new_string.into())
     }
 
     async fn value_of_char(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
@@ -510,7 +586,7 @@ impl String {
         let mut chars = jvm.instantiate_array("C", 1).await?;
         jvm.store_array(&mut chars, 0, [value]).await?;
 
-        Ok(jvm.new_class("java/lang/String", "([C)V", (chars,)).await?.into())
+        Ok(jvm.new_class("java/lang/String", "(II[C)V", (0, 1, chars)).await?.into())
     }
 
     async fn value_of_integer(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
@@ -544,9 +620,7 @@ impl String {
             return Ok(-1);
         }
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
         let from_index = from_index.max(0) as usize;
         let index = chars
             .get(from_index..)
@@ -575,12 +649,8 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
-        let pattern = jvm.get_field(&str, "value", "[C").await?;
-        let pattern_length = jvm.array_length(&pattern).await?;
-        let pattern: Vec<JavaChar> = jvm.load_array(&pattern, 0, pattern_length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let pattern = JavaLangString::to_utf16(jvm, &str).await?;
         let from_index = (from_index.max(0) as usize).min(chars.len());
 
         if pattern.is_empty() {
@@ -602,9 +672,7 @@ impl String {
             return Ok(-1);
         }
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
         let index = chars.iter().rposition(|&value| value == ch as u16).map(|index| index as i32);
 
         Ok(index.unwrap_or(-1))
@@ -613,18 +681,18 @@ impl String {
     async fn trim(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::trim({this:?})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let (value, offset, count) = Self::value_range(jvm, &this).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, offset, count).await?;
         let start = chars.iter().position(|&value| value > 0x20).unwrap_or(chars.len());
         let end = chars.iter().rposition(|&value| value > 0x20).map(|index| index + 1).unwrap_or(start);
         if start == 0 && end == chars.len() {
             return Ok(this);
         }
-        let mut array = jvm.instantiate_array("C", end - start).await?;
-        jvm.store_array(&mut array, 0, chars[start..end].iter().copied()).await?;
 
-        Ok(jvm.new_class("java/lang/String", "([C)V", (array,)).await?.into())
+        Ok(jvm
+            .new_class("java/lang/String", "(II[C)V", ((offset + start) as i32, (end - start) as i32, value))
+            .await?
+            .into())
     }
 
     async fn to_upper_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
@@ -674,12 +742,8 @@ impl String {
             return Ok(false);
         }
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
-        let prefix_value = jvm.get_field(&prefix, "value", "[C").await?;
-        let prefix_length = jvm.array_length(&prefix_value).await?;
-        let prefix: Vec<JavaChar> = jvm.load_array(&prefix_value, 0, prefix_length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let prefix = JavaLangString::to_utf16(jvm, &prefix).await?;
 
         Ok(chars.get(offset as usize..).is_some_and(|chars| chars.starts_with(&prefix)))
     }
@@ -691,6 +755,8 @@ impl String {
 
         let array = jvm.instantiate_array("C", 0).await?;
         jvm.put_field(&mut this, "value", "[C", array).await?;
+        jvm.put_field(&mut this, "offset", "I", 0).await?;
+        jvm.put_field(&mut this, "count", "I", 0).await?;
 
         Ok(())
     }
@@ -743,10 +809,13 @@ impl String {
 
         let utf16 = string.encode_utf16().collect::<Vec<_>>();
 
-        let mut array = jvm.instantiate_array("C", utf16.len()).await?;
+        let length = utf16.len();
+        let mut array = jvm.instantiate_array("C", length).await?;
         jvm.store_array(&mut array, 0, utf16).await?;
 
-        let _: () = jvm.invoke_special(&this, "java/lang/String", "<init>", "([C)V", [array.into()]).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/lang/String", "<init>", "(II[C)V", (0, length as i32, array))
+            .await?;
 
         Ok(())
     }
@@ -823,16 +892,15 @@ impl String {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::replace({this:?}, {old_char}, {new_char})");
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
 
         let replaced: Vec<JavaChar> = chars.into_iter().map(|c| if c == old_char { new_char } else { c }).collect();
 
-        let mut array = jvm.instantiate_array("C", replaced.len()).await?;
+        let length = replaced.len();
+        let mut array = jvm.instantiate_array("C", length).await?;
         jvm.store_array(&mut array, 0, replaced).await?;
 
-        let new_string = jvm.new_class("java/lang/String", "([C)V", (array,)).await?;
+        let new_string = jvm.new_class("java/lang/String", "(II[C)V", (0, length as i32, array)).await?;
 
         Ok(new_string.into())
     }
@@ -858,18 +926,16 @@ impl String {
             return Ok(false);
         }
 
-        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
-        let this_length = jvm.array_length(&this_value).await?;
-        let other_length = jvm.array_length(&other_value).await?;
+        let (this_value, this_offset, this_count) = Self::value_range(jvm, &this).await?;
+        let (other_value, other_offset, other_count) = Self::value_range(jvm, &other).await?;
         let end_t = toffset as usize + len as usize;
         let end_o = ooffset as usize + len as usize;
-        if end_t > this_length || end_o > other_length {
+        if end_t > this_count || end_o > other_count {
             return Ok(false);
         }
 
-        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, toffset as usize, len as usize).await?;
-        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, ooffset as usize, len as usize).await?;
+        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, this_offset + toffset as usize, len as usize).await?;
+        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, other_offset + ooffset as usize, len as usize).await?;
 
         if ignore_case {
             let to_lower = |c: JavaChar| -> JavaChar {
@@ -909,9 +975,7 @@ impl String {
             return Ok(-1);
         }
 
-        let value = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
         let end = (from_index as usize + 1).min(chars.len());
 
         let index = chars[..end].iter().rposition(|&value| value == ch as u16).map(|index| index as i32);
@@ -922,8 +986,7 @@ impl String {
     async fn last_index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::lastIndexOf({this:?}, {str:?})");
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&value).await? as i32;
+        let length: i32 = jvm.get_field(&this, "count", "I").await?;
         jvm.invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/String;I)I", (str, length)).await
     }
 
@@ -943,12 +1006,8 @@ impl String {
             return Ok(-1);
         }
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let pattern_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&str, "value", "[C").await?;
-        let length = jvm.array_length(&value).await?;
-        let pattern_length = jvm.array_length(&pattern_value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
-        let pattern: Vec<JavaChar> = jvm.load_array(&pattern_value, 0, pattern_length).await?;
+        let chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let pattern = JavaLangString::to_utf16(jvm, &str).await?;
 
         if pattern.is_empty() {
             return Ok((from_index as usize).min(chars.len()) as i32);
@@ -974,18 +1033,16 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "suffix is null").await);
         }
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
-        let suffix_string = JavaLangString::to_rust_string(jvm, &suffix).await?;
+        let this_chars = JavaLangString::to_utf16(jvm, &this).await?;
+        let suffix_chars = JavaLangString::to_utf16(jvm, &suffix).await?;
 
-        Ok(this_string.ends_with(&suffix_string))
+        Ok(this_chars.ends_with(&suffix_chars))
     }
 
     async fn intern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::intern({this:?})");
 
-        let chars = jvm.get_field(&this, "value", "[C").await?;
-        let length = jvm.array_length(&chars).await?;
-        let utf16: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
+        let utf16 = JavaLangString::to_utf16(jvm, &this).await?;
 
         let receiver = this.instance.unwrap();
 

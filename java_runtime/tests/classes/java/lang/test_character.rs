@@ -1,5 +1,5 @@
 use java_runtime::classes::java::lang::{Character, String};
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -275,8 +275,7 @@ async fn test_character_surrogate_and_compare_errors() -> Result<()> {
     let value: ClassInstanceRef<Character> = jvm.new_class("java/lang/Character", "(C)V", (surrogate,)).await?.into();
     assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&value, "charValue", "()C", ()).await?, surrogate);
     let text: ClassInstanceRef<String> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
-    let chars: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&text, "value", "[C").await?;
-    assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 1).await?, [surrogate]);
+    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&text, "charAt", "(I)C", (0,)).await?, surrogate);
 
     for method in [
         "isLowerCase",

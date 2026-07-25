@@ -1,8 +1,8 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -103,8 +103,7 @@ impl StringTokenizer {
         }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-        let max_position = jvm.array_length(&value).await? as i32;
+        let max_position: i32 = jvm.invoke_virtual(&string, "length", "()I", ()).await?;
         jvm.put_field(&mut this, "str", "Ljava/lang/String;", string).await?;
         jvm.put_field(&mut this, "delimiters", "Ljava/lang/String;", delimiters).await?;
         jvm.put_field(&mut this, "currentPosition", "I", 0).await?;
@@ -140,13 +139,11 @@ impl StringTokenizer {
             return Err(jvm.exception("java/util/NoSuchElementException", "StringTokenizer exhausted").await);
         };
 
-        let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-        let token_chars: Vec<JavaChar> = jvm.load_array(&string_value, start, end - start).await?;
-        let mut token_value = jvm.instantiate_array("C", token_chars.len()).await?;
-        jvm.store_array(&mut token_value, 0, token_chars).await?;
-        let token = jvm.new_class("java/lang/String", "([C)V", (token_value,)).await?;
+        let token: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (start as i32, end as i32))
+            .await?;
         jvm.put_field(&mut this, "currentPosition", "I", end as i32).await?;
-        Ok(token.into())
+        Ok(token)
     }
 
     async fn next_token_with_delimiters(
@@ -198,10 +195,8 @@ impl StringTokenizer {
             return Err(jvm.exception("java/lang/NullPointerException", "delimiters").await);
         }
 
-        let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(string, "value", "[C").await?;
-        let delimiter_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(delimiters, "value", "[C").await?;
-        let string_chars: Vec<JavaChar> = jvm.load_array(&string_value, 0, jvm.array_length(&string_value).await?).await?;
-        let delimiter_chars: Vec<JavaChar> = jvm.load_array(&delimiter_value, 0, jvm.array_length(&delimiter_value).await?).await?;
+        let string_chars = JavaLangString::to_utf16(jvm, string).await?;
+        let delimiter_chars = JavaLangString::to_utf16(jvm, delimiters).await?;
         let max_position = max_position.min(string_chars.len());
 
         if !return_delimiters {

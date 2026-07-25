@@ -538,3 +538,92 @@ async fn prop_03_eof_backslash_parity_and_incomplete_logical_line() -> Result<()
 
     Ok(())
 }
+
+#[tokio::test]
+async fn prop_store_and_load_with_substring_key_and_value() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let key_parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
+    let key: ClassInstanceRef<String> = jvm.invoke_virtual(&key_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+    let value_parent = JavaLangString::from_rust_string(&jvm, "zzWorldzz").await?;
+    let value: ClassInstanceRef<String> = jvm.invoke_virtual(&value_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+
+    let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &properties,
+            "setProperty",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+            (key.clone(), value),
+        )
+        .await?;
+
+    let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
+    let _: () = jvm
+        .invoke_virtual(
+            &properties,
+            "store",
+            "(Ljava/io/OutputStream;Ljava/lang/String;)V",
+            (output.clone(), ClassInstanceRef::<String>::from(None)),
+        )
+        .await?;
+
+    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
+    let text = RustString::from_utf8(values.iter().map(|byte| *byte as u8).collect()).expect("ASCII properties output");
+    assert!(text.contains("Hello=World"));
+
+    let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
+    let loaded = jvm.new_class("java/util/Properties", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&loaded, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let result: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&loaded, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "World");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn prop_empty_substring_key_round_trip() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let parent = JavaLangString::from_rust_string(&jvm, "HelloWorld").await?;
+    let empty_key: ClassInstanceRef<String> = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (5, 5)).await?;
+    let value = JavaLangString::from_rust_string(&jvm, "World").await?;
+
+    let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &properties,
+            "setProperty",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+            (empty_key.clone(), value),
+        )
+        .await?;
+
+    let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
+    let _: () = jvm
+        .invoke_virtual(
+            &properties,
+            "store",
+            "(Ljava/io/OutputStream;Ljava/lang/String;)V",
+            (output.clone(), ClassInstanceRef::<String>::from(None)),
+        )
+        .await?;
+
+    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
+    let text = RustString::from_utf8(values.iter().map(|byte| *byte as u8).collect()).unwrap();
+    assert!(text.contains("=World"), "store output: {text:?}");
+
+    let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
+    let loaded = jvm.new_class("java/util/Properties", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&loaded, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let result: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&loaded, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (empty_key,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "World");
+
+    Ok(())
+}

@@ -2,7 +2,7 @@ use alloc::{format, string::String as RustString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -250,12 +250,8 @@ impl Properties {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Malformed \\uxxxx encoding").await);
         };
 
-        let mut key_value = jvm.instantiate_array("C", key_chars.len()).await?;
-        jvm.store_array(&mut key_value, 0, key_chars).await?;
-        let key = jvm.new_class("java/lang/String", "([C)V", (key_value,)).await?;
-        let mut property_value = jvm.instantiate_array("C", value_chars.len()).await?;
-        jvm.store_array(&mut property_value, 0, value_chars).await?;
-        let value = jvm.new_class("java/lang/String", "([C)V", (property_value,)).await?;
+        let key = JavaLangString::from_utf16(jvm, key_chars).await?;
+        let value = JavaLangString::from_utf16(jvm, value_chars).await?;
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
             .await?;
@@ -277,8 +273,7 @@ impl Properties {
 
         let mut text = RustString::new();
         if !comments.is_null() {
-            let comments_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&comments, "value", "[C").await?;
-            let comments: Vec<JavaChar> = jvm.load_array(&comments_value, 0, jvm.array_length(&comments_value).await?).await?;
+            let comments = JavaLangString::to_utf16(jvm, &comments).await?;
             text.push('#');
             let mut index = 0;
             while index < comments.len() {
@@ -318,12 +313,8 @@ impl Properties {
                     .await);
             }
 
-            let key: ClassInstanceRef<String> = ClassInstanceRef::new(key.instance);
-            let value: ClassInstanceRef<String> = ClassInstanceRef::new(value.instance);
-            let key_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&key, "value", "[C").await?;
-            let value_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&value, "value", "[C").await?;
-            let key_chars: Vec<JavaChar> = jvm.load_array(&key_value, 0, jvm.array_length(&key_value).await?).await?;
-            let value_chars: Vec<JavaChar> = jvm.load_array(&value_value, 0, jvm.array_length(&value_value).await?).await?;
+            let key_chars = JavaLangString::to_utf16(jvm, &key).await?;
+            let value_chars = JavaLangString::to_utf16(jvm, &value).await?;
             text.push_str(&Self::save_convert(&key_chars, true));
             text.push('=');
             text.push_str(&Self::save_convert(&value_chars, false));

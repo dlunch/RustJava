@@ -21,8 +21,8 @@ async fn test_garbage_collection() -> JvmResult<()> {
 
     let garbage_count = jvm.collect_garbage()?;
 
-    // java/lang/String, its internal [C, and [C used in creation should be garbage collected
-    assert_eq!(garbage_count, 3);
+    // java/lang/String and its internal [C should be garbage collected
+    assert_eq!(garbage_count, 2);
 
     // load a class
     jvm.push_native_frame();
@@ -31,7 +31,7 @@ async fn test_garbage_collection() -> JvmResult<()> {
 
     let garbage_count = jvm.collect_garbage()?;
 
-    assert_eq!(garbage_count, 3);
+    assert_eq!(garbage_count, 2);
 
     // use loaded class
     jvm.push_native_frame();
@@ -74,7 +74,7 @@ async fn test_garbage_collection() -> JvmResult<()> {
 
     // vector, elementData, string, and its internal [C should be garbage collected
     let garbage_count = jvm.collect_garbage()?;
-    assert_eq!(garbage_count, 5);
+    assert_eq!(garbage_count, 4);
 
     Ok(())
 }
@@ -107,9 +107,37 @@ async fn test_garbage_collection_hashtable() -> JvmResult<()> {
 
     jvm.pop_frame();
 
-    // hashtable, table array, entry, key string, key [C, value string, value [C, and 2 temporaries from string construction
+    // hashtable, table array, entry, key string, key [C, value string, value [C
     let garbage_count = jvm.collect_garbage()?;
-    assert_eq!(garbage_count, 9);
+    assert_eq!(garbage_count, 7);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn substring_keeps_shared_array_alive_after_parent_collection() -> JvmResult<()> {
+    let jvm = test_jvm().await?;
+
+    jvm.collect_garbage()?;
+
+    struct String;
+
+    jvm.push_native_frame();
+    let parent = JavaLangString::from_rust_string(&jvm, "HelloWorld").await?;
+    let child: ClassInstanceRef<String> = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (2, 5)).await?;
+    let child = jvm.new_global_ref(&child).unwrap();
+    jvm.pop_frame();
+
+    // only the parent String is collected; the shared [C stays reachable through the child's value field
+    assert_eq!(jvm.collect_garbage()?, 1);
+
+    jvm.push_native_frame();
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &child).await?, "llo");
+    jvm.pop_frame();
+    jvm.collect_garbage()?;
+
+    drop(child);
+    assert_eq!(jvm.collect_garbage()?, 2);
 
     Ok(())
 }
@@ -273,7 +301,6 @@ async fn returned_exception_is_a_local_reference() -> JvmResult<()> {
         .await
         .unwrap_err();
 
-    assert_eq!(jvm.collect_garbage()?, 2);
     assert_eq!(jvm.collect_garbage()?, 0);
     jvm.pop_frame();
     assert_eq!(jvm.collect_garbage()?, 8);
@@ -293,7 +320,6 @@ async fn thread_start_keeps_the_thread_alive_until_spawn_callback_runs() -> JvmR
     let _: () = jvm.invoke_virtual(&thread, "start", "()V", ()).await?;
     jvm.pop_frame();
 
-    assert_eq!(jvm.collect_garbage()?, 1);
     assert_eq!(jvm.collect_garbage()?, 0);
 
     drop(runtime.take_spawn_callback().unwrap());

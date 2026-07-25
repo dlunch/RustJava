@@ -252,9 +252,8 @@ impl StringBuffer {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
 
-        let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-        let count = jvm.array_length(&string_value).await?;
-        let chars: Vec<JavaChar> = jvm.load_array(&string_value, 0, count).await?;
+        let chars = JavaLangString::to_utf16(jvm, &string).await?;
+        let count = chars.len();
         let mut value = jvm.instantiate_array("C", count + 16).await?;
         jvm.store_array(&mut value, 0, chars).await?;
         jvm.put_field(&mut this, "value", "[C", value).await?;
@@ -273,8 +272,7 @@ impl StringBuffer {
         let chars = if string.is_null() {
             "null".encode_utf16().collect()
         } else {
-            let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-            jvm.load_array(&value, 0, jvm.array_length(&value).await?).await?
+            JavaLangString::to_utf16(jvm, &string).await?
         };
         Self::append_utf16(jvm, &mut this, chars).await?;
         Ok(this)
@@ -409,8 +407,7 @@ impl StringBuffer {
         let chars = if string.is_null() {
             "null".encode_utf16().collect()
         } else {
-            let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-            jvm.load_array(&value, 0, jvm.array_length(&value).await?).await?
+            JavaLangString::to_utf16(jvm, &string).await?
         };
         Self::insert_utf16(jvm, &mut this, offset, chars).await?;
         Ok(this)
@@ -608,8 +605,7 @@ impl StringBuffer {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
 
-        let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
-        let replacement: Vec<JavaChar> = jvm.load_array(&string_value, 0, jvm.array_length(&string_value).await?).await?;
+        let replacement = JavaLangString::to_utf16(jvm, &string).await?;
         let replacement_length = replacement.len() as i32;
         let new_count = count + replacement_length - (end - start);
         Self::expand_capacity(jvm, &mut this, new_count).await?;
@@ -668,7 +664,11 @@ impl StringBuffer {
 
         let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        Ok(jvm.new_class("java/lang/String", "([CII)V", (value, 0, count)).await?.into())
+
+        // the buffer stays mutable, so snapshot it instead of handing it to the sharing constructor
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, count as usize).await?;
+
+        Ok(JavaLangString::from_utf16(jvm, chars).await?.into())
     }
 
     async fn capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {

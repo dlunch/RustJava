@@ -1,4 +1,4 @@
-use jvm::{JavaChar, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, JavaChar, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -12,6 +12,53 @@ async fn test_to_rust_string_unpaired_surrogate() -> Result<()> {
     let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "a\u{fffd}b");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_to_utf16_preserves_unpaired_surrogate() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut chars = jvm.instantiate_array("C", 3).await?;
+    jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0xd800, 0x62]).await?;
+
+    let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
+
+    assert_eq!(JavaLangString::to_utf16(&jvm, &string).await?, [0x61, 0xd800, 0x62]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_to_utf16_on_substring_preserves_unpaired_surrogate() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut chars = jvm.instantiate_array("C", 3).await?;
+    jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0xd800, 0x62]).await?;
+
+    let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
+    let sub = jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (1, 3)).await?;
+
+    assert_eq!(JavaLangString::to_utf16(&jvm, &sub).await?, [0xd800, 0x62]);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
+    let sub = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+
+    let interned: Box<dyn ClassInstance> = jvm.invoke_virtual(&sub, "intern", "()Ljava/lang/String;", ()).await?;
+    let pooled = jvm.intern_string("Hello").await?;
+    assert!(interned == pooled);
+
+    let independent = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let independent_interned: Box<dyn ClassInstance> = jvm.invoke_virtual(&independent, "intern", "()Ljava/lang/String;", ()).await?;
+    assert!(interned == independent_interned);
 
     Ok(())
 }
