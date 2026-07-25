@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 use crate::{JavaChar, Result, class_instance::ClassInstance, jvm::Jvm};
 
@@ -10,6 +10,13 @@ impl JavaLangString {
         let value = jvm.get_field(this, "value", "[C").await?;
         let offset: i32 = jvm.get_field(this, "offset", "I").await?;
         let count: i32 = jvm.get_field(this, "count", "I").await?;
+
+        // access flags are not enforced, so bytecode can leave a negative here, which would widen into a huge usize
+        if offset < 0 || count < 0 {
+            return Err(jvm
+                .exception("java/lang/StringIndexOutOfBoundsException", &format!("offset {offset}, count {count}"))
+                .await);
+        }
 
         jvm.load_array(&value, offset as _, count as _).await
     }

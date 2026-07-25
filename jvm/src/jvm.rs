@@ -410,12 +410,11 @@ impl Jvm {
         let values = values.into_iter().map(|x| x.into()).collect::<Vec<_>>();
 
         let array_size = self.array_length(array).await?;
-        if offset + values.len() > array_size {
+        // saturating so an out of range offset reaches the caller as a java exception rather than an overflow panic
+        let end = offset.saturating_add(values.len());
+        if end > array_size {
             return Err(self
-                .exception(
-                    "java/lang/ArrayIndexOutOfBoundsException",
-                    &format!("{} > {}", offset + values.len(), array_size),
-                )
+                .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{end} > {array_size}"))
                 .await);
         }
 
@@ -437,12 +436,11 @@ impl Jvm {
         tracing::trace!("Load array {} at offset {offset}", array.class_definition().name());
 
         let array_size = self.array_length(array).await?;
-        if offset + count > array_size {
+        // saturating so an out of range offset reaches the caller as a java exception rather than an overflow panic
+        let end = offset.saturating_add(count);
+        if end > array_size {
             return Err(self
-                .exception(
-                    "java/lang/ArrayIndexOutOfBoundsException",
-                    &format!("{} > {}", offset + count, array_size),
-                )
+                .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{end} > {array_size}"))
                 .await);
         }
 

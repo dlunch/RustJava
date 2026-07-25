@@ -1388,3 +1388,68 @@ async fn test_last_index_of_from_beyond_count_on_substring() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_shared_constructor_rejects_invalid_range() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let make_chars = async || -> Result<_> {
+        let mut chars = jvm.instantiate_array("C", 5).await?;
+        jvm.store_array(&mut chars, 0, "Hello".encode_utf16().collect::<Vec<_>>()).await?;
+        Ok(chars)
+    };
+
+    for (offset, count) in [(-1, 3), (0, -1), (i32::MIN, 1), (0, 6), (3, 3), (i32::MAX, i32::MAX)] {
+        let chars = make_chars().await?;
+        let result = jvm.new_class("java/lang/String", "(II[C)V", (offset, count, chars)).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("String({offset}, {count}, [C) must be rejected");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
+    }
+
+    let null: ClassInstanceRef<Array<JavaChar>> = None.into();
+    let result = jvm.new_class("java/lang/String", "(II[C)V", (0, 0, null)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("String(0, 0, null) must be rejected");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    let chars = make_chars().await?;
+    let whole = jvm.new_class("java/lang/String", "(II[C)V", (0, 5, chars)).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &whole).await?, "Hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_corrupted_length_fields_raise_java_exceptions() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    for field in ["offset", "count"] {
+        let mut string = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+        jvm.put_field(&mut string, field, "I", -1i32).await?;
+
+        let result: Result<i32> = jvm.invoke_virtual(&string, "hashCode", "()I", ()).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("a negative {field} must not be read as a length");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
+
+        let result: Result<u16> = jvm.invoke_virtual(&string, "charAt", "(I)C", (0i32,)).await;
+        assert!(matches!(result, Err(JavaError::JavaException(_))));
+
+        let result = JavaLangString::to_rust_string(&jvm, &string).await;
+        assert!(matches!(result, Err(JavaError::JavaException(_))));
+    }
+
+    let mut string = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    jvm.put_field(&mut string, "count", "I", i32::MAX).await?;
+    let result: Result<i32> = jvm.invoke_virtual(&string, "hashCode", "()I", ()).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("a count past the backing array must not be read");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/ArrayIndexOutOfBoundsException"));
+
+    Ok(())
+}

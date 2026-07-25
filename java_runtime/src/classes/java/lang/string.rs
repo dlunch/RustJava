@@ -170,6 +170,13 @@ impl String {
         let offset: i32 = jvm.get_field(this, "offset", "I").await?;
         let count: i32 = jvm.get_field(this, "count", "I").await?;
 
+        // access flags are not enforced, so bytecode can leave a negative here, which would widen into a huge usize
+        if offset < 0 || count < 0 {
+            return Err(jvm
+                .exception("java/lang/StringIndexOutOfBoundsException", &format!("offset {offset}, count {count}"))
+                .await);
+        }
+
         Ok((value, offset as _, count as _))
     }
 
@@ -250,6 +257,20 @@ impl String {
         tracing::debug!("java.lang.String::<init>({this:?}, {offset}, {count}, {value:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "value is null").await);
+        }
+        // this constructor is reachable from bytecode, since the runtime does not enforce access flags
+        let length = jvm.array_length(&value).await? as i64;
+        if offset < 0 || count < 0 || offset as i64 + count as i64 > length {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("offset {offset}, count {count}, length {length}"),
+                )
+                .await);
+        }
 
         jvm.put_field(&mut this, "value", "[C", value).await?;
         jvm.put_field(&mut this, "offset", "I", offset).await?;

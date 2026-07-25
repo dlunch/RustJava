@@ -1,4 +1,4 @@
-use jvm::{ClassInstance, JavaChar, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, JavaChar, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -81,6 +81,30 @@ async fn test_intern_identity_survives_gc() -> Result<()> {
 
     let c = jvm.intern_string("interned").await?;
     assert!(a == c);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_array_bounds_check_survives_offset_overflow() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut chars = jvm.instantiate_array("C", 3).await?;
+    jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0x62, 0x63]).await?;
+
+    for offset in [usize::MAX, usize::MAX - 2, 4] {
+        let result: Result<Vec<JavaChar>> = jvm.load_array(&chars, offset, 3).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("load_array at {offset} must report a java exception");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/ArrayIndexOutOfBoundsException"));
+
+        let result = jvm.store_array(&mut chars, offset, [0x64 as JavaChar]).await;
+        assert!(matches!(result, Err(JavaError::JavaException(_))));
+    }
+
+    let loaded: Vec<JavaChar> = jvm.load_array(&chars, 0, 3).await?;
+    assert_eq!(loaded, [0x61, 0x62, 0x63]);
 
     Ok(())
 }
