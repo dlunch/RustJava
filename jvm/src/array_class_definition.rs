@@ -2,6 +2,7 @@ use alloc::{
     boxed::Box,
     format,
     string::{String, ToString},
+    vec,
     vec::Vec,
 };
 use dyn_clone::clone_trait_object;
@@ -28,7 +29,7 @@ impl<T: ArrayClassDefinition> ClassDefinition for T {
     }
 
     fn interface_names(&self) -> Vec<String> {
-        Vec::new()
+        vec!["java/lang/Cloneable".to_string(), "java/io/Serializable".to_string()]
     }
 
     fn access_flags(&self) -> ClassAccessFlags {

@@ -1,5 +1,6 @@
-use java_runtime::classes::java::lang::String as JavaString;
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_runtime::classes::java::lang::{Object, String as JavaString};
+use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -483,6 +484,332 @@ async fn test_trim_uses_java_control_character_boundary() -> Result<()> {
     let unchanged = JavaLangString::from_rust_string(&jvm, "value").await?;
     let same: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&unchanged, "trim", "()Ljava/lang/String;", ()).await?;
     assert_eq!(unchanged.identity(), same.identity());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_01_string_declares_jdk12_interfaces_and_access() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let class = jvm.get_class("java/lang/String").expect("String must be loaded");
+    let interfaces = class.definition.interface_names();
+
+    assert!(interfaces.iter().any(|name| name == "java/lang/Comparable"));
+    assert!(interfaces.iter().any(|name| name == "java/io/Serializable"));
+    assert!(
+        class
+            .definition
+            .access_flags()
+            .contains(ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL)
+    );
+    assert!(
+        class
+            .definition
+            .method("compareTo", "(Ljava/lang/String;)I", false)
+            .expect("typed compareTo")
+            .access_flags()
+            .contains(MethodAccessFlags::PUBLIC)
+    );
+    assert!(
+        class
+            .definition
+            .method("compareTo", "(Ljava/lang/Object;)I", false)
+            .expect("raw compareTo")
+            .access_flags()
+            .contains(MethodAccessFlags::PUBLIC)
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_02_compare_to_uses_utf16_code_units_and_bridge_exceptions() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    let mut supplementary_chars = jvm.instantiate_array("C", 2).await?;
+    jvm.store_array(&mut supplementary_chars, 0, [0xd83d as JavaChar, 0xde00 as JavaChar])
+        .await?;
+    let supplementary = jvm.new_class("java/lang/String", "([C)V", (supplementary_chars,)).await?;
+    let mut private_use_chars = jvm.instantiate_array("C", 1).await?;
+    jvm.store_array(&mut private_use_chars, 0, [0xe000 as JavaChar]).await?;
+    let private_use = jvm.new_class("java/lang/String", "([C)V", (private_use_chars,)).await?;
+
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&supplementary, "compareTo", "(Ljava/lang/String;)I", (private_use.clone(),))
+            .await?,
+        0xd83d - 0xe000
+    );
+
+    let mut first_unpaired_chars = jvm.instantiate_array("C", 1).await?;
+    jvm.store_array(&mut first_unpaired_chars, 0, [0xd800 as JavaChar]).await?;
+    let first_unpaired = jvm.new_class("java/lang/String", "([C)V", (first_unpaired_chars,)).await?;
+    let mut second_unpaired_chars = jvm.instantiate_array("C", 1).await?;
+    jvm.store_array(&mut second_unpaired_chars, 0, [0xd801 as JavaChar]).await?;
+    let second_unpaired = jvm.new_class("java/lang/String", "([C)V", (second_unpaired_chars,)).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first_unpaired, "compareTo", "(Ljava/lang/String;)I", (second_unpaired.clone(),),)
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first_unpaired, "compareTo", "(Ljava/lang/Object;)I", (second_unpaired,))
+            .await?,
+        -1
+    );
+
+    let a = JavaLangString::from_rust_string(&jvm, "a").await?;
+    let ac = JavaLangString::from_rust_string(&jvm, "ac").await?;
+    let az = JavaLangString::from_rust_string(&jvm, "az").await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&ac, "compareTo", "(Ljava/lang/String;)I", (az,)).await?, -23);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&a, "compareTo", "(Ljava/lang/String;)I", (ac.clone(),))
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&ac, "compareTo", "(Ljava/lang/Object;)I", (ac.clone(),))
+            .await?,
+        0
+    );
+
+    let null: ClassInstanceRef<Object> = None.into();
+    let result: Result<i32> = jvm.invoke_virtual(&ac, "compareTo", "(Ljava/lang/String;)I", (null.clone(),)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("String.compareTo(String) must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    let result: Result<i32> = jvm.invoke_virtual(&ac, "compareTo", "(Ljava/lang/Object;)I", (null,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("String.compareTo(Object) must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+    let result: Result<i32> = jvm.invoke_virtual(&ac, "compareTo", "(Ljava/lang/Object;)I", (object,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("String.compareTo(Object) must reject non-String values");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/ClassCastException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_03_compare_to_ignore_case() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let mixed = JavaLangString::from_rust_string(&jvm, "AbC").await?;
+    let lower = JavaLangString::from_rust_string(&jvm, "aBc").await?;
+    let later = JavaLangString::from_rust_string(&jvm, "abd").await?;
+
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&mixed, "compareToIgnoreCase", "(Ljava/lang/String;)I", (lower,))
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&mixed, "compareToIgnoreCase", "(Ljava/lang/String;)I", (later,))
+            .await?,
+        -1
+    );
+
+    let null: ClassInstanceRef<JavaString> = None.into();
+    let result: Result<i32> = jvm.invoke_virtual(&mixed, "compareToIgnoreCase", "(Ljava/lang/String;)I", (null,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("compareToIgnoreCase must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_04_last_index_of_string_uses_utf16_indices() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let string = JavaLangString::from_rust_string(&jvm, "a😀ba😀b").await?;
+    let emoji = JavaLangString::from_rust_string(&jvm, "😀").await?;
+    let empty = JavaLangString::from_rust_string(&jvm, "").await?;
+
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;)I", (emoji.clone(),))
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;I)I", (emoji.clone(), 4))
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;I)I", (emoji, -1))
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;I)I", (empty.clone(), -1))
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;I)I", (empty.clone(), 8))
+            .await?,
+        8
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&string, "lastIndexOf", "(Ljava/lang/String;I)I", (empty, 9))
+            .await?,
+        8
+    );
+
+    let null: ClassInstanceRef<JavaString> = None.into();
+    let result: Result<i32> = jvm.invoke_virtual(&string, "lastIndexOf", "(Ljava/lang/String;)I", (null,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("lastIndexOf(String) must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_05_copy_value_of_copies_and_checks_ranges() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let mut chars = jvm.instantiate_array("C", 4).await?;
+    jvm.store_array(&mut chars, 0, ['a' as JavaChar, 'b' as JavaChar, 'c' as JavaChar, 'd' as JavaChar])
+        .await?;
+
+    let full: ClassInstanceRef<JavaString> = jvm
+        .invoke_static("java/lang/String", "copyValueOf", "([C)Ljava/lang/String;", (chars.clone(),))
+        .await?;
+    let partial: ClassInstanceRef<JavaString> = jvm
+        .invoke_static("java/lang/String", "copyValueOf", "([CII)Ljava/lang/String;", (chars.clone(), 1, 2))
+        .await?;
+    jvm.store_array(&mut chars, 0, ['z' as JavaChar]).await?;
+
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &full).await?, "abcd");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &partial).await?, "bc");
+
+    let null: ClassInstanceRef<Array<JavaChar>> = None.into();
+    let result: Result<ClassInstanceRef<JavaString>> = jvm
+        .invoke_static("java/lang/String", "copyValueOf", "([C)Ljava/lang/String;", (null,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("copyValueOf must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    for (offset, count) in [(-1, 1), (0, -1), (3, 2)] {
+        let result: Result<ClassInstanceRef<JavaString>> = jvm
+            .invoke_static(
+                "java/lang/String",
+                "copyValueOf",
+                "([CII)Ljava/lang/String;",
+                (chars.clone(), offset, count),
+            )
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("copyValueOf must reject range ({offset}, {count})");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_06_region_matches_without_ignore_case() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let source = JavaLangString::from_rust_string(&jvm, "a😀bc").await?;
+    let same = JavaLangString::from_rust_string(&jvm, "x😀by").await?;
+
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, same.clone(), 1, 3))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (-1, same.clone(), 1, 1))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, same.clone(), 1, 99))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, "regionMatches", "(ILjava/lang/String;II)Z", (1, same, 1, -1))
+            .await?
+    );
+
+    let mut first_surrogate = jvm.instantiate_array("C", 1).await?;
+    jvm.store_array(&mut first_surrogate, 0, [0xd800 as JavaChar]).await?;
+    let first_surrogate = jvm.new_class("java/lang/String", "([C)V", (first_surrogate,)).await?;
+    let mut second_surrogate = jvm.instantiate_array("C", 1).await?;
+    jvm.store_array(&mut second_surrogate, 0, [0xd801 as JavaChar]).await?;
+    let second_surrogate = jvm.new_class("java/lang/String", "([C)V", (second_surrogate,)).await?;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&first_surrogate, "regionMatches", "(ILjava/lang/String;II)Z", (0, second_surrogate, 0, 1),)
+            .await?
+    );
+
+    let null: ClassInstanceRef<JavaString> = None.into();
+    let result: Result<bool> = jvm
+        .invoke_virtual(&source, "regionMatches", "(ILjava/lang/String;II)Z", (0, null, 0, 0))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("regionMatches must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_str_07_locale_case_overloads_and_float_formatting() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let language = JavaLangString::from_rust_string(&jvm, "en").await?;
+    let locale = jvm.new_class("java/util/Locale", "(Ljava/lang/String;)V", (language,)).await?;
+    let mixed = JavaLangString::from_rust_string(&jvm, "AbC").await?;
+
+    let lower: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&mixed, "toLowerCase", "(Ljava/util/Locale;)Ljava/lang/String;", (locale.clone(),))
+        .await?;
+    let upper: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&mixed, "toUpperCase", "(Ljava/util/Locale;)Ljava/lang/String;", (locale,))
+        .await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &lower).await?, "abc");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &upper).await?, "ABC");
+
+    let null: ClassInstanceRef<Object> = None.into();
+    let result: Result<ClassInstanceRef<JavaString>> = jvm
+        .invoke_virtual(&mixed, "toLowerCase", "(Ljava/util/Locale;)Ljava/lang/String;", (null,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("locale case conversion must reject null Locale");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    let null: ClassInstanceRef<Object> = None.into();
+    let result: Result<ClassInstanceRef<JavaString>> = jvm
+        .invoke_virtual(&mixed, "toUpperCase", "(Ljava/util/Locale;)Ljava/lang/String;", (null,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("uppercase locale conversion must reject null Locale");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+    for (descriptor, value, expected) in [
+        ("(F)Ljava/lang/String;", 0.0f64, "0.0"),
+        ("(F)Ljava/lang/String;", -0.0f64, "-0.0"),
+        ("(F)Ljava/lang/String;", f32::INFINITY as f64, "Infinity"),
+        ("(D)Ljava/lang/String;", f64::NAN, "NaN"),
+        ("(D)Ljava/lang/String;", 1.0e20, "1.0E20"),
+    ] {
+        let text: ClassInstanceRef<JavaString> = if descriptor.starts_with("(F)") {
+            jvm.invoke_static("java/lang/String", "valueOf", descriptor, (value as f32,)).await?
+        } else {
+            jvm.invoke_static("java/lang/String", "valueOf", descriptor, (value,)).await?
+        };
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, expected);
+    }
 
     Ok(())
 }

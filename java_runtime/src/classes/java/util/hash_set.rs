@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -21,6 +22,12 @@ impl HashSet {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/Collection;)V",
+                    Self::init_from_collection,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
                 JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, Default::default()),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
@@ -34,7 +41,7 @@ impl HashSet {
                 JavaFieldProto::new("map", "Ljava/util/HashMap;", Default::default()),
                 JavaFieldProto::new("present", "Ljava/lang/Object;", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -58,6 +65,25 @@ impl HashSet {
 
         jvm.put_field(&mut this, "map", "Ljava/util/HashMap;", map).await?;
         jvm.put_field(&mut this, "present", "Ljava/lang/Object;", present).await?;
+
+        Ok(())
+    }
+
+    async fn init_from_collection(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        collection: ClassInstanceRef<Object>,
+    ) -> Result<()> {
+        tracing::debug!("java.util.HashSet::<init>({this:?}, {collection:?})");
+
+        if collection.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
+        }
+        let size: i32 = jvm.invoke_virtual(&collection, "size", "()I", ()).await?;
+        let capacity = size.saturating_mul(2).max(DEFAULT_INITIAL_CAPACITY);
+        let _: () = jvm.invoke_special(&this, "java/util/HashSet", "<init>", "(I)V", (capacity,)).await?;
+        let _: bool = jvm.invoke_virtual(&this, "addAll", "(Ljava/util/Collection;)Z", (collection,)).await?;
 
         Ok(())
     }

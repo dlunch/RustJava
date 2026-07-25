@@ -8,7 +8,11 @@ use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::{io::FileDescriptor, lang::String},
+    classes::java::{
+        io::{FileDescriptor, InputStream, PrintStream},
+        lang::{Object, String},
+        util::Properties,
+    },
 };
 
 // class java.lang.System
@@ -48,11 +52,60 @@ impl System {
                     MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::STATIC),
+                JavaMethodProto::new(
+                    "identityHashCode",
+                    "(Ljava/lang/Object;)I",
+                    Self::identity_hash_code,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "setIn",
+                    "(Ljava/io/InputStream;)V",
+                    Self::set_in,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "setOut",
+                    "(Ljava/io/PrintStream;)V",
+                    Self::set_out,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "setErr",
+                    "(Ljava/io/PrintStream;)V",
+                    Self::set_err,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "getProperties",
+                    "()Ljava/util/Properties;",
+                    Self::get_properties,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "getProperty",
+                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                    Self::get_property_with_default,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
             ],
             fields: vec![
-                JavaFieldProto::new("out", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("err", "Ljava/io/PrintStream;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::STATIC),
+                JavaFieldProto::new(
+                    "in",
+                    "Ljava/io/InputStream;",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new(
+                    "out",
+                    "Ljava/io/PrintStream;",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new(
+                    "err",
+                    "Ljava/io/PrintStream;",
+                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC),
             ],
             access_flags: Default::default(),
         }
@@ -60,6 +113,15 @@ impl System {
 
     async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::<clinit>()");
+
+        let in_descriptor: ClassInstanceRef<FileDescriptor> =
+            jvm.get_static_field("java/io/FileDescriptor", "in", "Ljava/io/FileDescriptor;").await?;
+        if !in_descriptor.is_null() {
+            let input = jvm
+                .new_class("java/io/FileInputStream", "(Ljava/io/FileDescriptor;)V", (in_descriptor,))
+                .await?;
+            jvm.put_static_field("java/lang/System", "in", "Ljava/io/InputStream;", input).await?;
+        }
 
         let out_descriptor: ClassInstanceRef<FileDescriptor> =
             jvm.get_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;").await?;
@@ -123,12 +185,72 @@ impl System {
     async fn get_property(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.System::getProperty({key:?})");
 
+        if key.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "key").await);
+        }
+
         let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm
             .invoke_virtual(&props, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
             .await?;
 
         Ok(value)
+    }
+
+    async fn get_property_with_default(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        key: ClassInstanceRef<String>,
+        default_value: ClassInstanceRef<String>,
+    ) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.System::getProperty({key:?}, {default_value:?})");
+
+        if key.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "key").await);
+        }
+
+        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        jvm.invoke_virtual(
+            &props,
+            "getProperty",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+            (key, default_value),
+        )
+        .await
+    }
+
+    async fn get_properties(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Properties>> {
+        tracing::debug!("java.lang.System::getProperties()");
+
+        jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await
+    }
+
+    async fn set_in(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<InputStream>) -> Result<()> {
+        tracing::debug!("java.lang.System::setIn({input:?})");
+
+        jvm.put_static_field("java/lang/System", "in", "Ljava/io/InputStream;", input).await
+    }
+
+    async fn set_out(jvm: &Jvm, _: &mut RuntimeContext, output: ClassInstanceRef<PrintStream>) -> Result<()> {
+        tracing::debug!("java.lang.System::setOut({output:?})");
+
+        jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", output).await
+    }
+
+    async fn set_err(jvm: &Jvm, _: &mut RuntimeContext, error: ClassInstanceRef<PrintStream>) -> Result<()> {
+        tracing::debug!("java.lang.System::setErr({error:?})");
+
+        jvm.put_static_field("java/lang/System", "err", "Ljava/io/PrintStream;", error).await
+    }
+
+    async fn identity_hash_code(_: &Jvm, _: &mut RuntimeContext, object: ClassInstanceRef<Object>) -> Result<i32> {
+        tracing::debug!("java.lang.System::identityHashCode({object:?})");
+
+        if object.is_null() {
+            return Ok(0);
+        }
+
+        Ok(Object::identity_hash_code(&object))
     }
 
     async fn set_property(

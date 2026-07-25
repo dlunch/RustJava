@@ -188,9 +188,19 @@ impl ClassLoader {
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
         if let Some(element_type_name) = name_str.strip_prefix('[') {
-            // TODO do we need another class loader for array?
+            let ultimate_element_type = element_type_name.trim_start_matches('[');
+            let defining_loader = if let Some(element_class_name) = ultimate_element_type.strip_prefix('L').and_then(|name| name.strip_suffix(';')) {
+                let element_class_name = JavaLangString::from_rust_string(jvm, element_class_name).await?;
+                let element_class: ClassInstanceRef<Class> = jvm
+                    .invoke_virtual(&this, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (element_class_name,))
+                    .await?;
+                jvm.get_field(&element_class, "classLoader", "Ljava/lang/ClassLoader;").await?
+            } else {
+                None
+            };
+
             let class = runtime.define_array_class(jvm, element_type_name).await?;
-            let java_class = jvm.register_class(class, Some(this.into())).await?;
+            let java_class = jvm.register_class(class, defining_loader).await?;
 
             return Ok(java_class.into());
         }

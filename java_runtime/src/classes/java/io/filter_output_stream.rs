@@ -1,8 +1,8 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::FieldAccessFlags;
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::OutputStream};
 
@@ -20,7 +20,7 @@ impl FilterOutputStream {
                 JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
                 JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
                 JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PROTECTED)],
             access_flags: Default::default(),
@@ -68,9 +68,27 @@ impl FilterOutputStream {
         jvm.invoke_virtual(&out, "flush", "()V", ()).await
     }
 
-    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::close({this:?})");
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "close", "()V", ()).await
+
+        let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        if out.is_null() {
+            return Ok(());
+        }
+
+        match jvm.invoke_virtual::<_, ()>(&this, "flush", "()V", ()).await {
+            Ok(()) => {}
+            Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {}
+            Err(error) => {
+                let null_output: ClassInstanceRef<OutputStream> = None.into();
+                jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", null_output).await?;
+                return Err(error);
+            }
+        }
+
+        let close_result: Result<()> = jvm.invoke_virtual(&out, "close", "()V", ()).await;
+        let null_output: ClassInstanceRef<OutputStream> = None.into();
+        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", null_output).await?;
+        close_result
     }
 }

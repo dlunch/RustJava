@@ -1,6 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -17,6 +18,12 @@ impl ArrayList {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/Collection;)V",
+                    Self::init_from_collection,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
                 JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, Default::default()),
                 JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, Default::default()),
@@ -30,12 +37,24 @@ impl ArrayList {
                 JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
                 JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, Default::default()),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
+                JavaMethodProto::new(
+                    "listIterator",
+                    "()Ljava/util/ListIterator;",
+                    Self::list_iterator,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "listIterator",
+                    "(I)Ljava/util/ListIterator;",
+                    Self::list_iterator_at,
+                    MethodAccessFlags::PUBLIC,
+                ),
             ],
             fields: vec![
                 JavaFieldProto::new("elementData", "[Ljava/lang/Object;", Default::default()),
                 JavaFieldProto::new("size", "I", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -61,6 +80,24 @@ impl ArrayList {
         let element_data = jvm.instantiate_array("Ljava/lang/Object;", capacity as usize).await?;
         jvm.put_field(&mut this, "elementData", "[Ljava/lang/Object;", element_data).await?;
         jvm.put_field(&mut this, "size", "I", 0).await?;
+
+        Ok(())
+    }
+
+    async fn init_from_collection(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        collection: ClassInstanceRef<Object>,
+    ) -> Result<()> {
+        tracing::debug!("java.util.ArrayList::<init>({this:?}, {collection:?})");
+
+        if collection.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
+        }
+        let size: i32 = jvm.invoke_virtual(&collection, "size", "()I", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/ArrayList", "<init>", "(I)V", (size,)).await?;
+        let _: bool = jvm.invoke_virtual(&this, "addAll", "(Ljava/util/Collection;)Z", (collection,)).await?;
 
         Ok(())
     }
@@ -245,9 +282,20 @@ impl ArrayList {
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::iterator({this:?})");
 
-        let snapshot: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&this, "toArray", "()[Ljava/lang/Object;", ()).await?;
-        let iterator = jvm.new_class("java/util/ArrayList$Itr", "([Ljava/lang/Object;)V", (snapshot,)).await?;
+        let iterator = jvm.new_class("java/util/ArrayList$Itr", "(Ljava/util/List;I)V", (this, 0)).await?;
 
+        Ok(iterator.into())
+    }
+
+    async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let iterator = jvm.new_class("java/util/ArrayList$ListItr", "(Ljava/util/List;I)V", (this, 0)).await?;
+        Ok(iterator.into())
+    }
+
+    async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
+        let iterator = jvm
+            .new_class("java/util/ArrayList$ListItr", "(Ljava/util/List;I)V", (this, index))
+            .await?;
         Ok(iterator.into())
     }
 

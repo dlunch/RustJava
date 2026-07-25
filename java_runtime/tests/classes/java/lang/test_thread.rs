@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use java_runtime::{RuntimeClassProto, RuntimeContext};
 use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
@@ -59,6 +60,10 @@ async fn test_thread() -> Result<()> {
     let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
     assert!(ran);
 
+    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isAlive", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (true,)).await?;
+    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+
     Ok(())
 }
 
@@ -100,6 +105,96 @@ async fn test_thread_cldc_metadata_and_state() -> Result<()> {
         panic!("invalid priority must throw IllegalArgumentException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<()> {
+    let runtime = TestRuntime::new_with_queued_spawns(BTreeMap::new());
+    let jvm = create_test_jvm(runtime).await?;
+    let thread = jvm.new_class("java/lang/Thread", "()V", ()).await?;
+
+    let class = jvm.get_class("java/lang/Thread").expect("Thread must be loaded");
+    for (name, descriptor, is_static, expected) in [
+        (
+            "setName",
+            "(Ljava/lang/String;)V",
+            false,
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+        ),
+        ("isInterrupted", "()Z", false, MethodAccessFlags::PUBLIC),
+        ("interrupted", "()Z", true, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
+        (
+            "join",
+            "(J)V",
+            false,
+            MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL | MethodAccessFlags::SYNCHRONIZED,
+        ),
+        ("setDaemon", "(Z)V", false, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+        ("isDaemon", "()Z", false, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+    ] {
+        let flags = class
+            .definition
+            .method(name, descriptor, is_static)
+            .unwrap_or_else(|| panic!("missing Thread.{name}{descriptor}"))
+            .access_flags();
+        assert_eq!(flags, expected, "wrong flags for Thread.{name}{descriptor}");
+    }
+
+    let original_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    let result: Result<()> = jvm
+        .invoke_virtual(
+            &thread,
+            "setName",
+            "(Ljava/lang/String;)V",
+            (ClassInstanceRef::<java_runtime::classes::java::lang::String>::new(None),),
+        )
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("setName(null) must throw NullPointerException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    let unchanged_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        JavaLangString::to_rust_string(&jvm, &unchanged_name).await?,
+        JavaLangString::to_rust_string(&jvm, &original_name).await?
+    );
+
+    let renamed = JavaLangString::from_rust_string(&jvm, "renamed").await?;
+    let _: () = jvm.invoke_virtual(&thread, "setName", "(Ljava/lang/String;)V", (renamed,)).await?;
+    let actual_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &actual_name).await?, "renamed");
+
+    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (true,)).await?;
+    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+
+    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&thread, "interrupt", "()V", ()).await?;
+    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
+    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
+
+    let current = jvm.invoke_static("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", ()).await?;
+    let _: () = jvm.invoke_virtual(&current, "interrupt", "()V", ()).await?;
+    assert!(jvm.invoke_static::<_, bool>("java/lang/Thread", "interrupted", "()Z", ()).await?);
+    assert!(!jvm.invoke_static::<_, bool>("java/lang/Thread", "interrupted", "()Z", ()).await?);
+    assert!(!jvm.invoke_virtual::<_, bool>(&current, "isInterrupted", "()Z", ()).await?);
+    assert!(!jvm.get_field::<bool>(&current, "interrupted", "Z").await?);
+
+    let result: Result<()> = jvm.invoke_virtual(&thread, "join", "(J)V", (-1i64,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("join(-1) must throw IllegalArgumentException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
+
+    let _: () = jvm.invoke_virtual(&thread, "start", "()V", ()).await?;
+    let result: Result<()> = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (false,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("setDaemon after start must throw IllegalThreadStateException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalThreadStateException"));
+    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
 
     Ok(())
 }

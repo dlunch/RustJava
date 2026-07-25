@@ -25,6 +25,15 @@ pub enum IOError {
 pub type IOResult<T> = Result<T, IOError>;
 pub type FileSize = u64;
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct FileOpenOptions {
+    pub read: bool,
+    pub write: bool,
+    pub append: bool,
+    pub truncate: bool,
+    pub create: bool,
+}
+
 #[derive(Eq, PartialEq)]
 pub enum FileType {
     File,

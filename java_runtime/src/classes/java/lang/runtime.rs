@@ -21,6 +21,7 @@ impl Runtime {
                 JavaMethodProto::new("totalMemory", "()J", Self::total_memory, Default::default()),
                 JavaMethodProto::new("freeMemory", "()J", Self::free_memory, Default::default()),
                 JavaMethodProto::new("gc", "()V", Self::gc, Default::default()),
+                JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
             access_flags: Default::default(),
@@ -58,6 +59,13 @@ impl Runtime {
 
         jvm.collect_garbage()?;
 
+        Ok(())
+    }
+
+    async fn exit(_: &Jvm, context: &mut RuntimeContext, _: ClassInstanceRef<Self>, status: i32) -> Result<()> {
+        tracing::debug!("java.lang.Runtime::exit({status})");
+
+        context.exit(status);
         Ok(())
     }
 }

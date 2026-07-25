@@ -1,10 +1,30 @@
 use alloc::{
     boxed::Box,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 
-use crate::{ClassInstance, JavaValue, class_loader::Class};
+use event_listener::Event;
+
+use crate::{ClassInstance, JavaValue, class_loader::Class, monitor::MonitorWaitTimeout};
+
+#[derive(Clone)]
+pub(crate) enum ThreadInterruptWaiter {
+    Monitor(MonitorWaitTimeout),
+    Event(Arc<Event>),
+}
+
+impl ThreadInterruptWaiter {
+    pub(crate) fn notify(self) {
+        match self {
+            Self::Monitor(waiter) => waiter.notify(),
+            Self::Event(event) => {
+                event.notify(1);
+            }
+        }
+    }
+}
 
 pub enum StackFrame {
     Java(JavaStackFrame),
@@ -30,6 +50,8 @@ impl StackFrame {
 pub struct JvmThread {
     stack: Vec<StackFrame>,
     java_thread: Option<Box<dyn ClassInstance>>,
+    pub(crate) interrupted: bool,
+    pub(crate) interrupt_waiter: Option<ThreadInterruptWaiter>,
 }
 
 impl JvmThread {
@@ -37,6 +59,8 @@ impl JvmThread {
         Self {
             stack: Vec::new(),
             java_thread: None,
+            interrupted: false,
+            interrupt_waiter: None,
         }
     }
 

@@ -6,7 +6,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    FileOpenOptions, RuntimeClassProto, RuntimeContext,
     classes::java::io::{File, FileDescriptor},
 };
 
@@ -43,7 +43,15 @@ impl FileInputStream {
         let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
-        let fd = context.open(&path, false).await;
+        let fd = context
+            .open(
+                &path,
+                FileOpenOptions {
+                    read: true,
+                    ..Default::default()
+                },
+            )
+            .await;
         if fd.is_err() {
             return Err(jvm.exception("java/io/FileNotFoundException", "File not found").await);
         }

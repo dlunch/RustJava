@@ -1,3 +1,4 @@
+use java_constants::MethodAccessFlags;
 use java_runtime::{
     Runtime,
     classes::java::{
@@ -12,6 +13,71 @@ use jvm::{
 };
 
 use test_utils::{TestRuntime, test_jvm};
+
+#[tokio::test]
+async fn cls_01_to_04_descriptors_and_standard_class_metadata() -> Result<()> {
+    let proto = Class::as_proto();
+    for (name, descriptor) in [
+        ("getSuperclass", "()Ljava/lang/Class;"),
+        ("getClassLoader", "()Ljava/lang/ClassLoader;"),
+        ("getComponentType", "()Ljava/lang/Class;"),
+        ("getInterfaces", "()[Ljava/lang/Class;"),
+    ] {
+        let method = proto
+            .methods
+            .iter()
+            .find(|method| method.name == name && method.descriptor == descriptor)
+            .unwrap_or_else(|| panic!("missing java/lang/Class.{name}{descriptor}"));
+        assert!(method.access_flags.contains(MethodAccessFlags::PUBLIC));
+    }
+
+    let jvm = test_jvm().await?;
+    let object = jvm.resolve_class("java/lang/Object").await?.java_class();
+    let string = jvm.resolve_class("java/lang/String").await?.java_class();
+    let comparable = jvm.resolve_class("java/lang/Comparable").await?.java_class();
+    let serializable = jvm.resolve_class("java/io/Serializable").await?.java_class();
+    let primitive = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
+    let primitive_array = jvm.resolve_class("[I").await?.java_class();
+    let string_array = jvm.resolve_class("[Ljava/lang/String;").await?.java_class();
+    let string_matrix = jvm.resolve_class("[[Ljava/lang/String;").await?.java_class();
+
+    let superclass: ClassInstanceRef<Class> = jvm.invoke_virtual(&string, "getSuperclass", "()Ljava/lang/Class;", ()).await?;
+    assert_eq!(superclass.identity(), object.identity());
+    for class in [&object, &primitive] {
+        let superclass: ClassInstanceRef<Class> = jvm.invoke_virtual(class, "getSuperclass", "()Ljava/lang/Class;", ()).await?;
+        assert!(superclass.is_null());
+    }
+    let array_superclass: ClassInstanceRef<Class> = jvm.invoke_virtual(&string_array, "getSuperclass", "()Ljava/lang/Class;", ()).await?;
+    assert_eq!(array_superclass.identity(), object.identity());
+
+    let primitive_component: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(&primitive_array, "getComponentType", "()Ljava/lang/Class;", ())
+        .await?;
+    assert_eq!(primitive_component.identity(), primitive.identity());
+    let string_component: ClassInstanceRef<Class> = jvm.invoke_virtual(&string_array, "getComponentType", "()Ljava/lang/Class;", ()).await?;
+    assert_eq!(string_component.identity(), string.identity());
+    let matrix_component: ClassInstanceRef<Class> = jvm.invoke_virtual(&string_matrix, "getComponentType", "()Ljava/lang/Class;", ()).await?;
+    assert_eq!(matrix_component.identity(), string_array.identity());
+    let non_array_component: ClassInstanceRef<Class> = jvm.invoke_virtual(&string, "getComponentType", "()Ljava/lang/Class;", ()).await?;
+    assert!(non_array_component.is_null());
+
+    let string_interfaces: ClassInstanceRef<Array<Class>> = jvm.invoke_virtual(&string, "getInterfaces", "()[Ljava/lang/Class;", ()).await?;
+    let string_interfaces: Vec<ClassInstanceRef<Class>> = jvm.load_array(&string_interfaces, 0, 2).await?;
+    assert_eq!(string_interfaces[0].identity(), serializable.identity());
+    assert_eq!(string_interfaces[1].identity(), comparable.identity());
+
+    let array_interfaces: ClassInstanceRef<Array<Class>> = jvm.invoke_virtual(&string_array, "getInterfaces", "()[Ljava/lang/Class;", ()).await?;
+    let array_interfaces: Vec<ClassInstanceRef<Class>> = jvm.load_array(&array_interfaces, 0, 2).await?;
+    assert_eq!(JavaLangClass::name(&jvm, &array_interfaces[0]).await?, "java/lang/Cloneable");
+    assert_eq!(JavaLangClass::name(&jvm, &array_interfaces[1]).await?, "java/io/Serializable");
+
+    for class in [object, string, primitive_array, string_array, string_matrix] {
+        let loader: ClassInstanceRef<ClassLoader> = jvm.invoke_virtual(&class, "getClassLoader", "()Ljava/lang/ClassLoader;", ()).await?;
+        assert!(loader.is_null());
+    }
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_class() -> Result<()> {

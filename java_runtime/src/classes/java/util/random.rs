@@ -1,8 +1,8 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
-use jvm::{ClassInstanceRef, Jvm, Result};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
 
@@ -14,20 +14,37 @@ impl Random {
         RuntimeClassProto {
             name: "java/util/Random",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, Default::default()),
-                JavaMethodProto::new("next", "(I)I", Self::next, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("nextInt", "()I", Self::next_int, Default::default()),
-                JavaMethodProto::new("nextInt", "(I)I", Self::next_int_with_bound, Default::default()),
-                JavaMethodProto::new("nextLong", "()J", Self::next_long, Default::default()),
-                JavaMethodProto::new("nextFloat", "()F", Self::next_float, Default::default()),
-                JavaMethodProto::new("nextDouble", "()D", Self::next_double, Default::default()),
-                JavaMethodProto::new("setSeed", "(J)V", Self::set_seed, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("next", "(I)I", Self::next, MethodAccessFlags::PROTECTED | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new("nextBoolean", "()Z", Self::next_boolean, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextBytes", "([B)V", Self::next_bytes, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextInt", "()I", Self::next_int, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextInt", "(I)I", Self::next_int_with_bound, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextLong", "()J", Self::next_long, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextFloat", "()F", Self::next_float, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextDouble", "()D", Self::next_double, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "nextGaussian",
+                    "()D",
+                    Self::next_gaussian,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "setSeed",
+                    "(J)V",
+                    Self::set_seed,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("seed", "J", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![
+                JavaFieldProto::new("seed", "J", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("nextNextGaussian", "D", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("haveNextNextGaussian", "Z", FieldAccessFlags::PRIVATE),
+            ],
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -61,6 +78,37 @@ impl Random {
         let value = (next_seed as u64).wrapping_shr(((48 - bits) & 63) as u32) as i32;
 
         Ok(value)
+    }
+
+    async fn next_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
+        tracing::debug!("java.util.Random::nextBoolean({this:?})");
+
+        let value: i32 = jvm.invoke_virtual(&this, "next", "(I)I", (1,)).await?;
+        Ok(value != 0)
+    }
+
+    async fn next_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, mut bytes: ClassInstanceRef<Array<i8>>) -> Result<()> {
+        tracing::debug!("java.util.Random::nextBytes({this:?}, {bytes:?})");
+
+        if bytes.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "bytes is null").await);
+        }
+
+        let length = jvm.array_length(&bytes).await?;
+        let mut index = 0;
+        while index < length {
+            let mut random: i32 = jvm.invoke_virtual(&this, "nextInt", "()I", ()).await?;
+            let chunk_length = core::cmp::min(length - index, 4);
+            let mut chunk = alloc::vec::Vec::with_capacity(chunk_length);
+            for _ in 0..chunk_length {
+                chunk.push(random as i8);
+                random >>= 8;
+            }
+            jvm.store_array(&mut bytes, index, chunk).await?;
+            index += chunk_length;
+        }
+
+        Ok(())
     }
 
     async fn next_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -112,12 +160,37 @@ impl Random {
         Ok(((high as i64) << 27 | low as i64) as f64 / (1u64 << 53) as f64)
     }
 
+    async fn next_gaussian(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<f64> {
+        tracing::debug!("java.util.Random::nextGaussian({this:?})");
+
+        let have_next_next_gaussian: bool = jvm.get_field(&this, "haveNextNextGaussian", "Z").await?;
+        if have_next_next_gaussian {
+            let next_next_gaussian: f64 = jvm.get_field(&this, "nextNextGaussian", "D").await?;
+            jvm.put_field(&mut this, "haveNextNextGaussian", "Z", false).await?;
+            return Ok(next_next_gaussian);
+        }
+
+        let (first, second, radius_squared) = loop {
+            let first = 2.0 * jvm.invoke_virtual::<_, f64>(&this, "nextDouble", "()D", ()).await? - 1.0;
+            let second = 2.0 * jvm.invoke_virtual::<_, f64>(&this, "nextDouble", "()D", ()).await? - 1.0;
+            let radius_squared = first * first + second * second;
+            if radius_squared < 1.0 && radius_squared != 0.0 {
+                break (first, second, radius_squared);
+            }
+        };
+        let multiplier = libm::sqrt(-2.0 * libm::log(radius_squared) / radius_squared);
+        jvm.put_field(&mut this, "nextNextGaussian", "D", second * multiplier).await?;
+        jvm.put_field(&mut this, "haveNextNextGaussian", "Z", true).await?;
+        Ok(first * multiplier)
+    }
+
     async fn set_seed(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
         tracing::debug!("java.util.Random::setSeed({this:?}, {seed:?})");
 
         let seed = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1);
 
         jvm.put_field(&mut this, "seed", "J", seed).await?;
+        jvm.put_field(&mut this, "haveNextNextGaussian", "Z", false).await?;
 
         Ok(())
     }

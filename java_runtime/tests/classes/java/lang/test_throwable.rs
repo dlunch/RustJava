@@ -20,6 +20,8 @@ async fn test_to_string() -> Result<()> {
 
     let message: ClassInstanceRef<String> = jvm.invoke_virtual(&throwable, "getMessage", "()Ljava/lang/String;", ()).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "test message");
+    let localized: ClassInstanceRef<String> = jvm.invoke_virtual(&throwable, "getLocalizedMessage", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(localized.identity(), message.identity());
 
     Ok(())
 }

@@ -175,7 +175,7 @@ async fn test_array_list_assignability_and_interface_style_calls() -> Result<()>
 }
 
 #[tokio::test]
-async fn test_array_list_itr_snapshot_exhaustion_and_remove() -> Result<()> {
+async fn test_array_list_itr_is_live_and_remove_writes_through() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let array_list = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
@@ -201,7 +201,13 @@ async fn test_array_list_itr_snapshot_exhaustion_and_remove() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "second");
 
     let has_next: bool = jvm.invoke_virtual(&iterator, "hasNext", "()Z", ()).await?;
-    assert!(!has_next);
+    assert!(has_next);
+
+    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "third");
+
+    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&array_list, "size", "()I", ()).await?, 2);
 
     let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
@@ -213,7 +219,7 @@ async fn test_array_list_itr_snapshot_exhaustion_and_remove() -> Result<()> {
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Expected JavaException, got {:?}", result);
     };
-    assert!(jvm.is_instance(&*exception, "java/lang/UnsupportedOperationException"));
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
 
     let empty_array_list = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
     let empty_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&empty_array_list, "iterator", "()Ljava/util/Iterator;", ()).await?;

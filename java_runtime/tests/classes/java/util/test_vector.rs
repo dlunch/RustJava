@@ -414,7 +414,7 @@ async fn test_vector_collection_and_list_wrappers() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_vector_itr_wrapper() -> Result<()> {
+async fn test_vector_itr_is_live_and_remove_writes_through() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
@@ -440,7 +440,13 @@ async fn test_vector_itr_wrapper() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "second");
 
     let has_next: bool = jvm.invoke_virtual(&iterator, "hasNext", "()Z", ()).await?;
-    assert!(!has_next);
+    assert!(has_next);
+
+    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "third");
+
+    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
+    assert_eq!(jvm.invoke_virtual::<_, i32>(&vector, "size", "()I", ()).await?, 2);
 
     let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
@@ -452,7 +458,7 @@ async fn test_vector_itr_wrapper() -> Result<()> {
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Expected JavaException, got {:?}", result);
     };
-    assert!(jvm.is_instance(&*exception, "java/lang/UnsupportedOperationException"));
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
 
     let empty_vector = jvm.new_class("java/util/Vector", "()V", ()).await?;
     let empty_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&empty_vector, "iterator", "()Ljava/util/Iterator;", ()).await?;

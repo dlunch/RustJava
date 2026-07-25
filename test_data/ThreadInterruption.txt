@@ -1,0 +1,14 @@
+true
+true
+false
+wait interrupted
+false
+true
+pre sleep interrupted
+false
+join interrupted
+false
+true
+true
+false
+true

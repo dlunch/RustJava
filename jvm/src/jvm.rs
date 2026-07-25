@@ -3,11 +3,15 @@
 use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     fmt::Debug,
+    future::{Future, poll_fn},
     iter,
+    pin::pin,
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    task::Poll,
 };
 
 use dyn_clone::clone_box;
+use event_listener::Event;
 use hashbrown::HashSet;
 use parking_lot::RwLock;
 
@@ -29,7 +33,7 @@ use crate::{
     method::Method,
     monitor::{Monitor, MonitorWait, MonitorWaitTimeout},
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
-    thread::JvmThread,
+    thread::{JvmThread, ThreadInterruptWaiter},
     r#type::JavaType,
     value::JavaValue,
 };
@@ -595,7 +599,18 @@ impl Jvm {
     pub async fn object_wait_prepare(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<(MonitorWait, MonitorWaitTimeout)> {
         let thread_id = (self.inner.get_current_thread_id)();
         match self.get_or_create_monitor(obj.as_class_instance()).prepare_wait(thread_id) {
-            Ok(wait) => Ok(wait),
+            Ok((wait, timeout)) => {
+                let interrupted = {
+                    let mut threads = self.inner.threads.write();
+                    let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
+                    thread.interrupt_waiter = Some(ThreadInterruptWaiter::Monitor(timeout.clone()));
+                    thread.interrupted
+                };
+                if interrupted {
+                    timeout.clone().notify();
+                }
+                Ok((wait, timeout))
+            }
             Err(_) => Err(self
                 .exception("java/lang/IllegalMonitorStateException", "current thread does not own the monitor")
                 .await),
@@ -604,7 +619,114 @@ impl Jvm {
 
     pub async fn object_wait(&self, wait: MonitorWait) -> Result<()> {
         wait.wait().await;
+
+        let thread_id = (self.inner.get_current_thread_id)();
+        {
+            let mut threads = self.inner.threads.write();
+            let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
+            thread.interrupt_waiter = None;
+        }
+        let interrupted = self.current_java_thread_interrupted().await?;
+        if interrupted {
+            Err(self.exception("java/lang/InterruptedException", "thread interrupted").await)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub async fn interrupt_java_thread(&self, thread: &mut Box<dyn ClassInstance>) -> Result<()> {
+        let field = self.find_field(&*thread.class_definition(), "interrupted", "Z")?.unwrap();
+        let identity = thread.identity();
+        let waiter = {
+            let mut threads = self.inner.threads.write();
+            thread.put_field(&*field, JavaValue::from(true))?;
+            let target = threads
+                .values_mut()
+                .find(|candidate| candidate.java_thread().is_some_and(|java_thread| java_thread.identity() == identity));
+            if let Some(target) = target {
+                target.interrupted = true;
+                target.interrupt_waiter.clone()
+            } else {
+                None
+            }
+        };
+        if let Some(waiter) = waiter {
+            waiter.notify();
+        }
         Ok(())
+    }
+
+    pub async fn is_java_thread_interrupted(&self, thread: &Box<dyn ClassInstance>) -> Result<bool> {
+        let field = self.find_field(&*thread.class_definition(), "interrupted", "Z")?.unwrap();
+        let identity = thread.identity();
+        let threads = self.inner.threads.read();
+        let field_interrupted: bool = thread.get_field(&*field)?.into();
+        let jvm_interrupted = threads
+            .values()
+            .find(|candidate| candidate.java_thread().is_some_and(|java_thread| java_thread.identity() == identity))
+            .is_some_and(|target| target.interrupted);
+        Ok(field_interrupted || jvm_interrupted)
+    }
+
+    pub async fn current_java_thread_interrupted(&self) -> Result<bool> {
+        let thread_id = (self.inner.get_current_thread_id)();
+        let mut java_thread = self
+            .inner
+            .threads
+            .read()
+            .get(&thread_id)
+            .and_then(JvmThread::java_thread)
+            .expect("attached JVM thread must have a java.lang.Thread")
+            .clone();
+        let field = self.find_field(&*java_thread.class_definition(), "interrupted", "Z")?.unwrap();
+        let mut threads = self.inner.threads.write();
+        let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
+        let field_interrupted: bool = java_thread.get_field(&*field)?.into();
+        let interrupted = thread.interrupted || field_interrupted;
+        thread.interrupted = false;
+        java_thread.put_field(&*field, JavaValue::from(false))?;
+        Ok(interrupted)
+    }
+
+    pub async fn sleep_interruptibly<F>(&self, sleep: F) -> Result<()>
+    where
+        F: Future<Output = ()>,
+    {
+        let event = Arc::new(Event::new());
+        let listener = event.listen();
+        let thread_id = (self.inner.get_current_thread_id)();
+        let interrupted = {
+            let mut threads = self.inner.threads.write();
+            let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
+            thread.interrupt_waiter = Some(ThreadInterruptWaiter::Event(event.clone()));
+            thread.interrupted
+        };
+        if interrupted {
+            event.notify(1);
+        }
+
+        let mut sleep = pin!(sleep);
+        let mut listener = pin!(listener);
+        poll_fn(|context| {
+            if listener.as_mut().poll(context).is_ready() || sleep.as_mut().poll(context).is_ready() {
+                Poll::Ready(())
+            } else {
+                Poll::Pending
+            }
+        })
+        .await;
+
+        {
+            let mut threads = self.inner.threads.write();
+            let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
+            thread.interrupt_waiter = None;
+        }
+        let interrupted = self.current_java_thread_interrupted().await?;
+        if interrupted {
+            Err(self.exception("java/lang/InterruptedException", "thread interrupted").await)
+        } else {
+            Ok(())
+        }
     }
 
     pub async fn object_notify(&self, obj: &(impl AsClassInstance + ?Sized), count: usize) -> Result<()> {
@@ -641,7 +763,8 @@ impl Jvm {
         if class_name.starts_with('[') {
             let stripped_name = class_name.trim_start_matches('[');
             if stripped_name.starts_with('L') {
-                self.resolve_class(&stripped_name[1..stripped_name.len() - 1]).await?;
+                self.resolve_class_internal(&stripped_name[1..stripped_name.len() - 1], class_loader_wrapper)
+                    .await?;
                 // ensure element type is loaded
             }
         }
@@ -933,7 +1056,14 @@ impl Jvm {
             Some(x) => x,
             None => self.new_class("java/lang/Thread", "(Z)V", (true,)).await?,
         };
-        self.inner.threads.write().get_mut(&thread_id).unwrap().set_java_thread(java_thread);
+        self.inner
+            .threads
+            .write()
+            .get_mut(&thread_id)
+            .unwrap()
+            .set_java_thread(java_thread.clone());
+        let interrupted: bool = self.get_field(&java_thread, "interrupted", "Z").await?;
+        self.inner.threads.write().get_mut(&thread_id).unwrap().interrupted |= interrupted;
 
         Ok(())
     }

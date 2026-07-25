@@ -34,6 +34,20 @@ impl Class {
                 JavaMethodProto::new("isAssignableFrom", "(Ljava/lang/Class;)Z", Self::is_assignable_from, Default::default()),
                 JavaMethodProto::new("newInstance", "()Ljava/lang/Object;", Self::new_instance, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getSuperclass", "()Ljava/lang/Class;", Self::get_superclass, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "getClassLoader",
+                    "()Ljava/lang/ClassLoader;",
+                    Self::get_class_loader,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "getComponentType",
+                    "()Ljava/lang/Class;",
+                    Self::get_component_type,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("getInterfaces", "()[Ljava/lang/Class;", Self::get_interfaces, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
@@ -171,6 +185,97 @@ impl Class {
         }
 
         Ok(jvm.is_type_assignable(&JavaType::from_class_name(&other_name), &JavaType::from_class_name(&class_name)))
+    }
+
+    async fn get_superclass(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.Class::getSuperclass({this:?})");
+
+        let name = JavaLangClass::name(jvm, &this).await?;
+        if matches!(
+            name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double" | "void" | "java/lang/Object"
+        ) {
+            return Ok(None.into());
+        }
+        if name.starts_with('[') {
+            return Ok(jvm.resolve_class("java/lang/Object").await?.java_class().into());
+        }
+
+        let class = JavaLangClass::to_rust_class(jvm, &this).await?;
+        if class.access_flags().contains(ClassAccessFlags::INTERFACE) {
+            return Ok(None.into());
+        }
+
+        match class.super_class_name() {
+            Some(super_class_name) => Ok(jvm.resolve_class(&super_class_name).await?.java_class().into()),
+            None => Ok(None.into()),
+        }
+    }
+
+    async fn get_class_loader(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<ClassLoader>> {
+        tracing::debug!("java.lang.Class::getClassLoader({this:?})");
+
+        jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await
+    }
+
+    async fn get_component_type(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.Class::getComponentType({this:?})");
+
+        let name = JavaLangClass::name(jvm, &this).await?;
+        let Some(component_descriptor) = name.strip_prefix('[') else {
+            return Ok(None.into());
+        };
+
+        let primitive_wrapper = match component_descriptor {
+            "Z" => Some("java/lang/Boolean"),
+            "B" => Some("java/lang/Byte"),
+            "C" => Some("java/lang/Character"),
+            "S" => Some("java/lang/Short"),
+            "I" => Some("java/lang/Integer"),
+            "J" => Some("java/lang/Long"),
+            "F" => Some("java/lang/Float"),
+            "D" => Some("java/lang/Double"),
+            _ => None,
+        };
+        if let Some(wrapper) = primitive_wrapper {
+            return jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await;
+        }
+
+        let component_name = if let Some(reference_name) = component_descriptor.strip_prefix('L').and_then(|name| name.strip_suffix(';')) {
+            reference_name
+        } else {
+            component_descriptor
+        };
+        let defining_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
+        if defining_loader.is_null() {
+            return Ok(jvm.resolve_class(component_name).await?.java_class().into());
+        }
+
+        let component_name = JavaLangString::from_rust_string(jvm, component_name).await?;
+        jvm.invoke_virtual(&defining_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (component_name,))
+            .await
+    }
+
+    async fn get_interfaces(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<jvm::Array<Self>>> {
+        tracing::debug!("java.lang.Class::getInterfaces({this:?})");
+
+        let name = JavaLangClass::name(jvm, &this).await?;
+        let interface_names = if matches!(
+            name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double" | "void"
+        ) {
+            vec![]
+        } else {
+            JavaLangClass::to_rust_class(jvm, &this).await?.interface_names()
+        };
+
+        let mut interfaces = jvm.instantiate_array("Ljava/lang/Class;", interface_names.len()).await?;
+        for (index, interface_name) in interface_names.iter().enumerate() {
+            let interface = jvm.resolve_class(interface_name).await?.java_class();
+            jvm.store_array(&mut interfaces, index, [interface]).await?;
+        }
+
+        Ok(interfaces.into())
     }
 
     async fn get_resource_as_stream(

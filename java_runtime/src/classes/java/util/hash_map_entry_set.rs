@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -21,6 +22,7 @@ impl HashMapEntrySet {
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
+                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
             ],
@@ -63,16 +65,53 @@ impl HashMapEntrySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
         let candidate_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
-        let candidate_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
 
         let entry = HashMap::find_entry(jvm, &map, &candidate_key).await?;
         if entry.is_null() {
             return Ok(false);
         }
 
+        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+        if !Self::object_equals(jvm, &entry_key, &candidate_key).await? {
+            return Ok(false);
+        }
+
+        let candidate_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
         let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
 
-        Self::object_equals(jvm, &candidate_value, &entry_value).await
+        Self::object_equals(jvm, &entry_value, &candidate_value).await
+    }
+
+    async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.HashMap$EntrySet::remove({this:?}, {candidate:?})");
+
+        if candidate.is_null() || !jvm.is_instance(&**candidate, "java/util/Map$Entry") {
+            return Ok(false);
+        }
+
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let candidate_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let entry = HashMap::find_entry(jvm, &map, &candidate_key).await?;
+        if entry.is_null() {
+            return Ok(false);
+        }
+
+        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+        if !Self::object_equals(jvm, &entry_key, &candidate_key).await? {
+            return Ok(false);
+        }
+
+        let candidate_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
+        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        if !Self::object_equals(jvm, &entry_value, &candidate_value).await? {
+            return Ok(false);
+        }
+
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (candidate_key,))
+            .await?;
+
+        Ok(true)
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {

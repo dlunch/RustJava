@@ -1,11 +1,11 @@
 use alloc::sync::Arc;
 use std::{
-    fs::{self, OpenOptions},
+    fs::{self, OpenOptions as StdOpenOptions},
     io::{self, Read, Seek, Write},
     sync::Mutex,
 };
 
-use java_runtime::{File, FileSize, FileStat, FileType, IOError, IOResult};
+use java_runtime::{File, FileOpenOptions, FileSize, FileStat, FileType, IOError, IOResult};
 
 pub struct WriteStreamFile<W>
 where
@@ -131,9 +131,14 @@ pub struct FileImpl {
 }
 
 impl FileImpl {
-    pub fn new(path: &str, write: bool) -> io::Result<Self> {
-        let mut options = OpenOptions::new();
-        let file = options.read(true).write(write).create(write).open(path)?;
+    pub fn new(path: &str, options: FileOpenOptions) -> io::Result<Self> {
+        let file = StdOpenOptions::new()
+            .read(options.read)
+            .write(options.write)
+            .append(options.append)
+            .truncate(options.truncate)
+            .create(options.create)
+            .open(path)?;
 
         Ok(Self {
             file: Arc::new(Mutex::new(file)),

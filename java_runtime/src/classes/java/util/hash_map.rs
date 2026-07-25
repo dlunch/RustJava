@@ -1,6 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -22,6 +23,7 @@ impl HashMap {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
                 JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, Default::default()),
@@ -33,6 +35,7 @@ impl HashMap {
                     Self::put,
                     Default::default(),
                 ),
+                JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("remove", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::remove, Default::default()),
                 JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
                 JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, Default::default()),
@@ -44,7 +47,7 @@ impl HashMap {
                 JavaFieldProto::new("size", "I", Default::default()),
                 JavaFieldProto::new("threshold", "I", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -109,6 +112,20 @@ impl HashMap {
         jvm.put_field(&mut this, "table", "[Ljava/util/HashMap$Entry;", table).await?;
         jvm.put_field(&mut this, "size", "I", 0).await?;
         jvm.put_field(&mut this, "threshold", "I", Self::threshold_for_capacity(capacity)).await?;
+
+        Ok(())
+    }
+
+    async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
+        tracing::debug!("java.util.HashMap::<init>({this:?}, {map:?})");
+
+        if map.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "map").await);
+        }
+        let size: i32 = jvm.invoke_virtual(&map, "size", "()I", ()).await?;
+        let capacity = size.saturating_mul(2).max(DEFAULT_INITIAL_CAPACITY);
+        let _: () = jvm.invoke_special(&this, "java/util/HashMap", "<init>", "(I)V", (capacity,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "putAll", "(Ljava/util/Map;)V", (map,)).await?;
 
         Ok(())
     }
@@ -179,10 +196,8 @@ impl HashMap {
         Self::ensure_table_for_insert(jvm, &mut this).await?;
 
         let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
-        let table_len = jvm.array_length(&table).await? as i32;
-        let Some(bucket_index) = Self::bucket_index(key_hash, table_len) else {
-            return Err(jvm.exception("java/lang/RuntimeException", "HashMap table is empty").await);
-        };
+        let table_len = jvm.array_length(&table).await?;
+        let bucket_index = Self::bucket_index(key_hash, table_len);
 
         let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
         while !entry.is_null() {
@@ -204,11 +219,7 @@ impl HashMap {
         let bucket_index = if size >= threshold {
             Self::rehash(jvm, &mut this).await?;
             table = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
-            let table_len = jvm.array_length(&table).await? as i32;
-            let Some(bucket_index) = Self::bucket_index(key_hash, table_len) else {
-                return Err(jvm.exception("java/lang/RuntimeException", "HashMap table is empty").await);
-            };
-            bucket_index
+            Self::bucket_index(key_hash, jvm.array_length(&table).await?)
         } else {
             bucket_index
         };
@@ -228,6 +239,13 @@ impl HashMap {
         Ok(None.into())
     }
 
+    async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
+        tracing::debug!("java.util.HashMap::putAll({this:?}, {map:?})");
+
+        jvm.invoke_special(&this, "java/util/AbstractMap", "putAll", "(Ljava/util/Map;)V", (map,))
+            .await
+    }
+
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -238,10 +256,11 @@ impl HashMap {
 
         let key_hash = Self::object_hash_or_zero(jvm, &key).await?;
         let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
-        let table_len = jvm.array_length(&table).await? as i32;
-        let Some(bucket_index) = Self::bucket_index(key_hash, table_len) else {
+        let table_len = jvm.array_length(&table).await?;
+        if table_len == 0 {
             return Ok(None.into());
-        };
+        }
+        let bucket_index = Self::bucket_index(key_hash, table_len);
 
         let mut previous: ClassInstanceRef<HashMapEntry> = None.into();
         let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
@@ -296,10 +315,11 @@ impl HashMap {
     ) -> Result<ClassInstanceRef<HashMapEntry>> {
         let key_hash = Self::object_hash_or_zero(jvm, key).await?;
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
-        let table_len = jvm.array_length(&table).await? as i32;
-        let Some(bucket_index) = Self::bucket_index(key_hash, table_len) else {
+        let table_len = jvm.array_length(&table).await?;
+        if table_len == 0 {
             return Ok(None.into());
-        };
+        }
+        let bucket_index = Self::bucket_index(key_hash, table_len);
 
         let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
         while !entry.is_null() {
@@ -335,7 +355,7 @@ impl HashMap {
     async fn rehash(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
         let old_table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
         let old_capacity = jvm.array_length(&old_table).await?;
-        let new_capacity = if old_capacity == 0 { 1 } else { old_capacity * 2 + 1 };
+        let new_capacity = old_capacity * 2 + 1;
 
         let mut new_table: ClassInstanceRef<Array<HashMapEntry>> = jvm.instantiate_array("Ljava/util/HashMap$Entry;", new_capacity).await?.into();
         for bucket_index in 0..old_capacity {
@@ -343,9 +363,7 @@ impl HashMap {
             while !entry.is_null() {
                 let next: ClassInstanceRef<HashMapEntry> = jvm.get_field(&entry, "next", "Ljava/util/HashMap$Entry;").await?;
                 let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
-                let Some(new_index) = Self::bucket_index(entry_hash, new_capacity as i32) else {
-                    return Err(jvm.exception("java/lang/RuntimeException", "HashMap table is empty").await);
-                };
+                let new_index = Self::bucket_index(entry_hash, new_capacity);
 
                 let existing = Self::load_bucket(jvm, &new_table, new_index).await?;
                 jvm.put_field(&mut entry, "next", "Ljava/util/HashMap$Entry;", existing).await?;
@@ -363,9 +381,7 @@ impl HashMap {
     }
 
     async fn load_bucket(jvm: &Jvm, table: &ClassInstanceRef<Array<HashMapEntry>>, bucket_index: usize) -> Result<ClassInstanceRef<HashMapEntry>> {
-        let mut entries = jvm.load_array(table, bucket_index, 1).await?;
-
-        Ok(entries.pop().unwrap_or_else(|| None.into()))
+        Ok(jvm.load_array(table, bucket_index, 1).await?.remove(0))
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {
@@ -401,19 +417,15 @@ impl HashMap {
         jvm.invoke_virtual(value, "hashCode", "()I", ()).await
     }
 
-    fn bucket_index(hash: i32, table_len: i32) -> Option<usize> {
-        if table_len <= 0 {
-            return None;
-        }
-
-        Some(((hash & 0x7FFFFFFF) % table_len) as usize)
+    fn bucket_index(hash: i32, table_len: usize) -> usize {
+        (hash & 0x7FFFFFFF) as usize % table_len
     }
 
     async fn snapshot_entries(jvm: &Jvm, this: &ClassInstanceRef<Self>, kind: SnapshotKind) -> Result<ClassInstanceRef<Array<Object>>> {
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
         let table_len = jvm.array_length(&table).await?;
         let size: i32 = jvm.get_field(this, "size", "I").await?;
-        let mut elements: Vec<ClassInstanceRef<Object>> = Vec::with_capacity(size.max(0) as usize);
+        let mut elements: Vec<ClassInstanceRef<Object>> = Vec::with_capacity(size as usize);
 
         for bucket_index in 0..table_len {
             let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;

@@ -1,5 +1,3 @@
-use core::cmp::Ordering;
-
 use alloc::{
     format,
     string::{String as RustString, ToString},
@@ -10,7 +8,7 @@ use alloc::{
 use bytemuck::{cast_slice, cast_vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -28,7 +26,7 @@ impl String {
         RuntimeClassProto {
             name: "java/lang/String",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/Serializable", "java/lang/Comparable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init_empty, Default::default()),
                 JavaMethodProto::new("<init>", "([B)V", Self::init_with_byte_array, Default::default()),
@@ -51,7 +49,14 @@ impl String {
                 JavaMethodProto::new("<init>", "(Ljava/lang/StringBuffer;)V", Self::init_with_string_buffer, Default::default()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
                 JavaMethodProto::new("equalsIgnoreCase", "(Ljava/lang/String;)Z", Self::equals_ignore_case, Default::default()),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/String;)I", Self::compare_to, Default::default()),
+                JavaMethodProto::new("compareTo", "(Ljava/lang/String;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "compareToIgnoreCase",
+                    "(Ljava/lang/String;)I",
+                    Self::compare_to_ignore_case,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
                 JavaMethodProto::new("charAt", "(I)C", Self::char_at, Default::default()),
@@ -60,19 +65,47 @@ impl String {
                 JavaMethodProto::new("getChars", "(II[CI)V", Self::get_chars, Default::default()),
                 JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, Default::default()),
                 JavaMethodProto::new("toUpperCase", "()Ljava/lang/String;", Self::to_upper_case, Default::default()),
+                JavaMethodProto::new(
+                    "toUpperCase",
+                    "(Ljava/util/Locale;)Ljava/lang/String;",
+                    Self::to_upper_case_locale,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("toLowerCase", "()Ljava/lang/String;", Self::to_lower_case, Default::default()),
+                JavaMethodProto::new(
+                    "toLowerCase",
+                    "(Ljava/util/Locale;)Ljava/lang/String;",
+                    Self::to_lower_case_locale,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("length", "()I", Self::length, Default::default()),
                 JavaMethodProto::new("concat", "(Ljava/lang/String;)Ljava/lang/String;", Self::concat, Default::default()),
                 JavaMethodProto::new("substring", "(I)Ljava/lang/String;", Self::substring, Default::default()),
                 JavaMethodProto::new("substring", "(II)Ljava/lang/String;", Self::substring_with_end, Default::default()),
                 JavaMethodProto::new("replace", "(CC)Ljava/lang/String;", Self::replace, Default::default()),
+                JavaMethodProto::new(
+                    "regionMatches",
+                    "(ILjava/lang/String;II)Z",
+                    Self::region_matches_case_sensitive,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("regionMatches", "(ZILjava/lang/String;II)Z", Self::region_matches, Default::default()),
                 JavaMethodProto::new("valueOf", "(Z)Ljava/lang/String;", Self::value_of_boolean, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("valueOf", "(C)Ljava/lang/String;", Self::value_of_char, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("valueOf", "(I)Ljava/lang/String;", Self::value_of_integer, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("valueOf", "(J)Ljava/lang/String;", Self::value_of_long, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("valueOf", "(F)Ljava/lang/String;", Self::value_of_float, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("valueOf", "(D)Ljava/lang/String;", Self::value_of_double, MethodAccessFlags::STATIC),
+                JavaMethodProto::new(
+                    "valueOf",
+                    "(F)Ljava/lang/String;",
+                    Self::value_of_float,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
+                    "(D)Ljava/lang/String;",
+                    Self::value_of_double,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new("valueOf", "([C)Ljava/lang/String;", Self::value_of_char_array, MethodAccessFlags::STATIC),
                 JavaMethodProto::new(
                     "valueOf",
@@ -92,14 +125,38 @@ impl String {
                 JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_string_from, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(I)I", Self::last_index_of, Default::default()),
                 JavaMethodProto::new("lastIndexOf", "(II)I", Self::last_index_of_from, Default::default()),
+                JavaMethodProto::new(
+                    "lastIndexOf",
+                    "(Ljava/lang/String;)I",
+                    Self::last_index_of_string,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "lastIndexOf",
+                    "(Ljava/lang/String;I)I",
+                    Self::last_index_of_string_from,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "copyValueOf",
+                    "([C)Ljava/lang/String;",
+                    Self::copy_value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "copyValueOf",
+                    "([CII)Ljava/lang/String;",
+                    Self::copy_value_of_range,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new("trim", "()Ljava/lang/String;", Self::trim, Default::default()),
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;)Z", Self::starts_with, Default::default()),
                 JavaMethodProto::new("startsWith", "(Ljava/lang/String;I)Z", Self::starts_with_offset, Default::default()),
                 JavaMethodProto::new("endsWith", "(Ljava/lang/String;)Z", Self::ends_with, Default::default()),
                 JavaMethodProto::new("intern", "()Ljava/lang/String;", Self::intern, Default::default()),
             ],
-            fields: vec![JavaFieldProto::new("value", "[C", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("value", "[C", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL)],
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
         }
     }
 
@@ -143,6 +200,19 @@ impl String {
         tracing::debug!("java.lang.String::<init>({this:?}, {value:?}, {offset}, {count})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
+
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "value is null").await);
+        }
+        let length = jvm.array_length(&value).await? as i32;
+        if offset < 0 || count < 0 || offset > length - count {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("offset {offset}, count {count}, length {length}"),
+                )
+                .await);
+        }
 
         let mut array = jvm.instantiate_array("C", count as _).await?;
         jvm.put_field(&mut this, "value", "[C", array.clone()).await?;
@@ -218,19 +288,76 @@ impl String {
         if this_string == other_string { Ok(true) } else { Ok(false) }
     }
 
-    async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
+    async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.lang.String::compareTo({this:?}, {other:?})");
 
-        let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
-        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
-
-        let compare_result = this_string.cmp(&other_string);
-
-        match compare_result {
-            Ordering::Less => Ok(-1),
-            Ordering::Equal => Ok(0),
-            Ordering::Greater => Ok(1),
+        if other.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "anotherString is null").await);
         }
+        if !jvm.is_instance(&**other, "java/lang/String") {
+            return Err(jvm.exception("java/lang/ClassCastException", &other.class_definition().name()).await);
+        }
+
+        let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
+        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
+        let this_length = jvm.array_length(&this_value).await?;
+        let other_length = jvm.array_length(&other_value).await?;
+        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, 0, this_length).await?;
+        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, 0, other_length).await?;
+
+        for (&this_char, &other_char) in this_chars.iter().zip(&other_chars) {
+            if this_char != other_char {
+                return Ok(this_char as i32 - other_char as i32);
+            }
+        }
+
+        Ok(this_length as i32 - other_length as i32)
+    }
+
+    async fn compare_to_ignore_case(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.lang.String::compareToIgnoreCase({this:?}, {other:?})");
+
+        if other.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
+        }
+
+        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
+        let this_length = jvm.array_length(&this_value).await?;
+        let other_length = jvm.array_length(&other_value).await?;
+        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, 0, this_length).await?;
+        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, 0, other_length).await?;
+
+        for (&this_char, &other_char) in this_chars.iter().zip(&other_chars) {
+            if this_char == other_char {
+                continue;
+            }
+
+            let this_folded = if this_char <= 0x7f {
+                (this_char as u8).to_ascii_lowercase() as JavaChar
+            } else {
+                char::from_u32(this_char as u32)
+                    .and_then(|value| value.to_uppercase().next())
+                    .and_then(|value| value.to_lowercase().next())
+                    .map(|value| value as JavaChar)
+                    .unwrap_or(this_char)
+            };
+            let other_folded = if other_char <= 0x7f {
+                (other_char as u8).to_ascii_lowercase() as JavaChar
+            } else {
+                char::from_u32(other_char as u32)
+                    .and_then(|value| value.to_uppercase().next())
+                    .and_then(|value| value.to_lowercase().next())
+                    .map(|value| value as JavaChar)
+                    .unwrap_or(other_char)
+            };
+            if this_folded != other_folded {
+                return Ok(this_folded as i32 - other_folded as i32);
+            }
+        }
+
+        Ok(this_length as i32 - other_length as i32)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -510,6 +637,21 @@ impl String {
         Ok(JavaLangString::from_rust_string(jvm, &upper).await?.into())
     }
 
+    async fn to_upper_case_locale(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        locale: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::toUpperCase({this:?}, {locale:?})");
+
+        if locale.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "locale is null").await);
+        }
+
+        jvm.invoke_virtual(&this, "toUpperCase", "()Ljava/lang/String;", ()).await
+    }
+
     async fn starts_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, prefix: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.String::startsWith({this:?}, {prefix:?})");
 
@@ -657,6 +799,21 @@ impl String {
         Ok(JavaLangString::from_rust_string(jvm, &lower).await?.into())
     }
 
+    async fn to_lower_case_locale(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        locale: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::toLowerCase({this:?}, {locale:?})");
+
+        if locale.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "locale is null").await);
+        }
+
+        jvm.invoke_virtual(&this, "toLowerCase", "()Ljava/lang/String;", ()).await
+    }
+
     async fn replace(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -701,31 +858,44 @@ impl String {
             return Ok(false);
         }
 
-        let this_string = JavaLangString::to_rust_string(jvm, &this).await?;
-        let other_string = JavaLangString::to_rust_string(jvm, &other).await?;
-
-        let this_chars: Vec<u16> = this_string.encode_utf16().collect();
-        let other_chars: Vec<u16> = other_string.encode_utf16().collect();
-
+        let this_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let other_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&other, "value", "[C").await?;
+        let this_length = jvm.array_length(&this_value).await?;
+        let other_length = jvm.array_length(&other_value).await?;
         let end_t = toffset as usize + len as usize;
         let end_o = ooffset as usize + len as usize;
-        if end_t > this_chars.len() || end_o > other_chars.len() {
+        if end_t > this_length || end_o > other_length {
             return Ok(false);
         }
 
-        let this_slice = &this_chars[toffset as usize..end_t];
-        let other_slice = &other_chars[ooffset as usize..end_o];
+        let this_chars: Vec<JavaChar> = jvm.load_array(&this_value, toffset as usize, len as usize).await?;
+        let other_chars: Vec<JavaChar> = jvm.load_array(&other_value, ooffset as usize, len as usize).await?;
 
         if ignore_case {
-            let to_lower = |c: u16| -> u16 {
+            let to_lower = |c: JavaChar| -> JavaChar {
                 char::from_u32(c as u32)
                     .map(|ch| ch.to_lowercase().next().unwrap_or(ch) as u32 as u16)
                     .unwrap_or(c)
             };
-            Ok(this_slice.iter().copied().map(to_lower).eq(other_slice.iter().copied().map(to_lower)))
+            Ok(this_chars.iter().copied().map(to_lower).eq(other_chars.iter().copied().map(to_lower)))
         } else {
-            Ok(this_slice == other_slice)
+            Ok(this_chars == other_chars)
         }
+    }
+
+    async fn region_matches_case_sensitive(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        toffset: i32,
+        other: ClassInstanceRef<Self>,
+        ooffset: i32,
+        len: i32,
+    ) -> Result<bool> {
+        tracing::debug!("java.lang.String::regionMatches({this:?}, {toffset}, {other:?}, {ooffset}, {len})");
+
+        jvm.invoke_virtual(&this, "regionMatches", "(ZILjava/lang/String;II)Z", (false, toffset, other, ooffset, len))
+            .await
     }
 
     async fn last_index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
@@ -747,6 +917,54 @@ impl String {
         let index = chars[..end].iter().rposition(|&value| value == ch as u16).map(|index| index as i32);
 
         Ok(index.unwrap_or(-1))
+    }
+
+    async fn last_index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
+        tracing::debug!("java.lang.String::lastIndexOf({this:?}, {str:?})");
+
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let length = jvm.array_length(&value).await? as i32;
+        jvm.invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/String;I)I", (str, length)).await
+    }
+
+    async fn last_index_of_string_from(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        str: ClassInstanceRef<Self>,
+        from_index: i32,
+    ) -> Result<i32> {
+        tracing::debug!("java.lang.String::lastIndexOf({this:?}, {str:?}, {from_index})");
+
+        if str.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
+        }
+        if from_index < 0 {
+            return Ok(-1);
+        }
+
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let pattern_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&str, "value", "[C").await?;
+        let length = jvm.array_length(&value).await?;
+        let pattern_length = jvm.array_length(&pattern_value).await?;
+        let chars: Vec<JavaChar> = jvm.load_array(&value, 0, length).await?;
+        let pattern: Vec<JavaChar> = jvm.load_array(&pattern_value, 0, pattern_length).await?;
+
+        if pattern.is_empty() {
+            return Ok((from_index as usize).min(chars.len()) as i32);
+        }
+        if pattern.len() > chars.len() {
+            return Ok(-1);
+        }
+
+        let last_start = (from_index as usize).min(chars.len() - pattern.len());
+        for index in (0..=last_start).rev() {
+            if chars[index..].starts_with(&pattern) {
+                return Ok(index as i32);
+            }
+        }
+
+        Ok(-1)
     }
 
     async fn ends_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, suffix: ClassInstanceRef<Self>) -> Result<bool> {
@@ -790,13 +1008,13 @@ impl String {
     async fn value_of_float(jvm: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::valueOf({value})");
 
-        Ok(JavaLangString::from_rust_string(jvm, &value.to_string()).await?.into())
+        jvm.invoke_static("java/lang/Float", "toString", "(F)Ljava/lang/String;", (value,)).await
     }
 
     async fn value_of_double(jvm: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.String::valueOf({value})");
 
-        Ok(JavaLangString::from_rust_string(jvm, &value.to_string()).await?.into())
+        jvm.invoke_static("java/lang/Double", "toString", "(D)Ljava/lang/String;", (value,)).await
     }
 
     async fn value_of_char_array(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<Array<JavaChar>>) -> Result<ClassInstanceRef<Self>> {
@@ -819,6 +1037,42 @@ impl String {
         let new_string = jvm.new_class("java/lang/String", "([CII)V", (value, offset, count)).await?;
 
         Ok(new_string.into())
+    }
+
+    async fn copy_value_of(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<Array<JavaChar>>) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::copyValueOf({value:?})");
+
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "data is null").await);
+        }
+
+        let length = jvm.array_length(&value).await? as i32;
+        Ok(jvm.new_class("java/lang/String", "([CII)V", (value, 0, length)).await?.into())
+    }
+
+    async fn copy_value_of_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        value: ClassInstanceRef<Array<JavaChar>>,
+        offset: i32,
+        count: i32,
+    ) -> Result<ClassInstanceRef<Self>> {
+        tracing::debug!("java.lang.String::copyValueOf({value:?}, {offset}, {count})");
+
+        if value.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "data is null").await);
+        }
+        let length = jvm.array_length(&value).await? as i32;
+        if offset < 0 || count < 0 || offset > length - count {
+            return Err(jvm
+                .exception(
+                    "java/lang/StringIndexOutOfBoundsException",
+                    &format!("offset {offset}, count {count}, length {length}"),
+                )
+                .await);
+        }
+
+        Ok(jvm.new_class("java/lang/String", "([CII)V", (value, offset, count)).await?.into())
     }
 
     fn decode_str(charset: &str, bytes: &[u8]) -> Option<RustString> {

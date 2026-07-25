@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -21,6 +22,7 @@ impl HashMapValues {
                 JavaMethodProto::new("size", "()I", Self::size, Default::default()),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
+                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
             ],
@@ -60,6 +62,33 @@ impl HashMapValues {
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "containsValue", "(Ljava/lang/Object;)Z", (value,)).await
+    }
+
+    async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.HashMap$Values::remove({this:?}, {value:?})");
+
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let entries = HashMap::entries_snapshot(jvm, &map).await?;
+        let count = jvm.array_length(&entries).await?;
+        for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
+            let entry_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let equal = if value.is_null() {
+                entry_value.is_null()
+            } else if entry_value.is_null() {
+                false
+            } else {
+                jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (entry_value,)).await?
+            };
+            if equal {
+                let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
+                let _: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+                    .await?;
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {

@@ -37,6 +37,12 @@ impl Hasher for IdentityHasher {
 }
 
 impl Object {
+    pub(crate) fn identity_hash_code<T>(object: &ClassInstanceRef<T>) -> i32 {
+        let mut hasher = IdentityHasher::default();
+        object.hash(&mut hasher);
+        hasher.finish() as i32
+    }
+
     pub fn as_proto() -> RuntimeClassProto {
         RuntimeClassProto {
             name: "java/lang/Object",
@@ -82,13 +88,7 @@ impl Object {
     async fn hash_code(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.Object::hashCode({this:?})");
 
-        let rust_this: Box<dyn ClassInstance> = this.into();
-
-        let mut hasher = IdentityHasher::default();
-        rust_this.hash(&mut hasher);
-        let hash = hasher.finish();
-
-        Ok(hash as _)
+        Ok(Self::identity_hash_code(&this))
     }
 
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {

@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -24,6 +25,8 @@ impl HashMapEntry {
                 JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, Default::default()),
                 JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, Default::default()),
                 JavaMethodProto::new("setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::set_value, Default::default()),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
                 JavaFieldProto::new("hash", "I", Default::default()),
@@ -80,5 +83,46 @@ impl HashMapEntry {
         jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
 
         Ok(old_value)
+    }
+
+    async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
+        if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map$Entry") {
+            return Ok(false);
+        }
+
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
+        let other_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&other, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let keys_equal = if key.is_null() {
+            other_key.is_null()
+        } else {
+            jvm.invoke_virtual(&key, "equals", "(Ljava/lang/Object;)Z", (other_key,)).await?
+        };
+        if !keys_equal {
+            return Ok(false);
+        }
+
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let other_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&other, "getValue", "()Ljava/lang/Object;", ()).await?;
+        if value.is_null() {
+            Ok(other_value.is_null())
+        } else {
+            jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (other_value,)).await
+        }
+    }
+
+    async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let key_hash = if key.is_null() {
+            0
+        } else {
+            jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?
+        };
+        let value_hash = if value.is_null() {
+            0
+        } else {
+            jvm.invoke_virtual(&value, "hashCode", "()I", ()).await?
+        };
+        Ok(key_hash ^ value_hash)
     }
 }

@@ -12,7 +12,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use java_runtime::{File, FileDescriptorId, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto};
+use java_runtime::{
+    File, FileDescriptorId, FileOpenOptions, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback, get_runtime_class_proto,
+};
 use jvm::{ClassDefinition, Jvm};
 use jvm_rust::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefinitionImpl};
 
@@ -136,8 +138,8 @@ where
         Ok(self.register_file(file))
     }
 
-    async fn open(&self, path: &str, write: bool) -> IOResult<FileDescriptorId> {
-        let file = FileImpl::new(path, write).map_err(|_| IOError::NotFound)?;
+    async fn open(&self, path: &str, options: FileOpenOptions) -> IOResult<FileDescriptorId> {
+        let file = FileImpl::new(path, options).map_err(|_| IOError::NotFound)?;
         Ok(self.register_file(Box::new(file)))
     }
 

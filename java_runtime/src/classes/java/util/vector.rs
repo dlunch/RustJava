@@ -6,7 +6,7 @@ use alloc::{
 };
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::FieldAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -27,20 +27,51 @@ impl Vector {
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
                 JavaMethodProto::new("<init>", "(II)V", Self::init_with_capacity_increment, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/Collection;)V",
+                    Self::init_from_collection,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("capacity", "()I", Self::capacity, Default::default()),
                 JavaMethodProto::new("copyInto", "([Ljava/lang/Object;)V", Self::copy_into, Default::default()),
                 JavaMethodProto::new("elements", "()Ljava/util/Enumeration;", Self::elements, Default::default()),
                 JavaMethodProto::new("ensureCapacity", "(I)V", Self::ensure_capacity_api, Default::default()),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, Default::default()),
+                JavaMethodProto::new(
+                    "add",
+                    "(Ljava/lang/Object;)Z",
+                    Self::add,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "add",
+                    "(ILjava/lang/Object;)V",
+                    Self::add_at,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
                 JavaMethodProto::new("addElement", "(Ljava/lang/Object;)V", Self::add_element, Default::default()),
                 JavaMethodProto::new("insertElementAt", "(Ljava/lang/Object;I)V", Self::insert_element_at, Default::default()),
                 JavaMethodProto::new("elementAt", "(I)Ljava/lang/Object;", Self::element_at, Default::default()),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, Default::default()),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
+                JavaMethodProto::new(
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    Self::get,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "set",
+                    "(ILjava/lang/Object;)Ljava/lang/Object;",
+                    Self::set,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
+                JavaMethodProto::new(
+                    "remove",
+                    "(I)Ljava/lang/Object;",
+                    Self::remove,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
                 JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, Default::default()),
                 JavaMethodProto::new("removeAllElements", "()V", Self::remove_all_elements, Default::default()),
                 JavaMethodProto::new("removeElementAt", "(I)V", Self::remove_element_at, Default::default()),
@@ -56,7 +87,60 @@ impl Vector {
                 JavaMethodProto::new("removeElement", "(Ljava/lang/Object;)Z", Self::remove_element, Default::default()),
                 JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
                 JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, Default::default()),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
+                JavaMethodProto::new(
+                    "toArray",
+                    "([Ljava/lang/Object;)[Ljava/lang/Object;",
+                    Self::to_typed_array,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "addAll",
+                    "(Ljava/util/Collection;)Z",
+                    Self::add_all,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "addAll",
+                    "(ILjava/util/Collection;)Z",
+                    Self::add_all_at,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "containsAll",
+                    "(Ljava/util/Collection;)Z",
+                    Self::contains_all,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "removeAll",
+                    "(Ljava/util/Collection;)Z",
+                    Self::remove_all,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "retainAll",
+                    "(Ljava/util/Collection;)Z",
+                    Self::retain_all,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "iterator",
+                    "()Ljava/util/Iterator;",
+                    Self::iterator,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "listIterator",
+                    "()Ljava/util/ListIterator;",
+                    Self::list_iterator,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "listIterator",
+                    "(I)Ljava/util/ListIterator;",
+                    Self::list_iterator_at,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
                 JavaMethodProto::new("trimToSize", "()V", Self::trim_to_size, Default::default()),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
             ],
@@ -65,7 +149,7 @@ impl Vector {
                 JavaFieldProto::new("elementCount", "I", FieldAccessFlags::PROTECTED),
                 JavaFieldProto::new("capacityIncrement", "I", FieldAccessFlags::PROTECTED),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -106,6 +190,24 @@ impl Vector {
         jvm.put_field(&mut this, "elementData", "[Ljava/lang/Object;", element_data).await?;
         jvm.put_field(&mut this, "elementCount", "I", 0).await?;
         jvm.put_field(&mut this, "capacityIncrement", "I", capacity_increment).await?;
+
+        Ok(())
+    }
+
+    async fn init_from_collection(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        collection: ClassInstanceRef<Object>,
+    ) -> Result<()> {
+        tracing::debug!("java.util.Vector::<init>({this:?}, {collection:?})");
+
+        if collection.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
+        }
+        let size: i32 = jvm.invoke_virtual(&collection, "size", "()I", ()).await?;
+        let _: () = jvm.invoke_special(&this, "java/util/Vector", "<init>", "(I)V", (size,)).await?;
+        let _: bool = jvm.invoke_virtual(&this, "addAll", "(Ljava/util/Collection;)Z", (collection,)).await?;
 
         Ok(())
     }
@@ -548,12 +650,110 @@ impl Vector {
         Self::copy_to_array(jvm, &element_data, element_count).await
     }
 
+    async fn to_typed_array(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        destination: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Array<Object>>> {
+        tracing::debug!("java.util.Vector::toArray({this:?}, {destination:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractCollection",
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination,),
+        )
+        .await
+    }
+
+    async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::addAll({this:?}, {collection:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractCollection",
+            "addAll",
+            "(Ljava/util/Collection;)Z",
+            (collection,),
+        )
+        .await
+    }
+
+    async fn add_all_at(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        index: i32,
+        collection: ClassInstanceRef<Object>,
+    ) -> Result<bool> {
+        tracing::debug!("java.util.Vector::addAll({this:?}, {index:?}, {collection:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractList",
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (index, collection),
+        )
+        .await
+    }
+
+    async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::containsAll({this:?}, {collection:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractCollection",
+            "containsAll",
+            "(Ljava/util/Collection;)Z",
+            (collection,),
+        )
+        .await
+    }
+
+    async fn remove_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::removeAll({this:?}, {collection:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractCollection",
+            "removeAll",
+            "(Ljava/util/Collection;)Z",
+            (collection,),
+        )
+        .await
+    }
+
+    async fn retain_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Vector::retainAll({this:?}, {collection:?})");
+
+        jvm.invoke_special(
+            &this,
+            "java/util/AbstractCollection",
+            "retainAll",
+            "(Ljava/util/Collection;)Z",
+            (collection,),
+        )
+        .await
+    }
+
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::iterator({this:?})");
 
-        let snapshot: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&this, "toArray", "()[Ljava/lang/Object;", ()).await?;
-        let iterator = jvm.new_class("java/util/Vector$Itr", "([Ljava/lang/Object;)V", (snapshot,)).await?;
+        let iterator = jvm.new_class("java/util/Vector$Itr", "(Ljava/util/Vector;I)V", (this, 0)).await?;
 
+        Ok(iterator.into())
+    }
+
+    async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let iterator = jvm.new_class("java/util/Vector$ListItr", "(Ljava/util/Vector;I)V", (this, 0)).await?;
+        Ok(iterator.into())
+    }
+
+    async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
+        let iterator = jvm.new_class("java/util/Vector$ListItr", "(Ljava/util/Vector;I)V", (this, index)).await?;
         Ok(iterator.into())
     }
 

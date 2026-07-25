@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -32,6 +33,12 @@ impl Throwable {
                 ),
                 JavaMethodProto::new("getCause", "()Ljava/lang/Throwable;", Self::get_cause, Default::default()),
                 JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, Default::default()),
+                JavaMethodProto::new(
+                    "getLocalizedMessage",
+                    "()Ljava/lang/String;",
+                    Self::get_localized_message,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new(
                     "initCause",
                     "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
@@ -137,6 +144,12 @@ impl Throwable {
         tracing::debug!("java.lang.Throwable::getMessage({this:?})");
 
         jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await
+    }
+
+    async fn get_localized_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
+        tracing::debug!("java.lang.Throwable::getLocalizedMessage({this:?})");
+
+        jvm.invoke_virtual(&this, "getMessage", "()Ljava/lang/String;", ()).await
     }
 
     async fn init_cause(

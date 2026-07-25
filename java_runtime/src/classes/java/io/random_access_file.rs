@@ -6,7 +6,7 @@ use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    FileOpenOptions, RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{File, FileDescriptor},
         lang::String,
@@ -57,7 +57,17 @@ impl RandomAccessFile {
 
         let write = mode.contains('w');
 
-        let fd_id = context.open(&name, write).await;
+        let fd_id = context
+            .open(
+                &name,
+                FileOpenOptions {
+                    read: true,
+                    write,
+                    create: write,
+                    ..Default::default()
+                },
+            )
+            .await;
         if fd_id.is_err() {
             return Err(jvm.exception("java/io/FileNotFoundException", "File not found").await);
         }
@@ -147,8 +157,14 @@ impl RandomAccessFile {
 
         let mut rust_buf = vec![0; length as usize];
         jvm.array_raw_buffer(&buf).await?.read(offset as _, &mut rust_buf)?;
-        if rust_file.write(&cast_vec(rust_buf)).await.is_err() {
-            return Err(jvm.exception("java/io/IOException", "I/O error").await);
+        let rust_buf = cast_vec(rust_buf);
+        let mut written = 0;
+        while written < rust_buf.len() {
+            match rust_file.write(&rust_buf[written..]).await {
+                Ok(0) | Err(_) => return Err(jvm.exception("java/io/IOException", "I/O error").await),
+                Ok(length) if length > rust_buf.len() - written => return Err(jvm.exception("java/io/IOException", "I/O error").await),
+                Ok(length) => written += length,
+            }
         }
 
         Ok(())

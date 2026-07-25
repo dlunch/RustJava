@@ -3,6 +3,7 @@ use alloc::{format, vec};
 use chrono::{DateTime, Datelike, Timelike, Utc};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -20,16 +21,20 @@ impl Date {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/io/Serializable", "java/lang/Cloneable", "java/lang/Comparable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(J)V", Self::init_with_time, Default::default()),
-                JavaMethodProto::new("getTime", "()J", Self::get_time, Default::default()),
-                JavaMethodProto::new("setTime", "(J)V", Self::set_time, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(J)V", Self::init_with_time, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getTime", "()J", Self::get_time, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setTime", "(J)V", Self::set_time, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("before", "(Ljava/util/Date;)Z", Self::before, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("after", "(Ljava/util/Date;)Z", Self::after, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("compareTo", "(Ljava/util/Date;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("value", "J", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("value", "J", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -67,6 +72,54 @@ impl Date {
         jvm.put_field(&mut this, "value", "J", time).await?;
 
         Ok(())
+    }
+
+    async fn before(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, when: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Date::before({this:?}, {when:?})");
+
+        if when.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "when is null").await);
+        }
+
+        let when: ClassInstanceRef<Self> = ClassInstanceRef::new(when.instance);
+        let time: i64 = jvm.get_field(&this, "value", "J").await?;
+        let when_time: i64 = jvm.get_field(&when, "value", "J").await?;
+        Ok(time < when_time)
+    }
+
+    async fn after(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, when: ClassInstanceRef<Object>) -> Result<bool> {
+        tracing::debug!("java.util.Date::after({this:?}, {when:?})");
+
+        if when.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "when is null").await);
+        }
+
+        let when: ClassInstanceRef<Self> = ClassInstanceRef::new(when.instance);
+        let time: i64 = jvm.get_field(&this, "value", "J").await?;
+        let when_time: i64 = jvm.get_field(&when, "value", "J").await?;
+        Ok(time > when_time)
+    }
+
+    async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
+        tracing::debug!("java.util.Date::compareTo({this:?}, {other:?})");
+
+        if other.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "anotherDate is null").await);
+        }
+        if !jvm.is_instance(&**other, "java/util/Date") {
+            return Err(jvm.exception("java/lang/ClassCastException", &other.class_definition().name()).await);
+        }
+
+        let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
+        let time: i64 = jvm.get_field(&this, "value", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "value", "J").await?;
+        Ok(if time < other_time {
+            -1
+        } else if time == other_time {
+            0
+        } else {
+            1
+        })
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
