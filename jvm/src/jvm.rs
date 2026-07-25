@@ -635,6 +635,7 @@ impl Jvm {
     }
 
     pub async fn interrupt_java_thread(&self, thread: &mut Box<dyn ClassInstance>) -> Result<()> {
+        // Resolve before locking so both interrupt states can be updated atomically without awaiting while the lock is held.
         let field = self.find_field(&*thread.class_definition(), "interrupted", "Z")?.unwrap();
         let identity = thread.identity();
         let waiter = {
@@ -657,6 +658,7 @@ impl Jvm {
     }
 
     pub async fn is_java_thread_interrupted(&self, thread: &Box<dyn ClassInstance>) -> Result<bool> {
+        // The Thread prototype guarantees this field, so avoid the async field API's impossible NoSuchFieldError path.
         let field = self.find_field(&*thread.class_definition(), "interrupted", "Z")?.unwrap();
         let identity = thread.identity();
         let threads = self.inner.threads.read();
@@ -678,6 +680,7 @@ impl Jvm {
             .and_then(JvmThread::java_thread)
             .expect("attached JVM thread must have a java.lang.Thread")
             .clone();
+        // Resolve before locking so both interrupt states can be read and cleared atomically without awaiting while the lock is held.
         let field = self.find_field(&*java_thread.class_definition(), "interrupted", "Z")?.unwrap();
         let mut threads = self.inner.threads.write();
         let thread = threads.get_mut(&thread_id).expect("current JVM thread must be attached");
