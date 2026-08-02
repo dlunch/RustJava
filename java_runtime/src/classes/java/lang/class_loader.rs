@@ -186,9 +186,10 @@ impl ClassLoader {
         }
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
+        let internal_name = name_str.replace('.', "/");
 
-        if let Some(element_type_name) = name_str.strip_prefix('[') {
-            let ultimate_element_type = element_type_name.trim_start_matches('[');
+        if let Some(element_type_name) = internal_name.strip_prefix('[') {
+            let ultimate_element_type = name_str.trim_start_matches('[');
             let defining_loader = if let Some(element_class_name) = ultimate_element_type.strip_prefix('L').and_then(|name| name.strip_suffix(';')) {
                 let element_class_name = JavaLangString::from_rust_string(jvm, element_class_name).await?;
                 let element_class: ClassInstanceRef<Class> = jvm
@@ -210,7 +211,7 @@ impl ClassLoader {
             jvm.invoke_virtual(&parent, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
                 .await?
         } else {
-            jvm.load_bootstrap_class(&name_str).await?.into()
+            jvm.load_bootstrap_class(&internal_name).await?.into()
         };
 
         if !class.is_null() {
@@ -243,12 +244,12 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({this:?}, {name:?})");
 
-        let rust_name = JavaLangString::to_rust_string(jvm, &name).await?;
-        if !jvm.has_class(&rust_name) {
+        let internal_name = JavaLangString::to_rust_string(jvm, &name).await?.replace('.', "/");
+        if !jvm.has_class(&internal_name) {
             return Ok(None.into());
         }
 
-        let class = jvm.resolve_class(&rust_name).await?;
+        let class = jvm.resolve_class(&internal_name).await?;
 
         Ok(class.java_class().into())
     }

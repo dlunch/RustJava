@@ -12,12 +12,14 @@ public class ClassMetadata {
     }
 
     static class ByteLoader extends ClassLoader {
+        int findCount;
+
         ByteLoader(ClassLoader parent) {
             super(parent);
         }
 
         public Class loadClass(String name) throws ClassNotFoundException {
-            if (!name.equals("ClassMetadata$Payload")) {
+            if (!name.equals("ClassMetadata$Payload") && !name.startsWith("loader.")) {
                 return super.loadClass(name);
             }
 
@@ -27,7 +29,16 @@ public class ClassMetadata {
 
         protected Class findClass(String name) throws ClassNotFoundException {
             try {
-                java.io.InputStream input = ClassMetadata.class.getResourceAsStream("ClassMetadata$Payload.class");
+                findCount++;
+                String resourceName;
+                if (name.equals("ClassMetadata$Payload")) {
+                    resourceName = "ClassMetadata$Payload.class";
+                } else if (name.equals("loader.Payload")) {
+                    resourceName = "loader/Payload.class";
+                } else {
+                    resourceName = "loader/Base.class";
+                }
+                java.io.InputStream input = ClassMetadata.class.getResourceAsStream(resourceName);
                 byte[] bytes = new byte[input.available()];
                 int offset = 0;
                 while (offset < bytes.length) {
@@ -84,5 +95,14 @@ public class ClassMetadata {
         System.out.println(payloadMatrix.getClassLoader() == customLoader);
         System.out.println(payloadArray.getComponentType() == payload);
         System.out.println(payloadMatrix.getComponentType() == payloadArray);
+
+        Class packagedPayload = customLoader.loadClass("loader.Payload");
+        Class packagedPayloadAgain = customLoader.loadClass("loader.Payload");
+        Class packagedPayloadArray = customLoader.loadClass("[Lloader.Payload;");
+        Class packagedPayloadArrayAgain = customLoader.loadClass("[Lloader.Payload;");
+        System.out.println(packagedPayload == packagedPayloadAgain);
+        System.out.println(packagedPayloadArray == packagedPayloadArrayAgain);
+        System.out.println(packagedPayload.getSuperclass().getClassLoader() == customLoader);
+        System.out.println(customLoader.findCount == 3);
     }
 }

@@ -17,7 +17,8 @@ impl JavaLangClassLoader {
 
     #[allow(clippy::borrowed_box)]
     pub async fn load_class(jvm: &Jvm, this: &Box<dyn ClassInstance>, class_name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
-        let java_class_name = JavaLangString::from_rust_string(jvm, class_name).await?;
+        let binary_name = class_name.replace('/', ".");
+        let java_class_name = JavaLangString::from_rust_string(jvm, &binary_name).await?;
 
         let java_class: Option<Box<dyn ClassInstance>> = jvm
             .invoke_virtual(this, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (java_class_name,))
