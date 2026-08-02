@@ -23,6 +23,12 @@ impl Character {
             methods: vec![
                 JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
                 JavaMethodProto::new("<init>", "(C)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "valueOf",
+                    "(C)Ljava/lang/Character;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new("charValue", "()C", Self::char_value, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
@@ -383,6 +389,10 @@ impl Character {
 
     async fn char_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         jvm.get_field(&this, "value", "C").await
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
+        Ok(jvm.new_class("java/lang/Character", "(C)V", (value,)).await?.into())
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {

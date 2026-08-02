@@ -66,23 +66,30 @@ impl OutputStreamWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::<init>({this:?}, {out:?}, {encoding:?})");
 
-        if out.is_null() || encoding.is_null() {
-            return Err(jvm.exception("java/lang/NullPointerException", "output or encoding is null").await);
+        if out.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "output is null").await);
         }
-
-        let encoding_name = JavaLangString::to_rust_string(jvm, &encoding).await?.to_ascii_uppercase();
-        if !matches!(
-            encoding_name.as_str(),
-            "UTF-8" | "UTF8" | "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949"
-        ) {
-            return Err(jvm.exception("java/io/UnsupportedEncodingException", &encoding_name).await);
-        }
+        Self::validate_encoding(jvm, &encoding).await?;
 
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", out).await?;
         jvm.put_field(&mut this, "encoding", "Ljava/lang/String;", encoding).await?;
         jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", false).await?;
 
+        Ok(())
+    }
+
+    pub(crate) async fn validate_encoding(jvm: &Jvm, encoding: &ClassInstanceRef<String>) -> Result<()> {
+        if encoding.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "encoding is null").await);
+        }
+        let encoding_name = JavaLangString::to_rust_string(jvm, encoding).await?.to_ascii_uppercase();
+        if !matches!(
+            encoding_name.as_str(),
+            "UTF-8" | "UTF8" | "EUC-KR" | "EUCKR" | "KS-C-5601-1987" | "MS949" | "CP949"
+        ) {
+            return Err(jvm.exception("java/io/UnsupportedEncodingException", &encoding_name).await);
+        }
         Ok(())
     }
 

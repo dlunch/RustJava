@@ -39,6 +39,12 @@ impl Long {
                 ),
                 JavaMethodProto::new(
                     "valueOf",
+                    "(J)Ljava/lang/Long;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
                     "(Ljava/lang/String;)Ljava/lang/Long;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -215,6 +221,10 @@ impl Long {
         let value: i64 = jvm
             .invoke_static("java/lang/Long", "parseLong", "(Ljava/lang/String;)J", (value,))
             .await?;
+        Ok(jvm.new_class("java/lang/Long", "(J)V", (value,)).await?.into())
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Long", "(J)V", (value,)).await?.into())
     }
     async fn value_of_string_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<ClassInstanceRef<Self>> {

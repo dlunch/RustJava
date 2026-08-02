@@ -59,13 +59,10 @@ async fn test_character_value_constants_and_type() -> Result<()> {
     assert!(jvm.is_instance(&**value, "java/lang/Comparable"));
     assert!(jvm.is_instance(&**value, "java/io/Serializable"));
 
-    let result: Result<ClassInstanceRef<Character>> = jvm
+    let result: ClassInstanceRef<Character> = jvm
         .invoke_static("java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", ('A' as JavaChar,))
-        .await;
-    let Err(JavaError::JavaException(exception)) = result else {
-        panic!("Character.valueOf(char) must remain outside the Java 1.2 API");
-    };
-    assert!(jvm.is_instance(&*exception, "java/lang/NoSuchMethodError"));
+        .await?;
+    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&result, "charValue", "()C", ()).await?, 'A' as JavaChar);
 
     Ok(())
 }

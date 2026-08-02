@@ -9,9 +9,9 @@ use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::Ja
 use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
-        io::{OutputStream, OutputStreamWriter},
-        lang::{Object, String},
-        util::Properties,
+        io::{File, OutputStream, OutputStreamWriter},
+        lang::{Appendable, CharSequence, Object, String},
+        util::{Formatter, Locale, Properties},
     },
 };
 
@@ -23,11 +23,32 @@ impl PrintStream {
         RuntimeClassProto {
             name: "java/io/PrintStream",
             parent_class: Some("java/io/FilterOutputStream"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Appendable", "java/io/Closeable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;Z)V", Self::init_auto_flush, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/io/OutputStream;ZLjava/lang/String;)V",
+                    Self::init_auto_flush_encoding,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_path, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/lang/String;Ljava/lang/String;)V",
+                    Self::init_path_encoding,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init_file, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/io/File;Ljava/lang/String;)V",
+                    Self::init_file_encoding,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("checkError", "()Z", Self::check_error, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setError", "()V", Self::set_error, MethodAccessFlags::PROTECTED),
                 JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("write", "(I)V", Self::write_byte, MethodAccessFlags::PUBLIC),
@@ -48,11 +69,64 @@ impl PrintStream {
                 JavaMethodProto::new("println", "(J)V", Self::println_long, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("println", "(C)V", Self::println_char, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("println", "([C)V", Self::println_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(B)V", Self::println_byte, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(S)V", Self::println_short, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("println", "(Z)V", Self::println_bool, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("println", "(F)V", Self::println_float, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("println", "(D)V", Self::println_double, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "printf",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+                    Self::printf,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
+                ),
+                JavaMethodProto::new(
+                    "printf",
+                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+                    Self::printf_with_locale,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
+                ),
+                JavaMethodProto::new(
+                    "format",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+                    Self::format,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
+                ),
+                JavaMethodProto::new(
+                    "format",
+                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+                    Self::format_with_locale,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;)Ljava/io/PrintStream;",
+                    Self::append_char_sequence,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;II)Ljava/io/PrintStream;",
+                    Self::append_char_sequence_range,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("append", "(C)Ljava/io/PrintStream;", Self::append_char, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+                    Self::append_char_sequence,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
+                    Self::append_char_sequence_range,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(C)Ljava/lang/Appendable;",
+                    Self::append_char,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
             ],
             fields: vec![
                 JavaFieldProto::new("autoFlush", "Z", FieldAccessFlags::PRIVATE),
@@ -73,20 +147,12 @@ impl PrintStream {
     async fn init_auto_flush(
         jvm: &Jvm,
         _: &mut RuntimeContext,
-        mut this: ClassInstanceRef<Self>,
+        this: ClassInstanceRef<Self>,
         out: ClassInstanceRef<OutputStream>,
         auto_flush: bool,
     ) -> Result<()> {
         tracing::debug!("java.io.PrintStream::<init>({this:?}, {out:?}, {auto_flush})");
 
-        if out.is_null() {
-            return Err(jvm.exception("java/lang/NullPointerException", "output is null").await);
-        }
-
-        let _: () = jvm
-            .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out.clone(),))
-            .await?;
-        let this_output: ClassInstanceRef<OutputStream> = this.instance.clone().into();
         let props: ClassInstanceRef<Properties> = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let encoding: ClassInstanceRef<String> = if props.is_null() {
             JavaLangString::from_rust_string(jvm, "UTF-8").await?.into()
@@ -101,6 +167,33 @@ impl PrintStream {
                 encoding
             }
         };
+        jvm.invoke_special(
+            &this,
+            "java/io/PrintStream",
+            "<init>",
+            "(Ljava/io/OutputStream;ZLjava/lang/String;)V",
+            (out, auto_flush, encoding),
+        )
+        .await
+    }
+
+    async fn init_auto_flush_encoding(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        out: ClassInstanceRef<OutputStream>,
+        auto_flush: bool,
+        encoding: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        if out.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "output is null").await);
+        }
+        OutputStreamWriter::validate_encoding(jvm, &encoding).await?;
+
+        let _: () = jvm
+            .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out.clone(),))
+            .await?;
+        let this_output: ClassInstanceRef<OutputStream> = this.instance.clone().into();
         let char_out = jvm
             .new_class(
                 "java/io/OutputStreamWriter",
@@ -112,6 +205,68 @@ impl PrintStream {
         jvm.put_field(&mut this, "trouble", "Z", false).await?;
         jvm.put_field(&mut this, "charOut", "Ljava/io/OutputStreamWriter;", char_out).await?;
         jvm.put_field(&mut this, "closing", "Z", false).await
+    }
+
+    async fn init_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, path: ClassInstanceRef<String>) -> Result<()> {
+        if path.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "file name is null").await);
+        }
+        let file: ClassInstanceRef<File> = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?.into();
+        jvm.invoke_special(&this, "java/io/PrintStream", "<init>", "(Ljava/io/File;)V", (file,))
+            .await
+    }
+
+    async fn init_path_encoding(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        path: ClassInstanceRef<String>,
+        encoding: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        if path.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "file name is null").await);
+        }
+        OutputStreamWriter::validate_encoding(jvm, &encoding).await?;
+        let file: ClassInstanceRef<File> = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?.into();
+        jvm.invoke_special(
+            &this,
+            "java/io/PrintStream",
+            "<init>",
+            "(Ljava/io/File;Ljava/lang/String;)V",
+            (file, encoding),
+        )
+        .await
+    }
+
+    async fn init_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
+        if file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "file is null").await);
+        }
+        let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?.into();
+        jvm.invoke_special(&this, "java/io/PrintStream", "<init>", "(Ljava/io/OutputStream;)V", (output,))
+            .await
+    }
+
+    async fn init_file_encoding(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        file: ClassInstanceRef<File>,
+        encoding: ClassInstanceRef<String>,
+    ) -> Result<()> {
+        if file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "file is null").await);
+        }
+        OutputStreamWriter::validate_encoding(jvm, &encoding).await?;
+        let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?.into();
+        jvm.invoke_special(
+            &this,
+            "java/io/PrintStream",
+            "<init>",
+            "(Ljava/io/OutputStream;ZLjava/lang/String;)V",
+            (output, false, encoding),
+        )
+        .await
     }
 
     async fn with_monitor<T, F>(jvm: &Jvm, this: &ClassInstanceRef<Self>, operation: F) -> Result<T>
@@ -147,6 +302,10 @@ impl PrintStream {
             jvm.get_field(&this, "trouble", "Z").await
         })
         .await
+    }
+
+    async fn set_error(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
+        jvm.put_field(&mut this, "trouble", "Z", true).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
@@ -384,22 +543,6 @@ impl PrintStream {
         .await
     }
 
-    async fn println_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i8) -> Result<()> {
-        Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(I)V", (value as i32,)).await?;
-            Self::new_line(jvm, &this).await
-        })
-        .await
-    }
-
-    async fn println_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i16) -> Result<()> {
-        Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(I)V", (value as i32,)).await?;
-            Self::new_line(jvm, &this).await
-        })
-        .await
-    }
-
     async fn println_bool(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
             let _: () = jvm.invoke_virtual(&this, "print", "(Z)V", (value,)).await?;
@@ -422,6 +565,124 @@ impl PrintStream {
             Self::new_line(jvm, &this).await
         })
         .await
+    }
+
+    async fn printf(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        format: ClassInstanceRef<String>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        jvm.invoke_virtual(
+            &this,
+            "format",
+            "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+            (format, arguments),
+        )
+        .await
+    }
+
+    async fn printf_with_locale(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        locale: ClassInstanceRef<Locale>,
+        format: ClassInstanceRef<String>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        jvm.invoke_virtual(
+            &this,
+            "format",
+            "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+            (locale, format, arguments),
+        )
+        .await
+    }
+
+    async fn format(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        format: ClassInstanceRef<String>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
+        jvm.invoke_virtual(
+            &this,
+            "format",
+            "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+            (locale, format, arguments),
+        )
+        .await
+    }
+
+    async fn format_with_locale(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        locale: ClassInstanceRef<Locale>,
+        format: ClassInstanceRef<String>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        Self::with_monitor(jvm, &this, async {
+            let appendable: ClassInstanceRef<Appendable> = this.instance.clone().into();
+            let formatter: ClassInstanceRef<Formatter> = jvm
+                .new_class("java/util/Formatter", "(Ljava/lang/Appendable;Ljava/util/Locale;)V", (appendable, locale))
+                .await?
+                .into();
+            let _: ClassInstanceRef<Formatter> = jvm
+                .invoke_virtual(
+                    &formatter,
+                    "format",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
+                    (format, arguments),
+                )
+                .await?;
+            Ok(this.clone())
+        })
+        .await
+    }
+
+    async fn append_char_sequence(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let string: ClassInstanceRef<String> = if sequence.is_null() {
+            JavaLangString::from_rust_string(jvm, "null").await?.into()
+        } else {
+            jvm.invoke_virtual(&sequence, "toString", "()Ljava/lang/String;", ()).await?
+        };
+        let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (string,)).await?;
+        Ok(this)
+    }
+
+    async fn append_char_sequence_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+        start: i32,
+        end: i32,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let sequence: ClassInstanceRef<CharSequence> = if sequence.is_null() {
+            JavaLangString::from_rust_string(jvm, "null").await?.into()
+        } else {
+            sequence
+        };
+        let subsequence: ClassInstanceRef<CharSequence> = jvm
+            .invoke_virtual(&sequence, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .await?;
+        let string: ClassInstanceRef<String> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
+        let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (string,)).await?;
+        Ok(this)
+    }
+
+    async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>> {
+        let _: () = jvm.invoke_virtual(&this, "print", "(C)V", (character,)).await?;
+        Ok(this)
     }
 
     async fn write_string(jvm: &Jvm, this: &ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {

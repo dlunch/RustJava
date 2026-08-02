@@ -320,6 +320,10 @@ async fn pw_01_constructors_fields_descriptors_and_access_flags() -> Result<()> 
         ("<init>", "(Ljava/io/Writer;Z)V"),
         ("<init>", "(Ljava/io/OutputStream;)V"),
         ("<init>", "(Ljava/io/OutputStream;Z)V"),
+        ("<init>", "(Ljava/lang/String;)V"),
+        ("<init>", "(Ljava/lang/String;Ljava/lang/String;)V"),
+        ("<init>", "(Ljava/io/File;)V"),
+        ("<init>", "(Ljava/io/File;Ljava/lang/String;)V"),
         ("write", "(I)V"),
         ("write", "([C)V"),
         ("write", "([CII)V"),
@@ -347,8 +351,21 @@ async fn pw_01_constructors_fields_descriptors_and_access_flags() -> Result<()> 
         ("flush", "()V"),
         ("close", "()V"),
         ("checkError", "()Z"),
+        ("printf", "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;"),
+        ("printf", "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;"),
+        ("format", "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;"),
+        ("format", "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;"),
+        ("append", "(Ljava/lang/CharSequence;)Ljava/io/PrintWriter;"),
+        ("append", "(Ljava/lang/CharSequence;II)Ljava/io/PrintWriter;"),
+        ("append", "(C)Ljava/io/PrintWriter;"),
+        ("append", "(Ljava/lang/CharSequence;)Ljava/io/Writer;"),
+        ("append", "(Ljava/lang/CharSequence;II)Ljava/io/Writer;"),
+        ("append", "(C)Ljava/io/Writer;"),
+        ("append", "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;"),
+        ("append", "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;"),
+        ("append", "(C)Ljava/lang/Appendable;"),
     ];
-    assert_eq!(proto.methods.len(), expected_methods.len());
+    assert_eq!(proto.methods.len(), expected_methods.len() + 1);
     for (name, descriptor) in expected_methods {
         let methods = proto
             .methods
@@ -358,6 +375,12 @@ async fn pw_01_constructors_fields_descriptors_and_access_flags() -> Result<()> 
         assert_eq!(methods.len(), 1, "missing or duplicated {name}{descriptor}");
         assert!(methods[0].access_flags.contains(MethodAccessFlags::PUBLIC));
     }
+    let set_error = proto
+        .methods
+        .iter()
+        .find(|method| method.name == "setError" && method.descriptor == "()V")
+        .expect("missing setError()V");
+    assert_eq!(set_error.access_flags, MethodAccessFlags::PROTECTED);
 
     assert_eq!(proto.fields.len(), 3);
     let out = proto.fields.iter().find(|field| field.name == "out").expect("out field");

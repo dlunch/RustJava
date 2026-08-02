@@ -39,6 +39,12 @@ impl Short {
                 ),
                 JavaMethodProto::new(
                     "valueOf",
+                    "(S)Ljava/lang/Short;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
                     "(Ljava/lang/String;)Ljava/lang/Short;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -145,6 +151,10 @@ impl Short {
         let value: i16 = jvm
             .invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;)S", (value,))
             .await?;
+        Ok(jvm.new_class("java/lang/Short", "(S)V", (value,)).await?.into())
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i16) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Short", "(S)V", (value,)).await?.into())
     }
 

@@ -28,6 +28,12 @@ impl Boolean {
                 JavaMethodProto::new("booleanValue", "()Z", Self::boolean_value, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "valueOf",
+                    "(Z)Ljava/lang/Boolean;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
                     "(Ljava/lang/String;)Ljava/lang/Boolean;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -112,6 +118,11 @@ impl Boolean {
         } else {
             jvm.get_static_field("java/lang/Boolean", "FALSE", "Ljava/lang/Boolean;").await
         }
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: bool) -> Result<ClassInstanceRef<Self>> {
+        jvm.get_static_field("java/lang/Boolean", if value { "TRUE" } else { "FALSE" }, "Ljava/lang/Boolean;")
+            .await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {

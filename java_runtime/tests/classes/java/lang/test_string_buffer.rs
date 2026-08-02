@@ -1,4 +1,4 @@
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use java_runtime::{
     classes::java::lang::{CharSequence, String as JavaString, StringBuffer},
     get_runtime_class_proto,
@@ -10,7 +10,10 @@ use test_utils::test_jvm;
 #[tokio::test]
 async fn string_buffer_char_sequence_sub_sequence_is_a_synchronized_snapshot() -> Result<()> {
     let proto = get_runtime_class_proto("java/lang/StringBuffer").expect("StringBuffer must be registered");
-    assert_eq!(proto.interfaces, vec!["java/lang/CharSequence"]);
+    assert_eq!(proto.parent_class, Some("java/lang/AbstractStringBuilder"));
+    assert_eq!(proto.interfaces, vec!["java/io/Serializable", "java/lang/CharSequence"]);
+    assert_eq!(proto.access_flags, ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL);
+    assert!(proto.fields.is_empty());
     let method = proto
         .methods
         .iter()
@@ -142,12 +145,7 @@ async fn test_sb_03_length_char_access_and_synchronized_flags() -> Result<()> {
         ("append", "([CII)Ljava/lang/StringBuffer;"),
         ("insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;"),
         ("insert", "(ILjava/lang/Object;)Ljava/lang/StringBuffer;"),
-        ("insert", "(IZ)Ljava/lang/StringBuffer;"),
         ("insert", "(IC)Ljava/lang/StringBuffer;"),
-        ("insert", "(II)Ljava/lang/StringBuffer;"),
-        ("insert", "(IJ)Ljava/lang/StringBuffer;"),
-        ("insert", "(IF)Ljava/lang/StringBuffer;"),
-        ("insert", "(ID)Ljava/lang/StringBuffer;"),
         ("insert", "(I[C)Ljava/lang/StringBuffer;"),
         ("delete", "(II)Ljava/lang/StringBuffer;"),
         ("deleteCharAt", "(I)Ljava/lang/StringBuffer;"),
@@ -172,6 +170,25 @@ async fn test_sb_03_length_char_access_and_synchronized_flags() -> Result<()> {
             .unwrap_or_else(|| panic!("missing {name}{descriptor}"))
             .access_flags();
         assert!(flags.contains(MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED));
+    }
+
+    for descriptor in [
+        "(ILjava/lang/CharSequence;)Ljava/lang/StringBuffer;",
+        "(IZ)Ljava/lang/StringBuffer;",
+        "(II)Ljava/lang/StringBuffer;",
+        "(IJ)Ljava/lang/StringBuffer;",
+        "(IF)Ljava/lang/StringBuffer;",
+        "(ID)Ljava/lang/StringBuffer;",
+    ] {
+        let flags = jvm
+            .get_class("java/lang/StringBuffer")
+            .expect("StringBuffer must be loaded")
+            .definition
+            .method("insert", descriptor, false)
+            .unwrap_or_else(|| panic!("missing insert{descriptor}"))
+            .access_flags();
+        assert!(flags.contains(MethodAccessFlags::PUBLIC));
+        assert!(!flags.contains(MethodAccessFlags::SYNCHRONIZED));
     }
 
     for index in [-1, 1] {

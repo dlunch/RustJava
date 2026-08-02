@@ -39,6 +39,12 @@ impl Byte {
                 ),
                 JavaMethodProto::new(
                     "valueOf",
+                    "(B)Ljava/lang/Byte;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
                     "(Ljava/lang/String;)Ljava/lang/Byte;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -145,6 +151,10 @@ impl Byte {
         let value: i8 = jvm
             .invoke_static("java/lang/Byte", "parseByte", "(Ljava/lang/String;)B", (value,))
             .await?;
+        Ok(jvm.new_class("java/lang/Byte", "(B)V", (value,)).await?.into())
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i8) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Byte", "(B)V", (value,)).await?.into())
     }
 

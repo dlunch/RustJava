@@ -5,6 +5,7 @@ mod test_arrays;
 mod test_collection_contracts;
 mod test_collections;
 mod test_date;
+mod test_formatter;
 mod test_gregorian_calendar;
 mod test_hash_map;
 mod test_hash_set;

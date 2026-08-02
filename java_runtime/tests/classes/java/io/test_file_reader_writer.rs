@@ -7,9 +7,9 @@ use std::sync::Mutex;
 
 use java_runtime::{
     File as RuntimeFile, FileDescriptorId, FileOpenOptions, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback,
-    get_runtime_class_proto,
+    classes::java::lang::Object, get_runtime_class_proto,
 };
-use jvm::{ClassDefinition, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassDefinition, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
 use test_utils::{TestRuntime, create_test_jvm, test_jvm_filesystem};
 
@@ -610,6 +610,38 @@ async fn file_writer_uses_only_opened_handle_write_semantics() -> Result<()> {
     assert_eq!(&*runtime.files.lock().unwrap()["append.txt"].lock().unwrap(), b"start-a-b-c-d");
     assert_eq!(runtime.seek_calls.load(Ordering::SeqCst), 0);
     assert_eq!(runtime.metadata_calls.load(Ordering::SeqCst), 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn formatter_file_constructor_truncates_before_writing() -> Result<()> {
+    let runtime = MemoryRuntime::new([("formatter.txt".into(), b"old content".to_vec())].into_iter().collect());
+    let jvm = create_test_jvm(runtime.clone()).await?;
+    let path = JavaLangString::from_rust_string(&jvm, "formatter.txt").await?;
+    let formatter = jvm.new_class("java/util/Formatter", "(Ljava/lang/String;)V", (path,)).await?;
+    let format = JavaLangString::from_rust_string(&jvm, "new").await?;
+    let arguments = ClassInstanceRef::<Array<Object>>::new(None);
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &formatter,
+            "format",
+            "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
+            (format, arguments),
+        )
+        .await?;
+    let _: () = jvm.invoke_virtual(&formatter, "close", "()V", ()).await?;
+
+    assert_eq!(&*runtime.files.lock().unwrap()["formatter.txt"].lock().unwrap(), b"new");
+    assert_eq!(
+        runtime.open_calls.lock().unwrap()[0].1,
+        FileOpenOptions {
+            write: true,
+            truncate: true,
+            create: true,
+            ..Default::default()
+        }
+    );
 
     Ok(())
 }

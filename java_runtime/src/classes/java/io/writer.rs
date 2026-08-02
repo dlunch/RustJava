@@ -2,11 +2,11 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    classes::java::lang::{CharSequence, Object, String},
 };
 
 // abstract class java.io.Writer
@@ -17,20 +17,51 @@ impl Writer {
         RuntimeClassProto {
             name: "java/io/Writer",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Appendable", "java/io/Closeable", "java/io/Flushable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
                 JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init_with_lock, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("write", "(I)V", Self::write_char, Default::default()),
-                JavaMethodProto::new("write", "([C)V", Self::write_chars, Default::default()),
-                JavaMethodProto::new_abstract("write", "([CII)V", Default::default()),
-                JavaMethodProto::new("write", "(Ljava/lang/String;)V", Self::write_string, Default::default()),
-                JavaMethodProto::new("write", "(Ljava/lang/String;II)V", Self::write_string_offset, Default::default()),
-                JavaMethodProto::new_abstract("flush", "()V", Default::default()),
-                JavaMethodProto::new_abstract("close", "()V", Default::default()),
+                JavaMethodProto::new("write", "(I)V", Self::write_char, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([C)V", Self::write_chars, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new_abstract("write", "([CII)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new("write", "(Ljava/lang/String;)V", Self::write_string, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "(Ljava/lang/String;II)V", Self::write_string_offset, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;)Ljava/io/Writer;",
+                    Self::append_char_sequence,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;II)Ljava/io/Writer;",
+                    Self::append_char_sequence_range,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("append", "(C)Ljava/io/Writer;", Self::append_char, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+                    Self::append_char_sequence,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
+                    Self::append_char_sequence_range,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
+                JavaMethodProto::new(
+                    "append",
+                    "(C)Ljava/lang/Appendable;",
+                    Self::append_char,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                ),
+                JavaMethodProto::new_abstract("flush", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("close", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
             ],
             fields: vec![JavaFieldProto::new("lock", "Ljava/lang/Object;", FieldAccessFlags::PROTECTED)],
-            access_flags: ClassAccessFlags::ABSTRACT,
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }
     }
 
@@ -95,5 +126,46 @@ impl Writer {
 
         let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "toCharArray", "()[C", ()).await?;
         jvm.invoke_virtual(&this, "write", "([CII)V", (chars, off, len)).await
+    }
+
+    async fn append_char_sequence(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let string: ClassInstanceRef<String> = if sequence.is_null() {
+            JavaLangString::from_rust_string(jvm, "null").await?.into()
+        } else {
+            jvm.invoke_virtual(&sequence, "toString", "()Ljava/lang/String;", ()).await?
+        };
+        let _: () = jvm.invoke_virtual(&this, "write", "(Ljava/lang/String;)V", (string,)).await?;
+        Ok(this)
+    }
+
+    async fn append_char_sequence_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+        start: i32,
+        end: i32,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let sequence: ClassInstanceRef<CharSequence> = if sequence.is_null() {
+            JavaLangString::from_rust_string(jvm, "null").await?.into()
+        } else {
+            sequence
+        };
+        let subsequence: ClassInstanceRef<CharSequence> = jvm
+            .invoke_virtual(&sequence, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .await?;
+        let string: ClassInstanceRef<String> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
+        let _: () = jvm.invoke_virtual(&this, "write", "(Ljava/lang/String;)V", (string,)).await?;
+        Ok(this)
+    }
+
+    async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>> {
+        let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (character as i32,)).await?;
+        Ok(this)
     }
 }

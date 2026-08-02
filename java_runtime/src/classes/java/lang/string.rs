@@ -15,7 +15,10 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Object, System},
-        util::regex::{Matcher, Pattern},
+        util::{
+            Formatter, Locale,
+            regex::{Matcher, Pattern},
+        },
     },
 };
 
@@ -112,6 +115,18 @@ impl String {
                     "(Ljava/lang/String;I)[Ljava/lang/String;",
                     Self::split_with_limit,
                     MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "format",
+                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;",
+                    Self::format,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::VARARGS,
+                ),
+                JavaMethodProto::new(
+                    "format",
+                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;",
+                    Self::format_with_locale,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::VARARGS,
                 ),
                 JavaMethodProto::new(
                     "regionMatches",
@@ -1072,6 +1087,43 @@ impl String {
         let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
         jvm.invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, limit))
             .await
+    }
+
+    async fn format(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        format: ClassInstanceRef<Self>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let formatter: ClassInstanceRef<Formatter> = jvm.new_class("java/util/Formatter", "()V", ()).await?.into();
+        let _: ClassInstanceRef<Formatter> = jvm
+            .invoke_virtual(
+                &formatter,
+                "format",
+                "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
+                (format, arguments),
+            )
+            .await?;
+        jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await
+    }
+
+    async fn format_with_locale(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        locale: ClassInstanceRef<Locale>,
+        format: ClassInstanceRef<Self>,
+        arguments: ClassInstanceRef<Array<Object>>,
+    ) -> Result<ClassInstanceRef<Self>> {
+        let formatter: ClassInstanceRef<Formatter> = jvm.new_class("java/util/Formatter", "(Ljava/util/Locale;)V", (locale,)).await?.into();
+        let _: ClassInstanceRef<Formatter> = jvm
+            .invoke_virtual(
+                &formatter,
+                "format",
+                "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
+                (format, arguments),
+            )
+            .await?;
+        jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await
     }
 
     #[allow(clippy::too_many_arguments)]

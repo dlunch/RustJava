@@ -34,6 +34,12 @@ impl Float {
                 ),
                 JavaMethodProto::new(
                     "valueOf",
+                    "(F)Ljava/lang/Float;",
+                    Self::value_of,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
+                JavaMethodProto::new(
+                    "valueOf",
                     "(Ljava/lang/String;)Ljava/lang/Float;",
                     Self::value_of_string,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
@@ -224,6 +230,10 @@ impl Float {
         }
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
         let value = Self::parse_value(jvm, &value).await?;
+        Ok(jvm.new_class("java/lang/Float", "(F)V", (value,)).await?.into())
+    }
+
+    async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Float", "(F)V", (value,)).await?.into())
     }
 

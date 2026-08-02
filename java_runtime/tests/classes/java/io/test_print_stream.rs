@@ -8,7 +8,7 @@ use java_runtime::classes::java::{
     lang::{Object, String},
 };
 use java_runtime::{RuntimeClassProto, RuntimeContext};
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
 
 use test_utils::{TestRuntime, create_test_jvm, test_jvm};
@@ -330,9 +330,18 @@ async fn assert_monitor_released(jvm: &Jvm, stream: &ClassInstanceRef<PrintStrea
 async fn ps_01_constructor_state_descriptors_and_access_flags() -> Result<()> {
     let proto = PrintStream::as_proto();
     assert_eq!(proto.parent_class, Some("java/io/FilterOutputStream"));
+    assert_eq!(proto.interfaces, vec!["java/lang/Appendable", "java/io/Closeable"]);
     assert!(proto.access_flags.contains(ClassAccessFlags::PUBLIC));
 
-    for descriptor in ["(Ljava/io/OutputStream;)V", "(Ljava/io/OutputStream;Z)V"] {
+    for descriptor in [
+        "(Ljava/io/OutputStream;)V",
+        "(Ljava/io/OutputStream;Z)V",
+        "(Ljava/io/OutputStream;ZLjava/lang/String;)V",
+        "(Ljava/lang/String;)V",
+        "(Ljava/lang/String;Ljava/lang/String;)V",
+        "(Ljava/io/File;)V",
+        "(Ljava/io/File;Ljava/lang/String;)V",
+    ] {
         let constructors = proto
             .methods
             .iter()
@@ -341,6 +350,19 @@ async fn ps_01_constructor_state_descriptors_and_access_flags() -> Result<()> {
         assert_eq!(constructors.len(), 1, "missing or duplicate constructor {descriptor}");
         assert!(constructors[0].access_flags.contains(MethodAccessFlags::PUBLIC));
     }
+    let set_error = proto
+        .methods
+        .iter()
+        .find(|method| method.name == "setError" && method.descriptor == "()V")
+        .expect("missing setError()V");
+    assert_eq!(set_error.access_flags, MethodAccessFlags::PROTECTED);
+    assert!(!proto.methods.iter().any(|method| method.name == "clearError"));
+    assert!(
+        !proto
+            .methods
+            .iter()
+            .any(|method| method.name == "println" && matches!(method.descriptor.as_str(), "(B)V" | "(S)V"))
+    );
 
     let auto_flush = proto.fields.iter().find(|field| field.name == "autoFlush").expect("autoFlush field");
     assert_eq!(auto_flush.descriptor, "Z");
@@ -394,6 +416,27 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
 
     let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('x' as i32,)).await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 0);
+
+    let formatted_output = jvm.new_class("ProbeOutputStream", "(III)V", (0, 0, 0)).await?;
+    let formatted_stream = jvm
+        .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;Z)V", (formatted_output.clone(), true))
+        .await?;
+    let format = JavaLangString::from_rust_string(&jvm, "%s").await?;
+    let value = JavaLangString::from_rust_string(&jvm, "value").await?;
+    let mut arguments: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/Object;", 1).await?.into();
+    jvm.store_array(&mut arguments, 0, [JavaValue::Object(Some(value))]).await?;
+    let _: ClassInstanceRef<PrintStream> = jvm
+        .invoke_virtual(
+            &formatted_stream,
+            "format",
+            "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
+            (format, arguments),
+        )
+        .await?;
+    let format_writes: i32 = jvm.get_field(&formatted_output, "writeCount", "I").await?;
+    assert!(format_writes > 0);
+    assert_eq!(jvm.get_field::<i32>(&formatted_output, "flushCount", "I").await?, 1);
+
     let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('\n' as i32,)).await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 1);
 
@@ -413,8 +456,8 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
     let _: () = jvm.invoke_virtual(&stream, "println", "(J)V", (2i64,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(C)V", ('d' as JavaChar,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "([C)V", (chars,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(B)V", (3i8,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(S)V", (4i16,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (3,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (4,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(Z)V", (true,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(F)V", (1.5f32,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(D)V", (2.5f64,)).await?;
@@ -887,8 +930,8 @@ async fn test_print_stream_remaining_overloads_and_close() -> Result<()> {
     let mut chars = jvm.instantiate_array("C", 2).await?;
     jvm.store_array(&mut chars, 0, ['B' as JavaChar, 'C' as JavaChar]).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "([C)V", (chars,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(B)V", (-3i8,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(S)V", (4i16,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (-3,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (4,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(Z)V", (false,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "println", "(F)V", (2.5f32,)).await?;
     let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;

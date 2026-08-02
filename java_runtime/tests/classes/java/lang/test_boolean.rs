@@ -70,7 +70,7 @@ async fn test_boolean_string_constants_and_type() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_boolean_property_and_primitive_value_of_exclusion() -> Result<()> {
+async fn test_boolean_property_and_java_5_primitive_value_of() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let key = JavaLangString::from_rust_string(&jvm, "rustjava.boolean.test").await?;
@@ -113,11 +113,11 @@ async fn test_boolean_property_and_primitive_value_of_exclusion() -> Result<()> 
             .await?
     );
 
-    let result: Result<ClassInstanceRef<Boolean>> = jvm.invoke_static("java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", (true,)).await;
-    let Err(JavaError::JavaException(exception)) = result else {
-        panic!("Boolean.valueOf(boolean) must remain outside the Java 1.2 API");
-    };
-    assert!(jvm.is_instance(&*exception, "java/lang/NoSuchMethodError"));
+    let result: ClassInstanceRef<Boolean> = jvm
+        .invoke_static("java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", (true,))
+        .await?;
+    let true_constant: ClassInstanceRef<Boolean> = jvm.get_static_field("java/lang/Boolean", "TRUE", "Ljava/lang/Boolean;").await?;
+    assert_eq!(result.identity(), true_constant.identity());
 
     let left = jvm.new_class("java/lang/Boolean", "(Z)V", (false,)).await?;
     let right = jvm.new_class("java/lang/Boolean", "(Z)V", (true,)).await?;
