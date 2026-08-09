@@ -126,12 +126,8 @@ impl HashMapEntrySet {
         tracing::debug!("java.util.HashMap$EntrySet::iterator({this:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let snapshot = HashMap::entries_snapshot(jvm, &map).await?;
-        let iterator = jvm
-            .new_class("java/util/HashMap$EntryIterator", "([Ljava/lang/Object;)V", (snapshot,))
-            .await?;
 
-        Ok(iterator.into())
+        jvm.invoke_virtual(&map, "entryIterator", "()Ljava/util/Iterator;", ()).await
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {

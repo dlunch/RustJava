@@ -91,11 +91,7 @@ impl HashMapKeySet {
         tracing::debug!("java.util.HashMap$KeySet::iterator({this:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let snapshot = HashMap::keys_snapshot(jvm, &map).await?;
-        let iterator = jvm
-            .new_class("java/util/HashMap$KeyIterator", "([Ljava/lang/Object;)V", (snapshot,))
-            .await?;
 
-        Ok(iterator.into())
+        jvm.invoke_virtual(&map, "keyIterator", "()Ljava/util/Iterator;", ()).await
     }
 }

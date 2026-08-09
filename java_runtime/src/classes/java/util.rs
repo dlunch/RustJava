@@ -66,6 +66,12 @@ mod illegal_format_flags_exception;
 mod illegal_format_precision_exception;
 mod illegal_format_width_exception;
 mod iterator;
+mod linked_hash_map;
+mod linked_hash_map_entry;
+mod linked_hash_map_entry_iterator;
+mod linked_hash_map_key_iterator;
+mod linked_hash_map_linked_hash_iterator;
+mod linked_hash_map_value_iterator;
 mod linked_list;
 mod linked_list_entry;
 mod linked_list_itr;
@@ -171,6 +177,12 @@ pub use self::{
     illegal_format_precision_exception::IllegalFormatPrecisionException,
     illegal_format_width_exception::IllegalFormatWidthException,
     iterator::Iterator,
+    linked_hash_map::LinkedHashMap,
+    linked_hash_map_entry::LinkedHashMapEntry,
+    linked_hash_map_entry_iterator::LinkedHashMapEntryIterator,
+    linked_hash_map_key_iterator::LinkedHashMapKeyIterator,
+    linked_hash_map_linked_hash_iterator::LinkedHashMapLinkedHashIterator,
+    linked_hash_map_value_iterator::LinkedHashMapValueIterator,
     linked_list::LinkedList,
     linked_list_entry::LinkedListEntry,
     linked_list_itr::LinkedListItr,

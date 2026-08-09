@@ -21,31 +21,55 @@ impl HashMap {
             parent_class: Some("java/util/AbstractMap"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(IF)V", Self::init_with_capacity_and_load_factor, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, Default::default()),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, Default::default()),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, Default::default()),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "put",
                     "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                     Self::put,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
                 JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::remove, Default::default()),
-                JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, Default::default()),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, Default::default()),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, Default::default()),
+                JavaMethodProto::new(
+                    "remove",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::remove,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("initializeMap", "()V", Self::initialize_map, Default::default()),
+                JavaMethodProto::new(
+                    "storeNewEntry",
+                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
+                    Self::store_new_entry,
+                    Default::default(),
+                ),
+                JavaMethodProto::new(
+                    "insertNewEntry",
+                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
+                    Self::insert_new_entry,
+                    Default::default(),
+                ),
+                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, Default::default()),
+                JavaMethodProto::new("valueIterator", "()Ljava/util/Iterator;", Self::value_iterator, Default::default()),
+                JavaMethodProto::new("entryIterator", "()Ljava/util/Iterator;", Self::entry_iterator, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("table", "[Ljava/util/HashMap$Entry;", Default::default()),
                 JavaFieldProto::new("size", "I", Default::default()),
                 JavaFieldProto::new("threshold", "I", Default::default()),
+                JavaFieldProto::new("loadFactor", "F", Default::default()),
+                JavaFieldProto::new("modCount", "I", Default::default()),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -55,7 +79,13 @@ impl HashMap {
         tracing::debug!("java.util.HashMap::<init>({this:?})");
 
         let _: () = jvm
-            .invoke_special(&this, "java/util/HashMap", "<init>", "(I)V", (DEFAULT_INITIAL_CAPACITY,))
+            .invoke_special(
+                &this,
+                "java/util/HashMap",
+                "<init>",
+                "(IF)V",
+                (DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR),
+            )
             .await?;
 
         Ok(())
@@ -85,24 +115,42 @@ impl HashMap {
         Ok(entry_set.into())
     }
 
-    pub(super) async fn keys_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
+    async fn keys_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         Self::snapshot_entries(jvm, this, SnapshotKind::Keys).await
     }
 
-    pub(super) async fn values_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
+    async fn values_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         Self::snapshot_entries(jvm, this, SnapshotKind::Values).await
     }
 
-    pub(super) async fn entries_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
+    async fn entries_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         Self::snapshot_entries(jvm, this, SnapshotKind::Entries).await
     }
 
-    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
+    async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?}, {capacity:?})");
+
+        jvm.invoke_special(&this, "java/util/HashMap", "<init>", "(IF)V", (capacity, DEFAULT_LOAD_FACTOR))
+            .await
+    }
+
+    async fn init_with_capacity_and_load_factor(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        capacity: i32,
+        load_factor: f32,
+    ) -> Result<()> {
+        tracing::debug!("java.util.HashMap::<init>({this:?}, {capacity:?}, {load_factor:?})");
 
         if capacity < 0 {
             return Err(jvm
                 .exception("java/lang/IllegalArgumentException", &format!("Illegal Capacity: {capacity}"))
+                .await);
+        }
+        if load_factor <= 0.0 || load_factor.is_nan() {
+            return Err(jvm
+                .exception("java/lang/IllegalArgumentException", &format!("Illegal Load: {load_factor}"))
                 .await);
         }
 
@@ -111,12 +159,16 @@ impl HashMap {
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.instantiate_array("Ljava/util/HashMap$Entry;", capacity as usize).await?.into();
         jvm.put_field(&mut this, "table", "[Ljava/util/HashMap$Entry;", table).await?;
         jvm.put_field(&mut this, "size", "I", 0).await?;
-        jvm.put_field(&mut this, "threshold", "I", Self::threshold_for_capacity(capacity)).await?;
+        jvm.put_field(&mut this, "threshold", "I", Self::threshold_for_capacity(capacity, load_factor))
+            .await?;
+        jvm.put_field(&mut this, "loadFactor", "F", load_factor).await?;
+        jvm.put_field(&mut this, "modCount", "I", 0).await?;
+        let _: () = jvm.invoke_virtual(&this, "initializeMap", "()V", ()).await?;
 
         Ok(())
     }
 
-    async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
+    async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?}, {map:?})");
 
         if map.is_null() {
@@ -124,8 +176,17 @@ impl HashMap {
         }
         let size: i32 = jvm.invoke_virtual(&map, "size", "()I", ()).await?;
         let capacity = size.saturating_mul(2).max(DEFAULT_INITIAL_CAPACITY);
-        let _: () = jvm.invoke_special(&this, "java/util/HashMap", "<init>", "(I)V", (capacity,)).await?;
-        let _: () = jvm.invoke_virtual(&this, "putAll", "(Ljava/util/Map;)V", (map,)).await?;
+        let _: () = jvm
+            .invoke_special(&this, "java/util/HashMap", "<init>", "(IF)V", (capacity, DEFAULT_LOAD_FACTOR))
+            .await?;
+        let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entry_set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let count = jvm.array_length(&entries).await?;
+        for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
+            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
+            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            Self::put_for_create(jvm, &mut this, key, value).await?;
+        }
 
         Ok(())
     }
@@ -195,7 +256,7 @@ impl HashMap {
         let key_hash = Self::object_hash_or_zero(jvm, &key).await?;
         Self::ensure_table_for_insert(jvm, &mut this).await?;
 
-        let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
+        let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
         let table_len = jvm.array_length(&table).await?;
         let bucket_index = Self::bucket_index(key_hash, table_len);
 
@@ -207,6 +268,7 @@ impl HashMap {
                 if Self::keys_equal(jvm, &key, &entry_key).await? {
                     let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
                     jvm.put_field(&mut entry, "value", "Ljava/lang/Object;", value).await?;
+                    let _: () = jvm.invoke_virtual(&entry, "onAccess", "(Ljava/util/HashMap;)V", (this.clone(),)).await?;
                     return Ok(old_value);
                 }
             }
@@ -214,27 +276,14 @@ impl HashMap {
             entry = jvm.get_field(&entry, "next", "Ljava/util/HashMap$Entry;").await?;
         }
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        let threshold: i32 = jvm.get_field(&this, "threshold", "I").await?;
-        let bucket_index = if size >= threshold {
-            Self::rehash(jvm, &mut this).await?;
-            table = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
-            Self::bucket_index(key_hash, jvm.array_length(&table).await?)
-        } else {
-            bucket_index
-        };
-
-        let existing = Self::load_bucket(jvm, &table, bucket_index).await?;
-        let new_entry: ClassInstanceRef<HashMapEntry> = jvm
-            .new_class(
-                "java/util/HashMap$Entry",
-                "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
-                (key_hash, key, value, existing),
+        let _: () = jvm
+            .invoke_virtual(
+                &this,
+                "insertNewEntry",
+                "(ILjava/lang/Object;Ljava/lang/Object;I)V",
+                (key_hash, key, value, bucket_index as i32),
             )
-            .await?
-            .into();
-        jvm.store_array(&mut table, bucket_index, core::iter::once(new_entry)).await?;
-        jvm.put_field(&mut this, "size", "I", size + 1).await?;
+            .await?;
 
         Ok(None.into())
     }
@@ -277,11 +326,14 @@ impl HashMap {
                     }
 
                     let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+                    let _: () = jvm.invoke_virtual(&entry, "onRemoval", "(Ljava/util/HashMap;)V", (this.clone(),)).await?;
                     let null_entry: ClassInstanceRef<HashMapEntry> = None.into();
                     jvm.put_field(&mut entry, "next", "Ljava/util/HashMap$Entry;", null_entry).await?;
 
                     let size: i32 = jvm.get_field(&this, "size", "I").await?;
                     jvm.put_field(&mut this, "size", "I", size - 1).await?;
+                    let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
+                    jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
 
                     return Ok(old_value);
                 }
@@ -304,8 +356,93 @@ impl HashMap {
             jvm.store_array(&mut table, 0, nulls).await?;
         }
         jvm.put_field(&mut this, "size", "I", 0).await?;
+        let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
+        jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
 
         Ok(())
+    }
+
+    async fn initialize_map(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
+        Ok(())
+    }
+
+    async fn store_new_entry(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        hash: i32,
+        key: ClassInstanceRef<Object>,
+        value: ClassInstanceRef<Object>,
+        bucket_index: i32,
+    ) -> Result<()> {
+        let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
+        let existing = Self::load_bucket(jvm, &table, bucket_index as usize).await?;
+        let entry: ClassInstanceRef<HashMapEntry> = jvm
+            .new_class(
+                "java/util/HashMap$Entry",
+                "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
+                (hash, key, value, existing),
+            )
+            .await?
+            .into();
+        jvm.store_array(&mut table, bucket_index as usize, core::iter::once(entry)).await?;
+        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        jvm.put_field(&mut this, "size", "I", size + 1).await
+    }
+
+    async fn insert_new_entry(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        hash: i32,
+        key: ClassInstanceRef<Object>,
+        value: ClassInstanceRef<Object>,
+        bucket_index: i32,
+    ) -> Result<()> {
+        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
+        jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &this,
+                "storeNewEntry",
+                "(ILjava/lang/Object;Ljava/lang/Object;I)V",
+                (hash, key, value, bucket_index),
+            )
+            .await?;
+        let threshold: i32 = jvm.get_field(&this, "threshold", "I").await?;
+        if size >= threshold {
+            Self::rehash(jvm, &mut this).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let snapshot = Self::keys_snapshot(jvm, &this).await?;
+
+        Ok(jvm
+            .new_class("java/util/HashMap$KeyIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .await?
+            .into())
+    }
+
+    async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let snapshot = Self::values_snapshot(jvm, &this).await?;
+
+        Ok(jvm
+            .new_class("java/util/HashMap$ValueIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .await?
+            .into())
+    }
+
+    async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
+        let snapshot = Self::entries_snapshot(jvm, &this).await?;
+
+        Ok(jvm
+            .new_class("java/util/HashMap$EntryIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .await?
+            .into())
     }
 
     pub(super) async fn find_entry(
@@ -337,6 +474,25 @@ impl HashMap {
         Ok(None.into())
     }
 
+    pub(super) async fn put_for_create(
+        jvm: &Jvm,
+        this: &mut ClassInstanceRef<Self>,
+        key: ClassInstanceRef<Object>,
+        value: ClassInstanceRef<Object>,
+    ) -> Result<()> {
+        let hash = Self::object_hash_or_zero(jvm, &key).await?;
+        Self::ensure_table_for_insert(jvm, this).await?;
+        let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
+        let bucket_index = Self::bucket_index(hash, jvm.array_length(&table).await?);
+        jvm.invoke_virtual(
+            this,
+            "storeNewEntry",
+            "(ILjava/lang/Object;Ljava/lang/Object;I)V",
+            (hash, key, value, bucket_index as i32),
+        )
+        .await
+    }
+
     async fn ensure_table_for_insert(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
         if jvm.array_length(&table).await? > 0 {
@@ -346,13 +502,14 @@ impl HashMap {
         let new_capacity = 1;
         let new_table: ClassInstanceRef<Array<HashMapEntry>> = jvm.instantiate_array("Ljava/util/HashMap$Entry;", new_capacity).await?.into();
         jvm.put_field(this, "table", "[Ljava/util/HashMap$Entry;", new_table).await?;
-        jvm.put_field(this, "threshold", "I", Self::threshold_for_capacity(new_capacity as i32))
+        let load_factor: f32 = jvm.get_field(this, "loadFactor", "F").await?;
+        jvm.put_field(this, "threshold", "I", Self::threshold_for_capacity(new_capacity as i32, load_factor))
             .await?;
 
         Ok(())
     }
 
-    async fn rehash(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
+    pub(super) async fn rehash(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
         let old_table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
         let old_capacity = jvm.array_length(&old_table).await?;
         let new_capacity = old_capacity * 2 + 1;
@@ -374,7 +531,8 @@ impl HashMap {
         }
 
         jvm.put_field(this, "table", "[Ljava/util/HashMap$Entry;", new_table).await?;
-        jvm.put_field(this, "threshold", "I", Self::threshold_for_capacity(new_capacity as i32))
+        let load_factor: f32 = jvm.get_field(this, "loadFactor", "F").await?;
+        jvm.put_field(this, "threshold", "I", Self::threshold_for_capacity(new_capacity as i32, load_factor))
             .await?;
 
         Ok(())
@@ -449,12 +607,8 @@ impl HashMap {
         Ok(snapshot)
     }
 
-    fn threshold_for_capacity(capacity: i32) -> i32 {
-        if capacity <= 0 {
-            0
-        } else {
-            (capacity as f32 * DEFAULT_LOAD_FACTOR) as i32
-        }
+    fn threshold_for_capacity(capacity: i32, load_factor: f32) -> i32 {
+        if capacity <= 0 { 0 } else { (capacity as f32 * load_factor) as i32 }
     }
 }
 

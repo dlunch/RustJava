@@ -10,6 +10,7 @@ mod test_gregorian_calendar;
 mod test_hash_map;
 mod test_hash_set;
 mod test_hashtable;
+mod test_linked_hash_map;
 mod test_list_views;
 mod test_locale;
 mod test_properties;

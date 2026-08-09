@@ -6,6 +6,8 @@ use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
+use super::HashMap;
+
 // class java.util.HashMap$Entry
 pub struct HashMapEntry;
 
@@ -22,11 +24,18 @@ impl HashMapEntry {
                     Self::init,
                     Default::default(),
                 ),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, Default::default()),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, Default::default()),
-                JavaMethodProto::new("setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::set_value, Default::default()),
+                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "setValue",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::set_value,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("onAccess", "(Ljava/util/HashMap;)V", Self::on_access, Default::default()),
+                JavaMethodProto::new("onRemoval", "(Ljava/util/HashMap;)V", Self::on_removal, Default::default()),
             ],
             fields: vec![
                 JavaFieldProto::new("hash", "I", Default::default()),
@@ -124,5 +133,13 @@ impl HashMapEntry {
             jvm.invoke_virtual(&value, "hashCode", "()I", ()).await?
         };
         Ok(key_hash ^ value_hash)
+    }
+
+    async fn on_access(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
+        Ok(())
+    }
+
+    async fn on_removal(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
+        Ok(())
     }
 }

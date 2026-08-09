@@ -68,9 +68,9 @@ impl HashMapValues {
         tracing::debug!("java.util.HashMap$Values::remove({this:?}, {value:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let entries = HashMap::entries_snapshot(jvm, &map).await?;
-        let count = jvm.array_length(&entries).await?;
-        for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
+        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entryIterator", "()Ljava/util/Iterator;", ()).await?;
+        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
+            let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
             let entry_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
             let equal = if value.is_null() {
                 entry_value.is_null()
@@ -103,11 +103,7 @@ impl HashMapValues {
         tracing::debug!("java.util.HashMap$Values::iterator({this:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let snapshot = HashMap::values_snapshot(jvm, &map).await?;
-        let iterator = jvm
-            .new_class("java/util/HashMap$ValueIterator", "([Ljava/lang/Object;)V", (snapshot,))
-            .await?;
 
-        Ok(iterator.into())
+        jvm.invoke_virtual(&map, "valueIterator", "()Ljava/util/Iterator;", ()).await
     }
 }
