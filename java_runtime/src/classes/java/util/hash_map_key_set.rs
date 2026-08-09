@@ -92,7 +92,6 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual_with_owner(&map, "java/util/HashMap", "keyIterator", "()Ljava/util/Iterator;", ())
-            .await
+        jvm.invoke_virtual(&map, "keyIterator", "()Ljava/util/Iterator;", ()).await
     }
 }

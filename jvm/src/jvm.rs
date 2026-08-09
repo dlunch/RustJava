@@ -82,7 +82,7 @@ impl Jvm {
         let bootstrap_classes = ["java/lang/Object", "java/lang/Runnable", "java/lang/Thread", "[B", "java/lang/Class"];
         for class_name in bootstrap_classes.iter() {
             let class_definition = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
-            let class = Class::new(class_definition, None, None);
+            let class = Class::new(class_definition, None);
 
             jvm.register_class_internal(class, None).await?;
         }
@@ -340,58 +340,28 @@ impl Jvm {
         T: InvokeArg,
         U: From<JavaValue>,
     {
-        let class_name = instance.class_definition().name();
-        self.invoke_virtual_with_owner(instance, &class_name, name, descriptor, args).await
-    }
-
-    pub async fn invoke_virtual_with_owner<T, U>(
-        &self,
-        instance: &Box<dyn ClassInstance>,
-        class_name: &str,
-        name: &str,
-        descriptor: &str,
-        args: T,
-    ) -> Result<U>
-    where
-        T: InvokeArg,
-        U: From<JavaValue>,
-    {
         let args = args.into_arg();
-        tracing::trace!("Invoke virtual {class_name}.{name}:{descriptor}({args:?})");
+        tracing::trace!("Invoke virtual {}.{name}:{descriptor}({args:?})", instance.class_definition().name());
 
-        let symbolic_class = self.resolve_class(class_name).await?;
-        let Some((resolved_class, resolved_method)) = self.resolve_method(&symbolic_class, name, descriptor) else {
-            tracing::error!("No such method: {class_name}.{name}:{descriptor}");
-            return Err(self
-                .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
-                .await);
-        };
-        if resolved_method.access_flags().contains(MethodAccessFlags::STATIC) {
-            return Err(self
-                .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
-                .await);
+        let class = instance.class_definition();
+        let method = self.find_virtual_method(&*class, name, descriptor, false)?;
+        if let Some(x) = method {
+            let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+                .chain(args.into_vec())
+                .collect::<Vec<_>>();
+
+            let class = self.resolve_class(&class.name()).await?; // TODO we're resolving class twice
+            Ok(self
+                .execute_method(&class, Some(instance.clone()), &x, args.into_boxed_slice())
+                .await?
+                .into())
+        } else {
+            tracing::error!("No such method: {}.{name}:{descriptor}", class.name());
+
+            Err(self
+                .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
+                .await)
         }
-
-        let runtime_class = self.resolve_class(&instance.class_definition().name()).await?;
-        let Some((declaring_class, method)) = self.select_virtual_method(&runtime_class, &resolved_class, &*resolved_method) else {
-            return Err(self
-                .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
-                .await);
-        };
-        if method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
-            return Err(self
-                .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
-                .await);
-        }
-
-        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-            .chain(args.into_vec())
-            .collect::<Vec<_>>();
-
-        Ok(self
-            .execute_method(&declaring_class, Some(instance.clone()), &method, args.into_boxed_slice())
-            .await?
-            .into())
     }
 
     // non-virtual
@@ -854,7 +824,7 @@ impl Jvm {
 
         let java_class = Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader.clone()).await?);
 
-        let class = Class::new(class, java_class.clone(), class_loader.clone());
+        let class = Class::new(class, java_class.clone());
 
         if let Some(x) = class_loader {
             self.register_class_internal(class, Some(&JavaClassLoaderWrapper::new(x))).await?;
@@ -1227,57 +1197,19 @@ impl Jvm {
         }
     }
 
-    fn select_virtual_method(&self, runtime_class: &Class, resolved_class: &Class, resolved_method: &dyn Method) -> Option<(Class, Box<dyn Method>)> {
-        let mut class = runtime_class.clone();
-        loop {
-            if let Some(method) = class.definition.method(&resolved_method.name(), &resolved_method.descriptor(), false)
-                && (class.definition.name() == resolved_class.definition.name()
-                    || self.method_overrides(&class, &*method, resolved_class, resolved_method))
-            {
-                return Some((class, method));
+    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> Result<Option<Box<dyn Method>>> {
+        let method = class.method(name, descriptor, false);
+
+        if let Some(x) = method {
+            if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
+                return Ok(Some(x));
             }
-
-            class = self.get_class(&class.definition.super_class_name()?)?;
-        }
-    }
-
-    fn method_overrides(&self, class: &Class, method: &dyn Method, overridden_class: &Class, overridden_method: &dyn Method) -> bool {
-        if method.access_flags().contains(MethodAccessFlags::PRIVATE)
-            || overridden_method
-                .access_flags()
-                .intersects(MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL)
-        {
-            return false;
+        } else if let Some(x) = class.super_class_name() {
+            let super_class = self.inner.classes.read().get(&x).unwrap().definition.clone();
+            return self.find_virtual_method(&*super_class, name, descriptor, is_static);
         }
 
-        if overridden_method
-            .access_flags()
-            .intersects(MethodAccessFlags::PUBLIC | MethodAccessFlags::PROTECTED)
-            || class.is_same_runtime_package(overridden_class)
-        {
-            return true;
-        }
-
-        let mut super_class_name = class.definition.super_class_name();
-        while let Some(name) = super_class_name {
-            let Some(super_class) = self.get_class(&name) else {
-                return false;
-            };
-            if super_class.definition.name() == overridden_class.definition.name() {
-                break;
-            }
-
-            if let Some(super_method) = super_class.definition.method(&method.name(), &method.descriptor(), false)
-                && self.method_overrides(class, method, &super_class, &*super_method)
-                && self.method_overrides(&super_class, &*super_method, overridden_class, overridden_method)
-            {
-                return true;
-            }
-
-            super_class_name = super_class.definition.super_class_name();
-        }
-
-        false
+        Ok(None)
     }
 
     async fn execute_method(

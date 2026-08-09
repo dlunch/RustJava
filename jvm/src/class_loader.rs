@@ -38,20 +38,14 @@ struct ClassInitialization {
 pub struct Class {
     pub definition: Box<dyn ClassDefinition>,
     java_class: Arc<RwLock<Option<Box<dyn ClassInstance>>>>,
-    defining_loader: Option<Box<dyn ClassInstance>>,
     initialization: Arc<ClassInitialization>,
 }
 
 impl Class {
-    pub fn new(
-        definition: Box<dyn ClassDefinition>,
-        java_class: Option<Box<dyn ClassInstance>>,
-        defining_loader: Option<Box<dyn ClassInstance>>,
-    ) -> Self {
+    pub fn new(definition: Box<dyn ClassDefinition>, java_class: Option<Box<dyn ClassInstance>>) -> Self {
         Self {
             definition,
             java_class: Arc::new(RwLock::new(java_class)),
-            defining_loader,
             initialization: Arc::new(ClassInitialization {
                 state: Mutex::new(ClassInitializationState {
                     status: InitState::NotInitialized,
@@ -95,20 +89,6 @@ impl Class {
     pub fn java_class(&self) -> Box<dyn ClassInstance> {
         self.java_class.read().clone().unwrap()
     }
-
-    pub(crate) fn is_same_runtime_package(&self, other: &Self) -> bool {
-        let name = self.definition.name();
-        let package = name.rsplit_once('/').map_or("", |(package, _)| package);
-        let other_name = other.definition.name();
-        let other_package = other_name.rsplit_once('/').map_or("", |(package, _)| package);
-
-        package == other_package
-            && match (&self.defining_loader, &other.defining_loader) {
-                (None, None) => true,
-                (Some(loader), Some(other_loader)) => loader.identity() == other_loader.identity(),
-                _ => false,
-            }
-    }
 }
 
 #[async_trait::async_trait]
@@ -137,7 +117,7 @@ impl ClassLoaderWrapper for BootstrapClassLoaderWrapper<'_> {
         let definition = self.bootstrap_class_loader.load_class(jvm, name).await?;
         if let Some(definition) = definition {
             let java_class = JavaLangClass::from_rust_class(jvm, definition.clone(), None).await?;
-            let class = Class::new(definition, Some(java_class), None);
+            let class = Class::new(definition, Some(java_class));
             jvm.register_class_internal(class.clone(), Some(self)).await?;
 
             Ok(Some(class))
@@ -164,8 +144,7 @@ impl ClassLoaderWrapper for JavaClassLoaderWrapper {
 
         if let Some(class) = class {
             let definition = JavaLangClass::to_rust_class(jvm, &class).await?;
-            let defining_loader = JavaLangClass::class_loader(jvm, &class).await?;
-            Ok(Some(Class::new(definition, Some(class), defining_loader)))
+            Ok(Some(Class::new(definition, Some(class))))
         } else {
             Ok(None)
         }

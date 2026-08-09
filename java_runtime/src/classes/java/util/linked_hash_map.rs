@@ -191,9 +191,7 @@ impl LinkedHashMap {
         if entry.is_null() {
             return Ok(None.into());
         }
-        let _: () = jvm
-            .invoke_virtual_with_owner(&entry, "java/util/HashMap$Entry", "onAccess", "(Ljava/util/HashMap;)V", (map,))
-            .await?;
+        let _: () = jvm.invoke_virtual(&entry, "onAccess", "(Ljava/util/HashMap;)V", (map,)).await?;
 
         jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
     }
@@ -260,9 +258,8 @@ impl LinkedHashMap {
         let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
         jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
         let _: () = jvm
-            .invoke_virtual_with_owner(
+            .invoke_virtual(
                 &this,
-                "java/util/LinkedHashMap",
                 "storeNewEntry",
                 "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                 (hash, key, value, bucket_index),
@@ -273,13 +270,7 @@ impl LinkedHashMap {
         let eldest: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
         let eldest_entry: ClassInstanceRef<Object> = ClassInstanceRef::new(eldest.instance.clone());
         if jvm
-            .invoke_virtual_with_owner::<_, bool>(
-                &this,
-                "java/util/LinkedHashMap",
-                "removeEldestEntry",
-                "(Ljava/util/Map$Entry;)Z",
-                (eldest_entry,),
-            )
+            .invoke_virtual::<_, bool>(&this, "removeEldestEntry", "(Ljava/util/Map$Entry;)Z", (eldest_entry,))
             .await?
         {
             let key: ClassInstanceRef<Object> = jvm.get_field(&eldest, "key", "Ljava/lang/Object;").await?;
