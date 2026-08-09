@@ -337,6 +337,45 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
     let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abC");
 
+    let sequence = JavaLangString::from_rust_string(&jvm, "string").await?;
+    let sequence: ClassInstanceRef<CharSequence> = sequence.into();
+    let length: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(
+            &buffer,
+            "insert",
+            "(ILjava/lang/CharSequence;)Ljava/lang/StringBuffer;",
+            (length, sequence),
+        )
+        .await?;
+    let sequence = JavaLangString::from_rust_string(&jvm, "buffer").await?;
+    let sequence = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (sequence,)).await?;
+    let sequence: ClassInstanceRef<CharSequence> = sequence.into();
+    let length: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(
+            &buffer,
+            "insert",
+            "(ILjava/lang/CharSequence;)Ljava/lang/StringBuffer;",
+            (length, sequence),
+        )
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abCstringbuffer");
+
+    let sequence: ClassInstanceRef<CharSequence> = None.into();
+    let length: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
+    let _: ClassInstanceRef<StringBuffer> = jvm
+        .invoke_virtual(
+            &buffer,
+            "insert",
+            "(ILjava/lang/CharSequence;)Ljava/lang/StringBuffer;",
+            (length, sequence),
+        )
+        .await?;
+    let text = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abCstringbuffernull");
+
     let null_string: ClassInstanceRef<java_runtime::classes::java::lang::String> = None.into();
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&buffer, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (0, null_string))

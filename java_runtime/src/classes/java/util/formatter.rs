@@ -1232,8 +1232,20 @@ impl Formatter {
         if !scaled.is_finite() {
             return value;
         }
-        let representation_error = f64::EPSILON * libm::fmax(libm::fabs(scaled), 1.0) * 4.0;
-        libm::round(scaled + representation_error) / factor
+        if value == 0.0 {
+            return value;
+        }
+        let exponent = libm::floor(libm::log10(value)) as i32;
+        let discarded_index = exponent + precision as i32 + 1;
+        let canonical = format!("{value:e}");
+        let round_up = discarded_index >= 0
+            && canonical
+                .bytes()
+                .take_while(|byte| *byte != b'e')
+                .filter(|byte| byte.is_ascii_digit())
+                .nth(discarded_index as usize)
+                .is_some_and(|digit| digit >= b'5');
+        (libm::floor(scaled) + if round_up { 1.0 } else { 0.0 }) / factor
     }
 
     async fn scientific(jvm: &Jvm, value: f64, precision: usize) -> Result<RustString> {

@@ -1023,7 +1023,7 @@ async fn formatter_matches_java_5_radix_and_non_finite_number_rules() -> Result<
 async fn formatter_rounds_fixed_scientific_and_general_values_like_java_5() -> Result<()> {
     let jvm = test_jvm().await?;
     let formatter = jvm.new_class("java/util/Formatter", "()V", ()).await?;
-    let format = JavaLangString::from_rust_string(&jvm, "%.2f|%.3f|%.0f|%.2e|%.6g|%.6g|%.6g|%.6g|%.4g|%.4g|%g|%g|%.2e|%.3g|%.2e").await?;
+    let format = JavaLangString::from_rust_string(&jvm, "%.2f|%.3f|%.0f|%.2e|%.6g|%.6g|%.6g|%.6g|%.4g|%.4g|%g|%g|%.2e|%.3g|%.2e|%.0f|%.2f").await?;
     let values = [
         2.675,
         9.9995,
@@ -1040,6 +1040,8 @@ async fn formatter_rounds_fixed_scientific_and_general_values_like_java_5() -> R
         f64::MIN_POSITIVE * f64::EPSILON,
         f64::MIN_POSITIVE * f64::EPSILON,
         f64::MAX,
+        2.4999999999999996,
+        1.005,
     ];
     let mut arguments: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/Object;", values.len()).await?.into();
     for (index, value) in values.into_iter().enumerate() {
@@ -1058,7 +1060,7 @@ async fn formatter_rounds_fixed_scientific_and_general_values_like_java_5() -> R
     let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &result).await?,
-        "2.68|10.000|1|1.00e+01|0.00000|9.99999e-05|1.00000e-05|1.00000e+06|1.000e+04|10.00|-0.00000|1.20000|4.90e-324|4.90e-324|1.80e+308"
+        "2.68|10.000|1|1.00e+01|0.00000|9.99999e-05|1.00000e-05|1.00000e+06|1.000e+04|10.00|-0.00000|1.20000|4.90e-324|4.90e-324|1.80e+308|2|1.01"
     );
 
     Ok(())

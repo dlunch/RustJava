@@ -915,15 +915,27 @@ impl StringBuffer {
         offset: i32,
         sequence: ClassInstanceRef<CharSequence>,
     ) -> Result<ClassInstanceRef<Self>> {
-        let _: ClassInstanceRef<AbstractStringBuilder> = jvm
-            .invoke_special(
-                &this,
-                "java/lang/AbstractStringBuilder",
-                "insert",
-                "(ILjava/lang/CharSequence;)Ljava/lang/AbstractStringBuilder;",
-                (offset, sequence),
-            )
-            .await?;
+        if sequence.is_null() {
+            let sequence = JavaLangString::from_rust_string(jvm, "null").await?;
+            let _: ClassInstanceRef<Self> = jvm
+                .invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, sequence))
+                .await?;
+        } else if jvm.is_instance(&**sequence, "java/lang/String") {
+            let sequence: ClassInstanceRef<String> = ClassInstanceRef::new(sequence.instance);
+            let _: ClassInstanceRef<Self> = jvm
+                .invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, sequence))
+                .await?;
+        } else {
+            let length: i32 = jvm.invoke_virtual(&sequence, "length", "()I", ()).await?;
+            let _: ClassInstanceRef<Self> = jvm
+                .invoke_virtual(
+                    &this,
+                    "insert",
+                    "(ILjava/lang/CharSequence;II)Ljava/lang/StringBuffer;",
+                    (offset, sequence, 0, length),
+                )
+                .await?;
+        }
         Ok(this)
     }
 
