@@ -79,15 +79,15 @@ impl Formatter {
             return Ok(message);
         }
 
-        let parameter_count = jvm.array_length(&parameters).await?.min(4);
+        let parameter_count = jvm.array_length(&parameters).await?;
         if parameter_count == 0 {
             return Ok(message);
         }
 
         let parameters: Vec<ClassInstanceRef<Object>> = jvm.load_array(&parameters, 0, parameter_count).await?;
-        let mut replacements: Vec<Option<RustString>> = vec![None; 4];
-        for (index, parameter) in parameters.into_iter().enumerate() {
-            replacements[index] = Some(if parameter.is_null() {
+        let mut replacements = Vec::with_capacity(parameter_count);
+        for parameter in parameters {
+            replacements.push(if parameter.is_null() {
                 RustString::from("null")
             } else {
                 let value: ClassInstanceRef<String> = jvm.invoke_virtual(&parameter, "toString", "()Ljava/lang/String;", ()).await?;
@@ -104,22 +104,28 @@ impl Formatter {
         let mut formatted = RustString::new();
         let mut index = 0;
         while index < characters.len() {
-            if index + 2 < characters.len()
-                && characters[index] == '{'
-                && ('0'..='3').contains(&characters[index + 1])
-                && characters[index + 2] == '}'
-            {
-                let parameter_index = characters[index + 1] as usize - '0' as usize;
-                if let Some(replacement) = &replacements[parameter_index] {
-                    formatted.push_str(replacement);
-                } else {
-                    formatted.extend(&characters[index..index + 3]);
+            if characters[index] == '{' {
+                let mut cursor = index + 1;
+                let mut parameter_index = Some(0usize);
+                let mut has_digit = false;
+                while cursor < characters.len() && characters[cursor].is_ascii_digit() {
+                    has_digit = true;
+                    let digit = (characters[cursor] as u8 - b'0') as usize;
+                    parameter_index = parameter_index.and_then(|value| value.checked_mul(10)?.checked_add(digit));
+                    cursor += 1;
                 }
-                index += 3;
-            } else {
-                formatted.push(characters[index]);
-                index += 1;
+                if has_digit && cursor < characters.len() && characters[cursor] == '}' {
+                    if let Some(replacement) = parameter_index.and_then(|parameter_index| replacements.get(parameter_index)) {
+                        formatted.push_str(replacement);
+                    } else {
+                        formatted.extend(&characters[index..=cursor]);
+                    }
+                    index = cursor + 1;
+                    continue;
+                }
             }
+            formatted.push(characters[index]);
+            index += 1;
         }
 
         Ok(JavaLangString::from_rust_string(jvm, &formatted).await?.into())

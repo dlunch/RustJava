@@ -6,7 +6,7 @@ use java_runtime::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{ByteArrayOutputStream, OutputStream},
-        lang::String,
+        lang::{String, Throwable},
         util::logging::{Filter, Formatter, Level, LogRecord, SimpleFormatter, StreamHandler},
     },
 };
@@ -46,12 +46,46 @@ impl ConfigurableFilter {
     }
 }
 
+struct FailingOutputStream;
+
+impl FailingOutputStream {
+    fn as_proto() -> RuntimeClassProto {
+        RuntimeClassProto {
+            name: "FailingLoggingOutputStream",
+            parent_class: Some("java/io/OutputStream"),
+            interfaces: vec![],
+            methods: vec![
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC),
+            ],
+            fields: vec![],
+            access_flags: ClassAccessFlags::PUBLIC,
+        }
+    }
+
+    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+        jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await
+    }
+
+    async fn write(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: i32) -> Result<()> {
+        Err(jvm.exception("java/io/IOException", "write failed").await)
+    }
+}
+
 async fn logging_jvm() -> Result<Jvm> {
     let runtime = TestRuntime::new(BTreeMap::new());
     let jvm = create_test_jvm(runtime.clone()).await?;
     jvm.register_class(
         Box::new(ClassDefinitionImpl::from_class_proto(
             ConfigurableFilter::as_proto(),
+            Box::new(runtime.clone()) as Box<_>,
+        )),
+        None,
+    )
+    .await?;
+    jvm.register_class(
+        Box::new(ClassDefinitionImpl::from_class_proto(
+            FailingOutputStream::as_proto(),
             Box::new(runtime) as Box<_>,
         )),
         None,
@@ -66,7 +100,7 @@ async fn formatter_substitutes_message_parameters() -> Result<()> {
     let info: ClassInstanceRef<Level> = jvm
         .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
         .await?;
-    let message = JavaLangString::from_rust_string(&jvm, "hello {0}").await?;
+    let message = JavaLangString::from_rust_string(&jvm, "hello {0} from {10}").await?;
     let record: ClassInstanceRef<LogRecord> = jvm
         .new_class(
             "java/util/logging/LogRecord",
@@ -75,8 +109,10 @@ async fn formatter_substitutes_message_parameters() -> Result<()> {
         )
         .await?
         .into();
-    let mut parameters: ClassInstanceRef<Array<()>> = jvm.instantiate_array("Ljava/lang/Object;", 1).await?.into();
+    let mut parameters: ClassInstanceRef<Array<()>> = jvm.instantiate_array("Ljava/lang/Object;", 11).await?.into();
     jvm.store_array(&mut parameters, 0, [JavaLangString::from_rust_string(&jvm, "world").await?])
+        .await?;
+    jvm.store_array(&mut parameters, 10, [JavaLangString::from_rust_string(&jvm, "parameter ten").await?])
         .await?;
     let _: () = jvm
         .invoke_virtual(&record, "setParameters", "([Ljava/lang/Object;)V", (parameters,))
@@ -91,7 +127,80 @@ async fn formatter_substitutes_message_parameters() -> Result<()> {
             (record,),
         )
         .await?;
-    assert_eq!(JavaLangString::to_rust_string(&jvm, &formatted).await?, "hello world");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &formatted).await?, "hello world from parameter ten");
+    Ok(())
+}
+
+#[tokio::test]
+async fn simple_formatter_includes_throwable_stack_trace() -> Result<()> {
+    let jvm = logging_jvm().await?;
+    let info: ClassInstanceRef<Level> = jvm
+        .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
+        .await?;
+    let record: ClassInstanceRef<LogRecord> = jvm
+        .new_class(
+            "java/util/logging/LogRecord",
+            "(Ljava/util/logging/Level;Ljava/lang/String;)V",
+            (info, JavaLangString::from_rust_string(&jvm, "failed").await?),
+        )
+        .await?
+        .into();
+    let mut thrown: ClassInstanceRef<Throwable> = jvm
+        .new_class(
+            "java/lang/RuntimeException",
+            "(Ljava/lang/String;)V",
+            (JavaLangString::from_rust_string(&jvm, "boom").await?,),
+        )
+        .await?
+        .into();
+    let mut stack_trace: ClassInstanceRef<Array<String>> = jvm.instantiate_array("Ljava/lang/String;", 1).await?.into();
+    jvm.store_array(
+        &mut stack_trace,
+        0,
+        [JavaLangString::from_rust_string(&jvm, "example.Test.run(Test.java:7)").await?],
+    )
+    .await?;
+    jvm.put_field(&mut thrown, "stackTrace", "[Ljava/lang/String;", stack_trace).await?;
+    let _: () = jvm.invoke_virtual(&record, "setThrown", "(Ljava/lang/Throwable;)V", (thrown,)).await?;
+
+    let formatter: ClassInstanceRef<SimpleFormatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
+    let formatted: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&formatter, "format", "(Ljava/util/logging/LogRecord;)Ljava/lang/String;", (record,))
+        .await?;
+    let formatted = JavaLangString::to_rust_string(&jvm, &formatted).await?;
+    assert!(formatted.contains("java.lang.RuntimeException: boom"));
+    assert!(formatted.contains("\tat example.Test.run(Test.java:7)"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn stream_handler_reports_output_failures_without_propagating_them() -> Result<()> {
+    let jvm = logging_jvm().await?;
+    let output: ClassInstanceRef<OutputStream> = jvm.new_class("FailingLoggingOutputStream", "()V", ()).await?.into();
+    let formatter: ClassInstanceRef<Formatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
+    let handler: ClassInstanceRef<StreamHandler> = jvm
+        .new_class(
+            "java/util/logging/StreamHandler",
+            "(Ljava/io/OutputStream;Ljava/util/logging/Formatter;)V",
+            (output, formatter),
+        )
+        .await?
+        .into();
+    let info: ClassInstanceRef<Level> = jvm
+        .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
+        .await?;
+    let record: ClassInstanceRef<LogRecord> = jvm
+        .new_class(
+            "java/util/logging/LogRecord",
+            "(Ljava/util/logging/Level;Ljava/lang/String;)V",
+            (info, JavaLangString::from_rust_string(&jvm, "message").await?),
+        )
+        .await?
+        .into();
+
+    let _: () = jvm
+        .invoke_virtual(&handler, "publish", "(Ljava/util/logging/LogRecord;)V", (record,))
+        .await?;
     Ok(())
 }
 

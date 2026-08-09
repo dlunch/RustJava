@@ -6,7 +6,10 @@ use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{String, Throwable},
+    classes::java::{
+        io::{PrintWriter, StringWriter},
+        lang::{String, Throwable},
+    },
 };
 
 use super::{Level, LogRecord};
@@ -95,13 +98,16 @@ impl SimpleFormatter {
         };
         let thrown: ClassInstanceRef<Throwable> = jvm.invoke_virtual(&record, "getThrown", "()Ljava/lang/Throwable;", ()).await?;
         if !thrown.is_null() {
-            let thrown: ClassInstanceRef<String> = jvm.invoke_virtual(&thrown, "toString", "()Ljava/lang/String;", ()).await?;
-            if thrown.is_null() {
-                formatted.push_str("null\n");
-            } else {
-                formatted.push_str(&JavaLangString::to_rust_string(jvm, &thrown).await?);
-                formatted.push('\n');
-            }
+            let string_writer: ClassInstanceRef<StringWriter> = jvm.new_class("java/io/StringWriter", "()V", ()).await?.into();
+            let print_writer: ClassInstanceRef<PrintWriter> = jvm
+                .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (string_writer.clone(),))
+                .await?
+                .into();
+            let _: () = jvm
+                .invoke_virtual(&thrown, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+                .await?;
+            let trace: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+            formatted.push_str(&JavaLangString::to_rust_string(jvm, &trace).await?);
         }
 
         Ok(JavaLangString::from_rust_string(jvm, &formatted).await?.into())

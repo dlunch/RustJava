@@ -2,13 +2,13 @@ use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
 use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, JavaError, Jvm, Result};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         io::{OutputStream, OutputStreamWriter},
-        lang::String,
+        lang::{Exception, String},
     },
 };
 
@@ -182,13 +182,62 @@ impl StreamHandler {
             return Ok(());
         }
 
-        Self::write_head(jvm, &this).await?;
+        if let Err(JavaError::JavaException(exception)) = Self::write_head(jvm, &this).await {
+            if !jvm.is_instance(&*exception, "java/lang/Exception") {
+                return Err(JavaError::JavaException(exception));
+            }
+            let message: ClassInstanceRef<String> = None.into();
+            let exception: ClassInstanceRef<Exception> = exception.into();
+            let _: () = jvm
+                .invoke_virtual(
+                    &this,
+                    "reportError",
+                    "(Ljava/lang/String;Ljava/lang/Exception;I)V",
+                    (message, exception, 1),
+                )
+                .await?;
+            return Ok(());
+        }
         let formatter: ClassInstanceRef<Formatter> = jvm.get_field(&this, "formatter", "Ljava/util/logging/Formatter;").await?;
-        let formatted: ClassInstanceRef<String> = jvm
+        let formatted: ClassInstanceRef<String> = match jvm
             .invoke_virtual(&formatter, "format", "(Ljava/util/logging/LogRecord;)Ljava/lang/String;", (record,))
-            .await?;
+            .await
+        {
+            Ok(formatted) => formatted,
+            Err(JavaError::JavaException(exception)) => {
+                if !jvm.is_instance(&*exception, "java/lang/Exception") {
+                    return Err(JavaError::JavaException(exception));
+                }
+                let message: ClassInstanceRef<String> = None.into();
+                let exception: ClassInstanceRef<Exception> = exception.into();
+                let _: () = jvm
+                    .invoke_virtual(
+                        &this,
+                        "reportError",
+                        "(Ljava/lang/String;Ljava/lang/Exception;I)V",
+                        (message, exception, 5),
+                    )
+                    .await?;
+                return Ok(());
+            }
+        };
         let writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(&this, "writer", "Ljava/io/OutputStreamWriter;").await?;
-        jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (formatted,)).await
+        if let Err(JavaError::JavaException(exception)) = jvm.invoke_virtual::<_, ()>(&writer, "write", "(Ljava/lang/String;)V", (formatted,)).await {
+            if !jvm.is_instance(&*exception, "java/lang/Exception") {
+                return Err(JavaError::JavaException(exception));
+            }
+            let message: ClassInstanceRef<String> = None.into();
+            let exception: ClassInstanceRef<Exception> = exception.into();
+            let _: () = jvm
+                .invoke_virtual(
+                    &this,
+                    "reportError",
+                    "(Ljava/lang/String;Ljava/lang/Exception;I)V",
+                    (message, exception, 1),
+                )
+                .await?;
+        }
+        Ok(())
     }
 
     async fn set_encoding(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, encoding: ClassInstanceRef<String>) -> Result<()> {
