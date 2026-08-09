@@ -1,4 +1,5 @@
 pub mod jar;
+pub mod logging;
 pub mod regex;
 pub mod zip;
 
