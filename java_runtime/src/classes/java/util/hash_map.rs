@@ -163,7 +163,9 @@ impl HashMap {
             .await?;
         jvm.put_field(&mut this, "loadFactor", "F", load_factor).await?;
         jvm.put_field(&mut this, "modCount", "I", 0).await?;
-        let _: () = jvm.invoke_virtual(&this, "initializeMap", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_virtual_with_owner(&this, "java/util/HashMap", "initializeMap", "()V", ())
+            .await?;
 
         Ok(())
     }
@@ -268,7 +270,9 @@ impl HashMap {
                 if Self::keys_equal(jvm, &key, &entry_key).await? {
                     let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
                     jvm.put_field(&mut entry, "value", "Ljava/lang/Object;", value).await?;
-                    let _: () = jvm.invoke_virtual(&entry, "onAccess", "(Ljava/util/HashMap;)V", (this.clone(),)).await?;
+                    let _: () = jvm
+                        .invoke_virtual_with_owner(&entry, "java/util/HashMap$Entry", "onAccess", "(Ljava/util/HashMap;)V", (this.clone(),))
+                        .await?;
                     return Ok(old_value);
                 }
             }
@@ -277,8 +281,9 @@ impl HashMap {
         }
 
         let _: () = jvm
-            .invoke_virtual(
+            .invoke_virtual_with_owner(
                 &this,
+                "java/util/HashMap",
                 "insertNewEntry",
                 "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                 (key_hash, key, value, bucket_index as i32),
@@ -326,7 +331,9 @@ impl HashMap {
                     }
 
                     let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
-                    let _: () = jvm.invoke_virtual(&entry, "onRemoval", "(Ljava/util/HashMap;)V", (this.clone(),)).await?;
+                    let _: () = jvm
+                        .invoke_virtual_with_owner(&entry, "java/util/HashMap$Entry", "onRemoval", "(Ljava/util/HashMap;)V", (this.clone(),))
+                        .await?;
                     let null_entry: ClassInstanceRef<HashMapEntry> = None.into();
                     jvm.put_field(&mut entry, "next", "Ljava/util/HashMap$Entry;", null_entry).await?;
 
@@ -403,8 +410,9 @@ impl HashMap {
         let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
         jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
         let _: () = jvm
-            .invoke_virtual(
+            .invoke_virtual_with_owner(
                 &this,
+                "java/util/HashMap",
                 "storeNewEntry",
                 "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                 (hash, key, value, bucket_index),
@@ -484,8 +492,9 @@ impl HashMap {
         Self::ensure_table_for_insert(jvm, this).await?;
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "table", "[Ljava/util/HashMap$Entry;").await?;
         let bucket_index = Self::bucket_index(hash, jvm.array_length(&table).await?);
-        jvm.invoke_virtual(
+        jvm.invoke_virtual_with_owner(
             this,
+            "java/util/HashMap",
             "storeNewEntry",
             "(ILjava/lang/Object;Ljava/lang/Object;I)V",
             (hash, key, value, bucket_index as i32),

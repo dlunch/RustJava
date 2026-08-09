@@ -210,6 +210,21 @@ async fn linked_hash_map_access_order_tracks_only_documented_accesses() -> Resul
 
     let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "keySet", "()Ljava/util/Set;", ()).await?;
     let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let tail = JavaLangString::from_rust_string(&jvm, "c").await?;
+    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (tail,)).await?;
+    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "a");
+
+    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let tail = JavaLangString::from_rust_string(&jvm, "c").await?;
+    let value = JavaLangString::from_rust_string(&jvm, "C").await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (tail, value))
+        .await?;
+    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "a");
+
+    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
     let missing = JavaLangString::from_rust_string(&jvm, "missing").await?;
     let missing_value: ClassInstanceRef<Object> = jvm
         .invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (missing,))

@@ -68,7 +68,9 @@ impl HashMapValues {
         tracing::debug!("java.util.HashMap$Values::remove({this:?}, {value:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entryIterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual_with_owner(&map, "java/util/HashMap", "entryIterator", "()Ljava/util/Iterator;", ())
+            .await?;
         while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
             let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
             let entry_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
@@ -104,6 +106,7 @@ impl HashMapValues {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "valueIterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual_with_owner(&map, "java/util/HashMap", "valueIterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 }

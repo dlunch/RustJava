@@ -683,7 +683,9 @@ impl Interpreter {
                         .await);
                 }
 
-                let result = jvm.invoke_virtual(&instance.unwrap(), &x.name, &x.descriptor, params).await?;
+                let result = jvm
+                    .invoke_virtual_with_owner(&instance.unwrap(), &x.class, &x.name, &x.descriptor, params)
+                    .await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Ior => {

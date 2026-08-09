@@ -59,14 +59,18 @@ impl LinkedHashMapEntry {
             return Ok(());
         }
 
+        let mut header: ClassInstanceRef<Self> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let mut tail: ClassInstanceRef<Self> = jvm.get_field(&header, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
+        if this.identity() == tail.identity() {
+            return Ok(());
+        }
+
         let mut before: ClassInstanceRef<Self> = jvm.get_field(&this, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
         let mut after: ClassInstanceRef<Self> = jvm.get_field(&this, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
         jvm.put_field(&mut before, "after", "Ljava/util/LinkedHashMap$Entry;", after.clone())
             .await?;
         jvm.put_field(&mut after, "before", "Ljava/util/LinkedHashMap$Entry;", before).await?;
 
-        let mut header: ClassInstanceRef<Self> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut tail: ClassInstanceRef<Self> = jvm.get_field(&header, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
         jvm.put_field(&mut this, "before", "Ljava/util/LinkedHashMap$Entry;", tail.clone())
             .await?;
         jvm.put_field(&mut this, "after", "Ljava/util/LinkedHashMap$Entry;", header.clone())

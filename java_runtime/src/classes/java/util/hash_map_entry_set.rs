@@ -127,7 +127,8 @@ impl HashMapEntrySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "entryIterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual_with_owner(&map, "java/util/HashMap", "entryIterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {
