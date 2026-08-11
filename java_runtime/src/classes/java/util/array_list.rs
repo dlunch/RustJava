@@ -14,7 +14,7 @@ impl ArrayList {
         RuntimeClassProto {
             name: "java/util/ArrayList",
             parent_class: Some("java/util/AbstractList"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),

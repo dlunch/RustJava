@@ -20,7 +20,7 @@ impl URL {
         RuntimeClassProto {
             name: "java/net/URL",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_spec, Default::default()),
                 JavaMethodProto::new(

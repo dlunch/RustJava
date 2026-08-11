@@ -16,7 +16,7 @@ impl Manifest {
         RuntimeClassProto {
             name: "java/util/jar/Manifest",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
                 JavaMethodProto::new("read", "(Ljava/io/InputStream;)V", Self::read, Default::default()),

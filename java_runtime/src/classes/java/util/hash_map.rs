@@ -19,7 +19,7 @@ impl HashMap {
         RuntimeClassProto {
             name: "java/util/HashMap",
             parent_class: Some("java/util/AbstractMap"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),

@@ -22,7 +22,7 @@ impl Hashtable {
         RuntimeClassProto {
             name: "java/util/Hashtable",
             parent_class: Some("java/util/Dictionary"),
-            interfaces: vec!["java/util/Map"],
+            interfaces: vec!["java/util/Map", "java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),

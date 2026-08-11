@@ -79,7 +79,14 @@ impl Jvm {
         };
 
         // load bootstrap classes
-        let bootstrap_classes = ["java/lang/Object", "java/lang/Runnable", "java/lang/Thread", "[B", "java/lang/Class"];
+        let bootstrap_classes = [
+            "java/lang/Object",
+            "java/lang/Runnable",
+            "java/lang/Thread",
+            "[B",
+            "java/io/Serializable",
+            "java/lang/Class",
+        ];
         for class_name in bootstrap_classes.iter() {
             let class_definition = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
             let class = Class::new(class_definition, None);

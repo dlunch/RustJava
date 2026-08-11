@@ -13,7 +13,7 @@ impl ZipEntry {
         RuntimeClassProto {
             name: "java/util/zip/ZipEntry",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(Ljava/util/zip/ZipEntry;)V", Self::init_with_zip_entry, Default::default()),

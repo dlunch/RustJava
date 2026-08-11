@@ -19,7 +19,7 @@ impl LogRecord {
         RuntimeClassProto {
             name: "java/util/logging/LogRecord",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new(
                     "<init>",

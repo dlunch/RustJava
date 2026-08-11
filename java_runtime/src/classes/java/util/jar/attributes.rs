@@ -13,7 +13,7 @@ impl Attributes {
         RuntimeClassProto {
             name: "java/util/jar/Attributes",
             parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
+            interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new(

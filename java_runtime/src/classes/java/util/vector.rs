@@ -22,7 +22,7 @@ impl Vector {
         RuntimeClassProto {
             name: "java/util/Vector",
             parent_class: Some("java/util/AbstractList"),
-            interfaces: vec!["java/util/List"],
+            interfaces: vec!["java/util/List", "java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
                 JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
