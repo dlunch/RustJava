@@ -28,7 +28,7 @@ async fn test_system_time_yield_and_exit_runtime_contract() -> Result<()> {
     assert_eq!(runtime.exit_status(), Some(i32::MIN));
 
     let runtime_instance: ClassInstanceRef<JavaRuntime> = jvm.invoke_static("java/lang/Runtime", "getRuntime", "()Ljava/lang/Runtime;", ()).await?;
-    let _: () = jvm.invoke_virtual(&runtime_instance, "exit", "(I)V", (23,)).await?;
+    let _: () = jvm.invoke_virtual(&runtime_instance, "java/lang/Runtime", "exit", "(I)V", (23,)).await?;
     assert_eq!(runtime.exit_status(), Some(23));
 
     Ok(())
@@ -68,7 +68,10 @@ async fn sys_01_to_06_descriptors_streams_properties_and_identity_hash() -> Resu
 
     let stdin: ClassInstanceRef<InputStream> = jvm.get_static_field("java/lang/System", "in", "Ljava/io/InputStream;").await?;
     assert!(!stdin.is_null());
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stdin, "read", "()I", ()).await?, 0x41);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stdin, "java/io/InputStream", "read", "()I", ()).await?,
+        0x41
+    );
 
     let mut bytes = jvm.instantiate_array("B", 1).await?;
     jvm.store_array(&mut bytes, 0, [7i8]).await?;

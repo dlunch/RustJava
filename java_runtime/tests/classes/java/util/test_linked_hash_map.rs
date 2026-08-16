@@ -42,7 +42,7 @@ impl LimitedLinkedHashMap {
     async fn remove_eldest_entry(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         let callbacks: i32 = jvm.get_field(&this, "callbacks", "I").await?;
         jvm.put_field(&mut this, "callbacks", "I", callbacks + 1).await?;
-        let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&this, "LimitedLinkedHashMap", "size", "()I", ()).await?;
         let limit: i32 = jvm.get_field(&this, "limit", "I").await?;
 
         Ok(size > limit)
@@ -50,11 +50,18 @@ impl LimitedLinkedHashMap {
 }
 
 async fn view_strings(jvm: &Jvm, map: &ClassInstanceRef<Object>, method: &str, descriptor: &str) -> Result<Vec<Option<String>>> {
-    let view: ClassInstanceRef<Object> = jvm.invoke_virtual(map, method, descriptor, ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&view, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let view: ClassInstanceRef<Object> = jvm.invoke_virtual(map, &map.class_definition().name(), method, descriptor, ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&view, &view.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let mut values = Vec::new();
-    while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-        let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    while jvm
+        .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+        .await?
+    {
+        let value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await?;
         values.push(if value.is_null() {
             None
         } else {
@@ -66,13 +73,26 @@ async fn view_strings(jvm: &Jvm, map: &ClassInstanceRef<Object>, method: &str, d
 }
 
 async fn entry_strings(jvm: &Jvm, map: &ClassInstanceRef<Object>) -> Result<Vec<(Option<String>, Option<String>)>> {
-    let view: ClassInstanceRef<Object> = jvm.invoke_virtual(map, "entrySet", "()Ljava/util/Set;", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&view, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let view: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&view, &view.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let mut entries = Vec::new();
-    while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-        let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-        let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-        let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+    while jvm
+        .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+        .await?
+    {
+        let entry: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
+        let value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
         entries.push((
             if key.is_null() {
                 None
@@ -147,7 +167,13 @@ async fn linked_hash_map_preserves_insertion_order_across_views_nulls_and_rehash
         let key = JavaLangString::from_rust_string(&jvm, &format!("k{index:02}")).await?;
         let value = JavaLangString::from_rust_string(&jvm, &format!("v{index:02}")).await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
     let replacement_key = JavaLangString::from_rust_string(&jvm, "k05").await?;
@@ -155,6 +181,7 @@ async fn linked_hash_map_preserves_insertion_order_across_views_nulls_and_rehash
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (replacement_key, replacement),
@@ -164,6 +191,7 @@ async fn linked_hash_map_preserves_insertion_order_across_views_nulls_and_rehash
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (null.clone(), null),
@@ -181,14 +209,30 @@ async fn linked_hash_map_preserves_insertion_order_across_views_nulls_and_rehash
     assert_eq!(entries[5], (Some("k05".into()), Some("changed".into())));
     assert_eq!(entries.last(), Some(&(None, None)));
 
-    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let key = JavaLangString::from_rust_string(&jvm, "k00").await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,)).await?;
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "get",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (key,),
+        )
+        .await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "k00");
 
-    let text: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     let text = JavaLangString::to_rust_string(&jvm, &text).await?;
     assert!(text.starts_with("{k00=v00, k01=v01, k02=v02"));
     assert!(text.ends_with(", null=null}"));
@@ -204,39 +248,91 @@ async fn linked_hash_map_access_order_tracks_only_documented_accesses() -> Resul
         let value = JavaLangString::from_rust_string(&jvm, key).await?;
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
 
-    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let tail = JavaLangString::from_rust_string(&jvm, "c").await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (tail,)).await?;
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "get",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (tail,),
+        )
+        .await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "a");
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let tail = JavaLangString::from_rust_string(&jvm, "c").await?;
     let value = JavaLangString::from_rust_string(&jvm, "C").await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (tail, value))
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (tail, value),
+        )
         .await?;
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "a");
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let missing = JavaLangString::from_rust_string(&jvm, "missing").await?;
     let missing_value: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (missing,))
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "get",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (missing,),
+        )
         .await?;
     assert!(missing_value.is_null());
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "a");
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let key = JavaLangString::from_rust_string(&jvm, "a").await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,)).await?;
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "get",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (key,),
+        )
+        .await?;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("access-order get must invalidate an existing iterator");
     };
@@ -248,7 +344,7 @@ async fn linked_hash_map_access_order_tracks_only_documented_accesses() -> Resul
 
     let key = JavaLangString::from_rust_string(&jvm, "b").await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&map, "containsKey", "(Ljava/lang/Object;)Z", (key,))
+        jvm.invoke_virtual::<_, bool>(&map, &map.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (key,))
             .await?
     );
     assert_eq!(
@@ -259,7 +355,13 @@ async fn linked_hash_map_access_order_tracks_only_documented_accesses() -> Resul
     let key = JavaLangString::from_rust_string(&jvm, "b").await?;
     let value = JavaLangString::from_rust_string(&jvm, "B").await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
         .await?;
     assert_eq!(
         view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?,
@@ -271,10 +373,18 @@ async fn linked_hash_map_access_order_tracks_only_documented_accesses() -> Resul
         let value = JavaLangString::from_rust_string(&jvm, key).await?;
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&source, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &source,
+                &source.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
-    let _: () = jvm.invoke_virtual(&map, "putAll", "(Ljava/util/Map;)V", (source,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "putAll", "(Ljava/util/Map;)V", (source,))
+        .await?;
     assert_eq!(
         view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?,
         vec![Some("c".into()), Some("b".into()), Some("a".into()), Some("d".into())]
@@ -291,58 +401,103 @@ async fn linked_hash_map_views_and_iterators_remove_in_order_and_fail_fast() -> 
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
 
-    let values: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "values", "()Ljava/util/Collection;", ()).await?;
+    let values: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "values", "()Ljava/util/Collection;", ())
+        .await?;
     let same = JavaLangString::from_rust_string(&jvm, "same").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&values, "remove", "(Ljava/lang/Object;)Z", (same,)).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&values, &values.class_definition().name(), "remove", "(Ljava/lang/Object;)Z", (same,))
+            .await?
+    );
     assert_eq!(
         view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?,
         vec![Some("b".into()), Some("c".into())]
     );
 
-    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &first).await?, "b");
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    let result: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    let result: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("repeated iterator remove must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
     assert_eq!(view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?, vec![Some("c".into())]);
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
     let key = JavaLangString::from_rust_string(&jvm, "d").await?;
     let value = JavaLangString::from_rust_string(&jvm, "other").await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
         .await?;
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("structural modification must invalidate iterator");
     };
     assert!(jvm.is_instance(&*exception, "java/util/ConcurrentModificationException"));
 
-    let _: () = jvm.invoke_virtual(&map, "clear", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await?;
     assert!(view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?.is_empty());
     let key = JavaLangString::from_rust_string(&jvm, "reused").await?;
     let value = JavaLangString::from_rust_string(&jvm, "value").await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+        .invoke_virtual(
+            &map,
+            &map.class_definition().name(),
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
         .await?;
     assert_eq!(
         view_strings(&jvm, &map, "keySet", "()Ljava/util/Set;").await?,
         vec![Some("reused".into())]
     );
 
-    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&keys, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
+    let keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&keys, &keys.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("exhausted iterator must fail");
     };
@@ -369,7 +524,13 @@ async fn linked_hash_map_copy_and_remove_eldest_entry_preserve_policy_and_order(
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let value = key.clone();
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&limited, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &limited,
+                &limited.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
     assert_eq!(
@@ -381,7 +542,13 @@ async fn linked_hash_map_copy_and_remove_eldest_entry_preserve_policy_and_order(
     let key = JavaLangString::from_rust_string(&jvm, "c").await?;
     let value = JavaLangString::from_rust_string(&jvm, "C").await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&limited, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+        .invoke_virtual(
+            &limited,
+            &limited.class_definition().name(),
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
         .await?;
     assert_eq!(jvm.get_field::<i32>(&limited, "callbacks", "I").await?, 3);
 
@@ -392,8 +559,12 @@ async fn linked_hash_map_copy_and_remove_eldest_entry_preserve_policy_and_order(
     );
     assert_eq!(entry_strings(&jvm, &copy).await?[1], (Some("c".into()), Some("C".into())));
 
-    let key_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&copy, "keySet", "()Ljava/util/Set;", ()).await?;
-    let array: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&key_set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+    let key_set: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&copy, &copy.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let array: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(&key_set, &key_set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+        .await?;
     let keys = jvm.load_array::<ClassInstanceRef<Object>>(&array, 0, 2).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &keys[0]).await?, "b");
     assert_eq!(JavaLangString::to_rust_string(&jvm, &keys[1]).await?, "c");

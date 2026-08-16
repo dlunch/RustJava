@@ -71,7 +71,13 @@ impl ZipFileEntries {
 
         let zip_file = jvm.get_field(&this, "zipFile", "Ljava/util/zip/ZipFile;").await?;
         let entry = jvm
-            .invoke_virtual(&zip_file, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name[0].clone(),))
+            .invoke_virtual(
+                &zip_file,
+                "java/util/zip/ZipFile",
+                "getEntry",
+                "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
+                (name[0].clone(),),
+            )
             .await?;
 
         jvm.put_field(&mut this, "i", "I", i + 1).await?;

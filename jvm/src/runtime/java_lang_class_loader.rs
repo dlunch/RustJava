@@ -21,7 +21,13 @@ impl JavaLangClassLoader {
         let java_class_name = JavaLangString::from_rust_string(jvm, &binary_name).await?;
 
         let java_class: Option<Box<dyn ClassInstance>> = jvm
-            .invoke_virtual(this, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (java_class_name,))
+            .invoke_virtual(
+                this,
+                "java/lang/ClassLoader",
+                "loadClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;",
+                (java_class_name,),
+            )
             .await?;
 
         Ok(java_class)
@@ -32,7 +38,13 @@ impl JavaLangClassLoader {
         let java_name = JavaLangString::from_rust_string(jvm, name).await?;
 
         let java_resource: Option<Box<dyn ClassInstance>> = jvm
-            .invoke_virtual(this, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (java_name,))
+            .invoke_virtual(
+                this,
+                "java/lang/ClassLoader",
+                "getResourceAsStream",
+                "(Ljava/lang/String;)Ljava/io/InputStream;",
+                (java_name,),
+            )
             .await?;
 
         Ok(java_resource)

@@ -26,7 +26,13 @@ async fn test_find_class_uses_rustjar_runtime_source() -> Result<()> {
 
     let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
     let class: ClassInstanceRef<Class> = jvm
-        .invoke_virtual(&class_loader, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .invoke_virtual(
+            &class_loader,
+            "org/rustjava/lang/RustJarClassLoader",
+            "findClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            (name,),
+        )
         .await?;
     assert!(!class.is_null());
 

@@ -8,6 +8,7 @@ use std::io::{Cursor, Read};
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -29,23 +30,23 @@ impl ZipFile {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getEntry",
                     "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
                     Self::get_entry,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
                 JavaMethodProto::new(
                     "getInputStream",
                     "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;",
                     Self::get_input_stream,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
+                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("zipData", "[B", Default::default())],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -66,11 +67,11 @@ impl ZipFile {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let length: i64 = jvm.invoke_virtual(&file, "length", "()J", ()).await?;
+        let length: i64 = jvm.invoke_virtual(&file, "java/io/File", "length", "()J", ()).await?;
         let is = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
 
         let buf = jvm.instantiate_array("B", length as _).await?;
-        let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
+        let _: i32 = jvm.invoke_virtual(&is, "java/io/InputStream", "read", "([B)I", (buf.clone(),)).await?;
 
         jvm.put_field(&mut this, "zipData", "[B", buf).await?;
 
@@ -95,7 +96,9 @@ impl ZipFile {
         let file_size = zip.by_name(&name).map(|x| x.size());
 
         if let Ok(x) = file_size {
-            let _: () = jvm.invoke_virtual(&entry, "setSize", "(J)V", (x as i64,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&entry, "java/util/zip/ZipEntry", "setSize", "(J)V", (x as i64,))
+                .await?;
 
             Ok(entry.into())
         } else {
@@ -134,7 +137,9 @@ impl ZipFile {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.util.zip.ZipFile::getInputStream({this:?}, {entry:?})");
 
-        let entry_name = jvm.invoke_virtual(&entry, "getName", "()Ljava/lang/String;", ()).await?;
+        let entry_name = jvm
+            .invoke_virtual(&entry, "java/util/zip/ZipEntry", "getName", "()Ljava/lang/String;", ())
+            .await?;
         let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;
 
         let data = {

@@ -299,7 +299,8 @@ impl CollectionsExceptionalSet {
         let list = jvm
             .new_class("java/util/Collections$CopiesList", "(ILjava/lang/Object;)V", (1, element))
             .await?;
-        jvm.invoke_virtual(&list, "iterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual(&list, &list.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
@@ -314,7 +315,8 @@ impl CollectionsExceptionalSet {
                 } else if target.is_null() {
                     Ok(false)
                 } else {
-                    jvm.invoke_virtual(&element, "equals", "(Ljava/lang/Object;)Z", (target,)).await
+                    jvm.invoke_virtual(&element, &element.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (target,))
+                        .await
                 }
             }
         }
@@ -500,17 +502,24 @@ async fn integer_list(jvm: &Jvm, values: &[i32]) -> Result<ClassInstanceRef<Obje
     let list: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     for value in values {
         let element: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (*value,)).await?.into();
-        let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (element,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (element,))
+            .await?;
     }
     Ok(list)
 }
 
 async fn integer_values(jvm: &Jvm, list: &ClassInstanceRef<Object>) -> Result<Vec<i32>> {
-    let size: i32 = jvm.invoke_virtual(list, "size", "()I", ()).await?;
+    let size: i32 = jvm.invoke_virtual(list, &list.class_definition().name(), "size", "()I", ()).await?;
     let mut values = Vec::with_capacity(size as usize);
     for index in 0..size {
-        let element: ClassInstanceRef<Object> = jvm.invoke_virtual(list, "get", "(I)Ljava/lang/Object;", (index,)).await?;
-        values.push(jvm.invoke_virtual(&element, "intValue", "()I", ()).await?);
+        let element: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(list, &list.class_definition().name(), "get", "(I)Ljava/lang/Object;", (index,))
+            .await?;
+        values.push(
+            jvm.invoke_virtual(&element, &element.class_definition().name(), "intValue", "()I", ())
+                .await?,
+        );
     }
     Ok(values)
 }
@@ -575,8 +584,16 @@ async fn test_coll_01_exact_descriptors_access_and_singletons() -> Result<()> {
     assert_eq!(empty_list.identity(), same_empty_list.identity());
     assert!(jvm.is_instance(empty_list.as_ref(), "java/util/List"));
     assert!(jvm.is_instance(empty_set.as_ref(), "java/util/Set"));
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&empty_list, "size", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&empty_set, "size", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&empty_list, &empty_list.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&empty_set, &empty_set.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
 
     for (name, parent) in [
         ("java/util/Collections$EmptyList", "java/util/AbstractList"),
@@ -743,7 +760,15 @@ async fn test_coll_03_binary_search_insertion_duplicates_and_comparator() -> Res
     let reverse_list: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     for key in [3, 2, 1] {
         let value: ClassInstanceRef<Object> = jvm.new_class("CollectionsSortValue", "(IIZ)V", (key, key, false)).await?.into();
-        let _: bool = jvm.invoke_virtual(&reverse_list, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(
+                &reverse_list,
+                &reverse_list.class_definition().name(),
+                "add",
+                "(Ljava/lang/Object;)Z",
+                (value,),
+            )
+            .await?;
     }
     let comparator: ClassInstanceRef<Object> = jvm.new_class("CollectionsComparator", "(ZZ)V", (true, false)).await?.into();
     let key: ClassInstanceRef<Object> = jvm.new_class("CollectionsSortValue", "(IIZ)V", (2, 9, false)).await?.into();
@@ -942,13 +967,29 @@ async fn test_coll_06_min_max_natural_comparator_empty_and_null() -> Result<()> 
             (values.clone(),),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&min, "intValue", "()I", ()).await?, -2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&max, "intValue", "()I", ()).await?, 7);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&min, &min.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        -2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&max, &max.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        7
+    );
 
     let comparable_values: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     for key in [1, 3, 2] {
         let value: ClassInstanceRef<Object> = jvm.new_class("CollectionsSortValue", "(IIZ)V", (key, key, false)).await?.into();
-        let _: bool = jvm.invoke_virtual(&comparable_values, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(
+                &comparable_values,
+                &comparable_values.class_definition().name(),
+                "add",
+                "(Ljava/lang/Object;)Z",
+                (value,),
+            )
+            .await?;
     }
     let reverse: ClassInstanceRef<Object> = jvm.new_class("CollectionsComparator", "(ZZ)V", (true, false)).await?.into();
     let comparator_min: ClassInstanceRef<Object> = jvm
@@ -989,8 +1030,12 @@ async fn test_coll_06_min_max_natural_comparator_empty_and_null() -> Result<()> 
     let nulls: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     let null: ClassInstanceRef<Object> = None.into();
     let value: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (1,)).await?.into();
-    let _: bool = jvm.invoke_virtual(&nulls, "add", "(Ljava/lang/Object;)Z", (null,)).await?;
-    let _: bool = jvm.invoke_virtual(&nulls, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&nulls, &nulls.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (null,))
+        .await?;
+    let _: bool = jvm
+        .invoke_virtual(&nulls, &nulls.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+        .await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_static("java/util/Collections", "min", "(Ljava/util/Collection;)Ljava/lang/Object;", (nulls,))
         .await;
@@ -1016,13 +1061,25 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
         .await?;
     assert_eq!(integer_values(&jvm, &copies).await?, vec![11, 11, 11]);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&copies, "indexOf", "(Ljava/lang/Object;)I", (element.clone(),))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &copies,
+            &copies.class_definition().name(),
+            "indexOf",
+            "(Ljava/lang/Object;)I",
+            (element.clone(),)
+        )
+        .await?,
         0
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&copies, "lastIndexOf", "(Ljava/lang/Object;)I", (element.clone(),))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &copies,
+            &copies.class_definition().name(),
+            "lastIndexOf",
+            "(Ljava/lang/Object;)I",
+            (element.clone(),)
+        )
+        .await?,
         2
     );
 
@@ -1039,13 +1096,21 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalArgumentException"));
 
-    let add_result: Result<bool> = jvm.invoke_virtual(&copies, "add", "(Ljava/lang/Object;)Z", (element.clone(),)).await;
+    let add_result: Result<bool> = jvm
+        .invoke_virtual(
+            &copies,
+            &copies.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (element.clone(),),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = add_result else {
         panic!("nCopies.add must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let clear_result: Result<()> = jvm.invoke_virtual(&copies, "clear", "()V", ()).await;
+    let clear_result: Result<()> = jvm.invoke_virtual(&copies, &copies.class_definition().name(), "clear", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = clear_result else {
         panic!("non-empty nCopies.clear must fail");
     };
@@ -1058,20 +1123,52 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
             (0, element.clone()),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&zero_copies, "clear", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&zero_copies, &zero_copies.class_definition().name(), "clear", "()V", ())
+        .await?;
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&copies, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let remove_result: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&copies, &copies.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    let remove_result: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove_result else {
         panic!("nCopies iterator.remove must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let list_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&copies, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&list_iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let list_iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &copies,
+            &copies.class_definition().name(),
+            "listIterator",
+            "()Ljava/util/ListIterator;",
+            (),
+        )
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &list_iterator,
+            &list_iterator.class_definition().name(),
+            "next",
+            "()Ljava/lang/Object;",
+            (),
+        )
+        .await?;
     for (name, descriptor) in [("set", "(Ljava/lang/Object;)V"), ("add", "(Ljava/lang/Object;)V")] {
-        let result: Result<()> = jvm.invoke_virtual(&list_iterator, name, descriptor, (element.clone(),)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(
+                &list_iterator,
+                &list_iterator.class_definition().name(),
+                name,
+                descriptor,
+                (element.clone(),),
+            )
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("nCopies listIterator.{name} must fail");
         };
@@ -1086,28 +1183,58 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
             (element.clone(),),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&singleton, "size", "()I", ()).await?, 1);
-    assert!(
-        jvm.invoke_virtual::<_, bool>(&singleton, "contains", "(Ljava/lang/Object;)Z", (element.clone(),))
-            .await?
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&singleton, &singleton.class_definition().name(), "size", "()I", ())
+            .await?,
+        1
     );
-    let singleton_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&singleton, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&singleton_iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let remove_result: Result<()> = jvm.invoke_virtual(&singleton_iterator, "remove", "()V", ()).await;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &singleton,
+            &singleton.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (element.clone(),)
+        )
+        .await?
+    );
+    let singleton_iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&singleton, &singleton.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &singleton_iterator,
+            &singleton_iterator.class_definition().name(),
+            "next",
+            "()Ljava/lang/Object;",
+            (),
+        )
+        .await?;
+    let remove_result: Result<()> = jvm
+        .invoke_virtual(&singleton_iterator, &singleton_iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove_result else {
         panic!("singleton iterator.remove must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let singleton_clear: Result<()> = jvm.invoke_virtual(&singleton, "clear", "()V", ()).await;
+    let singleton_clear: Result<()> = jvm
+        .invoke_virtual(&singleton, &singleton.class_definition().name(), "clear", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = singleton_clear else {
         panic!("singleton.clear must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     let absent: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (99,)).await?.into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&singleton, "remove", "(Ljava/lang/Object;)Z", (absent,))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &singleton,
+            &singleton.class_definition().name(),
+            "remove",
+            "(Ljava/lang/Object;)Z",
+            (absent,)
+        )
+        .await?
     );
 
     let one_copy: ClassInstanceRef<Object> = jvm
@@ -1124,20 +1251,44 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
     }
 
     let empty: ClassInstanceRef<Object> = jvm.get_static_field("java/util/Collections", "EMPTY_LIST", "Ljava/util/List;").await?;
-    let _: () = jvm.invoke_virtual(&empty, "clear", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&empty, &empty.class_definition().name(), "clear", "()V", ()).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&empty, "remove", "(Ljava/lang/Object;)Z", (element.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &empty,
+            &empty.class_definition().name(),
+            "remove",
+            "(Ljava/lang/Object;)Z",
+            (element.clone(),)
+        )
+        .await?
     );
-    let add_result: Result<bool> = jvm.invoke_virtual(&empty, "add", "(Ljava/lang/Object;)Z", (element.clone(),)).await;
+    let add_result: Result<bool> = jvm
+        .invoke_virtual(
+            &empty,
+            &empty.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (element.clone(),),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = add_result else {
         panic!("EMPTY_LIST.add must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
     let empty_set: ClassInstanceRef<Object> = jvm.get_static_field("java/util/Collections", "EMPTY_SET", "Ljava/util/Set;").await?;
-    let _: () = jvm.invoke_virtual(&empty_set, "clear", "()V", ()).await?;
-    let add_result: Result<bool> = jvm.invoke_virtual(&empty_set, "add", "(Ljava/lang/Object;)Z", (element.clone(),)).await;
+    let _: () = jvm
+        .invoke_virtual(&empty_set, &empty_set.class_definition().name(), "clear", "()V", ())
+        .await?;
+    let add_result: Result<bool> = jvm
+        .invoke_virtual(
+            &empty_set,
+            &empty_set.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (element.clone(),),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = add_result else {
         panic!("EMPTY_SET.add must fail");
     };
@@ -1150,7 +1301,9 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
         (copies.clone(), "retainAll", "(Ljava/util/Collection;)Z", empty.clone()),
         (singleton.clone(), "removeAll", "(Ljava/util/Collection;)Z", removal_source),
     ] {
-        let result: Result<bool> = jvm.invoke_virtual(&target, name, descriptor, (argument,)).await;
+        let result: Result<bool> = jvm
+            .invoke_virtual(&target, &target.class_definition().name(), name, descriptor, (argument,))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("{name} requiring mutation must fail");
         };
@@ -1158,8 +1311,14 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
     }
 
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&copies, "addAll", "(Ljava/util/Collection;)Z", (zero_copies.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &copies,
+            &copies.class_definition().name(),
+            "addAll",
+            "(Ljava/util/Collection;)Z",
+            (zero_copies.clone(),)
+        )
+        .await?
     );
 
     let text = JavaLangString::from_rust_string(&jvm, "text").await?;
@@ -1173,7 +1332,13 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
         .await?;
     let destination: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/String;", 3).await?.into();
     let typed: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&text_copies, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (destination,))
+        .invoke_virtual(
+            &text_copies,
+            &text_copies.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination,),
+        )
         .await?;
     let typed_values = jvm.load_array::<ClassInstanceRef<Object>>(&typed, 0, 3).await?;
     assert_eq!(typed_values[0].identity(), text.identity());
@@ -1190,7 +1355,7 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
         )
         .await?;
     assert!(
-        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(&null_copies, "get", "(I)Ljava/lang/Object;", (1,))
+        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(&null_copies, &null_copies.class_definition().name(), "get", "(I)Ljava/lang/Object;", (1,))
             .await?
             .is_null()
     );
@@ -1203,8 +1368,14 @@ async fn test_coll_07_ncopies_singleton_and_empty_are_immutable() -> Result<()> 
         )
         .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_singleton, "contains", "(Ljava/lang/Object;)Z", (null,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_singleton,
+            &null_singleton.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (null,)
+        )
+        .await?
     );
 
     Ok(())
@@ -1221,36 +1392,96 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
 
     for collection in [empty_list.clone(), empty_set.clone()] {
         assert!(
-            !jvm.invoke_virtual::<_, bool>(&collection, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
-                .await?
+            !jvm.invoke_virtual::<_, bool>(
+                &collection,
+                &collection.class_definition().name(),
+                "equals",
+                "(Ljava/lang/Object;)Z",
+                (null.clone(),)
+            )
+            .await?
         );
-        let first_hash: i32 = jvm.invoke_virtual(&collection, "hashCode", "()I", ()).await?;
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&collection, "hashCode", "()I", ()).await?, first_hash);
+        let first_hash: i32 = jvm
+            .invoke_virtual(&collection, &collection.class_definition().name(), "hashCode", "()I", ())
+            .await?;
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&collection, &collection.class_definition().name(), "hashCode", "()I", ())
+                .await?,
+            first_hash
+        );
     }
     assert!(
-        jvm.invoke_virtual::<_, bool>(&empty_list, "equals", "(Ljava/lang/Object;)Z", (standard_empty_list.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &empty_list,
+            &empty_list.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (standard_empty_list.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&standard_empty_list, "equals", "(Ljava/lang/Object;)Z", (empty_list.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &standard_empty_list,
+            &standard_empty_list.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (empty_list.clone(),),
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&empty_list, "hashCode", "()I", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&standard_empty_list, "hashCode", "()I", ()).await?, 1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&empty_list, &empty_list.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(
+            &standard_empty_list,
+            &standard_empty_list.class_definition().name(),
+            "hashCode",
+            "()I",
+            ()
+        )
+        .await?,
+        1
+    );
 
     assert!(
-        jvm.invoke_virtual::<_, bool>(&empty_set, "equals", "(Ljava/lang/Object;)Z", (standard_empty_set.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &empty_set,
+            &empty_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (standard_empty_set.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&standard_empty_set, "equals", "(Ljava/lang/Object;)Z", (empty_set.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &standard_empty_set,
+            &standard_empty_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (empty_set.clone(),),
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&empty_set, "hashCode", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&standard_empty_set, "hashCode", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&empty_set, &empty_set.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&standard_empty_set, &standard_empty_set.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0
+    );
 
     let element: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (11,)).await?.into();
-    let element_hash: i32 = jvm.invoke_virtual(&element, "hashCode", "()I", ()).await?;
+    let element_hash: i32 = jvm
+        .invoke_virtual(&element, &element.class_definition().name(), "hashCode", "()I", ())
+        .await?;
     let copies: ClassInstanceRef<Object> = jvm
         .invoke_static(
             "java/util/Collections",
@@ -1261,20 +1492,44 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
         .await?;
     let peer_list = integer_list(&jvm, &[11, 11]).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&copies, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &copies,
+            &copies.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&copies, "equals", "(Ljava/lang/Object;)Z", (peer_list.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &copies,
+            &copies.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (peer_list.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&peer_list, "equals", "(Ljava/lang/Object;)Z", (copies.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &peer_list,
+            &peer_list.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (copies.clone(),)
+        )
+        .await?
     );
-    let copies_hash: i32 = jvm.invoke_virtual(&copies, "hashCode", "()I", ()).await?;
+    let copies_hash: i32 = jvm
+        .invoke_virtual(&copies, &copies.class_definition().name(), "hashCode", "()I", ())
+        .await?;
     assert_eq!(copies_hash, 31i32.wrapping_mul(31 + element_hash).wrapping_add(element_hash));
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&copies, "hashCode", "()I", ()).await?, copies_hash);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&copies, &copies.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        copies_hash
+    );
     let one_copy: ClassInstanceRef<Object> = jvm
         .invoke_static(
             "java/util/Collections",
@@ -1284,10 +1539,20 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
         )
         .await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&copies, "equals", "(Ljava/lang/Object;)Z", (one_copy.clone(),))
+        !jvm.invoke_virtual::<_, bool>(
+            &copies,
+            &copies.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (one_copy.clone(),)
+        )
+        .await?
+    );
+    assert_ne!(
+        copies_hash,
+        jvm.invoke_virtual::<_, i32>(&one_copy, &one_copy.class_definition().name(), "hashCode", "()I", ())
             .await?
     );
-    assert_ne!(copies_hash, jvm.invoke_virtual::<_, i32>(&one_copy, "hashCode", "()I", ()).await?);
 
     let singleton: ClassInstanceRef<Object> = jvm
         .invoke_static(
@@ -1299,23 +1564,55 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
         .await?;
     let peer_set: ClassInstanceRef<Object> = jvm.new_class("java/util/HashSet", "()V", ()).await?.into();
     let peer_element: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (11,)).await?.into();
-    let _: bool = jvm.invoke_virtual(&peer_set, "add", "(Ljava/lang/Object;)Z", (peer_element,)).await?;
+    let _: bool = jvm
+        .invoke_virtual(
+            &peer_set,
+            &peer_set.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (peer_element,),
+        )
+        .await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&singleton, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &singleton,
+            &singleton.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&singleton, "equals", "(Ljava/lang/Object;)Z", (peer_set.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &singleton,
+            &singleton.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (peer_set.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&peer_set, "equals", "(Ljava/lang/Object;)Z", (singleton.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &peer_set,
+            &peer_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (singleton.clone(),)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&singleton, "hashCode", "()I", ()).await?, element_hash);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&singleton, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&peer_set, "hashCode", "()I", ()).await?
+        jvm.invoke_virtual::<_, i32>(&singleton, &singleton.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        element_hash
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&singleton, &singleton.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&peer_set, &peer_set.class_definition().name(), "hashCode", "()I", ())
+            .await?
     );
 
     let null_copies: ClassInstanceRef<Object> = jvm
@@ -1329,18 +1626,40 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
     let null_peer_list: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     for _ in 0..2 {
         let _: bool = jvm
-            .invoke_virtual(&null_peer_list, "add", "(Ljava/lang/Object;)Z", (null.clone(),))
+            .invoke_virtual(
+                &null_peer_list,
+                &null_peer_list.class_definition().name(),
+                "add",
+                "(Ljava/lang/Object;)Z",
+                (null.clone(),),
+            )
             .await?;
     }
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_copies, "equals", "(Ljava/lang/Object;)Z", (null_peer_list.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_copies,
+            &null_copies.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_peer_list.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_peer_list, "equals", "(Ljava/lang/Object;)Z", (null_copies.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_peer_list,
+            &null_peer_list.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_copies.clone(),),
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&null_copies, "hashCode", "()I", ()).await?, 961);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&null_copies, &null_copies.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        961
+    );
 
     let null_singleton: ClassInstanceRef<Object> = jvm
         .invoke_static(
@@ -1352,18 +1671,44 @@ async fn test_coll_07_immutable_equals_and_hash_code_match_standard_collections(
         .await?;
     let null_peer_set: ClassInstanceRef<Object> = jvm.new_class("java/util/HashSet", "()V", ()).await?.into();
     let _: bool = jvm
-        .invoke_virtual(&null_peer_set, "add", "(Ljava/lang/Object;)Z", (null.clone(),))
+        .invoke_virtual(
+            &null_peer_set,
+            &null_peer_set.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),),
+        )
         .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_singleton, "equals", "(Ljava/lang/Object;)Z", (null_peer_set.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_singleton,
+            &null_singleton.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_peer_set.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_peer_set, "equals", "(Ljava/lang/Object;)Z", (null_singleton.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_peer_set,
+            &null_peer_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_singleton.clone(),),
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&null_singleton, "hashCode", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&null_peer_set, "hashCode", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&null_singleton, &null_singleton.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&null_peer_set, &null_peer_set.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0
+    );
 
     Ok(())
 }
@@ -1386,11 +1731,17 @@ async fn test_coll_07_abstract_set_equals_catches_only_jdk_compatibility_excepti
         .await?
         .into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&incompatible, "equals", "(Ljava/lang/Object;)Z", (peer.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &incompatible,
+            &incompatible.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (peer.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&peer, "equals", "(Ljava/lang/Object;)Z", (incompatible,))
+        jvm.invoke_virtual::<_, bool>(&peer, &peer.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (incompatible,))
             .await?
     );
 
@@ -1408,19 +1759,39 @@ async fn test_coll_07_abstract_set_equals_catches_only_jdk_compatibility_excepti
         .await?
         .into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&null_rejecting, "equals", "(Ljava/lang/Object;)Z", (null_peer.clone(),),)
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &null_rejecting,
+            &null_rejecting.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_peer.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&null_peer, "equals", "(Ljava/lang/Object;)Z", (null_rejecting,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &null_peer,
+            &null_peer.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_rejecting,)
+        )
+        .await?
     );
 
     let unexpected: ClassInstanceRef<Object> = jvm
         .new_class("CollectionsExceptionalSet", "(Ljava/lang/Object;I)V", (value, 2))
         .await?
         .into();
-    let result: Result<bool> = jvm.invoke_virtual(&unexpected, "equals", "(Ljava/lang/Object;)Z", (peer,)).await;
+    let result: Result<bool> = jvm
+        .invoke_virtual(
+            &unexpected,
+            &unexpected.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (peer,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("AbstractSet.equals must propagate non-compatibility exceptions");
     };
@@ -1448,8 +1819,14 @@ async fn test_coll_07_singleton_set_equals_uses_other_element_direction() -> Res
         .await?
         .into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&accepting_singleton, "equals", "(Ljava/lang/Object;)Z", (rejecting_peer,),)
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &accepting_singleton,
+            &accepting_singleton.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (rejecting_peer,),
+        )
+        .await?
     );
 
     let rejecting_singleton: ClassInstanceRef<Object> = jvm
@@ -1460,8 +1837,14 @@ async fn test_coll_07_singleton_set_equals_uses_other_element_direction() -> Res
         .await?
         .into();
     assert!(
-        jvm.invoke_virtual::<_, bool>(&rejecting_singleton, "equals", "(Ljava/lang/Object;)Z", (accepting_peer,),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &rejecting_singleton,
+            &rejecting_singleton.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (accepting_peer,),
+        )
+        .await?
     );
 
     Ok(())
@@ -1732,8 +2115,14 @@ async fn test_coll_08_exact_descriptors_access_and_null_factories() -> Result<()
 
         let wrapper_class = jvm.resolve_class(name).await?.java_class();
         assert_eq!(
-            jvm.invoke_virtual::<_, bool>(&serializable, "isAssignableFrom", "(Ljava/lang/Class;)Z", (wrapper_class,),)
-                .await?,
+            jvm.invoke_virtual::<_, bool>(
+                &serializable,
+                &serializable.class_definition().name(),
+                "isAssignableFrom",
+                "(Ljava/lang/Class;)Z",
+                (wrapper_class,),
+            )
+            .await?,
             *is_serializable,
             "{name} Serializable"
         );
@@ -1764,35 +2153,87 @@ async fn test_coll_08_unmodifiable_collection_is_live_identity_based_and_always_
         .await?;
     assert_ne!(wrapper.identity(), nested.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapper, "equals", "(Ljava/lang/Object;)Z", (wrapper.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (wrapper.clone(),)
+        )
+        .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapper, "equals", "(Ljava/lang/Object;)Z", (backing.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (backing.clone(),)
+        )
+        .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapper, "equals", "(Ljava/lang/Object;)Z", (nested.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (nested.clone(),)
+        )
+        .await?
     );
     let null: ClassInstanceRef<Object> = None.into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapper, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
 
     let value: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (2,)).await?.into();
-    let _: bool = jvm.invoke_virtual(&backing, "add", "(Ljava/lang/Object;)Z", (value.clone(),)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&wrapper, "size", "()I", ()).await?, 2);
-    assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapper, "contains", "(Ljava/lang/Object;)Z", (value.clone(),))
-            .await?
+    let _: bool = jvm
+        .invoke_virtual(
+            &backing,
+            &backing.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (value.clone(),),
+        )
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&wrapper, &wrapper.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
     );
-    let backing_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&backing, "toString", "()Ljava/lang/String;", ()).await?;
-    let wrapper_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapper, "toString", "()Ljava/lang/String;", ()).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapper_text, "equals", "(Ljava/lang/Object;)Z", (backing_text,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (value.clone(),)
+        )
+        .await?
+    );
+    let backing_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&backing, &backing.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
+    let wrapper_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapper, &wrapper.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &wrapper_text,
+            &wrapper_text.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (backing_text,)
+        )
+        .await?
     );
 
     let mut destination: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/Object;", 3).await?.into();
@@ -1800,7 +2241,13 @@ async fn test_coll_08_unmodifiable_collection_is_live_identity_based_and_always_
     jvm.store_array(&mut destination, 2, core::iter::once(sentinel)).await?;
     let destination_identity = destination.identity();
     let result: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&wrapper, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (destination,))
+        .invoke_virtual(
+            &wrapper,
+            &wrapper.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination,),
+        )
         .await?;
     assert_eq!(result.identity(), destination_identity);
     assert!(jvm.load_array::<ClassInstanceRef<Object>>(&result, 2, 1).await?[0].is_null());
@@ -1810,7 +2257,9 @@ async fn test_coll_08_unmodifiable_collection_is_live_identity_based_and_always_
         ("add", null.clone()),
         ("remove", jvm.new_class("java/lang/Integer", "(I)V", (404,)).await?.into()),
     ] {
-        let result: Result<bool> = jvm.invoke_virtual(&wrapper, name, "(Ljava/lang/Object;)Z", (argument,)).await;
+        let result: Result<bool> = jvm
+            .invoke_virtual(&wrapper, &wrapper.class_definition().name(), name, "(Ljava/lang/Object;)Z", (argument,))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("{name} must throw even when no change is possible");
         };
@@ -1824,7 +2273,15 @@ async fn test_coll_08_unmodifiable_collection_is_live_identity_based_and_always_
         ("retainAll", wrapper.clone()),
         ("retainAll", null.clone()),
     ] {
-        let result: Result<bool> = jvm.invoke_virtual(&wrapper, name, "(Ljava/util/Collection;)Z", (argument,)).await;
+        let result: Result<bool> = jvm
+            .invoke_virtual(
+                &wrapper,
+                &wrapper.class_definition().name(),
+                name,
+                "(Ljava/util/Collection;)Z",
+                (argument,),
+            )
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("{name} must throw before no-op or null handling");
         };
@@ -1839,20 +2296,30 @@ async fn test_coll_08_unmodifiable_collection_is_live_identity_based_and_always_
             (empty,),
         )
         .await?;
-    let clear: Result<()> = jvm.invoke_virtual(&empty_wrapper, "clear", "()V", ()).await;
+    let clear: Result<()> = jvm
+        .invoke_virtual(&empty_wrapper, &empty_wrapper.class_definition().name(), "clear", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = clear else {
         panic!("clear on an empty wrapper must throw");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapper, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let remove: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapper, &wrapper.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let remove: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("iterator.remove before next must throw UOE");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let remove: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    let remove: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("iterator.remove after next must throw UOE");
     };
@@ -1883,116 +2350,213 @@ async fn test_coll_08_unmodifiable_list_delegates_value_contract_and_wraps_sub_l
         .await?;
     assert_ne!(list.identity(), nested.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&list, "equals", "(Ljava/lang/Object;)Z", (backing.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (backing.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&nested, "equals", "(Ljava/lang/Object;)Z", (list.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &nested,
+            &nested.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (list.clone(),)
+        )
+        .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&list, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&backing, "hashCode", "()I", ()).await?
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&backing, &backing.class_definition().name(), "hashCode", "()I", ())
+            .await?
     );
     let null: ClassInstanceRef<Object> = None.into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
+        !jvm.invoke_virtual::<_, bool>(&list, &list.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
             .await?
     );
-    let backing_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&backing, "toString", "()Ljava/lang/String;", ()).await?;
-    let list_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "toString", "()Ljava/lang/String;", ()).await?;
+    let backing_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&backing, &backing.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
+    let list_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&list_text, "equals", "(Ljava/lang/Object;)Z", (backing_text,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &list_text,
+            &list_text.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (backing_text,)
+        )
+        .await?
     );
 
     let replacement: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (20,)).await?.into();
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&backing, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (1, replacement.clone()))
+        .invoke_virtual(
+            &backing,
+            &backing.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (1, replacement.clone()),
+        )
         .await?;
     assert_eq!(integer_values(&jvm, &list).await?, vec![1, 20, 3]);
 
-    let sub_list: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "subList", "(II)Ljava/util/List;", (0, 2)).await?;
-    let nested_sub_list: ClassInstanceRef<Object> = jvm.invoke_virtual(&sub_list, "subList", "(II)Ljava/util/List;", (1, 2)).await?;
+    let sub_list: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "subList", "(II)Ljava/util/List;", (0, 2))
+        .await?;
+    let nested_sub_list: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sub_list, &sub_list.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 2))
+        .await?;
     assert_eq!(integer_values(&jvm, &sub_list).await?, vec![1, 20]);
     assert_eq!(integer_values(&jvm, &nested_sub_list).await?, vec![20]);
     let changed: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (21,)).await?.into();
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&backing, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (1, changed.clone()))
+        .invoke_virtual(
+            &backing,
+            &backing.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (1, changed.clone()),
+        )
         .await?;
     assert_eq!(integer_values(&jvm, &nested_sub_list).await?, vec![21]);
 
     let set: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&list, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (-1, changed.clone()))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (-1, changed.clone()),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = set else {
         panic!("set with invalid index must throw UOE first");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let add: Result<()> = jvm.invoke_virtual(&list, "add", "(ILjava/lang/Object;)V", (-1, changed.clone())).await;
+    let add: Result<()> = jvm
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "add",
+            "(ILjava/lang/Object;)V",
+            (-1, changed.clone()),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = add else {
         panic!("add with invalid index must throw UOE first");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let remove: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&list, "remove", "(I)Ljava/lang/Object;", (-1,)).await;
+    let remove: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "remove", "(I)Ljava/lang/Object;", (-1,))
+        .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("remove with invalid index must throw UOE first");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     let add_all: Result<bool> = jvm
-        .invoke_virtual(&list, "addAll", "(ILjava/util/Collection;)Z", (-1, null.clone()))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (-1, null.clone()),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = add_all else {
         panic!("indexed addAll must throw UOE before index and null validation");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     let empty = integer_list(&jvm, &[]).await?;
-    let add_all: Result<bool> = jvm.invoke_virtual(&list, "addAll", "(ILjava/util/Collection;)Z", (0, empty)).await;
+    let add_all: Result<bool> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "addAll", "(ILjava/util/Collection;)Z", (0, empty))
+        .await;
     let Err(JavaError::JavaException(exception)) = add_all else {
         panic!("indexed addAll of an empty collection must throw");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
     let sub_set: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&sub_list, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (0, changed.clone()))
+        .invoke_virtual(
+            &sub_list,
+            &sub_list.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (0, changed.clone()),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = sub_set else {
         panic!("subList must remain unmodifiable");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 0);
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        0
+    );
     for (name, descriptor, argument) in [
         ("set", "(Ljava/lang/Object;)V", changed.clone()),
         ("add", "(Ljava/lang/Object;)V", changed.clone()),
     ] {
-        let result: Result<()> = jvm.invoke_virtual(&iterator, name, descriptor, (argument,)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), name, descriptor, (argument,))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("listIterator.{name} before next must throw UOE");
         };
         assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     }
-    let remove: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let remove: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("listIterator.remove before next must throw UOE");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "intValue", "()I", ()).await?, 1);
-    assert!(jvm.invoke_virtual::<_, bool>(&iterator, "hasPrevious", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "previousIndex", "()I", ()).await?, 0);
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        1
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasPrevious", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
+            .await?,
+        0
+    );
     for (name, descriptor, argument) in [
         ("set", "(Ljava/lang/Object;)V", changed.clone()),
         ("add", "(Ljava/lang/Object;)V", changed),
     ] {
-        let result: Result<()> = jvm.invoke_virtual(&iterator, name, descriptor, (argument,)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), name, descriptor, (argument,))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("listIterator.{name} after next must throw UOE");
         };
         assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     }
-    let remove: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let remove: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("listIterator.remove after next must throw UOE");
     };
@@ -2007,7 +2571,9 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
     let set: ClassInstanceRef<Object> = jvm.new_class("java/util/HashSet", "()V", ()).await?.into();
     let first: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (1,)).await?.into();
     let second: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (2,)).await?.into();
-    let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (first.clone(),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&set, &set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (first.clone(),))
+        .await?;
     let wrapped_set: ClassInstanceRef<Object> = jvm
         .invoke_static(
             "java/util/Collections",
@@ -2026,23 +2592,49 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
         .await?;
     assert_ne!(wrapped_set.identity(), nested_set.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_set, "equals", "(Ljava/lang/Object;)Z", (set.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_set,
+            &wrapped_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (set.clone(),)
+        )
+        .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&wrapped_set, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&set, "hashCode", "()I", ()).await?
+        jvm.invoke_virtual::<_, i32>(&wrapped_set, &wrapped_set.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&set, &set.class_definition().name(), "hashCode", "()I", ())
+            .await?
     );
     let null: ClassInstanceRef<Object> = None.into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapped_set, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapped_set,
+            &wrapped_set.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
-    let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (second.clone(),)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&wrapped_set, "size", "()I", ()).await?, 2);
+    let _: bool = jvm
+        .invoke_virtual(&set, &set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (second.clone(),))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&wrapped_set, &wrapped_set.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
     let absent: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (404,)).await?.into();
     let remove: Result<bool> = jvm
-        .invoke_virtual(&wrapped_set, "remove", "(Ljava/lang/Object;)Z", (absent.clone(),))
+        .invoke_virtual(
+            &wrapped_set,
+            &wrapped_set.class_definition().name(),
+            "remove",
+            "(Ljava/lang/Object;)Z",
+            (absent.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("set removal of an absent element must throw");
@@ -2054,6 +2646,7 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (first.clone(), value.clone()),
@@ -2077,34 +2670,94 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
         .await?;
     assert_ne!(wrapped_map.identity(), nested_map.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_map, "equals", "(Ljava/lang/Object;)Z", (map.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (map.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&nested_map, "equals", "(Ljava/lang/Object;)Z", (wrapped_map.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &nested_map,
+            &nested_map.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (wrapped_map.clone(),)
+        )
+        .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&wrapped_map, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&map, "hashCode", "()I", ()).await?
-    );
-    assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapped_map, "equals", "(Ljava/lang/Object;)Z", (null.clone(),))
+        jvm.invoke_virtual::<_, i32>(&wrapped_map, &wrapped_map.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&map, &map.class_definition().name(), "hashCode", "()I", ())
             .await?
     );
-    let map_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "toString", "()Ljava/lang/String;", ()).await?;
-    let wrapped_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "toString", "()Ljava/lang/String;", ()).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_text, "equals", "(Ljava/lang/Object;)Z", (map_text,))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
+    );
+    let map_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
+    let wrapped_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_text,
+            &wrapped_text.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (map_text,)
+        )
+        .await?
     );
 
-    let keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let same_keys: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "keySet", "()Ljava/util/Set;", ()).await?;
-    let values: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "values", "()Ljava/util/Collection;", ()).await?;
-    let same_values: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "values", "()Ljava/util/Collection;", ()).await?;
-    let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "entrySet", "()Ljava/util/Set;", ()).await?;
-    let same_entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "entrySet", "()Ljava/util/Set;", ()).await?;
+    let keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let same_keys: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
+    let values: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "values",
+            "()Ljava/util/Collection;",
+            (),
+        )
+        .await?;
+    let same_values: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "values",
+            "()Ljava/util/Collection;",
+            (),
+        )
+        .await?;
+    let entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
+    let same_entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
     assert_eq!(keys.identity(), same_keys.identity());
     assert_eq!(values.identity(), same_values.identity());
     assert_eq!(entries.identity(), same_entries.identity());
@@ -2112,21 +2765,37 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (second.clone(), second_value.clone()),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&keys, "size", "()I", ()).await?, 2);
-    assert!(
-        jvm.invoke_virtual::<_, bool>(&values, "contains", "(Ljava/lang/Object;)Z", (second_value,))
-            .await?
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&keys, &keys.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&entries, "size", "()I", ()).await?, 2);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &values,
+            &values.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (second_value,)
+        )
+        .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&entries, &entries.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     let put: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &wrapped_map,
+            &wrapped_map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (null.clone(), null.clone()),
@@ -2137,7 +2806,13 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
     let remove: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&wrapped_map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (absent.clone(),))
+        .invoke_virtual(
+            &wrapped_map,
+            &wrapped_map.class_definition().name(),
+            "remove",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (absent.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = remove else {
         panic!("map.remove of absent key must throw");
@@ -2148,7 +2823,15 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
         wrapped_map.clone(),
         null.clone(),
     ] {
-        let put_all: Result<()> = jvm.invoke_virtual(&wrapped_map, "putAll", "(Ljava/util/Map;)V", (source,)).await;
+        let put_all: Result<()> = jvm
+            .invoke_virtual(
+                &wrapped_map,
+                &wrapped_map.class_definition().name(),
+                "putAll",
+                "(Ljava/util/Map;)V",
+                (source,),
+            )
+            .await;
         let Err(JavaError::JavaException(exception)) = put_all else {
             panic!("map.putAll must throw for empty, self, and null inputs");
         };
@@ -2163,7 +2846,9 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
             (empty_map,),
         )
         .await?;
-    let clear: Result<()> = jvm.invoke_virtual(&empty_wrapper, "clear", "()V", ()).await;
+    let clear: Result<()> = jvm
+        .invoke_virtual(&empty_wrapper, &empty_wrapper.class_definition().name(), "clear", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = clear else {
         panic!("map.clear on empty map must throw");
     };
@@ -2171,32 +2856,52 @@ async fn test_coll_08_unmodifiable_set_and_map_views_are_live_and_always_unmodif
 
     let empty_collection = integer_list(&jvm, &[]).await?;
     for view in [keys, values, entries] {
-        let add: Result<bool> = jvm.invoke_virtual(&view, "add", "(Ljava/lang/Object;)Z", (null.clone(),)).await;
+        let add: Result<bool> = jvm
+            .invoke_virtual(&view, &view.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (null.clone(),))
+            .await;
         let Err(JavaError::JavaException(exception)) = add else {
             panic!("map view add must throw");
         };
         assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-        let remove: Result<bool> = jvm.invoke_virtual(&view, "remove", "(Ljava/lang/Object;)Z", (absent.clone(),)).await;
+        let remove: Result<bool> = jvm
+            .invoke_virtual(
+                &view,
+                &view.class_definition().name(),
+                "remove",
+                "(Ljava/lang/Object;)Z",
+                (absent.clone(),),
+            )
+            .await;
         let Err(JavaError::JavaException(exception)) = remove else {
             panic!("map view remove of absent value must throw");
         };
         assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
         for name in ["addAll", "removeAll", "retainAll"] {
             let bulk: Result<bool> = jvm
-                .invoke_virtual(&view, name, "(Ljava/util/Collection;)Z", (empty_collection.clone(),))
+                .invoke_virtual(
+                    &view,
+                    &view.class_definition().name(),
+                    name,
+                    "(Ljava/util/Collection;)Z",
+                    (empty_collection.clone(),),
+                )
                 .await;
             let Err(JavaError::JavaException(exception)) = bulk else {
                 panic!("map view {name} must throw for an empty input");
             };
             assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
         }
-        let clear: Result<()> = jvm.invoke_virtual(&view, "clear", "()V", ()).await;
+        let clear: Result<()> = jvm.invoke_virtual(&view, &view.class_definition().name(), "clear", "()V", ()).await;
         let Err(JavaError::JavaException(exception)) = clear else {
             panic!("map view clear must throw");
         };
         assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&view, "iterator", "()Ljava/util/Iterator;", ()).await?;
-        let remove: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&view, &view.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
+        let remove: Result<()> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+            .await;
         let Err(JavaError::JavaException(exception)) = remove else {
             panic!("map view iterator.remove must throw before next");
         };
@@ -2215,14 +2920,27 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (key.clone(), original),
         )
         .await?;
-    let raw_entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-    let raw_iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&raw_entries, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let raw_entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&raw_iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let raw_entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
+    let raw_iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &raw_entries,
+            &raw_entries.class_definition().name(),
+            "iterator",
+            "()Ljava/util/Iterator;",
+            (),
+        )
+        .await?;
+    let raw_entry: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&raw_iterator, &raw_iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
 
     let wrapped_map: ClassInstanceRef<Object> = jvm
         .invoke_static(
@@ -2232,49 +2950,104 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
             (map.clone(),),
         )
         .await?;
-    let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "entrySet", "()Ljava/util/Set;", ()).await?;
+    let entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&entries, "contains", "(Ljava/lang/Object;)Z", (raw_entry.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (raw_entry.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&entries, "containsAll", "(Ljava/util/Collection;)Z", (raw_entries.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "containsAll",
+            "(Ljava/util/Collection;)Z",
+            (raw_entries.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&entries, "equals", "(Ljava/lang/Object;)Z", (raw_entries.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (raw_entries.clone(),)
+        )
+        .await?
     );
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entries, "iterator", "()Ljava/util/Iterator;", ()).await?;
-    let wrapped_entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&entries, &entries.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let wrapped_entry: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(
         wrapped_entry.class_definition().name(),
         "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry"
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_entry, "equals", "(Ljava/lang/Object;)Z", (raw_entry.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (raw_entry.clone(),)
+        )
+        .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&wrapped_entry, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&raw_entry, "hashCode", "()I", ()).await?
+        jvm.invoke_virtual::<_, i32>(&wrapped_entry, &wrapped_entry.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&raw_entry, &raw_entry.class_definition().name(), "hashCode", "()I", ())
+            .await?
     );
     let null_entry: ClassInstanceRef<Object> = None.into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapped_entry, "equals", "(Ljava/lang/Object;)Z", (null_entry,),)
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (null_entry,),
+        )
+        .await?
     );
-    let raw_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&raw_entry, "toString", "()Ljava/lang/String;", ()).await?;
-    let wrapped_text: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_entry, "toString", "()Ljava/lang/String;", ()).await?;
+    let raw_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&raw_entry, &raw_entry.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
+    let wrapped_text: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_text, "equals", "(Ljava/lang/Object;)Z", (raw_text,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_text,
+            &wrapped_text.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (raw_text,)
+        )
+        .await?
     );
     let replacement = JavaLangString::from_rust_string(&jvm, "after").await?;
     let set_value: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
             "setValue",
             "(Ljava/lang/Object;)Ljava/lang/Object;",
             (replacement.clone(),),
@@ -2288,18 +3061,35 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (key, replacement.clone()),
         )
         .await?;
-    let live_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+    let live_value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "getValue",
+            "()Ljava/lang/Object;",
+            (),
+        )
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&live_value, "equals", "(Ljava/lang/Object;)Z", (replacement,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &live_value,
+            &live_value.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (replacement,)
+        )
+        .await?
     );
 
-    let array: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entries, "toArray", "()[Ljava/lang/Object;", ()).await?;
+    let array: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(&entries, &entries.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+        .await?;
     let array_entry = jvm.load_array::<ClassInstanceRef<Object>>(&array, 0, 1).await?[0].clone();
     assert_eq!(
         array_entry.class_definition().name(),
@@ -2307,7 +3097,13 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
     );
     let null_value: ClassInstanceRef<Object> = None.into();
     let set_value: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&array_entry, "setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", (null_value,))
+        .invoke_virtual(
+            &array_entry,
+            &array_entry.class_definition().name(),
+            "setValue",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (null_value,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = set_value else {
         panic!("entry returned by toArray must be unmodifiable");
@@ -2318,7 +3114,13 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
     jvm.store_array(&mut typed_destination, 1, core::iter::once(raw_entry.clone())).await?;
     let destination_identity = typed_destination.identity();
     let typed: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (typed_destination,))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (typed_destination,),
+        )
         .await?;
     assert_eq!(typed.identity(), destination_identity);
     let typed_values = jvm.load_array::<ClassInstanceRef<Object>>(&typed, 0, 2).await?;
@@ -2330,7 +3132,13 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
 
     let small: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/util/Map$Entry;", 0).await?.into();
     let grown: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (small,))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (small,),
+        )
         .await?;
     assert_eq!(jvm.array_length(&grown).await?, 1);
     assert_eq!(grown.class_definition().name(), "[Ljava/util/Map$Entry;");
@@ -2343,7 +3151,13 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
 
     let null_array: ClassInstanceRef<Array<Object>> = None.into();
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (null_array,))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (null_array,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("typed entry toArray(null) must throw");
@@ -2352,7 +3166,13 @@ async fn test_coll_08_unmodifiable_entry_set_wraps_iterator_and_all_array_result
 
     let incompatible: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/util/HashMap$Entry;", 2).await?.into();
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (incompatible.clone(),))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (incompatible.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("concrete mutable-entry array must reject wrapped entries");
@@ -2398,8 +3218,14 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&wrapped_entry, "equals", "(Ljava/lang/Object;)Z", (candidate_entry.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (candidate_entry.clone(),)
+        )
+        .await?
     );
     assert_eq!(jvm.get_field::<i32>(&backing_entry, "keyCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&candidate_entry, "keyCalls", "I").await?, 1);
@@ -2437,8 +3263,14 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     assert!(
-        jvm.invoke_virtual::<_, bool>(&wrapped_entry, "equals", "(Ljava/lang/Object;)Z", (candidate_entry.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (candidate_entry.clone(),)
+        )
+        .await?
     );
     assert_eq!(jvm.get_field::<i32>(&backing_entry, "keyCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&backing_entry, "valueCalls", "I").await?, 1);
@@ -2451,7 +3283,13 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
 
     let replacement: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&wrapped_entry, "setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", (replacement,))
+        .invoke_virtual(
+            &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
+            "setValue",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (replacement,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("wrapped custom entry.setValue must throw");
@@ -2484,7 +3322,13 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     let result: Result<bool> = jvm
-        .invoke_virtual(&throwing_key_wrapper, "equals", "(Ljava/lang/Object;)Z", (untouched_candidate.clone(),))
+        .invoke_virtual(
+            &throwing_key_wrapper,
+            &throwing_key_wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (untouched_candidate.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("backing getKey exception must propagate");
@@ -2511,7 +3355,13 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     let result: Result<bool> = jvm
-        .invoke_virtual(&throwing_equals_wrapper, "equals", "(Ljava/lang/Object;)Z", (candidate_entry.clone(),))
+        .invoke_virtual(
+            &throwing_equals_wrapper,
+            &throwing_equals_wrapper.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (candidate_entry.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("backing key.equals exception must propagate");
@@ -2531,6 +3381,7 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
     let result: Result<bool> = jvm
         .invoke_virtual(
             &wrapped_entry,
+            &wrapped_entry.class_definition().name(),
             "equals",
             "(Ljava/lang/Object;)Z",
             (required_throwing_value_entry.clone(),),
@@ -2549,6 +3400,7 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (map_key.clone(), map_value.clone()),
@@ -2557,7 +3409,9 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
     let wrapped_map: ClassInstanceRef<Object> = jvm
         .invoke_static("java/util/Collections", "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;", (map,))
         .await?;
-    let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "entrySet", "()Ljava/util/Set;", ()).await?;
+    let entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
     let matching: ClassInstanceRef<Object> = jvm
         .new_class(
             "CollectionsEntryProbe",
@@ -2567,8 +3421,14 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     assert!(
-        jvm.invoke_virtual::<_, bool>(&entries, "contains", "(Ljava/lang/Object;)Z", (matching.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (matching.clone(),)
+        )
+        .await?
     );
     assert_eq!(jvm.get_field::<i32>(&matching, "keyCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&matching, "valueCalls", "I").await?, 1);
@@ -2584,8 +3444,14 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&entries, "contains", "(Ljava/lang/Object;)Z", (missing.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (missing.clone(),)
+        )
+        .await?
     );
     assert_eq!(jvm.get_field::<i32>(&missing, "keyCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&missing, "valueCalls", "I").await?, 0);
@@ -2600,7 +3466,13 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     let result: Result<bool> = jvm
-        .invoke_virtual(&entries, "contains", "(Ljava/lang/Object;)Z", (required_throwing_value.clone(),))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (required_throwing_value.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("contains must propagate getValue failure after finding the key");
@@ -2618,7 +3490,13 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .await?
         .into();
     let result: Result<bool> = jvm
-        .invoke_virtual(&entries, "contains", "(Ljava/lang/Object;)Z", (throwing_key.clone(),))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (throwing_key.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("contains must propagate getKey failure");
@@ -2637,17 +3515,41 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         .into();
     let candidates: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     let _: bool = jvm
-        .invoke_virtual(&candidates, "add", "(Ljava/lang/Object;)Z", (matching.clone(),))
+        .invoke_virtual(
+            &candidates,
+            &candidates.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (matching.clone(),),
+        )
         .await?;
     let _: bool = jvm
-        .invoke_virtual(&candidates, "add", "(Ljava/lang/Object;)Z", (missing.clone(),))
+        .invoke_virtual(
+            &candidates,
+            &candidates.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (missing.clone(),),
+        )
         .await?;
     let _: bool = jvm
-        .invoke_virtual(&candidates, "add", "(Ljava/lang/Object;)Z", (never_reached.clone(),))
+        .invoke_virtual(
+            &candidates,
+            &candidates.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (never_reached.clone(),),
+        )
         .await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&entries, "containsAll", "(Ljava/util/Collection;)Z", (candidates,))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &entries,
+            &entries.class_definition().name(),
+            "containsAll",
+            "(Ljava/util/Collection;)Z",
+            (candidates,)
+        )
+        .await?
     );
     assert_eq!(jvm.get_field::<i32>(&never_reached, "keyCalls", "I").await?, 0);
     assert_eq!(jvm.get_field::<i32>(&never_reached, "valueCalls", "I").await?, 0);
@@ -2663,18 +3565,38 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
         let key: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into();
         let mapped: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (value * 10,)).await?.into();
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, mapped))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, mapped),
+            )
             .await?;
     }
-    let raw_entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-    let raw_array: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&raw_entries, "toArray", "()[Ljava/lang/Object;", ()).await?;
+    let raw_entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
+    let raw_array: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(
+            &raw_entries,
+            &raw_entries.class_definition().name(),
+            "toArray",
+            "()[Ljava/lang/Object;",
+            (),
+        )
+        .await?;
     let raw_values = jvm.load_array::<ClassInstanceRef<Object>>(&raw_array, 0, 2).await?;
     let wrapped_map: ClassInstanceRef<Object> = jvm
         .invoke_static("java/util/Collections", "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;", (map,))
         .await?;
-    let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&wrapped_map, "entrySet", "()Ljava/util/Set;", ()).await?;
+    let entries: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&wrapped_map, &wrapped_map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+        .await?;
 
-    let untyped: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entries, "toArray", "()[Ljava/lang/Object;", ()).await?;
+    let untyped: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(&entries, &entries.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+        .await?;
     for entry in jvm.load_array::<ClassInstanceRef<Object>>(&untyped, 0, 2).await? {
         assert_eq!(
             entry.class_definition().name(),
@@ -2682,7 +3604,13 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
         );
         let null: ClassInstanceRef<Object> = None.into();
         let result: Result<ClassInstanceRef<Object>> = jvm
-            .invoke_virtual(&entry, "setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", (null,))
+            .invoke_virtual(
+                &entry,
+                &entry.class_definition().name(),
+                "setValue",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (null,),
+            )
             .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("untyped entry array must contain only unmodifiable entries");
@@ -2694,7 +3622,13 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
     jvm.store_array(&mut oversized, 2, [raw_values[0].clone(), raw_values[1].clone()]).await?;
     let oversized_identity = oversized.identity();
     let reused: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (oversized,))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (oversized,),
+        )
         .await?;
     assert_eq!(reused.identity(), oversized_identity);
     let reused_values = jvm.load_array::<ClassInstanceRef<Object>>(&reused, 0, 4).await?;
@@ -2713,7 +3647,13 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
 
     let small: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/util/Map$Entry;", 0).await?.into();
     let grown: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (small,))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (small,),
+        )
         .await?;
     assert_eq!(grown.class_definition().name(), "[Ljava/util/Map$Entry;");
     assert_eq!(jvm.array_length(&grown).await?, 2);
@@ -2727,7 +3667,13 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
     let mut concrete: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/util/HashMap$Entry;", 2).await?.into();
     jvm.store_array(&mut concrete, 0, [raw_values[0].clone(), raw_values[1].clone()]).await?;
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (concrete.clone(),))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (concrete.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("HashMap.Entry[] must reject wrapped entries");
@@ -2742,7 +3688,13 @@ async fn test_coll_08_unmodifiable_entry_arrays_preserve_runtime_type_and_partia
     jvm.store_array(&mut matrix, 0, [sentinel_row.clone(), sentinel_row.clone(), sentinel_row.clone()])
         .await?;
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&entries, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (matrix.clone(),))
+        .invoke_virtual(
+            &entries,
+            &entries.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (matrix.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Map.Entry[][] must reject scalar wrapped entries");
@@ -2766,6 +3718,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
+                &map.class_definition().name(),
                 "put",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 (key.clone(), value),
@@ -2791,31 +3744,68 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
         .await?;
     assert_ne!(sorted_map.identity(), nested_sorted_map.identity());
     assert!(
-        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(&sorted_map, "comparator", "()Ljava/util/Comparator;", ())
-            .await?
-            .is_null()
+        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "comparator",
+            "()Ljava/util/Comparator;",
+            ()
+        )
+        .await?
+        .is_null()
     );
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_map, "firstKey", "()Ljava/lang/Object;", ()).await?;
-    let last: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_map, "lastKey", "()Ljava/lang/Object;", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "intValue", "()I", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&last, "intValue", "()I", ()).await?, 5);
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_map, &sorted_map.class_definition().name(), "firstKey", "()Ljava/lang/Object;", ())
+        .await?;
+    let last: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_map, &sorted_map.class_definition().name(), "lastKey", "()Ljava/lang/Object;", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&last, &last.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        5
+    );
 
     let range: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &sorted_map,
+            &sorted_map.class_definition().name(),
             "subMap",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
             (keys[0].clone(), keys[2].clone()),
         )
         .await?;
     let nested_range: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&range, "headMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (keys[1].clone(),))
+        .invoke_virtual(
+            &range,
+            &range.class_definition().name(),
+            "headMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (keys[1].clone(),),
+        )
         .await?;
     let head_range: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_map, "headMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (keys[2].clone(),))
+        .invoke_virtual(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "headMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (keys[2].clone(),),
+        )
         .await?;
     let tail_range: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_map, "tailMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (keys[0].clone(),))
+        .invoke_virtual(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "tailMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (keys[0].clone(),),
+        )
         .await?;
     for wrapped_range in [&range, &nested_range, &head_range, &tail_range] {
         assert_eq!(wrapped_range.class_definition().name(), "java/util/Collections$UnmodifiableSortedMap");
@@ -2825,30 +3815,56 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (inserted_key.clone(), inserted_value.clone()),
         )
         .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&range, "containsKey", "(Ljava/lang/Object;)Z", (inserted_key.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &range,
+            &range.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&nested_range, "containsKey", "(Ljava/lang/Object;)Z", (inserted_key.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &nested_range,
+            &nested_range.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&head_range, "containsKey", "(Ljava/lang/Object;)Z", (inserted_key.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &head_range,
+            &head_range.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&tail_range, "containsKey", "(Ljava/lang/Object;)Z", (inserted_key.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &tail_range,
+            &tail_range.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),)
+        )
+        .await?
     );
     let put: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &range,
+            &range.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (inserted_key.clone(), inserted_value),
@@ -2861,7 +3877,9 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
 
     let set: ClassInstanceRef<Object> = jvm.new_class("java/util/TreeSet", "()V", ()).await?.into();
     for key in &keys {
-        let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&set, &set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (key.clone(),))
+            .await?;
     }
     let sorted_set: ClassInstanceRef<Object> = jvm
         .invoke_static(
@@ -2881,17 +3899,36 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
         .await?;
     assert_ne!(sorted_set.identity(), nested_sorted_set.identity());
     assert!(
-        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(&sorted_set, "comparator", "()Ljava/util/Comparator;", ())
-            .await?
-            .is_null()
+        jvm.invoke_virtual::<_, ClassInstanceRef<Object>>(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "comparator",
+            "()Ljava/util/Comparator;",
+            ()
+        )
+        .await?
+        .is_null()
     );
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_set, "first", "()Ljava/lang/Object;", ()).await?;
-    let last: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_set, "last", "()Ljava/lang/Object;", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "intValue", "()I", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&last, "intValue", "()I", ()).await?, 5);
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_set, &sorted_set.class_definition().name(), "first", "()Ljava/lang/Object;", ())
+        .await?;
+    let last: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_set, &sorted_set.class_definition().name(), "last", "()Ljava/lang/Object;", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&last, &last.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        5
+    );
     let set_range: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &sorted_set,
+            &sorted_set.class_definition().name(),
             "subSet",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
             (keys[0].clone(), keys[2].clone()),
@@ -2900,38 +3937,91 @@ async fn test_coll_08_unmodifiable_sorted_ranges_remain_live_and_unmodifiable() 
     let nested_set_range: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &set_range,
+            &set_range.class_definition().name(),
             "tailSet",
             "(Ljava/lang/Object;)Ljava/util/SortedSet;",
             (inserted_key.clone(),),
         )
         .await?;
     let head_set_range: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_set, "headSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (keys[2].clone(),))
+        .invoke_virtual(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "headSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (keys[2].clone(),),
+        )
         .await?;
     let tail_set_range: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_set, "tailSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (keys[0].clone(),))
+        .invoke_virtual(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "tailSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (keys[0].clone(),),
+        )
         .await?;
     for wrapped_range in [&set_range, &nested_set_range, &head_set_range, &tail_set_range] {
         assert_eq!(wrapped_range.class_definition().name(), "java/util/Collections$UnmodifiableSortedSet");
     }
-    let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (inserted_key.clone(),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(
+            &set,
+            &set.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),),
+        )
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&set_range, "contains", "(Ljava/lang/Object;)Z", (inserted_key.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &set_range,
+            &set_range.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),)
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&nested_set_range, "contains", "(Ljava/lang/Object;)Z", (inserted_key.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &nested_set_range,
+            &nested_set_range.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&head_set_range, "contains", "(Ljava/lang/Object;)Z", (inserted_key.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &head_set_range,
+            &head_set_range.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),),
+        )
+        .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&tail_set_range, "contains", "(Ljava/lang/Object;)Z", (inserted_key.clone(),),)
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &tail_set_range,
+            &tail_set_range.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key.clone(),),
+        )
+        .await?
     );
-    let add: Result<bool> = jvm.invoke_virtual(&set_range, "add", "(Ljava/lang/Object;)Z", (inserted_key,)).await;
+    let add: Result<bool> = jvm
+        .invoke_virtual(
+            &set_range,
+            &set_range.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (inserted_key,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = add else {
         panic!("sorted set range must remain unmodifiable");
     };
@@ -2958,7 +4048,13 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     for key in [high.clone(), middle.clone(), low.clone(), null.clone()] {
         let value = JavaLangString::from_rust_string(&jvm, "value").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
     }
     let sorted_map: ClassInstanceRef<Object> = jvm
@@ -2969,34 +4065,66 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
             (map.clone(),),
         )
         .await?;
-    let returned_comparator: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_map, "comparator", "()Ljava/util/Comparator;", ()).await?;
+    let returned_comparator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "comparator",
+            "()Ljava/util/Comparator;",
+            (),
+        )
+        .await?;
     assert_eq!(returned_comparator.identity(), comparator.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&sorted_map, "containsKey", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
-    let first_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_map, "firstKey", "()Ljava/lang/Object;", ()).await?;
-    let last_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_map, "lastKey", "()Ljava/lang/Object;", ()).await?;
+    let first_key: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_map, &sorted_map.class_definition().name(), "firstKey", "()Ljava/lang/Object;", ())
+        .await?;
+    let last_key: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_map, &sorted_map.class_definition().name(), "lastKey", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(first_key.identity(), high.identity());
     assert!(last_key.is_null());
 
     let map_range: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &sorted_map,
+            &sorted_map.class_definition().name(),
             "subMap",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
             (high.clone(), null.clone()),
         )
         .await?;
     let map_head: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_map, "headMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (null.clone(),))
+        .invoke_virtual(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "headMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (null.clone(),),
+        )
         .await?;
     let map_tail: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_map, "tailMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (null.clone(),))
+        .invoke_virtual(
+            &sorted_map,
+            &sorted_map.class_definition().name(),
+            "tailMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (null.clone(),),
+        )
         .await?;
     let nested_map: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map_range,
+            &map_range.class_definition().name(),
             "subMap",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
             (middle.clone(), low.clone()),
@@ -3005,6 +4133,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     let equal_map: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map_range,
+            &map_range.class_definition().name(),
             "subMap",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
             (middle.clone(), middle.clone()),
@@ -3012,22 +4141,41 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         .await?;
     for range in [&map_range, &map_head, &map_tail, &nested_map, &equal_map] {
         assert_eq!(range.class_definition().name(), "java/util/Collections$UnmodifiableSortedMap");
-        let range_comparator: ClassInstanceRef<Object> = jvm.invoke_virtual(range, "comparator", "()Ljava/util/Comparator;", ()).await?;
+        let range_comparator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(range, &range.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
+            .await?;
         assert_eq!(range_comparator.identity(), comparator.identity());
     }
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&equal_map, "size", "()I", ()).await?, 0);
-    assert!(
-        !jvm.invoke_virtual::<_, bool>(&map_head, "containsKey", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&equal_map, &equal_map.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&map_tail, "containsKey", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &map_head,
+            &map_head.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &map_tail,
+            &map_tail.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
 
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &sorted_map,
+            &sorted_map.class_definition().name(),
             "subMap",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
             (low.clone(), high.clone()),
@@ -3038,7 +4186,13 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalArgumentException"));
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&map_range, "tailMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (outside.clone(),))
+        .invoke_virtual(
+            &map_range,
+            &map_range.class_definition().name(),
+            "tailMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (outside.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("nested map range must reject an endpoint outside its lower boundary");
@@ -3049,19 +4203,32 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &map,
+            &map.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (live_key.clone(), live_value.clone()),
         )
         .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&map_range, "containsKey", "(Ljava/lang/Object;)Z", (live_key.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &map_range,
+            &map_range.class_definition().name(),
+            "containsKey",
+            "(Ljava/lang/Object;)Z",
+            (live_key.clone(),)
+        )
+        .await?
     );
 
     jvm.put_field(&mut comparator.clone(), "fail", "Z", true).await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&map_range, "headMap", "(Ljava/lang/Object;)Ljava/util/SortedMap;", (middle.clone(),))
+        .invoke_virtual(
+            &map_range,
+            &map_range.class_definition().name(),
+            "headMap",
+            "(Ljava/lang/Object;)Ljava/util/SortedMap;",
+            (middle.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("range factory must propagate the backing comparator exception");
@@ -3070,6 +4237,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &map_range,
+            &map_range.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (outside.clone(), live_value),
@@ -3086,7 +4254,9 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         .await?
         .into();
     for key in [high.clone(), middle.clone(), low.clone(), null.clone()] {
-        let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (key,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&set, &set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (key,))
+            .await?;
     }
     let sorted_set: ClassInstanceRef<Object> = jvm
         .invoke_static(
@@ -3096,34 +4266,66 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
             (set.clone(),),
         )
         .await?;
-    let returned_comparator: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_set, "comparator", "()Ljava/util/Comparator;", ()).await?;
+    let returned_comparator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "comparator",
+            "()Ljava/util/Comparator;",
+            (),
+        )
+        .await?;
     assert_eq!(returned_comparator.identity(), comparator.identity());
     assert!(
-        jvm.invoke_virtual::<_, bool>(&sorted_set, "contains", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_set, "first", "()Ljava/lang/Object;", ()).await?;
-    let last: ClassInstanceRef<Object> = jvm.invoke_virtual(&sorted_set, "last", "()Ljava/lang/Object;", ()).await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_set, &sorted_set.class_definition().name(), "first", "()Ljava/lang/Object;", ())
+        .await?;
+    let last: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&sorted_set, &sorted_set.class_definition().name(), "last", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(first.identity(), high.identity());
     assert!(last.is_null());
 
     let set_range: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &sorted_set,
+            &sorted_set.class_definition().name(),
             "subSet",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
             (high.clone(), null.clone()),
         )
         .await?;
     let set_head: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_set, "headSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (null.clone(),))
+        .invoke_virtual(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "headSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (null.clone(),),
+        )
         .await?;
     let set_tail: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&sorted_set, "tailSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (null.clone(),))
+        .invoke_virtual(
+            &sorted_set,
+            &sorted_set.class_definition().name(),
+            "tailSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (null.clone(),),
+        )
         .await?;
     let nested_set: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &set_range,
+            &set_range.class_definition().name(),
             "subSet",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
             (middle.clone(), low.clone()),
@@ -3132,6 +4334,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     let equal_set: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &set_range,
+            &set_range.class_definition().name(),
             "subSet",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
             (middle.clone(), middle.clone()),
@@ -3139,22 +4342,41 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         .await?;
     for range in [&set_range, &set_head, &set_tail, &nested_set, &equal_set] {
         assert_eq!(range.class_definition().name(), "java/util/Collections$UnmodifiableSortedSet");
-        let range_comparator: ClassInstanceRef<Object> = jvm.invoke_virtual(range, "comparator", "()Ljava/util/Comparator;", ()).await?;
+        let range_comparator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(range, &range.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
+            .await?;
         assert_eq!(range_comparator.identity(), comparator.identity());
     }
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&equal_set, "size", "()I", ()).await?, 0);
-    assert!(
-        !jvm.invoke_virtual::<_, bool>(&set_head, "contains", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&equal_set, &equal_set.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&set_tail, "contains", "(Ljava/lang/Object;)Z", (null.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &set_head,
+            &set_head.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(
+            &set_tail,
+            &set_tail.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (null.clone(),)
+        )
+        .await?
     );
 
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &sorted_set,
+            &sorted_set.class_definition().name(),
             "subSet",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
             (low, high),
@@ -3165,28 +4387,56 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalArgumentException"));
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&set_range, "tailSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (outside.clone(),))
+        .invoke_virtual(
+            &set_range,
+            &set_range.class_definition().name(),
+            "tailSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (outside.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("nested set range must reject an endpoint outside its lower boundary");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalArgumentException"));
 
-    let _: bool = jvm.invoke_virtual(&set, "add", "(Ljava/lang/Object;)Z", (live_key.clone(),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&set, &set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (live_key.clone(),))
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&set_range, "contains", "(Ljava/lang/Object;)Z", (live_key,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &set_range,
+            &set_range.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (live_key,)
+        )
+        .await?
     );
 
     jvm.put_field(&mut comparator.clone(), "fail", "Z", true).await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&set_range, "headSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (middle,))
+        .invoke_virtual(
+            &set_range,
+            &set_range.class_definition().name(),
+            "headSet",
+            "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+            (middle,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("set range factory must propagate the backing comparator exception");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    let result: Result<bool> = jvm.invoke_virtual(&set_range, "add", "(Ljava/lang/Object;)Z", (outside,)).await;
+    let result: Result<bool> = jvm
+        .invoke_virtual(
+            &set_range,
+            &set_range.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (outside,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("unmodifiable set mutation must throw before comparator range validation");
     };

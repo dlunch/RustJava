@@ -642,7 +642,9 @@ impl Interpreter {
                         .await);
                 }
 
-                let result = jvm.invoke_virtual(&instance.unwrap(), &x.name, &x.descriptor, params).await?;
+                let instance = instance.unwrap();
+                let class_name = instance.class_definition().name();
+                let result = jvm.invoke_virtual(&instance, &class_name, &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Invokespecial(x) => {
@@ -683,7 +685,7 @@ impl Interpreter {
                         .await);
                 }
 
-                let result = jvm.invoke_virtual(&instance.unwrap(), &x.name, &x.descriptor, params).await?;
+                let result = jvm.invoke_virtual(&instance.unwrap(), &x.class, &x.name, &x.descriptor, params).await?;
                 Self::push_invoke_result(stack_frame, result);
             }
             Opcode::Ior => {

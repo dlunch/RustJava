@@ -17,7 +17,9 @@ async fn test_random_access_file() -> Result<()> {
         .await?;
 
     let buf = jvm.instantiate_array("B", 11).await?;
-    let read: i32 = jvm.invoke_virtual(&raf, "read", "([B)I", (buf.clone(),)).await?;
+    let read: i32 = jvm
+        .invoke_virtual(&raf, &raf.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
     assert_eq!(read, 11);
 
     let mut rust_buf = vec![0; 11];

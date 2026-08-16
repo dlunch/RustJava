@@ -129,9 +129,15 @@ async fn compile_preserves_the_source_and_valid_flags() -> Result<()> {
             (source.clone(),),
         )
         .await?;
-    let actual: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&pattern, "pattern", "()Ljava/lang/String;", ()).await?;
+    let actual: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&pattern, "java/util/regex/Pattern", "pattern", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "a+b");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&pattern, "flags", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&pattern, "java/util/regex/Pattern", "flags", "()I", ())
+            .await?,
+        0
+    );
 
     let source = JavaLangString::from_rust_string(&jvm, "a").await?;
     let pattern: ClassInstanceRef<Pattern> = jvm
@@ -142,7 +148,11 @@ async fn compile_preserves_the_source_and_valid_flags() -> Result<()> {
             (source, 0xef),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&pattern, "flags", "()I", ()).await?, 0xef);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&pattern, "java/util/regex/Pattern", "flags", "()I", ())
+            .await?,
+        0xef
+    );
 
     Ok(())
 }
@@ -159,15 +169,28 @@ async fn compile_passes_modern_regex_syntax_through_without_translation() -> Res
             (source.clone(),),
         )
         .await?;
-    let preserved: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&pattern, "pattern", "()Ljava/lang/String;", ()).await?;
+    let preserved: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&pattern, "java/util/regex/Pattern", "pattern", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &preserved).await?, r"(?P<word>a+)");
 
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "aaa").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
-    let group: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (1,)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
+    let group: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (1,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &group).await?, "aaa");
 
     Ok(())
@@ -240,10 +263,30 @@ async fn compile_reports_rust_regex_errors_as_pattern_syntax_exception() -> Resu
         };
         assert!(jvm.is_instance(&*exception, "java/util/regex/PatternSyntaxException"));
         let exception: ClassInstanceRef<PatternSyntaxException> = exception.into();
-        let actual: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&exception, "getPattern", "()Ljava/lang/String;", ()).await?;
+        let actual: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(
+                &exception,
+                "java/util/regex/PatternSyntaxException",
+                "getPattern",
+                "()Ljava/lang/String;",
+                (),
+            )
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, source);
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&exception, "getIndex", "()I", ()).await?, -1);
-        let description: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&exception, "getDescription", "()Ljava/lang/String;", ()).await?;
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&exception, "java/util/regex/PatternSyntaxException", "getIndex", "()I", ())
+                .await?,
+            -1
+        );
+        let description: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(
+                &exception,
+                "java/util/regex/PatternSyntaxException",
+                "getDescription",
+                "()Ljava/lang/String;",
+                (),
+            )
+            .await?;
         assert!(!JavaLangString::to_rust_string(&jvm, &description).await?.is_empty());
     }
 
@@ -270,9 +313,19 @@ async fn pattern_flags_control_rust_regex_matching() -> Result<()> {
             .await?;
         let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, input).await?.into();
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
-        assert_eq!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?, expected);
+        assert_eq!(
+            jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+                .await?,
+            expected
+        );
     }
 
     let source = JavaLangString::from_rust_string(&jvm, "^b$").await?;
@@ -286,11 +339,28 @@ async fn pattern_flags_control_rust_regex_matching() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "a\nb\nc").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?, 3);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+            .await?,
+        3
+    );
 
     Ok(())
 }
@@ -322,6 +392,7 @@ async fn static_matches_and_matcher_reject_null_inputs() -> Result<()> {
     let result: Result<ClassInstanceRef<Matcher>> = jvm
         .invoke_virtual(
             &pattern,
+            "java/util/regex/Pattern",
             "matcher",
             "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
             (null_input.clone(),),

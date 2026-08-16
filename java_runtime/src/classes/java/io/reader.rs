@@ -18,15 +18,15 @@ impl Reader {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
                 JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init_with_lock, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("read", "()I", Self::read_char, Default::default()),
-                JavaMethodProto::new("read", "([C)I", Self::read, Default::default()),
-                JavaMethodProto::new_abstract("read", "([CII)I", Default::default()),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
-                JavaMethodProto::new("ready", "()Z", Self::ready, Default::default()),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
-                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
-                JavaMethodProto::new_abstract("close", "()V", Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read_char, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([C)I", Self::read, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new_abstract("read", "([CII)I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new_abstract("close", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
             ],
             fields: vec![JavaFieldProto::new("lock", "Ljava/lang/Object;", FieldAccessFlags::PROTECTED)],
             access_flags: ClassAccessFlags::ABSTRACT,
@@ -60,7 +60,9 @@ impl Reader {
         tracing::debug!("java.io.Reader::read({this:?})");
 
         let chars = jvm.instantiate_array("C", 1).await?;
-        let read: i32 = jvm.invoke_virtual(&this, "read", "([CII)I", (chars.clone(), 0, 1)).await?;
+        let read: i32 = jvm
+            .invoke_virtual(&this, "java/io/Reader", "read", "([CII)I", (chars.clone(), 0, 1))
+            .await?;
         if read == -1 {
             return Ok(-1);
         }
@@ -73,7 +75,7 @@ impl Reader {
         tracing::debug!("java.io.Reader::read({this:?}, {buf:?})");
 
         let len = jvm.array_length(&buf).await? as i32;
-        let result = jvm.invoke_virtual(&this, "read", "([CII)I", (buf, 0, len)).await?;
+        let result = jvm.invoke_virtual(&this, "java/io/Reader", "read", "([CII)I", (buf, 0, len)).await?;
 
         Ok(result)
     }
@@ -90,7 +92,13 @@ impl Reader {
         let mut remaining = n;
         while remaining > 0 {
             let read: i32 = jvm
-                .invoke_virtual(&this, "read", "([CII)I", (buffer.clone(), 0, remaining.min(buffer_size as i64) as i32))
+                .invoke_virtual(
+                    &this,
+                    "java/io/Reader",
+                    "read",
+                    "([CII)I",
+                    (buffer.clone(), 0, remaining.min(buffer_size as i64) as i32),
+                )
                 .await?;
             if read == -1 {
                 break;

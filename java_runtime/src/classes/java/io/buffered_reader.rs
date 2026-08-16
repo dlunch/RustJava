@@ -172,7 +172,13 @@ impl BufferedReader {
         let mut read;
         loop {
             read = jvm
-                .invoke_virtual(&r#in, "read", "([CII)I", (cb.clone(), destination, capacity - destination))
+                .invoke_virtual(
+                    &r#in,
+                    "java/io/Reader",
+                    "read",
+                    "([CII)I",
+                    (cb.clone(), destination, capacity - destination),
+                )
                 .await?;
             if read != 0 {
                 break;
@@ -271,7 +277,7 @@ impl BufferedReader {
             let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
             let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
             if next_char >= n_chars {
-                if total > 0 && !jvm.invoke_virtual::<_, bool>(&r#in, "ready", "()Z", ()).await? {
+                if total > 0 && !jvm.invoke_virtual::<_, bool>(&r#in, "java/io/Reader", "ready", "()Z", ()).await? {
                     break;
                 }
                 if Self::fill(jvm, &mut this).await? <= 0 {
@@ -435,7 +441,7 @@ impl BufferedReader {
         let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
         let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
         if jvm.get_field::<bool>(&this, "skipLF", "Z").await? {
-            if next_char >= n_chars && jvm.invoke_virtual::<_, bool>(&r#in, "ready", "()Z", ()).await? {
+            if next_char >= n_chars && jvm.invoke_virtual::<_, bool>(&r#in, "java/io/Reader", "ready", "()Z", ()).await? {
                 let _ = Self::fill(jvm, &mut this).await?;
                 next_char = jvm.get_field(&this, "nextChar", "I").await?;
                 n_chars = jvm.get_field(&this, "nChars", "I").await?;
@@ -454,7 +460,7 @@ impl BufferedReader {
         if next_char < n_chars {
             return Ok(true);
         }
-        jvm.invoke_virtual(&r#in, "ready", "()Z", ()).await
+        jvm.invoke_virtual(&r#in, "java/io/Reader", "ready", "()Z", ()).await
     }
 
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -528,7 +534,7 @@ impl BufferedReader {
             return Ok(());
         }
 
-        let result = jvm.invoke_virtual(&r#in, "close", "()V", ()).await;
+        let result = jvm.invoke_virtual(&r#in, "java/io/Reader", "close", "()V", ()).await;
         let closed: ClassInstanceRef<Reader> = None.into();
         jvm.put_field(&mut this, "in", "Ljava/io/Reader;", closed).await?;
         let released: ClassInstanceRef<Array<JavaChar>> = None.into();

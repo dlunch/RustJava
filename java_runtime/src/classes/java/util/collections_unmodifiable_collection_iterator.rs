@@ -40,12 +40,14 @@ impl CollectionsUnmodifiableCollectionIterator {
 
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/Iterator;").await?;
-        jvm.invoke_virtual(&iterator, "hasNext", "()Z", ()).await
+        jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await
     }
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/Iterator;").await?;
-        jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await
+        jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {

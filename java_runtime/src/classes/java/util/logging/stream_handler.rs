@@ -135,8 +135,8 @@ impl StreamHandler {
         }
 
         Self::write_tail(jvm, &this).await?;
-        let _: () = jvm.invoke_virtual(&writer, "flush", "()V", ()).await?;
-        let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "flush", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "close", "()V", ()).await?;
         let output: ClassInstanceRef<OutputStream> = None.into();
         let writer: ClassInstanceRef<OutputStreamWriter> = None.into();
         jvm.put_field(&mut this, "output", "Ljava/io/OutputStream;", output).await?;
@@ -151,7 +151,7 @@ impl StreamHandler {
         if writer.is_null() {
             return Ok(());
         }
-        jvm.invoke_virtual(&writer, "flush", "()V", ()).await
+        jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "flush", "()V", ()).await
     }
 
     async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<bool> {
@@ -176,7 +176,13 @@ impl StreamHandler {
         tracing::debug!("java.util.logging.StreamHandler::publish({this:?}, {record:?})");
 
         let loggable: bool = jvm
-            .invoke_virtual(&this, "isLoggable", "(Ljava/util/logging/LogRecord;)Z", (record.clone(),))
+            .invoke_virtual(
+                &this,
+                "java/util/logging/StreamHandler",
+                "isLoggable",
+                "(Ljava/util/logging/LogRecord;)Z",
+                (record.clone(),),
+            )
             .await?;
         if !loggable {
             return Ok(());
@@ -191,6 +197,7 @@ impl StreamHandler {
             let _: () = jvm
                 .invoke_virtual(
                     &this,
+                    "java/util/logging/StreamHandler",
                     "reportError",
                     "(Ljava/lang/String;Ljava/lang/Exception;I)V",
                     (message, exception, 1),
@@ -200,7 +207,13 @@ impl StreamHandler {
         }
         let formatter: ClassInstanceRef<Formatter> = jvm.get_field(&this, "formatter", "Ljava/util/logging/Formatter;").await?;
         let formatted: ClassInstanceRef<String> = match jvm
-            .invoke_virtual(&formatter, "format", "(Ljava/util/logging/LogRecord;)Ljava/lang/String;", (record,))
+            .invoke_virtual(
+                &formatter,
+                "java/util/logging/Formatter",
+                "format",
+                "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
+                (record,),
+            )
             .await
         {
             Ok(formatted) => formatted,
@@ -213,6 +226,7 @@ impl StreamHandler {
                 let _: () = jvm
                     .invoke_virtual(
                         &this,
+                        "java/util/logging/StreamHandler",
                         "reportError",
                         "(Ljava/lang/String;Ljava/lang/Exception;I)V",
                         (message, exception, 5),
@@ -222,7 +236,10 @@ impl StreamHandler {
             }
         };
         let writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(&this, "writer", "Ljava/io/OutputStreamWriter;").await?;
-        if let Err(JavaError::JavaException(exception)) = jvm.invoke_virtual::<_, ()>(&writer, "write", "(Ljava/lang/String;)V", (formatted,)).await {
+        if let Err(JavaError::JavaException(exception)) = jvm
+            .invoke_virtual::<_, ()>(&writer, "java/io/OutputStreamWriter", "write", "(Ljava/lang/String;)V", (formatted,))
+            .await
+        {
             if !jvm.is_instance(&*exception, "java/lang/Exception") {
                 return Err(JavaError::JavaException(exception));
             }
@@ -231,6 +248,7 @@ impl StreamHandler {
             let _: () = jvm
                 .invoke_virtual(
                     &this,
+                    "java/util/logging/StreamHandler",
                     "reportError",
                     "(Ljava/lang/String;Ljava/lang/Exception;I)V",
                     (message, exception, 1),
@@ -259,7 +277,7 @@ impl StreamHandler {
         }
 
         let writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(&this, "writer", "Ljava/io/OutputStreamWriter;").await?;
-        let _: () = jvm.invoke_virtual(&writer, "flush", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "flush", "()V", ()).await?;
         let writer: ClassInstanceRef<OutputStreamWriter> = if encoding.is_null() {
             jvm.new_class("java/io/OutputStreamWriter", "(Ljava/io/OutputStream;)V", (output,))
                 .await?
@@ -291,8 +309,12 @@ impl StreamHandler {
         let current_writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(&this, "writer", "Ljava/io/OutputStreamWriter;").await?;
         if !current_writer.is_null() {
             Self::write_tail(jvm, &this).await?;
-            let _: () = jvm.invoke_virtual(&current_writer, "flush", "()V", ()).await?;
-            let _: () = jvm.invoke_virtual(&current_writer, "close", "()V", ()).await?;
+            let _: () = jvm
+                .invoke_virtual(&current_writer, "java/io/OutputStreamWriter", "flush", "()V", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&current_writer, "java/io/OutputStreamWriter", "close", "()V", ())
+                .await?;
         }
 
         let encoding: ClassInstanceRef<String> = jvm.get_field(&this, "encoding", "Ljava/lang/String;").await?;
@@ -321,10 +343,18 @@ impl StreamHandler {
 
         let formatter: ClassInstanceRef<Formatter> = jvm.get_field(this, "formatter", "Ljava/util/logging/Formatter;").await?;
         let head: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&formatter, "getHead", "(Ljava/util/logging/Handler;)Ljava/lang/String;", (this.clone(),))
+            .invoke_virtual(
+                &formatter,
+                "java/util/logging/Formatter",
+                "getHead",
+                "(Ljava/util/logging/Handler;)Ljava/lang/String;",
+                (this.clone(),),
+            )
             .await?;
         let writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(this, "writer", "Ljava/io/OutputStreamWriter;").await?;
-        let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (head,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&writer, "java/io/OutputStreamWriter", "write", "(Ljava/lang/String;)V", (head,))
+            .await?;
         let mut this = this.clone();
         jvm.put_field(&mut this, "headerWritten", "Z", true).await
     }
@@ -333,9 +363,16 @@ impl StreamHandler {
         Self::write_head(jvm, this).await?;
         let formatter: ClassInstanceRef<Formatter> = jvm.get_field(this, "formatter", "Ljava/util/logging/Formatter;").await?;
         let tail: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&formatter, "getTail", "(Ljava/util/logging/Handler;)Ljava/lang/String;", (this.clone(),))
+            .invoke_virtual(
+                &formatter,
+                "java/util/logging/Formatter",
+                "getTail",
+                "(Ljava/util/logging/Handler;)Ljava/lang/String;",
+                (this.clone(),),
+            )
             .await?;
         let writer: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(this, "writer", "Ljava/io/OutputStreamWriter;").await?;
-        jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (tail,)).await
+        jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "write", "(Ljava/lang/String;)V", (tail,))
+            .await
     }
 }

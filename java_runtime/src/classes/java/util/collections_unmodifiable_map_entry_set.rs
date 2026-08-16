@@ -41,7 +41,9 @@ impl CollectionsUnmodifiableMapEntrySet {
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&set, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&set, &set.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         Ok(jvm
             .new_class(
                 "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$1",
@@ -54,7 +56,9 @@ impl CollectionsUnmodifiableMapEntrySet {
 
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&set, &set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let length = jvm.array_length(&entries).await?;
         let mut wrapped: Vec<ClassInstanceRef<Object>> = Vec::with_capacity(length);
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, length).await? {
@@ -87,7 +91,9 @@ impl CollectionsUnmodifiableMapEntrySet {
         let class_name = destination.class_definition().name();
         let component_descriptor = class_name.strip_prefix('[').unwrap();
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&set, &set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let length = jvm.array_length(&entries).await?;
         let mut wrapped: Vec<ClassInstanceRef<Object>> = Vec::with_capacity(length);
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, length).await? {
@@ -134,18 +140,38 @@ impl CollectionsUnmodifiableMapEntrySet {
             .await?
             .into();
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&set, "contains", "(Ljava/lang/Object;)Z", (safe,)).await
+        jvm.invoke_virtual(&set, &set.class_definition().name(), "contains", "(Ljava/lang/Object;)Z", (safe,))
+            .await
     }
 
     async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&collection, "iterator", "()Ljava/util/Iterator;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &collection,
+                &collection.class_definition().name(),
+                "iterator",
+                "()Ljava/util/Iterator;",
+                (),
+            )
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let entry: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             if !jvm
-                .invoke_virtual::<_, bool>(&this, "contains", "(Ljava/lang/Object;)Z", (entry,))
+                .invoke_virtual::<_, bool>(
+                    &this,
+                    "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+                    "contains",
+                    "(Ljava/lang/Object;)Z",
+                    (entry,),
+                )
                 .await?
             {
                 return Ok(false);
@@ -161,11 +187,20 @@ impl CollectionsUnmodifiableMapEntrySet {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Set") {
             return Ok(false);
         }
-        let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
-        let other_size: i32 = jvm.invoke_virtual(&other, "size", "()I", ()).await?;
+        let size: i32 = jvm
+            .invoke_virtual(&this, "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet", "size", "()I", ())
+            .await?;
+        let other_size: i32 = jvm.invoke_virtual(&other, &other.class_definition().name(), "size", "()I", ()).await?;
         if size != other_size {
             return Ok(false);
         }
-        jvm.invoke_virtual(&this, "containsAll", "(Ljava/util/Collection;)Z", (other,)).await
+        jvm.invoke_virtual(
+            &this,
+            "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+            "containsAll",
+            "(Ljava/util/Collection;)Z",
+            (other,),
+        )
+        .await
     }
 }

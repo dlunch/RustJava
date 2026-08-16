@@ -114,10 +114,16 @@ impl Handler {
             return Ok(false);
         }
 
-        let record_level: ClassInstanceRef<Level> = jvm.invoke_virtual(&record, "getLevel", "()Ljava/util/logging/Level;", ()).await?;
+        let record_level: ClassInstanceRef<Level> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getLevel", "()Ljava/util/logging/Level;", ())
+            .await?;
         let handler_level: ClassInstanceRef<Level> = jvm.get_field(&this, "level", "Ljava/util/logging/Level;").await?;
-        let record_value: i32 = jvm.invoke_virtual(&record_level, "intValue", "()I", ()).await?;
-        let handler_value: i32 = jvm.invoke_virtual(&handler_level, "intValue", "()I", ()).await?;
+        let record_value: i32 = jvm
+            .invoke_virtual(&record_level, "java/util/logging/Level", "intValue", "()I", ())
+            .await?;
+        let handler_value: i32 = jvm
+            .invoke_virtual(&handler_level, "java/util/logging/Level", "intValue", "()I", ())
+            .await?;
         if handler_value == i32::MAX || record_value < handler_value {
             return Ok(false);
         }
@@ -127,8 +133,14 @@ impl Handler {
             return Ok(true);
         }
 
-        jvm.invoke_virtual(&filter, "isLoggable", "(Ljava/util/logging/LogRecord;)Z", (record,))
-            .await
+        jvm.invoke_virtual(
+            &filter,
+            &filter.class_definition().name(),
+            "isLoggable",
+            "(Ljava/util/logging/LogRecord;)Z",
+            (record,),
+        )
+        .await
     }
 
     async fn report_error(

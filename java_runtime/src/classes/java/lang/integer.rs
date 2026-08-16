@@ -341,17 +341,17 @@ impl Integer {
     }
 
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as i64)
     }
 
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as f32)
     }
 
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as f64)
     }
 
@@ -375,7 +375,7 @@ impl Integer {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, 10)).await?.into())
     }
 
@@ -424,8 +424,8 @@ impl Integer {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Integer") {
             return Ok(false);
         }
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
+        let this_value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
+        let other_value: i32 = jvm.invoke_virtual(&other, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(this_value == other_value)
     }
 
@@ -433,8 +433,8 @@ impl Integer {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
+        let this_value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
+        let other_value: i32 = jvm.invoke_virtual(&other, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(this_value.cmp(&other_value) as i32)
     }
 
@@ -446,8 +446,8 @@ impl Integer {
             return Err(jvm.exception("java/lang/ClassCastException", "java/lang/Object is not Integer").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let this_value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "intValue", "()I", ()).await?;
+        let this_value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
+        let other_value: i32 = jvm.invoke_virtual(&other, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(this_value.cmp(&other_value) as i32)
     }
 }

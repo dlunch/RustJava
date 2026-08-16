@@ -19,6 +19,7 @@ async fn test_attribute_get_set() -> Result<()> {
     let old: ClassInstanceRef<String> = jvm
         .invoke_virtual(
             &attributes,
+            &attributes.class_definition().name(),
             "putValue",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
             (name.clone(), value),
@@ -27,7 +28,13 @@ async fn test_attribute_get_set() -> Result<()> {
     assert!(old.is_null());
 
     let value = jvm
-        .invoke_virtual(&attributes, "getValue", "(Ljava/lang/String;)Ljava/lang/String;", (name,))
+        .invoke_virtual(
+            &attributes,
+            &attributes.class_definition().name(),
+            "getValue",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (name,),
+        )
         .await?;
 
     let value = JavaLangString::to_rust_string(&jvm, &value).await?;

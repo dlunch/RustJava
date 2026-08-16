@@ -744,20 +744,38 @@ async fn test_arr_08_as_list_is_live_fixed_size_and_uses_abstract_list_contracts
         .await?;
     assert!(jvm.is_instance(list.as_ref(), "java/util/List"));
     assert!(jvm.is_instance(list.as_ref(), "java/io/Serializable"));
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     jvm.store_array(&mut array, 0, core::iter::once(third.clone())).await?;
-    let from_list: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "get", "(I)Ljava/lang/Object;", (0,)).await?;
+    let from_list: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "get", "(I)Ljava/lang/Object;", (0,))
+        .await?;
     assert_eq!(from_list.identity(), third.identity());
     let previous: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&list, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (1, first.clone()))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (1, first.clone()),
+        )
         .await?;
     assert_eq!(previous.identity(), second.identity());
     let from_array = jvm.load_array::<ClassInstanceRef<Object>>(&array, 1, 1).await?.remove(0);
     assert_eq!(from_array.identity(), first.identity());
     let incompatible = jvm.new_class("java/lang/Object", "()V", ()).await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
-        .invoke_virtual(&list, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (1, incompatible))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (1, incompatible),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("array-backed list set must preserve the component type");
@@ -768,46 +786,86 @@ async fn test_arr_08_as_list_is_live_fixed_size_and_uses_abstract_list_contracts
         first.identity()
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&list, "indexOf", "(Ljava/lang/Object;)I", (first.clone(),))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &list,
+            &list.class_definition().name(),
+            "indexOf",
+            "(Ljava/lang/Object;)I",
+            (first.clone(),)
+        )
+        .await?,
         1
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&list, "contains", "(Ljava/lang/Object;)Z", (third.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (third.clone(),)
+        )
+        .await?
     );
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (second.clone(),)).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &iterator,
+            &iterator.class_definition().name(),
+            "set",
+            "(Ljava/lang/Object;)V",
+            (second.clone(),),
+        )
+        .await?;
     assert_eq!(
         jvm.load_array::<ClassInstanceRef<Object>>(&array, 0, 1).await?.remove(0).identity(),
         second.identity()
     );
 
-    let result: Result<()> = jvm.invoke_virtual(&iterator, "add", "(Ljava/lang/Object;)V", (third.clone(),)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(
+            &iterator,
+            &iterator.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)V",
+            (third.clone(),),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("list iterator add must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-    let result: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
+    let result: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("list iterator remove must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
 
-    let result: Result<bool> = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (third.clone(),)).await;
+    let result: Result<bool> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (third.clone(),))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("fixed list add must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let result: Result<bool> = jvm.invoke_virtual(&list, "remove", "(Ljava/lang/Object;)Z", (first,)).await;
+    let result: Result<bool> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "remove", "(Ljava/lang/Object;)Z", (first,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("fixed list remove must fail");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    let result: Result<()> = jvm.invoke_virtual(&list, "clear", "()V", ()).await;
+    let result: Result<()> = jvm.invoke_virtual(&list, &list.class_definition().name(), "clear", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("fixed list clear must fail");
     };
@@ -815,7 +873,13 @@ async fn test_arr_08_as_list_is_live_fixed_size_and_uses_abstract_list_contracts
 
     let typed: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/String;", 0).await?.into();
     let copied: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (typed,))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (typed,),
+        )
         .await?;
     assert_eq!(copied.class_definition().name(), "[Ljava/lang/String;");
     assert_eq!(jvm.array_length(&copied).await?, 2);
@@ -1505,47 +1569,115 @@ async fn test_arr_08_array_list_bulk_mutation_noop_and_unsupported_paths() -> Re
 
     let empty = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "addAll", "(Ljava/util/Collection;)Z", (empty.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "addAll",
+            "(Ljava/util/Collection;)Z",
+            (empty.clone(),)
+        )
+        .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "addAll", "(ILjava/util/Collection;)Z", (1, empty.clone()))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (1, empty.clone())
+        )
+        .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "removeAll", "(Ljava/util/Collection;)Z", (empty.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "removeAll",
+            "(Ljava/util/Collection;)Z",
+            (empty.clone(),)
+        )
+        .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "retainAll", "(Ljava/util/Collection;)Z", (list.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "retainAll",
+            "(Ljava/util/Collection;)Z",
+            (list.clone(),)
+        )
+        .await?
     );
 
     let absent_collection = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
-    let _: bool = jvm.invoke_virtual(&absent_collection, "add", "(Ljava/lang/Object;)Z", (absent,)).await?;
+    let _: bool = jvm
+        .invoke_virtual(
+            &absent_collection,
+            &absent_collection.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (absent,),
+        )
+        .await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "removeAll", "(Ljava/util/Collection;)Z", (absent_collection,),)
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "removeAll",
+            "(Ljava/util/Collection;)Z",
+            (absent_collection,),
+        )
+        .await?
     );
 
     let all = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
-    let _: bool = jvm.invoke_virtual(&all, "add", "(Ljava/lang/Object;)Z", (first.clone(),)).await?;
-    let _: bool = jvm.invoke_virtual(&all, "add", "(Ljava/lang/Object;)Z", (second.clone(),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&all, &all.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (first.clone(),))
+        .await?;
+    let _: bool = jvm
+        .invoke_virtual(&all, &all.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (second.clone(),))
+        .await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&list, "retainAll", "(Ljava/util/Collection;)Z", (all,))
+        !jvm.invoke_virtual::<_, bool>(&list, &list.class_definition().name(), "retainAll", "(Ljava/util/Collection;)Z", (all,))
             .await?
     );
 
     let non_empty = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
-    let _: bool = jvm.invoke_virtual(&non_empty, "add", "(Ljava/lang/Object;)Z", (first.clone(),)).await?;
+    let _: bool = jvm
+        .invoke_virtual(
+            &non_empty,
+            &non_empty.class_definition().name(),
+            "add",
+            "(Ljava/lang/Object;)Z",
+            (first.clone(),),
+        )
+        .await?;
     for result in [
-        jvm.invoke_virtual::<_, bool>(&list, "addAll", "(Ljava/util/Collection;)Z", (non_empty.clone(),))
-            .await,
-        jvm.invoke_virtual::<_, bool>(&list, "addAll", "(ILjava/util/Collection;)Z", (1, non_empty.clone()))
-            .await,
-        jvm.invoke_virtual::<_, bool>(&list, "removeAll", "(Ljava/util/Collection;)Z", (non_empty.clone(),))
-            .await,
-        jvm.invoke_virtual::<_, bool>(&list, "retainAll", "(Ljava/util/Collection;)Z", (empty,))
+        jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "addAll",
+            "(Ljava/util/Collection;)Z",
+            (non_empty.clone(),),
+        )
+        .await,
+        jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (1, non_empty.clone()),
+        )
+        .await,
+        jvm.invoke_virtual::<_, bool>(
+            &list,
+            &list.class_definition().name(),
+            "removeAll",
+            "(Ljava/util/Collection;)Z",
+            (non_empty.clone(),),
+        )
+        .await,
+        jvm.invoke_virtual::<_, bool>(&list, &list.class_definition().name(), "retainAll", "(Ljava/util/Collection;)Z", (empty,))
             .await,
     ] {
         let Err(JavaError::JavaException(exception)) = result else {
@@ -1559,7 +1691,13 @@ async fn test_arr_08_array_list_bulk_mutation_noop_and_unsupported_paths() -> Re
 
     let null_collection: ClassInstanceRef<Object> = None.into();
     let result: Result<bool> = jvm
-        .invoke_virtual(&list, "removeAll", "(Ljava/util/Collection;)Z", (null_collection,))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "removeAll",
+            "(Ljava/util/Collection;)Z",
+            (null_collection,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("bulk operation must reject a null collection");
@@ -1590,7 +1728,13 @@ async fn test_arr_08_array_list_typed_to_array_reuse_grow_termination_and_sequen
     .await?;
     let oversized_identity = oversized.identity();
     let reused: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (oversized,))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (oversized,),
+        )
         .await?;
     assert_eq!(reused.identity(), oversized_identity);
     let reused_values = jvm.load_array::<ClassInstanceRef<Object>>(&reused, 0, 4).await?;
@@ -1603,7 +1747,13 @@ async fn test_arr_08_array_list_typed_to_array_reuse_grow_termination_and_sequen
     jvm.store_array(&mut exact, 0, [sentinel.clone(), sentinel.clone()]).await?;
     let exact_identity = exact.identity();
     let exact_result: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (exact,))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (exact,),
+        )
         .await?;
     assert_eq!(exact_result.identity(), exact_identity);
     let exact_values = jvm.load_array::<ClassInstanceRef<Object>>(&exact_result, 0, 2).await?;
@@ -1614,7 +1764,13 @@ async fn test_arr_08_array_list_typed_to_array_reuse_grow_termination_and_sequen
     jvm.store_array(&mut small, 0, core::iter::once(sentinel.clone())).await?;
     let small_identity = small.identity();
     let grown: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (small.clone(),))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (small.clone(),),
+        )
         .await?;
     assert_ne!(grown.identity(), small_identity);
     assert_eq!(grown.class_definition().name(), "[Ljava/lang/String;");
@@ -1626,7 +1782,13 @@ async fn test_arr_08_array_list_typed_to_array_reuse_grow_termination_and_sequen
 
     let null_destination: ClassInstanceRef<Array<Object>> = None.into();
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (null_destination,))
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (null_destination,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("typed toArray must reject null");
@@ -1651,7 +1813,13 @@ async fn test_arr_08_array_list_typed_to_array_reuse_grow_termination_and_sequen
     )
     .await?;
     let result: Result<ClassInstanceRef<Array<Object>>> = jvm
-        .invoke_virtual(&row_list, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (destination.clone(),))
+        .invoke_virtual(
+            &row_list,
+            &row_list.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination.clone(),),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("typed multidimensional toArray must reject an Object[] row");

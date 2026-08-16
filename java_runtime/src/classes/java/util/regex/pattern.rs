@@ -199,9 +199,15 @@ impl Pattern {
             )
             .await?;
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
-        jvm.invoke_virtual(&matcher, "matches", "()Z", ()).await
+        jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "matches", "()Z", ()).await
     }
 
     async fn split(
@@ -212,8 +218,14 @@ impl Pattern {
     ) -> Result<ClassInstanceRef<Array<String>>> {
         tracing::debug!("java.util.regex.Pattern::split({this:?}, {input:?})");
 
-        jvm.invoke_virtual(&this, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, 0))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, 0),
+        )
+        .await
     }
 
     async fn split_with_limit(
@@ -226,43 +238,86 @@ impl Pattern {
         tracing::debug!("java.util.regex.Pattern::split({this:?}, {input:?}, {limit})");
 
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&this, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input.clone(),))
+            .invoke_virtual(
+                &this,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input.clone(),),
+            )
             .await?;
-        let input_length: i32 = jvm.invoke_virtual(&input, "length", "()I", ()).await?;
+        let input_length: i32 = jvm.invoke_virtual(&input, &input.class_definition().name(), "length", "()I", ()).await?;
         let match_limited = limit > 0;
         let mut index = 0;
         let mut parts = Vec::new();
 
-        while jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await? {
+        while jvm
+            .invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+        {
             if !match_limited || parts.len() < (limit - 1) as usize {
-                let start: i32 = jvm.invoke_virtual(&matcher, "start", "()I", ()).await?;
+                let start: i32 = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "start", "()I", ()).await?;
                 let part: ClassInstanceRef<CharSequence> = jvm
-                    .invoke_virtual(&input, "subSequence", "(II)Ljava/lang/CharSequence;", (index, start))
+                    .invoke_virtual(
+                        &input,
+                        &input.class_definition().name(),
+                        "subSequence",
+                        "(II)Ljava/lang/CharSequence;",
+                        (index, start),
+                    )
                     .await?;
-                parts.push(jvm.invoke_virtual(&part, "toString", "()Ljava/lang/String;", ()).await?);
-                index = jvm.invoke_virtual(&matcher, "end", "()I", ()).await?;
+                parts.push(
+                    jvm.invoke_virtual(&part, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                        .await?,
+                );
+                index = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "end", "()I", ()).await?;
             } else if parts.len() == (limit - 1) as usize {
                 let part: ClassInstanceRef<CharSequence> = jvm
-                    .invoke_virtual(&input, "subSequence", "(II)Ljava/lang/CharSequence;", (index, input_length))
+                    .invoke_virtual(
+                        &input,
+                        &input.class_definition().name(),
+                        "subSequence",
+                        "(II)Ljava/lang/CharSequence;",
+                        (index, input_length),
+                    )
                     .await?;
-                parts.push(jvm.invoke_virtual(&part, "toString", "()Ljava/lang/String;", ()).await?);
-                index = jvm.invoke_virtual(&matcher, "end", "()I", ()).await?;
+                parts.push(
+                    jvm.invoke_virtual(&part, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                        .await?,
+                );
+                index = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "end", "()I", ()).await?;
             }
         }
 
         if index == 0 {
             parts.clear();
-            parts.push(jvm.invoke_virtual(&input, "toString", "()Ljava/lang/String;", ()).await?);
+            parts.push(
+                jvm.invoke_virtual(&input, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                    .await?,
+            );
         } else {
             if !match_limited || parts.len() < limit as usize {
                 let part: ClassInstanceRef<CharSequence> = jvm
-                    .invoke_virtual(&input, "subSequence", "(II)Ljava/lang/CharSequence;", (index, input_length))
+                    .invoke_virtual(
+                        &input,
+                        &input.class_definition().name(),
+                        "subSequence",
+                        "(II)Ljava/lang/CharSequence;",
+                        (index, input_length),
+                    )
                     .await?;
-                parts.push(jvm.invoke_virtual(&part, "toString", "()Ljava/lang/String;", ()).await?);
+                parts.push(
+                    jvm.invoke_virtual(&part, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                        .await?,
+                );
             }
             if limit == 0 {
                 while let Some(part) = parts.last() {
-                    if jvm.invoke_virtual::<_, i32>(part, "length", "()I", ()).await? != 0 {
+                    if jvm
+                        .invoke_virtual::<_, i32>(part, &part.class_definition().name(), "length", "()I", ())
+                        .await?
+                        != 0
+                    {
                         break;
                     }
                     parts.pop();

@@ -16,23 +16,68 @@ async fn test_string_writer() -> Result<()> {
     jvm.store_array(&mut buf, 0, vec![b'a' as JavaChar, b'b' as JavaChar, b'c' as JavaChar])
         .await?;
 
-    let _: () = jvm.invoke_virtual(&string_writer, "write", "([CII)V", (buf.clone(), 0, 3)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "write",
+            "([CII)V",
+            (buf.clone(), 0, 3),
+        )
+        .await?;
 
-    let _: () = jvm.invoke_virtual(&string_writer, "write", "([CII)V", (buf.clone(), 1, 2)).await?;
-    let _: () = jvm.invoke_virtual(&string_writer, "write", "(I)V", ('d' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&string_writer, "write", "([C)V", (buf,)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "write",
+            "([CII)V",
+            (buf.clone(), 1, 2),
+        )
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&string_writer, &string_writer.class_definition().name(), "write", "(I)V", ('d' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&string_writer, &string_writer.class_definition().name(), "write", "([C)V", (buf,))
+        .await?;
 
     let value = JavaLangString::from_rust_string(&jvm, "XYZ").await?;
     let _: () = jvm
-        .invoke_virtual(&string_writer, "write", "(Ljava/lang/String;)V", (value.clone(),))
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "write",
+            "(Ljava/lang/String;)V",
+            (value.clone(),),
+        )
         .await?;
     let _: () = jvm
-        .invoke_virtual(&string_writer, "write", "(Ljava/lang/String;II)V", (value, 1, 1))
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "write",
+            "(Ljava/lang/String;II)V",
+            (value, 1, 1),
+        )
         .await?;
-    let _: () = jvm.invoke_virtual(&string_writer, "flush", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&string_writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&string_writer, &string_writer.class_definition().name(), "flush", "()V", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&string_writer, &string_writer.class_definition().name(), "close", "()V", ())
+        .await?;
 
-    let string = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await.unwrap();
+    let string = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await
+        .unwrap();
 
     let string = JavaLangString::to_rust_string(&jvm, &string).await?;
 

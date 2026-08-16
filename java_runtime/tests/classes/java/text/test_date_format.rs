@@ -16,7 +16,13 @@ async fn test_date_format_factories_use_english_patterns() -> Result<()> {
         .invoke_static("java/text/DateFormat", "getDateInstance", "(I)Ljava/text/DateFormat;", (3,))
         .await?;
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&short, "format", "(Ljava/util/Date;)Ljava/lang/String;", (date.clone(),))
+        .invoke_virtual(
+            &short,
+            "java/text/DateFormat",
+            "format",
+            "(Ljava/util/Date;)Ljava/lang/String;",
+            (date.clone(),),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1/1/70");
 
@@ -24,7 +30,13 @@ async fn test_date_format_factories_use_english_patterns() -> Result<()> {
         .invoke_static("java/text/DateFormat", "getDateInstance", "(I)Ljava/text/DateFormat;", (2,))
         .await?;
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&medium, "format", "(Ljava/util/Date;)Ljava/lang/String;", (date.clone(),))
+        .invoke_virtual(
+            &medium,
+            "java/text/DateFormat",
+            "format",
+            "(Ljava/util/Date;)Ljava/lang/String;",
+            (date.clone(),),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "Jan 1, 1970");
 
@@ -32,7 +44,7 @@ async fn test_date_format_factories_use_english_patterns() -> Result<()> {
         .invoke_static("java/text/DateFormat", "getTimeInstance", "(I)Ljava/text/DateFormat;", (3,))
         .await?;
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&time, "format", "(Ljava/util/Date;)Ljava/lang/String;", (date,))
+        .invoke_virtual(&time, "java/text/DateFormat", "format", "(Ljava/util/Date;)Ljava/lang/String;", (date,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "12:00 AM");
 
@@ -49,7 +61,13 @@ async fn test_simple_date_format_patterns_quotes_and_fields() -> Result<()> {
         .into();
     let date: ClassInstanceRef<Date> = jvm.new_class("java/util/Date", "(J)V", (0i64,)).await?.into();
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&format, "format", "(Ljava/util/Date;)Ljava/lang/String;", (date.clone(),))
+        .invoke_virtual(
+            &format,
+            "java/text/SimpleDateFormat",
+            "format",
+            "(Ljava/util/Date;)Ljava/lang/String;",
+            (date.clone(),),
+        )
         .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &text).await?,
@@ -58,7 +76,13 @@ async fn test_simple_date_format_patterns_quotes_and_fields() -> Result<()> {
 
     let field_pattern = JavaLangString::from_rust_string(&jvm, "yyyy-MM").await?;
     let _: () = jvm
-        .invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (field_pattern,))
+        .invoke_virtual(
+            &format,
+            "java/text/SimpleDateFormat",
+            "applyPattern",
+            "(Ljava/lang/String;)V",
+            (field_pattern,),
+        )
         .await?;
     let prefix = JavaLangString::from_rust_string(&jvm, "on ").await?;
     let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (prefix,)).await?.into();
@@ -66,15 +90,26 @@ async fn test_simple_date_format_patterns_quotes_and_fields() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(
             &format,
+            "java/text/SimpleDateFormat",
             "format",
             "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
             (date, buffer.clone(), position.clone()),
         )
         .await?;
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "on 1970-01");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getBeginIndex", "()I", ()).await?, 3);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getEndIndex", "()I", ()).await?, 7);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getBeginIndex", "()I", ())
+            .await?,
+        3
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getEndIndex", "()I", ())
+            .await?,
+        7
+    );
 
     Ok(())
 }
@@ -92,21 +127,31 @@ async fn test_date_format_timezone_and_calendar_state() -> Result<()> {
         .new_class("java/util/SimpleTimeZone", "(ILjava/lang/String;)V", (9 * 60 * 60 * 1000, id))
         .await?
         .into();
-    let _: () = jvm.invoke_virtual(&format, "setTimeZone", "(Ljava/util/TimeZone;)V", (timezone,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "setTimeZone", "(Ljava/util/TimeZone;)V", (timezone,))
+        .await?;
 
     let date: ClassInstanceRef<Date> = jvm.new_class("java/util/Date", "(J)V", (0i64,)).await?.into();
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&format, "format", "(Ljava/util/Date;)Ljava/lang/String;", (date,))
+        .invoke_virtual(&format, "java/text/DateFormat", "format", "(Ljava/util/Date;)Ljava/lang/String;", (date,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1970-01-01 09:00:00 GMT+09:00");
 
-    let actual: ClassInstanceRef<TimeZone> = jvm.invoke_virtual(&format, "getTimeZone", "()Ljava/util/TimeZone;", ()).await?;
+    let actual: ClassInstanceRef<TimeZone> = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "getTimeZone", "()Ljava/util/TimeZone;", ())
+        .await?;
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&actual, "getRawOffset", "()I", ()).await?,
+        jvm.invoke_virtual::<_, i32>(&actual, "java/util/TimeZone", "getRawOffset", "()I", ())
+            .await?,
         9 * 60 * 60 * 1000
     );
-    let _: () = jvm.invoke_virtual(&format, "setLenient", "(Z)V", (false,)).await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&format, "isLenient", "()Z", ()).await?);
+    let _: () = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "setLenient", "(Z)V", (false,))
+        .await?;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&format, "java/text/DateFormat", "isLenient", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -124,27 +169,56 @@ async fn test_simple_date_format_parse_and_positions() -> Result<()> {
     let date: ClassInstanceRef<Date> = jvm
         .invoke_virtual(
             &format,
+            "java/text/SimpleDateFormat",
             "parse",
             "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
             (source, position.clone()),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&date, "getTime", "()J", ()).await?, 97_445_006);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 23);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&date, "java/util/Date", "getTime", "()J", ()).await?,
+        97_445_006
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getIndex", "()I", ())
+            .await?,
+        23
+    );
 
     let text_pattern = JavaLangString::from_rust_string(&jvm, "MMMM d, yyyy h:mm a z").await?;
     let _: () = jvm
-        .invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (text_pattern,))
+        .invoke_virtual(
+            &format,
+            "java/text/SimpleDateFormat",
+            "applyPattern",
+            "(Ljava/lang/String;)V",
+            (text_pattern,),
+        )
         .await?;
     let source = JavaLangString::from_rust_string(&jvm, "January 2, 1970 3:04 PM GMT").await?;
     let date: ClassInstanceRef<Date> = jvm
-        .invoke_virtual(&format, "parse", "(Ljava/lang/String;)Ljava/util/Date;", (source,))
+        .invoke_virtual(
+            &format,
+            "java/text/SimpleDateFormat",
+            "parse",
+            "(Ljava/lang/String;)Ljava/util/Date;",
+            (source,),
+        )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&date, "getTime", "()J", ()).await?, 140_640_000);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&date, "java/util/Date", "getTime", "()J", ()).await?,
+        140_640_000
+    );
 
     let invalid = JavaLangString::from_rust_string(&jvm, "not a date").await?;
     let result = jvm
-        .invoke_virtual::<_, ClassInstanceRef<Date>>(&format, "parse", "(Ljava/lang/String;)Ljava/util/Date;", (invalid,))
+        .invoke_virtual::<_, ClassInstanceRef<Date>>(
+            &format,
+            "java/text/SimpleDateFormat",
+            "parse",
+            "(Ljava/lang/String;)Ljava/util/Date;",
+            (invalid,),
+        )
         .await;
     assert!(matches!(result, Err(JavaError::JavaException(_))));
 
@@ -165,43 +239,69 @@ async fn test_simple_date_format_uses_utf16_positions() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(
             &format,
+            "java/text/SimpleDateFormat",
             "format",
             "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
             (date, buffer.clone(), position.clone()),
         )
         .await?;
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "\u{1f600}1970");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getBeginIndex", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getEndIndex", "()I", ()).await?, 6);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getBeginIndex", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getEndIndex", "()I", ())
+            .await?,
+        6
+    );
 
     let pattern = JavaLangString::from_rust_string(&jvm, "yyyy-MM-dd").await?;
-    let _: () = jvm.invoke_virtual(&format, "applyPattern", "(Ljava/lang/String;)V", (pattern,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "java/text/SimpleDateFormat", "applyPattern", "(Ljava/lang/String;)V", (pattern,))
+        .await?;
     let source = JavaLangString::from_rust_string(&jvm, "\u{1f600}1970-01-02").await?;
     let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (2,)).await?.into();
     let date: ClassInstanceRef<Date> = jvm
         .invoke_virtual(
             &format,
+            "java/text/SimpleDateFormat",
             "parse",
             "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
             (source, position.clone()),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&date, "getTime", "()J", ()).await?, 86_400_000);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 12);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&date, "java/util/Date", "getTime", "()J", ()).await?,
+        86_400_000
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getIndex", "()I", ())
+            .await?,
+        12
+    );
 
     let source = JavaLangString::from_rust_string(&jvm, "\u{1f600}197x").await?;
     let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (2,)).await?.into();
     let date: ClassInstanceRef<Date> = jvm
         .invoke_virtual(
             &format,
+            "java/text/SimpleDateFormat",
             "parse",
             "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
             (source, position.clone()),
         )
         .await?;
     assert!(date.is_null());
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getErrorIndex", "()I", ()).await?, 5);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+            .await?,
+        5
+    );
 
     Ok(())
 }
@@ -214,26 +314,45 @@ async fn test_date_format_clone_and_calendar_leniency_are_isolated() -> Result<(
         .new_class("java/text/SimpleDateFormat", "(Ljava/lang/String;)V", (pattern,))
         .await?
         .into();
-    let calendar: ClassInstanceRef<Calendar> = jvm.invoke_virtual(&format, "getCalendar", "()Ljava/util/Calendar;", ()).await?;
-    let _: () = jvm.invoke_virtual(&calendar, "setTimeInMillis", "(J)V", (0i64,)).await?;
+    let calendar: ClassInstanceRef<Calendar> = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "getCalendar", "()Ljava/util/Calendar;", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&calendar, "java/util/Calendar", "setTimeInMillis", "(J)V", (0i64,))
+        .await?;
 
-    let cloned: ClassInstanceRef<DateFormat> = jvm.invoke_virtual(&format, "clone", "()Ljava/lang/Object;", ()).await?;
-    let cloned_calendar: ClassInstanceRef<Calendar> = jvm.invoke_virtual(&cloned, "getCalendar", "()Ljava/util/Calendar;", ()).await?;
-    let _: () = jvm.invoke_virtual(&cloned_calendar, "setTimeInMillis", "(J)V", (86_400_000i64,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&calendar, "get", "(I)I", (5,)).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&cloned_calendar, "get", "(I)I", (5,)).await?, 2);
+    let cloned: ClassInstanceRef<DateFormat> = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "clone", "()Ljava/lang/Object;", ())
+        .await?;
+    let cloned_calendar: ClassInstanceRef<Calendar> = jvm
+        .invoke_virtual(&cloned, "java/text/DateFormat", "getCalendar", "()Ljava/util/Calendar;", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&cloned_calendar, "java/util/Calendar", "setTimeInMillis", "(J)V", (86_400_000i64,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&calendar, "java/util/Calendar", "get", "(I)I", (5,)).await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&cloned_calendar, "java/util/Calendar", "get", "(I)I", (5,))
+            .await?,
+        2
+    );
 
     let other: ClassInstanceRef<Calendar> = jvm
         .invoke_static("java/util/Calendar", "getInstance", "()Ljava/util/Calendar;", ())
         .await?;
-    let _: () = jvm.invoke_virtual(&other, "setTimeInMillis", "(J)V", (0i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&other, "java/util/Calendar", "setTimeInMillis", "(J)V", (0i64,))
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&calendar, "equals", "(Ljava/lang/Object;)Z", (other.clone(),))
+        jvm.invoke_virtual::<_, bool>(&calendar, "java/util/Calendar", "equals", "(Ljava/lang/Object;)Z", (other.clone(),))
             .await?
     );
-    let _: () = jvm.invoke_virtual(&other, "setLenient", "(Z)V", (false,)).await?;
+    let _: () = jvm.invoke_virtual(&other, "java/util/Calendar", "setLenient", "(Z)V", (false,)).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&calendar, "equals", "(Ljava/lang/Object;)Z", (other,))
+        !jvm.invoke_virtual::<_, bool>(&calendar, "java/util/Calendar", "equals", "(Ljava/lang/Object;)Z", (other,))
             .await?
     );
 

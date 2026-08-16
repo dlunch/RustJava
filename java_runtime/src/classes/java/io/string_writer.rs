@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
@@ -18,14 +19,14 @@ impl StringWriter {
             parent_class: Some("java/io/Writer"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
-                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("buf", "Ljava/lang/StringBuffer;", Default::default())],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -53,7 +54,13 @@ impl StringWriter {
         let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
 
         let _: ClassInstanceRef<StringBuffer> = jvm
-            .invoke_virtual(&buf, "append", "([CII)Ljava/lang/StringBuffer;", (chars, off, len))
+            .invoke_virtual(
+                &buf,
+                "java/lang/StringBuffer",
+                "append",
+                "([CII)Ljava/lang/StringBuffer;",
+                (chars, off, len),
+            )
             .await?;
 
         Ok(())
@@ -74,7 +81,9 @@ impl StringWriter {
 
         let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
 
-        let string = jvm.invoke_virtual(&buf, "toString", "()Ljava/lang/String;", ()).await?;
+        let string = jvm
+            .invoke_virtual(&buf, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
+            .await?;
 
         Ok(string)
     }

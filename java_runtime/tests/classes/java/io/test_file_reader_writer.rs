@@ -292,17 +292,29 @@ async fn file_01_file_reader_constructor_contracts() -> Result<()> {
     let path = JavaLangString::from_rust_string(&jvm, "input.txt").await?;
 
     let reader = jvm.new_class("java/io/FileReader", "(Ljava/lang/String;)V", (path.clone(),)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'A' as i32);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "()I", ())
+            .await?,
+        'A' as i32
+    );
 
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path.clone(),)).await?;
     let reader = jvm.new_class("java/io/FileReader", "(Ljava/io/File;)V", (file.clone(),)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'A' as i32);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "()I", ())
+            .await?,
+        'A' as i32
+    );
 
     let input = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
     let descriptor: ClassInstanceRef<java_runtime::classes::java::io::FileDescriptor> =
         jvm.get_field(&input, "fd", "Ljava/io/FileDescriptor;").await?;
     let reader = jvm.new_class("java/io/FileReader", "(Ljava/io/FileDescriptor;)V", (descriptor,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'A' as i32);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "()I", ())
+            .await?,
+        'A' as i32
+    );
 
     let null_path: ClassInstanceRef<java_runtime::classes::java::lang::String> = None.into();
     let result = jvm.new_class("java/io/FileReader", "(Ljava/lang/String;)V", (null_path,)).await;
@@ -322,11 +334,15 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
 
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/lang/String;)V", (path.clone(),)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "new").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"new");
     let value = JavaLangString::from_rust_string(&jvm, "!").await?;
-    let closed: Result<()> = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await;
+    let closed: Result<()> = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("write after close must throw IOException");
     };
@@ -335,16 +351,20 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path.clone(),)).await?;
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/io/File;Z)V", (file.clone(), true)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "+file").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"new+file");
 
     let writer = jvm
         .new_class("java/io/FileWriter", "(Ljava/lang/String;Z)V", (path.clone(), true))
         .await?;
     let value = JavaLangString::from_rust_string(&jvm, "+path").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"new+file+path");
 
     let first = jvm
@@ -355,10 +375,12 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
         .await?;
     for (writer, text) in [(&first, "+first"), (&second, "+second"), (&first, "+third"), (&second, "+fourth")] {
         let value = JavaLangString::from_rust_string(&jvm, text).await?;
-        let _: () = jvm.invoke_virtual(writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
+        let _: () = jvm
+            .invoke_virtual(writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+            .await?;
     }
-    let _: () = jvm.invoke_virtual(&first, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&second, "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&first, &first.class_definition().name(), "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&second, &second.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(
         &*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(),
         b"new+file+path+first+second+third+fourth"
@@ -366,8 +388,10 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
 
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/io/File;)V", (file.clone(),)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "reset").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"reset");
 
     let output = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?;
@@ -375,8 +399,10 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
         jvm.get_field(&output, "fd", "Ljava/io/FileDescriptor;").await?;
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/io/FileDescriptor;)V", (descriptor,)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "F").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"F");
 
     let null_path: ClassInstanceRef<java_runtime::classes::java::lang::String> = None.into();
@@ -578,8 +604,10 @@ async fn file_writer_uses_only_opened_handle_write_semantics() -> Result<()> {
     let path = JavaLangString::from_rust_string(&jvm, "truncate.txt").await?;
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/lang/String;)V", (path,)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "new").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
 
     assert_eq!(&*runtime.files.lock().unwrap()["truncate.txt"].lock().unwrap(), b"new");
     assert_eq!(runtime.seek_calls.load(Ordering::SeqCst), 0);
@@ -605,7 +633,9 @@ async fn file_writer_uses_only_opened_handle_write_semantics() -> Result<()> {
     let second = jvm.new_class("java/io/FileWriter", "(Ljava/lang/String;Z)V", (path, true)).await?;
     for (writer, text) in [(&first, "-a"), (&second, "-b"), (&first, "-c"), (&second, "-d")] {
         let value = JavaLangString::from_rust_string(&jvm, text).await?;
-        let _: () = jvm.invoke_virtual(writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
+        let _: () = jvm
+            .invoke_virtual(writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+            .await?;
     }
     assert_eq!(&*runtime.files.lock().unwrap()["append.txt"].lock().unwrap(), b"start-a-b-c-d");
     assert_eq!(runtime.seek_calls.load(Ordering::SeqCst), 0);
@@ -625,12 +655,15 @@ async fn formatter_file_constructor_truncates_before_writing() -> Result<()> {
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&formatter, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "close", "()V", ())
+        .await?;
 
     assert_eq!(&*runtime.files.lock().unwrap()["formatter.txt"].lock().unwrap(), b"new");
     assert_eq!(
@@ -656,7 +689,9 @@ async fn file_writers_retry_partial_runtime_writes_until_complete() -> Result<()
     let output = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?;
     let mut bytes = jvm.instantiate_array("B", 4).await?;
     jvm.store_array(&mut bytes, 0, [b'F' as i8, b'O' as i8, b'S' as i8, b'!' as i8]).await?;
-    let _: () = jvm.invoke_virtual(&output, "write", "([BII)V", (bytes, 0, 4)).await?;
+    let _: () = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "write", "([BII)V", (bytes, 0, 4))
+        .await?;
     assert_eq!(&*runtime.files.lock().unwrap()["fos.bin"].lock().unwrap(), b"FOS!");
 
     let mut runtime = MemoryRuntime::new([("raf.bin".into(), Vec::new())].into_iter().collect());
@@ -669,7 +704,9 @@ async fn file_writers_retry_partial_runtime_writes_until_complete() -> Result<()
         .await?;
     let mut bytes = jvm.instantiate_array("B", 4).await?;
     jvm.store_array(&mut bytes, 0, [b'R' as i8, b'A' as i8, b'F' as i8, b'!' as i8]).await?;
-    let _: () = jvm.invoke_virtual(&file, "write", "([BII)V", (bytes, 0, 4)).await?;
+    let _: () = jvm
+        .invoke_virtual(&file, &file.class_definition().name(), "write", "([BII)V", (bytes, 0, 4))
+        .await?;
     assert_eq!(&*runtime.files.lock().unwrap()["raf.bin"].lock().unwrap(), b"RAF!");
 
     let mut runtime = MemoryRuntime::new([("writer.txt".into(), Vec::new())].into_iter().collect());
@@ -678,7 +715,9 @@ async fn file_writers_retry_partial_runtime_writes_until_complete() -> Result<()
     let path = JavaLangString::from_rust_string(&jvm, "writer.txt").await?;
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/lang/String;)V", (path,)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "A한B").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
     assert_eq!(&*runtime.files.lock().unwrap()["writer.txt"].lock().unwrap(), "A한B".as_bytes());
 
     Ok(())
@@ -697,7 +736,9 @@ async fn file_output_stream_reports_zero_and_late_write_failures_with_exact_pref
         let output = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?;
         let mut bytes = jvm.instantiate_array("B", 3).await?;
         jvm.store_array(&mut bytes, 0, [b'a' as i8, b'b' as i8, b'c' as i8]).await?;
-        let result: Result<()> = jvm.invoke_virtual(&output, "write", "([BII)V", (bytes, 0, 3)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&output, &output.class_definition().name(), "write", "([BII)V", (bytes, 0, 3))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("incomplete runtime write must throw IOException");
         };
@@ -711,7 +752,9 @@ async fn file_output_stream_reports_zero_and_late_write_failures_with_exact_pref
     let path = JavaLangString::from_rust_string(&jvm, "byte.bin").await?;
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?;
     let output = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?;
-    let result: Result<()> = jvm.invoke_virtual(&output, "write", "(I)V", (65,)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "write", "(I)V", (65,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("zero-byte runtime write must throw IOException");
     };
@@ -736,7 +779,9 @@ async fn random_access_file_reports_zero_and_late_write_failures_with_exact_pref
             .await?;
         let mut bytes = jvm.instantiate_array("B", 3).await?;
         jvm.store_array(&mut bytes, 0, [b'a' as i8, b'b' as i8, b'c' as i8]).await?;
-        let result: Result<()> = jvm.invoke_virtual(&file, "write", "([BII)V", (bytes, 0, 3)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&file, &file.class_definition().name(), "write", "([BII)V", (bytes, 0, 3))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("incomplete runtime write must throw IOException");
         };
@@ -758,7 +803,9 @@ async fn file_writer_reports_zero_and_late_write_failures_with_exact_prefix() ->
         let path_string = JavaLangString::from_rust_string(&jvm, path).await?;
         let writer = jvm.new_class("java/io/FileWriter", "(Ljava/lang/String;)V", (path_string,)).await?;
         let value = JavaLangString::from_rust_string(&jvm, "abc").await?;
-        let result: Result<()> = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("incomplete runtime write must throw IOException");
         };

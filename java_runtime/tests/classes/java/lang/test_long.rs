@@ -7,12 +7,36 @@ use test_utils::test_jvm;
 async fn test_long_api() -> Result<()> {
     let jvm = test_jvm().await?;
     let value = jvm.new_class("java/lang/Long", "(J)V", (i64::MIN,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i8>(&value, "byteValue", "()B", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i16>(&value, "shortValue", "()S", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&value, "longValue", "()J", ()).await?, i64::MIN);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "intValue", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, f32>(&value, "floatValue", "()F", ()).await?, i64::MIN as f32);
-    assert_eq!(jvm.invoke_virtual::<_, f64>(&value, "doubleValue", "()D", ()).await?, i64::MIN as f64);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i8>(&value, &value.class_definition().name(), "byteValue", "()B", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i16>(&value, &value.class_definition().name(), "shortValue", "()S", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&value, &value.class_definition().name(), "longValue", "()J", ())
+            .await?,
+        i64::MIN
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, f32>(&value, &value.class_definition().name(), "floatValue", "()F", ())
+            .await?,
+        i64::MIN as f32
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, f64>(&value, &value.class_definition().name(), "doubleValue", "()D", ())
+            .await?,
+        i64::MIN as f64
+    );
 
     for (input, radix, expected) in [
         ("7fffffffffffffff", 16, i64::MAX),
@@ -39,7 +63,11 @@ async fn test_long_api() -> Result<()> {
         .invoke_static("java/lang/Long", "toHexString", "(J)Ljava/lang/String;", (-1i64,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &hex).await?, "ffffffffffffffff");
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&value, "longValue", "()J", ()).await?, -1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&value, &value.class_definition().name(), "longValue", "()J", ())
+            .await?,
+        -1
+    );
 
     let overflow = JavaLangString::from_rust_string(&jvm, "9223372036854775808").await?;
     let result: Result<i64> = jvm
@@ -50,7 +78,9 @@ async fn test_long_api() -> Result<()> {
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NumberFormatException"));
 
-    let typed_null_result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Long;)I", (None,)).await;
+    let typed_null_result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Long;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = typed_null_result else {
         panic!("Long typed compare null must throw NPE");
     };
@@ -78,7 +108,10 @@ async fn test_long_api() -> Result<()> {
     let property: ClassInstanceRef<Long> = jvm
         .invoke_static("java/lang/Long", "getLong", "(Ljava/lang/String;)Ljava/lang/Long;", (key.clone(),))
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&property, "longValue", "()J", ()).await?, 63);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&property, "java/lang/Long", "longValue", "()J", ()).await?,
+        63
+    );
 
     let invalid = JavaLangString::from_rust_string(&jvm, "invalid").await?;
     let _: ClassInstanceRef<Object> = jvm
@@ -92,7 +125,10 @@ async fn test_long_api() -> Result<()> {
     let property: ClassInstanceRef<Long> = jvm
         .invoke_static("java/lang/Long", "getLong", "(Ljava/lang/String;J)Ljava/lang/Long;", (key, -9i64))
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&property, "longValue", "()J", ()).await?, -9);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&property, "java/lang/Long", "longValue", "()J", ()).await?,
+        -9
+    );
 
     for (text, radix, expected) in [
         ("-1000000000000000000000000000000000000000000000000000000000000000", 2, i64::MIN),
@@ -124,7 +160,10 @@ async fn test_long_api() -> Result<()> {
         let decoded: ClassInstanceRef<Long> = jvm
             .invoke_static("java/lang/Long", "decode", "(Ljava/lang/String;)Ljava/lang/Long;", (text,))
             .await?;
-        assert_eq!(jvm.invoke_virtual::<_, i64>(&decoded, "longValue", "()J", ()).await?, expected);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i64>(&decoded, "java/lang/Long", "longValue", "()J", ()).await?,
+            expected
+        );
     }
     for (method, expected) in [
         ("toBinaryString", "1111111111111111111111111111111111111111111111111111111111111111"),
@@ -137,22 +176,36 @@ async fn test_long_api() -> Result<()> {
 
     let equal = jvm.new_class("java/lang/Long", "(J)V", (-1i64,)).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&value, "equals", "(Ljava/lang/Object;)Z", (equal.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &value,
+            &value.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (equal.clone(),)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "hashCode", "()I", ()).await?, 0);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&value, "compareTo", "(Ljava/lang/Object;)I", (equal,))
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (equal,))
             .await?,
         0
     );
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (object,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (object,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Long raw compare must reject another type");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/ClassCastException"));
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (None,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Long raw compare null must throw NPE");
     };
@@ -161,8 +214,13 @@ async fn test_long_api() -> Result<()> {
     assert_eq!(jvm.get_static_field::<i64>("java/lang/Long", "MIN_VALUE", "J").await?, i64::MIN);
     assert_eq!(jvm.get_static_field::<i64>("java/lang/Long", "MAX_VALUE", "J").await?, i64::MAX);
     let typ = jvm.get_static_field("java/lang/Long", "TYPE", "Ljava/lang/Class;").await?;
-    let type_name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let type_name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &type_name).await?, "long");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
     Ok(())
 }

@@ -8,16 +8,44 @@ async fn test_float_constructors_and_number_conversions() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let value = jvm.new_class("java/lang/Float", "(D)V", (130.75f64,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, f32>(&value, "floatValue", "()F", ()).await?, 130.75);
-    assert_eq!(jvm.invoke_virtual::<_, f64>(&value, "doubleValue", "()D", ()).await?, 130.75);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "intValue", "()I", ()).await?, 130);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&value, "longValue", "()J", ()).await?, 130);
-    assert_eq!(jvm.invoke_virtual::<_, i8>(&value, "byteValue", "()B", ()).await?, -126);
-    assert_eq!(jvm.invoke_virtual::<_, i16>(&value, "shortValue", "()S", ()).await?, 130);
+    assert_eq!(
+        jvm.invoke_virtual::<_, f32>(&value, &value.class_definition().name(), "floatValue", "()F", ())
+            .await?,
+        130.75
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, f64>(&value, &value.class_definition().name(), "doubleValue", "()D", ())
+            .await?,
+        130.75
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        130
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&value, &value.class_definition().name(), "longValue", "()J", ())
+            .await?,
+        130
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i8>(&value, &value.class_definition().name(), "byteValue", "()B", ())
+            .await?,
+        -126
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i16>(&value, &value.class_definition().name(), "shortValue", "()S", ())
+            .await?,
+        130
+    );
 
     let text = JavaLangString::from_rust_string(&jvm, "-3.5").await?;
     let from_string = jvm.new_class("java/lang/Float", "(Ljava/lang/String;)V", (text,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, f32>(&from_string, "floatValue", "()F", ()).await?, -3.5);
+    assert_eq!(
+        jvm.invoke_virtual::<_, f32>(&from_string, &from_string.class_definition().name(), "floatValue", "()F", ())
+            .await?,
+        -3.5
+    );
 
     Ok(())
 }
@@ -51,7 +79,7 @@ async fn test_float_parse_value_of_and_format() -> Result<()> {
     let nan: ClassInstanceRef<Float> = jvm
         .invoke_static("java/lang/Float", "valueOf", "(Ljava/lang/String;)Ljava/lang/Float;", (nan,))
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&nan, "isNaN", "()Z", ()).await?);
+    assert!(jvm.invoke_virtual::<_, bool>(&nan, "java/lang/Float", "isNaN", "()Z", ()).await?);
 
     for (value, expected) in [(12.0f32, "12.0"), (-0.0, "-0.0"), (10_000_000.0, "1.0E7"), (0.000_125, "1.25E-4")] {
         let text: ClassInstanceRef<String> = jvm
@@ -131,12 +159,22 @@ async fn test_float_bits_equality_hash_and_comparison() -> Result<()> {
     let nan_a = jvm.new_class("java/lang/Float", "(F)V", (payload_nan_a,)).await?;
     let nan_b = jvm.new_class("java/lang/Float", "(F)V", (payload_nan_b,)).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&nan_a, "equals", "(Ljava/lang/Object;)Z", (nan_b.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &nan_a,
+            &nan_a.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (nan_b.clone(),)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&nan_a, "hashCode", "()I", ()).await?, 0x7fc0_0000);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&nan_a, "compareTo", "(Ljava/lang/Float;)I", (nan_b,))
+        jvm.invoke_virtual::<_, i32>(&nan_a, &nan_a.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        0x7fc0_0000
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&nan_a, &nan_a.class_definition().name(), "compareTo", "(Ljava/lang/Float;)I", (nan_b,))
             .await?,
         0
     );
@@ -144,47 +182,99 @@ async fn test_float_bits_equality_hash_and_comparison() -> Result<()> {
     let negative_zero = jvm.new_class("java/lang/Float", "(F)V", (-0.0f32,)).await?;
     let positive_zero = jvm.new_class("java/lang/Float", "(F)V", (0.0f32,)).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&negative_zero, "equals", "(Ljava/lang/Object;)Z", (positive_zero.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (positive_zero.clone(),)
+        )
+        .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&negative_zero, "compareTo", "(Ljava/lang/Float;)I", (positive_zero.clone(),),)
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Float;)I",
+            (positive_zero.clone(),),
+        )
+        .await?,
         -1
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&negative_zero, "compareTo", "(Ljava/lang/Object;)I", (positive_zero,))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Object;)I",
+            (positive_zero,)
+        )
+        .await?,
         -1
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&negative_zero, "hashCode", "()I", ()).await?, i32::MIN);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&jvm.new_class("java/lang/Float", "(F)V", (0.0f32,)).await?, "hashCode", "()I", (),)
+        jvm.invoke_virtual::<_, i32>(&negative_zero, &negative_zero.class_definition().name(), "hashCode", "()I", ())
             .await?,
+        i32::MIN
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(
+            &jvm.new_class("java/lang/Float", "(F)V", (0.0f32,)).await?,
+            &jvm.new_class("java/lang/Float", "(F)V", (0.0f32,)).await?.class_definition().name(),
+            "hashCode",
+            "()I",
+            (),
+        )
+        .await?,
         0
     );
 
     let infinity = jvm.new_class("java/lang/Float", "(F)V", (f32::INFINITY,)).await?;
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&nan_a, "compareTo", "(Ljava/lang/Float;)I", (infinity,))
+        jvm.invoke_virtual::<_, i32>(&nan_a, &nan_a.class_definition().name(), "compareTo", "(Ljava/lang/Float;)I", (infinity,))
             .await?,
         1
     );
 
-    let typed_null: Result<i32> = jvm.invoke_virtual(&negative_zero, "compareTo", "(Ljava/lang/Float;)I", (None,)).await;
+    let typed_null: Result<i32> = jvm
+        .invoke_virtual(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Float;)I",
+            (None,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = typed_null else {
         panic!("Float typed compare null must throw NPE");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
-    let raw_null: Result<i32> = jvm.invoke_virtual(&negative_zero, "compareTo", "(Ljava/lang/Object;)I", (None,)).await;
+    let raw_null: Result<i32> = jvm
+        .invoke_virtual(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Object;)I",
+            (None,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = raw_null else {
         panic!("Float raw compare null must throw NPE");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
-    let wrong_type: Result<i32> = jvm.invoke_virtual(&negative_zero, "compareTo", "(Ljava/lang/Object;)I", (object,)).await;
+    let wrong_type: Result<i32> = jvm
+        .invoke_virtual(
+            &negative_zero,
+            &negative_zero.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Object;)I",
+            (object,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = wrong_type else {
         panic!("Float raw compare wrong type must throw CCE");
     };
@@ -196,8 +286,16 @@ async fn test_float_bits_equality_hash_and_comparison() -> Result<()> {
         (f32::NEG_INFINITY, i32::MIN, i64::MIN),
     ] {
         let wrapper = jvm.new_class("java/lang/Float", "(F)V", (value,)).await?;
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&wrapper, "intValue", "()I", ()).await?, int_value);
-        assert_eq!(jvm.invoke_virtual::<_, i64>(&wrapper, "longValue", "()J", ()).await?, long_value);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&wrapper, &wrapper.class_definition().name(), "intValue", "()I", ())
+                .await?,
+            int_value
+        );
+        assert_eq!(
+            jvm.invoke_virtual::<_, i64>(&wrapper, &wrapper.class_definition().name(), "longValue", "()J", ())
+                .await?,
+            long_value
+        );
     }
 
     Ok(())
@@ -225,9 +323,14 @@ async fn test_float_constants_type_and_predicates() -> Result<()> {
     );
 
     let typ = jvm.get_static_field("java/lang/Float", "TYPE", "Ljava/lang/Class;").await?;
-    let name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "float");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }

@@ -238,22 +238,22 @@ impl Float {
     }
 
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok((value as i32) as i8)
     }
 
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok((value as i32) as i16)
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as i32)
     }
 
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as i64)
     }
 
@@ -262,7 +262,7 @@ impl Float {
     }
 
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as f64)
     }
 
@@ -304,7 +304,7 @@ impl Float {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
@@ -313,7 +313,7 @@ impl Float {
     }
 
     async fn is_nan(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value.is_nan())
     }
 
@@ -322,7 +322,7 @@ impl Float {
     }
 
     async fn is_infinite(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value.is_infinite())
     }
 
@@ -339,7 +339,7 @@ impl Float {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
+        let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(if value.is_nan() { 0x7fc0_0000 } else { value.to_bits() as i32 })
     }
 
@@ -347,8 +347,8 @@ impl Float {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Float") {
             return Ok(false);
         }
-        let left: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
-        let right: f32 = jvm.invoke_virtual(&other, "floatValue", "()F", ()).await?;
+        let left: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
+        let right: f32 = jvm.invoke_virtual(&other, "java/lang/Float", "floatValue", "()F", ()).await?;
         let left_bits = if left.is_nan() { 0x7fc0_0000 } else { left.to_bits() as i32 };
         let right_bits = if right.is_nan() { 0x7fc0_0000 } else { right.to_bits() as i32 };
         Ok(left_bits == right_bits)
@@ -358,8 +358,8 @@ impl Float {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let left: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
-        let right: f32 = jvm.invoke_virtual(&other, "floatValue", "()F", ()).await?;
+        let left: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
+        let right: f32 = jvm.invoke_virtual(&other, "java/lang/Float", "floatValue", "()F", ()).await?;
         if left < right {
             return Ok(-1);
         }
@@ -379,8 +379,8 @@ impl Float {
             return Err(jvm.exception("java/lang/ClassCastException", "not Float").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let left: f32 = jvm.invoke_virtual(&this, "floatValue", "()F", ()).await?;
-        let right: f32 = jvm.invoke_virtual(&other, "floatValue", "()F", ()).await?;
+        let left: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
+        let right: f32 = jvm.invoke_virtual(&other, "java/lang/Float", "floatValue", "()F", ()).await?;
         if left < right {
             return Ok(-1);
         }

@@ -81,7 +81,9 @@ impl BufferedOutputStream {
         }
         let count: i32 = jvm.get_field(this, "count", "I").await?;
         if count > 0 {
-            let _: () = jvm.invoke_virtual(&out, "write", "([BII)V", (buffer, 0, count)).await?;
+            let _: () = jvm
+                .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (buffer, 0, count))
+                .await?;
             jvm.put_field(this, "count", "I", 0).await?;
         }
         Ok(())
@@ -131,7 +133,9 @@ impl BufferedOutputStream {
         let buffer_length = jvm.array_length(&buffer).await? as i32;
         if length >= buffer_length {
             Self::flush_buffer(jvm, &mut this).await?;
-            return jvm.invoke_virtual(&out, "write", "([BII)V", (bytes, offset, length)).await;
+            return jvm
+                .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (bytes, offset, length))
+                .await;
         }
 
         let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
@@ -156,6 +160,6 @@ impl BufferedOutputStream {
 
         Self::flush_buffer(jvm, &mut this).await?;
         let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "flush", "()V", ()).await
+        jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 }

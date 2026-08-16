@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::ClassAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -19,16 +19,21 @@ impl JarURLConnection {
             parent_class: Some("java/net/URLConnection"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, Default::default()),
-                JavaMethodProto::new_abstract("getJarFile", "()Ljava/util/jar/JarFile;", Default::default()),
-                JavaMethodProto::new("getEntryName", "()Ljava/lang/String;", Self::get_entry_name, Default::default()),
-                JavaMethodProto::new("getJarFileURL", "()Ljava/net/URL;", Self::get_jar_file_url, Default::default()),
-                JavaMethodProto::new("getJarEntry", "()Ljava/util/jar/JarEntry;", Self::get_jar_entry, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new_abstract("getJarFile", "()Ljava/util/jar/JarFile;", MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getEntryName", "()Ljava/lang/String;", Self::get_entry_name, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getJarFileURL", "()Ljava/net/URL;", Self::get_jar_file_url, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "getJarEntry",
+                    "()Ljava/util/jar/JarEntry;",
+                    Self::get_jar_entry,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new(
                     "getMainAttributes",
                     "()Ljava/util/jar/Attributes;",
                     Self::get_main_attributes,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
             ],
             fields: vec![
@@ -46,7 +51,7 @@ impl JarURLConnection {
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;
 
-        let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
+        let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
         let file = JavaLangString::to_rust_string(jvm, &file).await?;
         let split = file.splitn(2, "!/").collect::<Vec<_>>();
 
@@ -79,11 +84,21 @@ impl JarURLConnection {
     async fn get_jar_entry(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.JarURLConnection::getJarEntry({this:?})");
 
-        let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
-        let entry_name: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getEntryName", "()Ljava/lang/String;", ()).await?;
+        let jar_file = jvm
+            .invoke_virtual(&this, "java/net/JarURLConnection", "getJarFile", "()Ljava/util/jar/JarFile;", ())
+            .await?;
+        let entry_name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&this, "java/net/JarURLConnection", "getEntryName", "()Ljava/lang/String;", ())
+            .await?;
 
         let entry = jvm
-            .invoke_virtual(&jar_file, "getJarEntry", "(Ljava/lang/String;)Ljava/util/jar/JarEntry;", (entry_name,))
+            .invoke_virtual(
+                &jar_file,
+                "java/util/jar/JarFile",
+                "getJarEntry",
+                "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
+                (entry_name,),
+            )
             .await?;
 
         Ok(entry)
@@ -92,10 +107,20 @@ impl JarURLConnection {
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
         tracing::debug!("java.net.JarURLConnection::getMainAttributes({this:?})");
 
-        let jar_file = jvm.invoke_virtual(&this, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
-        let manifest = jvm.invoke_virtual(&jar_file, "getManifest", "()Ljava/util/jar/Manifest;", ()).await?;
+        let jar_file = jvm
+            .invoke_virtual(&this, "java/net/JarURLConnection", "getJarFile", "()Ljava/util/jar/JarFile;", ())
+            .await?;
+        let manifest = jvm
+            .invoke_virtual(&jar_file, "java/util/jar/JarFile", "getManifest", "()Ljava/util/jar/Manifest;", ())
+            .await?;
         let main_attributes = jvm
-            .invoke_virtual(&manifest, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+            .invoke_virtual(
+                &manifest,
+                "java/util/jar/Manifest",
+                "getMainAttributes",
+                "()Ljava/util/jar/Attributes;",
+                (),
+            )
             .await?;
 
         Ok(main_attributes)

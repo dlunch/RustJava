@@ -95,7 +95,13 @@ impl LinkedHashMapLinkedHashIterator {
 
         let key: ClassInstanceRef<Object> = jvm.get_field(&last_returned, "key", "Ljava/lang/Object;").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .invoke_virtual(
+                &map,
+                "java/util/LinkedHashMap",
+                "remove",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key,),
+            )
             .await?;
         let last_returned: ClassInstanceRef<LinkedHashMapEntry> = None.into();
         jvm.put_field(&mut this, "lastReturned", "Ljava/util/LinkedHashMap$Entry;", last_returned)

@@ -55,7 +55,10 @@ async fn test_wait() -> Result<()> {
             self.runtime.sleep(Duration::from_millis(100)).await;
             self.notified.store(true, Ordering::Relaxed);
             self.jvm.monitor_enter(&self.target).await?;
-            let _: () = self.jvm.invoke_virtual(&self.target, "notify", "()V", ()).await?;
+            let _: () = self
+                .jvm
+                .invoke_virtual(&self.target, &self.target.class_definition().name(), "notify", "()V", ())
+                .await?;
             self.jvm.monitor_exit(&self.target).await?;
 
             self.jvm.detach_thread()?;
@@ -76,7 +79,7 @@ async fn test_wait() -> Result<()> {
 
     assert!(!notified.load(Ordering::Relaxed));
     jvm.monitor_enter(&object).await?;
-    let _: () = jvm.invoke_virtual(&object, "wait", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&object, &object.class_definition().name(), "wait", "()V", ()).await?;
     jvm.monitor_exit(&object).await?;
     assert!(notified.load(Ordering::Relaxed));
 
@@ -89,7 +92,9 @@ async fn test_wait_timeout() -> Result<()> {
 
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
     jvm.monitor_enter(&object).await?;
-    let _: () = jvm.invoke_virtual(&object, "wait", "(J)V", (100i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&object, &object.class_definition().name(), "wait", "(J)V", (100i64,))
+        .await?;
     jvm.monitor_exit(&object).await?;
 
     Ok(())
@@ -102,8 +107,10 @@ async fn test_wait_and_notify_require_monitor_ownership() -> Result<()> {
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
 
     for result in [
-        jvm.invoke_virtual::<_, ()>(&object, "notify", "()V", ()).await,
-        jvm.invoke_virtual::<_, ()>(&object, "wait", "(J)V", (1i64,)).await,
+        jvm.invoke_virtual::<_, ()>(&object, &object.class_definition().name(), "notify", "()V", ())
+            .await,
+        jvm.invoke_virtual::<_, ()>(&object, &object.class_definition().name(), "wait", "(J)V", (1i64,))
+            .await,
     ] {
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("monitor ownership violation must throw IllegalMonitorStateException");
@@ -121,7 +128,9 @@ async fn test_clone_not_cloneable() -> Result<()> {
 
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
 
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&object, "clone", "()Ljava/lang/Object;", ()).await;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&object, &object.class_definition().name(), "clone", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(java_exception)) = result else {
         panic!("Expected JavaException, got {:?}", result);
     };
@@ -150,7 +159,9 @@ async fn test_clone_creates_shallow_object_and_array_copies() -> Result<()> {
     jvm.put_field(&mut original, "value", "I", 7i32).await?;
     jvm.put_field(&mut original, "reference", "Ljava/lang/Object;", reference.clone()).await?;
 
-    let mut cloned: ClassInstanceRef<CloneableObject> = jvm.invoke_virtual(&original, "clone", "()Ljava/lang/Object;", ()).await?;
+    let mut cloned: ClassInstanceRef<CloneableObject> = jvm
+        .invoke_virtual(&original, &original.class_definition().name(), "clone", "()Ljava/lang/Object;", ())
+        .await?;
     assert_ne!(original.identity(), cloned.identity());
     assert_eq!(jvm.get_field::<i32>(&cloned, "value", "I").await?, 7);
     let cloned_reference = jvm
@@ -163,7 +174,9 @@ async fn test_clone_creates_shallow_object_and_array_copies() -> Result<()> {
 
     let mut array = jvm.instantiate_array("I", 2).await?;
     jvm.store_array(&mut array, 0, [1i32, 2i32]).await?;
-    let mut cloned_array: ClassInstanceRef<Array<i32>> = jvm.invoke_virtual(&array, "clone", "()Ljava/lang/Object;", ()).await?;
+    let mut cloned_array: ClassInstanceRef<Array<i32>> = jvm
+        .invoke_virtual(&array, &array.class_definition().name(), "clone", "()Ljava/lang/Object;", ())
+        .await?;
     assert_ne!(array.identity(), cloned_array.identity());
     jvm.store_array(&mut cloned_array, 0, [9i32]).await?;
     assert_eq!(jvm.load_array::<i32>(&array, 0, 2).await?, [1, 2]);
@@ -171,8 +184,15 @@ async fn test_clone_creates_shallow_object_and_array_copies() -> Result<()> {
 
     let mut reference_array = jvm.instantiate_array("Ljava/lang/Object;", 1).await?;
     jvm.store_array(&mut reference_array, 0, [reference.clone()]).await?;
-    let mut cloned_reference_array: ClassInstanceRef<Array<Object>> =
-        jvm.invoke_virtual(&reference_array, "clone", "()Ljava/lang/Object;", ()).await?;
+    let mut cloned_reference_array: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(
+            &reference_array,
+            &reference_array.class_definition().name(),
+            "clone",
+            "()Ljava/lang/Object;",
+            (),
+        )
+        .await?;
     let cloned_element = jvm.load_array::<ClassInstanceRef<Object>>(&cloned_reference_array, 0, 1).await?;
     assert_eq!(cloned_element[0].identity(), reference.identity());
     let replacement: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
@@ -190,8 +210,12 @@ async fn test_hash_code_is_stable_for_same_object() -> Result<()> {
 
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
 
-    let first: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
-    let second: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
+    let first: i32 = jvm
+        .invoke_virtual(&object, &object.class_definition().name(), "hashCode", "()I", ())
+        .await?;
+    let second: i32 = jvm
+        .invoke_virtual(&object, &object.class_definition().name(), "hashCode", "()I", ())
+        .await?;
 
     assert_eq!(first, second);
 
@@ -207,7 +231,9 @@ async fn test_hash_code_is_not_constant_across_objects() -> Result<()> {
 
     for _ in 0..32 {
         let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
-        let hash: i32 = jvm.invoke_virtual(&object, "hashCode", "()I", ()).await?;
+        let hash: i32 = jvm
+            .invoke_virtual(&object, &object.class_definition().name(), "hashCode", "()I", ())
+            .await?;
         hashes.insert(hash);
     }
 

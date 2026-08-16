@@ -179,18 +179,32 @@ async fn full_match_reselects_alternatives_without_shifting_capture_groups() -> 
             .await?;
         let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "ab").await?.into();
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
 
-        assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
-        let group: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "()Ljava/lang/String;", ()).await?;
+        assert!(
+            jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+                .await?
+        );
+        let group: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "()Ljava/lang/String;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &group).await?, "ab");
         assert_eq!(
-            jvm.invoke_virtual::<_, i32>(&matcher, "groupCount", "()I", ()).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "groupCount", "()I", ())
+                .await?,
             expected_group_count
         );
         if expected_group_count == 1 {
-            let group: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (1,)).await?;
+            let group: ClassInstanceRef<String> = jvm
+                .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (1,))
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &group).await?, "ab");
         }
     }
@@ -206,10 +220,21 @@ async fn full_match_reselects_alternatives_without_shifting_capture_groups() -> 
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "ab").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "lookingAt", "()Z", ()).await?);
-    let group: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "()Ljava/lang/String;", ()).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "lookingAt", "()Z", ())
+            .await?
+    );
+    let group: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &group).await?, "a");
 
     Ok(())
@@ -231,9 +256,18 @@ async fn comments_mode_allows_a_terminal_comment_in_full_and_prefix_matches() ->
     for method in ["matches", "lookingAt"] {
         let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "a").await?.into();
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
-        assert!(jvm.invoke_virtual::<_, bool>(&matcher, method, "()Z", ()).await?);
+        assert!(
+            jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", method, "()Z", ())
+                .await?
+        );
     }
 
     Ok(())
@@ -253,9 +287,18 @@ async fn full_match_preserves_inline_comment_modes() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "a").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
 
     let source = JavaLangString::from_rust_string(&jvm, "(?-x)a # trailing").await?;
     let pattern: ClassInstanceRef<Pattern> = jvm
@@ -268,9 +311,18 @@ async fn full_match_preserves_inline_comment_modes() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "a # trailing").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -289,15 +341,40 @@ async fn captures_report_unmatched_empty_and_utf16_ranges() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "bbb").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "groupCount", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "(I)I", (1,)).await?, -1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "end", "(I)I", (1,)).await?, -1);
-    let unmatched: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (1,)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "groupCount", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "(I)I", (1,))
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "(I)I", (1,))
+            .await?,
+        -1
+    );
+    let unmatched: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (1,))
+        .await?;
     assert!(unmatched.is_null());
-    let group: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (2,)).await?;
+    let group: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (2,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &group).await?, "bbb");
 
     let source = JavaLangString::from_rust_string(&jvm, "(a*)").await?;
@@ -311,12 +388,31 @@ async fn captures_report_unmatched_empty_and_utf16_ranges() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "b").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "(I)I", (1,)).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "end", "(I)I", (1,)).await?, 0);
-    let empty: ClassInstanceRef<String> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (1,)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "(I)I", (1,))
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "(I)I", (1,))
+            .await?,
+        0
+    );
+    let empty: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (1,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &empty).await?, "");
 
     let source = JavaLangString::from_rust_string(&jvm, "(😀)(한)").await?;
@@ -330,27 +426,42 @@ async fn captures_report_unmatched_empty_and_utf16_ranges() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "A😀한B").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+                .await?,
         ),
         (1, 4)
     );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "(I)I", (1,)).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "(I)I", (1,)).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "(I)I", (1,))
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "(I)I", (1,))
+                .await?,
         ),
         (1, 3)
     );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "(I)I", (2,)).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "(I)I", (2,)).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "(I)I", (2,))
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "(I)I", (2,))
+                .await?,
         ),
         (3, 4)
     );
@@ -372,35 +483,54 @@ async fn failed_or_missing_matches_enforce_state_before_group_bounds() -> Result
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "baa").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
 
-    let result: Result<ClassInstanceRef<String>> = jvm.invoke_virtual(&matcher, "group", "(I)Ljava/lang/String;", (-1,)).await;
+    let result: Result<ClassInstanceRef<String>> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "(I)Ljava/lang/String;", (-1,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("group before a match must throw");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
 
-    assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
     for (name, descriptor) in [("start", "()I"), ("end", "()I")] {
-        let result: Result<i32> = jvm.invoke_virtual(&matcher, name, descriptor, ()).await;
+        let result: Result<i32> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", name, descriptor, ()).await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("{name} after a failed match must throw");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
     }
 
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
     for group in [-1, 1] {
-        let result: Result<i32> = jvm.invoke_virtual(&matcher, "start", "(I)I", (group,)).await;
+        let result: Result<i32> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "start", "(I)I", (group,)).await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("out-of-range group must throw");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
     }
 
-    assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    let result: Result<ClassInstanceRef<String>> = jvm.invoke_virtual(&matcher, "group", "()Ljava/lang/String;", ()).await;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    let result: Result<ClassInstanceRef<String>> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "group", "()Ljava/lang/String;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("group after find failure must throw");
     };
@@ -424,20 +554,37 @@ async fn find_advances_after_zero_width_matches_and_stops_after_the_end() -> Res
             .await?;
         let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, input).await?.into();
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
         for range in expected {
-            assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+            assert!(
+                jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+                    .await?
+            );
             assert_eq!(
                 (
-                    jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?,
-                    jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?,
+                    jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                        .await?,
+                    jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+                        .await?,
                 ),
                 range
             );
         }
-        assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-        assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+        assert!(
+            !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+                .await?
+        );
+        assert!(
+            !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+                .await?
+        );
     }
 
     let source = JavaLangString::from_rust_string(&jvm, "a*").await?;
@@ -451,18 +598,35 @@ async fn find_advances_after_zero_width_matches_and_stops_after_the_end() -> Res
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "a").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "matches", "()Z", ()).await?);
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "matches", "()Z", ())
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+                .await?,
         ),
         (1, 1)
     );
-    assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -481,18 +645,32 @@ async fn find_at_input_length_matches_the_end_anchor() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "ab").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
 
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "(I)Z", (2,)).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (2,))
+            .await?
+    );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+                .await?,
         ),
         (2, 2)
     );
-    assert!(!jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -519,10 +697,16 @@ async fn invalid_find_start_is_checked_before_creating_an_input_snapshot() -> Re
         )
         .await?;
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
 
-    let result: Result<bool> = jvm.invoke_virtual(&matcher, "find", "(I)Z", (-1,)).await;
+    let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (-1,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("negative find start must throw");
     };
@@ -530,7 +714,7 @@ async fn invalid_find_start_is_checked_before_creating_an_input_snapshot() -> Re
     assert_eq!(jvm.get_field::<i32>(&sequence, "lengthCalls", "I").await?, 0);
     assert_eq!(jvm.get_field::<i32>(&sequence, "snapshotCalls", "I").await?, 0);
 
-    let result: Result<bool> = jvm.invoke_virtual(&matcher, "find", "(I)Z", (2,)).await;
+    let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (2,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("find start beyond the input length must throw");
     };
@@ -564,13 +748,26 @@ async fn valid_find_start_resets_state_before_creating_an_input_snapshot() -> Re
         )
         .await?;
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 0);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        0
+    );
 
     jvm.put_field(&mut sequence, "failSnapshot", "Z", true).await?;
-    let result: Result<bool> = jvm.invoke_virtual(&matcher, "find", "(I)Z", (0,)).await;
+    let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (0,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("snapshot failure must be observable");
     };
@@ -578,7 +775,7 @@ async fn valid_find_start_resets_state_before_creating_an_input_snapshot() -> Re
     assert_eq!(jvm.get_field::<i32>(&sequence, "lengthCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&sequence, "snapshotCalls", "I").await?, 2);
 
-    let result: Result<i32> = jvm.invoke_virtual(&matcher, "start", "()I", ()).await;
+    let result: Result<i32> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "start", "()I", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("valid find(start) must invalidate the previous match before searching");
     };
@@ -603,16 +800,34 @@ async fn find_continues_from_the_prefix_end_after_successful_looking_at() -> Res
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "abca").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
 
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "lookingAt", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?, 1);
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "lookingAt", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+            .await?,
+        1
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
     assert_eq!(
         (
-            jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?,
-            jvm.invoke_virtual::<_, i32>(&matcher, "end", "()I", ()).await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                .await?,
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "end", "()I", ())
+                .await?,
         ),
         (3, 4)
     );
@@ -634,42 +849,85 @@ async fn find_start_and_reset_preserve_or_replace_state_as_specified() -> Result
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "baac").await?.into();
     let matcher: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (input,),
+        )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 1);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        1
+    );
 
     for invalid in [-1, 5] {
-        let result: Result<bool> = jvm.invoke_virtual(&matcher, "find", "(I)Z", (invalid,)).await;
+        let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (invalid,)).await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("invalid find start must throw");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 1);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+                .await?,
+            1
+        );
     }
 
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "(I)Z", (2,)).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 2);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (2,))
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        2
+    );
 
     let null: ClassInstanceRef<CharSequence> = None.into();
     let result: Result<ClassInstanceRef<Matcher>> = jvm
-        .invoke_virtual(&matcher, "reset", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (null,))
+        .invoke_virtual(
+            &matcher,
+            "java/util/regex/Matcher",
+            "reset",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (null,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("reset(null) must throw");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        2
+    );
 
-    let reset: ClassInstanceRef<Matcher> = jvm.invoke_virtual(&matcher, "reset", "()Ljava/util/regex/Matcher;", ()).await?;
+    let reset: ClassInstanceRef<Matcher> = jvm
+        .invoke_virtual(&matcher, "java/util/regex/Matcher", "reset", "()Ljava/util/regex/Matcher;", ())
+        .await?;
     assert_eq!(reset.identity(), matcher.identity());
-    let result: Result<i32> = jvm.invoke_virtual(&matcher, "start", "()I", ()).await;
+    let result: Result<i32> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "start", "()I", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("reset must invalidate the previous match");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    assert!(jvm.invoke_virtual::<_, bool>(&matcher, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&matcher, "start", "()I", ()).await?, 1);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&matcher, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        1
+    );
 
     Ok(())
 }
@@ -689,23 +947,55 @@ async fn reset_accepts_string_buffer_snapshots_and_matchers_keep_independent_sta
     let first_input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "x!x").await?.into();
     let second_input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "!x").await?.into();
     let first: ClassInstanceRef<Matcher> = jvm
-        .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (first_input,))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "matcher",
+            "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+            (first_input,),
+        )
         .await?;
     let second: ClassInstanceRef<Matcher> = jvm
         .invoke_virtual(
             &pattern,
+            "java/util/regex/Pattern",
             "matcher",
             "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
             (second_input,),
         )
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&first, "find", "()Z", ()).await?);
-    assert!(jvm.invoke_virtual::<_, bool>(&second, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "start", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "start", "()I", ()).await?, 1);
-    assert!(jvm.invoke_virtual::<_, bool>(&first, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "start", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "start", "()I", ()).await?, 1);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&first, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&second, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        1
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&first, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        1
+    );
 
     let value = JavaLangString::from_rust_string(&jvm, "xy").await?;
     let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (value,)).await?.into();
@@ -713,16 +1003,28 @@ async fn reset_accepts_string_buffer_snapshots_and_matchers_keep_independent_sta
     let reset: ClassInstanceRef<Matcher> = jvm
         .invoke_virtual(
             &second,
+            "java/util/regex/Matcher",
             "reset",
             "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
             (buffer_as_sequence,),
         )
         .await?;
     assert_eq!(reset.identity(), second.identity());
-    assert!(jvm.invoke_virtual::<_, bool>(&second, "find", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "start", "()I", ()).await?, 0);
-    let _: () = jvm.invoke_virtual(&buffer, "setCharAt", "(IC)V", (0, 'y' as JavaChar)).await?;
-    let parent: ClassInstanceRef<Pattern> = jvm.invoke_virtual(&second, "pattern", "()Ljava/util/regex/Pattern;", ()).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&second, "java/util/regex/Matcher", "find", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, "java/util/regex/Matcher", "start", "()I", ())
+            .await?,
+        0
+    );
+    let _: () = jvm
+        .invoke_virtual(&buffer, "java/lang/StringBuffer", "setCharAt", "(IC)V", (0, 'y' as JavaChar))
+        .await?;
+    let parent: ClassInstanceRef<Pattern> = jvm
+        .invoke_virtual(&second, "java/util/regex/Matcher", "pattern", "()Ljava/util/regex/Pattern;", ())
+        .await?;
     assert_eq!(parent.identity(), pattern.identity());
 
     Ok(())

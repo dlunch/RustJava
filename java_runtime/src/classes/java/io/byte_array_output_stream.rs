@@ -140,7 +140,8 @@ impl ByteArrayOutputStream {
 
         let buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&out, "write", "([BII)V", (buf, 0, count)).await
+        jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (buf, 0, count))
+            .await
     }
 
     async fn to_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {

@@ -11,10 +11,14 @@ async fn test_random() -> Result<()> {
     let seed = 42i64;
     let random = jvm.new_class("java/util/Random", "(J)V", (seed,)).await?;
 
-    let next: i32 = jvm.invoke_virtual(&random, "nextInt", "()I", ()).await?;
+    let next: i32 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextInt", "()I", ())
+        .await?;
     assert_eq!(next, -1170105035);
 
-    let next: i32 = jvm.invoke_virtual(&random, "nextInt", "()I", ()).await?;
+    let next: i32 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextInt", "()I", ())
+        .await?;
     assert_eq!(next, 234785527);
 
     Ok(())
@@ -25,20 +29,40 @@ async fn test_random_cldc11_algorithms() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&random, "nextInt", "(I)I", (100,)).await?, 30);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&random, &random.class_definition().name(), "nextInt", "(I)I", (100,))
+            .await?,
+        30
+    );
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&random, "nextLong", "()J", ()).await?, -5025562857975149833);
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&random, &random.class_definition().name(), "nextLong", "()J", ())
+            .await?,
+        -5025562857975149833
+    );
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
-    let value: f32 = jvm.invoke_virtual(&random, "nextFloat", "()F", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
+    let value: f32 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextFloat", "()F", ())
+        .await?;
     assert!((value - 0.7275637).abs() < f32::EPSILON);
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
-    let value: f64 = jvm.invoke_virtual(&random, "nextDouble", "()D", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
+    let value: f64 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextDouble", "()D", ())
+        .await?;
     assert!((value - 0.7275636800328681).abs() < f64::EPSILON);
 
-    let result: Result<i32> = jvm.invoke_virtual(&random, "nextInt", "(I)I", (0,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextInt", "(I)I", (0,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("non-positive bound must throw IllegalArgumentException");
     };
@@ -95,20 +119,45 @@ async fn rng_01_boolean_and_bytes_match_jdk_seed_oracle() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let boolean_random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&boolean_random, "nextBoolean", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&boolean_random, &boolean_random.class_definition().name(), "nextBoolean", "()Z", ())
+            .await?
+    );
 
     let bytes_random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
     let mut bytes: ClassInstanceRef<Array<i8>> = jvm.instantiate_array("B", 10).await?.into();
-    let _: () = jvm.invoke_virtual(&bytes_random, "nextBytes", "([B)V", (bytes.clone(),)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &bytes_random,
+            &bytes_random.class_definition().name(),
+            "nextBytes",
+            "([B)V",
+            (bytes.clone(),),
+        )
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, 10).await?,
         vec![53, -99, 65, -70, -9, -118, -2, 13, -31, -69]
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&bytes_random, "nextInt", "()I", ()).await?, 205897768);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&bytes_random, &bytes_random.class_definition().name(), "nextInt", "()I", ())
+            .await?,
+        205897768
+    );
 
     jvm.store_array(&mut bytes, 0, [0i8; 10]).await?;
-    let _: () = jvm.invoke_virtual(&bytes_random, "setSeed", "(J)V", (42i64,)).await?;
-    let _: () = jvm.invoke_virtual(&bytes_random, "nextBytes", "([B)V", (bytes.clone(),)).await?;
+    let _: () = jvm
+        .invoke_virtual(&bytes_random, &bytes_random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &bytes_random,
+            &bytes_random.class_definition().name(),
+            "nextBytes",
+            "([B)V",
+            (bytes.clone(),),
+        )
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, 10).await?,
         vec![53, -99, 65, -70, -9, -118, -2, 13, -31, -69]
@@ -123,22 +172,44 @@ async fn rng_01_next_bytes_null_and_empty_arrays_do_not_advance_seed() -> Result
 
     let random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
     let null_bytes: ClassInstanceRef<Array<i8>> = None.into();
-    let result: Result<()> = jvm.invoke_virtual(&random, "nextBytes", "([B)V", (null_bytes,)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextBytes", "([B)V", (null_bytes,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("nextBytes(null) must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&random, "nextInt", "()I", ()).await?, -1170105035);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&random, &random.class_definition().name(), "nextInt", "()I", ())
+            .await?,
+        -1170105035
+    );
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
     let empty: ClassInstanceRef<Array<i8>> = jvm.instantiate_array("B", 0).await?.into();
-    let _: () = jvm.invoke_virtual(&random, "nextBytes", "([B)V", (empty,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&random, "nextInt", "()I", ()).await?, -1170105035);
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextBytes", "([B)V", (empty,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&random, &random.class_definition().name(), "nextInt", "()I", ())
+            .await?,
+        -1170105035
+    );
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
     let five: ClassInstanceRef<Array<i8>> = jvm.instantiate_array("B", 5).await?.into();
-    let _: () = jvm.invoke_virtual(&random, "nextBytes", "([B)V", (five,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&random, "nextInt", "()I", ()).await?, -1360544799);
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextBytes", "([B)V", (five,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&random, &random.class_definition().name(), "nextInt", "()I", ())
+            .await?,
+        -1360544799
+    );
 
     Ok(())
 }
@@ -148,21 +219,35 @@ async fn rng_01_gaussian_matches_jdk_seed_oracle_and_consumes_cache() -> Result<
     let jvm = test_jvm().await?;
 
     let random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
-    let first: f64 = jvm.invoke_virtual(&random, "nextGaussian", "()D", ()).await?;
+    let first: f64 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
+        .await?;
     assert!((first - 1.1419053154730547).abs() < 1e-15);
     assert!(jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
     let cached: f64 = jvm.get_field(&random, "nextNextGaussian", "D").await?;
 
-    let second: f64 = jvm.invoke_virtual(&random, "nextGaussian", "()D", ()).await?;
+    let second: f64 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
+        .await?;
     assert_eq!(second.to_bits(), cached.to_bits());
     assert!((second - 0.9194079489827879).abs() < 1e-15);
     assert!(!jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
 
-    let after_cached: i32 = jvm.invoke_virtual(&random, "nextInt", "()I", ()).await?;
+    let after_cached: i32 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextInt", "()I", ())
+        .await?;
     let control = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
-    let _: f64 = jvm.invoke_virtual(&control, "nextDouble", "()D", ()).await?;
-    let _: f64 = jvm.invoke_virtual(&control, "nextDouble", "()D", ()).await?;
-    assert_eq!(after_cached, jvm.invoke_virtual::<_, i32>(&control, "nextInt", "()I", ()).await?);
+    let _: f64 = jvm
+        .invoke_virtual(&control, &control.class_definition().name(), "nextDouble", "()D", ())
+        .await?;
+    let _: f64 = jvm
+        .invoke_virtual(&control, &control.class_definition().name(), "nextDouble", "()D", ())
+        .await?;
+    assert_eq!(
+        after_cached,
+        jvm.invoke_virtual::<_, i32>(&control, &control.class_definition().name(), "nextInt", "()I", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -172,12 +257,18 @@ async fn rng_02_set_seed_clears_gaussian_cache() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let random = jvm.new_class("java/util/Random", "(J)V", (42i64,)).await?;
-    let first: f64 = jvm.invoke_virtual(&random, "nextGaussian", "()D", ()).await?;
+    let first: f64 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
+        .await?;
     assert!(jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
 
-    let _: () = jvm.invoke_virtual(&random, "setSeed", "(J)V", (42i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
+        .await?;
     assert!(!jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
-    let reset_first: f64 = jvm.invoke_virtual(&random, "nextGaussian", "()D", ()).await?;
+    let reset_first: f64 = jvm
+        .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
+        .await?;
     assert_eq!(reset_first.to_bits(), first.to_bits());
 
     Ok(())

@@ -16,12 +16,24 @@ async fn test_manifest_parsing() -> Result<()> {
         .await?;
 
     let main_attributes = jvm
-        .invoke_virtual(&manifest, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+        .invoke_virtual(
+            &manifest,
+            &manifest.class_definition().name(),
+            "getMainAttributes",
+            "()Ljava/util/jar/Attributes;",
+            (),
+        )
         .await?;
 
     let key = JavaLangString::from_rust_string(&jvm, "Main-Class").await?;
     let value = jvm
-        .invoke_virtual(&main_attributes, "getValue", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .invoke_virtual(
+            &main_attributes,
+            &main_attributes.class_definition().name(),
+            "getValue",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (key,),
+        )
         .await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "test");

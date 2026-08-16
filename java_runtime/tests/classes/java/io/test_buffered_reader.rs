@@ -156,7 +156,7 @@ impl ReadRunner {
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.put_field(&mut this, "started", "Z", true).await?;
         let reader: ClassInstanceRef<BufferedReader> = jvm.get_field(&this, "reader", "Ljava/io/BufferedReader;").await?;
-        let value: i32 = jvm.invoke_virtual(&reader, "read", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "read", "()I", ()).await?;
         jvm.put_field(&mut this, "value", "I", value).await?;
         jvm.put_field(&mut this, "done", "Z", true).await?;
         Ok(())
@@ -205,39 +205,67 @@ async fn test_buffered_reader_constructors_and_read_contract() -> Result<()> {
     let mut chars = jvm.instantiate_array("C", 4).await?;
     jvm.store_array(&mut chars, 0, ['?' as JavaChar; 4]).await?;
 
-    let invalid_range: Result<i32> = jvm.invoke_virtual(&reader, "read", "([CII)I", (chars.clone(), -1, 1)).await;
+    let invalid_range: Result<i32> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = invalid_range else {
         panic!("negative offset must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
 
-    let overflowing_range: Result<i32> = jvm.invoke_virtual(&reader, "read", "([CII)I", (chars.clone(), 3, 2)).await;
+    let overflowing_range: Result<i32> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 3, 2))
+        .await;
     let Err(JavaError::JavaException(exception)) = overflowing_range else {
         panic!("overflowing range must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
 
     let null_chars: ClassInstanceRef<Array<JavaChar>> = None.into();
-    let null_result: Result<i32> = jvm.invoke_virtual(&reader, "read", "([CII)I", (null_chars, 0, 0)).await;
+    let null_result: Result<i32> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "read", "([CII)I", (null_chars, 0, 0))
+        .await;
     let Err(JavaError::JavaException(exception)) = null_result else {
         panic!("null destination must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'a' as i32);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 1, 2)).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'a' as i32
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 1, 2))
+            .await?,
+        2
+    );
     assert_eq!(
         jvm.load_array::<JavaChar>(&chars, 0, 4).await?,
         ['?' as JavaChar, 'b' as JavaChar, 'c' as JavaChar, '?' as JavaChar]
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, -1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 0)).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 1)).await?, -1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 0, 0))
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 0, 1))
+            .await?,
+        -1
+    );
 
     let empty = jvm.instantiate_array("C", 0).await?;
     let input = jvm.new_class("ChunkedReader", "([CI)V", (empty, 1)).await?;
     let default_reader = jvm.new_class("java/io/BufferedReader", "(Ljava/io/Reader;)V", (input.clone(),)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&default_reader, "read", "()I", ()).await?, -1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&default_reader, &default_reader.class_definition().name(), "read", "()I", ())
+            .await?,
+        -1
+    );
 
     for size in [0, -1] {
         let invalid_size = jvm
@@ -274,11 +302,15 @@ async fn test_buffered_reader_read_line_endings_and_long_lines() -> Result<()> {
     let (jvm, _, reader) = buffered_reader(&input, 1, 3).await?;
 
     for expected in ["first", "second", "third", "", long_line] {
-        let line: ClassInstanceRef<String> = jvm.invoke_virtual(&reader, "readLine", "()Ljava/lang/String;", ()).await?;
+        let line: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &line).await?, expected);
     }
 
-    let line: ClassInstanceRef<String> = jvm.invoke_virtual(&reader, "readLine", "()Ljava/lang/String;", ()).await?;
+    let line: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+        .await?;
     assert!(line.is_null());
 
     Ok(())
@@ -288,27 +320,59 @@ async fn test_buffered_reader_read_line_endings_and_long_lines() -> Result<()> {
 async fn test_buffered_reader_mixed_reads_skip_and_ready_share_cursor() -> Result<()> {
     let (jvm, source, reader) = buffered_reader("abc\ndef", 16, 8).await?;
 
-    let negative_skip: Result<i64> = jvm.invoke_virtual(&reader, "skip", "(J)J", (-1i64,)).await;
+    let negative_skip: Result<i64> = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "skip", "(J)J", (-1i64,)).await;
     let Err(JavaError::JavaException(exception)) = negative_skip else {
         panic!("negative skip must throw IllegalArgumentException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
 
-    assert!(jvm.invoke_virtual::<_, bool>(&reader, "ready", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'a' as i32);
-    assert!(!jvm.invoke_virtual::<_, bool>(&source, "ready", "()Z", ()).await?);
-    assert!(jvm.invoke_virtual::<_, bool>(&reader, "ready", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "ready", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'a' as i32
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&source, &source.class_definition().name(), "ready", "()Z", ())
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "ready", "()Z", ())
+            .await?
+    );
 
     let chars = jvm.instantiate_array("C", 2).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 2)).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 0, 2))
+            .await?,
+        2
+    );
     assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 2).await?, ['b' as JavaChar, 'c' as JavaChar]);
 
-    let line: ClassInstanceRef<String> = jvm.invoke_virtual(&reader, "readLine", "()Ljava/lang/String;", ()).await?;
+    let line: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &line).await?, "");
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&reader, "skip", "(J)J", (2i64,)).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'f' as i32);
-    assert!(!jvm.invoke_virtual::<_, bool>(&reader, "ready", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&reader, "skip", "(J)J", (2i64,)).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&reader, "java/io/BufferedReader", "skip", "(J)J", (2i64,))
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'f' as i32
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "ready", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&reader, "java/io/BufferedReader", "skip", "(J)J", (2i64,))
+            .await?,
+        0
+    );
 
     Ok(())
 }
@@ -317,41 +381,64 @@ async fn test_buffered_reader_mixed_reads_skip_and_ready_share_cursor() -> Resul
 async fn test_buffered_reader_mark_reset_preservation_and_invalidation() -> Result<()> {
     let (jvm, _, reader) = buffered_reader("abcdef", 2, 3).await?;
 
-    assert!(jvm.invoke_virtual::<_, bool>(&reader, "markSupported", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'a' as i32);
-    let _: () = jvm.invoke_virtual(&reader, "mark", "(I)V", (4,)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "markSupported", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'a' as i32
+    );
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "mark", "(I)V", (4,)).await?;
 
-    let negative_mark: Result<()> = jvm.invoke_virtual(&reader, "mark", "(I)V", (-1,)).await;
+    let negative_mark: Result<()> = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "mark", "(I)V", (-1,)).await;
     let Err(JavaError::JavaException(exception)) = negative_mark else {
         panic!("negative read-ahead limit must throw IllegalArgumentException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
 
     let chars = jvm.instantiate_array("C", 4).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 4)).await?, 4);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 0, 4))
+            .await?,
+        4
+    );
     assert_eq!(
         jvm.load_array::<JavaChar>(&chars, 0, 4).await?,
         ['b' as JavaChar, 'c' as JavaChar, 'd' as JavaChar, 'e' as JavaChar]
     );
-    let _: () = jvm.invoke_virtual(&reader, "reset", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars.clone(), 0, 4)).await?, 4);
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "reset", "()V", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars.clone(), 0, 4))
+            .await?,
+        4
+    );
     assert_eq!(
         jvm.load_array::<JavaChar>(&chars, 0, 4).await?,
         ['b' as JavaChar, 'c' as JavaChar, 'd' as JavaChar, 'e' as JavaChar]
     );
 
     let (jvm, _, reader) = buffered_reader("abcd", 2, 2).await?;
-    let unset_reset: Result<()> = jvm.invoke_virtual(&reader, "reset", "()V", ()).await;
+    let unset_reset: Result<()> = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "reset", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = unset_reset else {
         panic!("reset without mark must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
 
-    let _: () = jvm.invoke_virtual(&reader, "mark", "(I)V", (2,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'a' as i32);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'b' as i32);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'c' as i32);
-    let invalidated_reset: Result<()> = jvm.invoke_virtual(&reader, "reset", "()V", ()).await;
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "mark", "(I)V", (2,)).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'a' as i32
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'b' as i32
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'c' as i32
+    );
+    let invalidated_reset: Result<()> = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "reset", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = invalidated_reset else {
         panic!("reset beyond read-ahead limit must throw IOException");
     };
@@ -364,12 +451,20 @@ async fn test_buffered_reader_mark_reset_preservation_and_invalidation() -> Resu
 async fn test_buffered_reader_mark_restores_pending_crlf_state() -> Result<()> {
     let (jvm, _, reader) = buffered_reader("a\r\nb", 1, 2).await?;
 
-    let line: ClassInstanceRef<String> = jvm.invoke_virtual(&reader, "readLine", "()Ljava/lang/String;", ()).await?;
+    let line: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &line).await?, "a");
-    let _: () = jvm.invoke_virtual(&reader, "mark", "(I)V", (2,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'b' as i32);
-    let _: () = jvm.invoke_virtual(&reader, "reset", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'b' as i32);
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "mark", "(I)V", (2,)).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'b' as i32
+    );
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "reset", "()V", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'b' as i32
+    );
 
     Ok(())
 }
@@ -379,12 +474,20 @@ async fn test_buffered_reader_ready_preserves_pending_lf_until_input_is_availabl
     let (jvm, mut source, reader) = buffered_reader("\r\nX", 3, 2).await?;
     jvm.put_field(&mut source, "visibleLength", "I", 1).await?;
 
-    let line: ClassInstanceRef<String> = jvm.invoke_virtual(&reader, "readLine", "()Ljava/lang/String;", ()).await?;
+    let line: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &line).await?, "");
-    assert!(!jvm.invoke_virtual::<_, bool>(&reader, "ready", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "ready", "()Z", ())
+            .await?
+    );
 
     jvm.put_field(&mut source, "visibleLength", "I", 3).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'X' as i32);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'X' as i32
+    );
 
     Ok(())
 }
@@ -394,8 +497,14 @@ async fn test_buffered_reader_fill_retries_temporary_zero_read() -> Result<()> {
     let (jvm, mut source, reader) = buffered_reader("a", 1, 1).await?;
     jvm.put_field(&mut source, "zeroReads", "I", 1).await?;
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, 'a' as i32);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await?, -1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        'a' as i32
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
+        -1
+    );
 
     Ok(())
 }
@@ -409,7 +518,7 @@ async fn test_buffered_reader_serializes_on_inherited_reader_lock() -> Result<()
     let thread = jvm.new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (runner.clone(),)).await?;
 
     jvm.monitor_enter(&source).await?;
-    let _: () = jvm.invoke_virtual(&thread, "start", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "start", "()V", ()).await?;
 
     let mut started = false;
     for _ in 0..100 {
@@ -423,7 +532,7 @@ async fn test_buffered_reader_serializes_on_inherited_reader_lock() -> Result<()
     let completed_while_lock_was_held = jvm.get_field::<bool>(&runner, "done", "Z").await?;
 
     jvm.monitor_exit(&source).await?;
-    let _: () = jvm.invoke_virtual(&thread, "join", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "join", "()V", ()).await?;
 
     assert!(started, "worker thread did not start");
     assert!(!completed_while_lock_was_held, "read did not synchronize on Reader.lock");
@@ -436,28 +545,48 @@ async fn test_buffered_reader_serializes_on_inherited_reader_lock() -> Result<()
 async fn test_buffered_reader_close_is_idempotent_and_closes_all_operations() -> Result<()> {
     let (jvm, source, reader) = buffered_reader("abc", 2, 2).await?;
 
-    let _: () = jvm.invoke_virtual(&reader, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&reader, "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "close", "()V", ()).await?;
     assert_eq!(jvm.get_field::<i32>(&source, "closeCount", "I").await?, 1);
-    assert!(jvm.invoke_virtual::<_, bool>(&reader, "markSupported", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "markSupported", "()Z", ())
+            .await?
+    );
 
     let chars = jvm.instantiate_array("C", 1).await?;
     let operations: Vec<(&str, Result<()>)> = vec![
-        ("read()", jvm.invoke_virtual::<_, i32>(&reader, "read", "()I", ()).await.map(|_| ())),
         (
-            "read(char[],off,len)",
-            jvm.invoke_virtual::<_, i32>(&reader, "read", "([CII)I", (chars, 0, 1)).await.map(|_| ()),
-        ),
-        (
-            "readLine",
-            jvm.invoke_virtual::<_, ClassInstanceRef<String>>(&reader, "readLine", "()Ljava/lang/String;", ())
+            "read()",
+            jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ())
                 .await
                 .map(|_| ()),
         ),
-        ("skip", jvm.invoke_virtual::<_, i64>(&reader, "skip", "(J)J", (1i64,)).await.map(|_| ())),
-        ("ready", jvm.invoke_virtual::<_, bool>(&reader, "ready", "()Z", ()).await.map(|_| ())),
-        ("mark", jvm.invoke_virtual(&reader, "mark", "(I)V", (1,)).await),
-        ("reset", jvm.invoke_virtual(&reader, "reset", "()V", ()).await),
+        (
+            "read(char[],off,len)",
+            jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "([CII)I", (chars, 0, 1))
+                .await
+                .map(|_| ()),
+        ),
+        (
+            "readLine",
+            jvm.invoke_virtual::<_, ClassInstanceRef<String>>(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+                .await
+                .map(|_| ()),
+        ),
+        (
+            "skip",
+            jvm.invoke_virtual::<_, i64>(&reader, "java/io/BufferedReader", "skip", "(J)J", (1i64,))
+                .await
+                .map(|_| ()),
+        ),
+        (
+            "ready",
+            jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "ready", "()Z", ())
+                .await
+                .map(|_| ()),
+        ),
+        ("mark", jvm.invoke_virtual(&reader, "java/io/BufferedReader", "mark", "(I)V", (1,)).await),
+        ("reset", jvm.invoke_virtual(&reader, "java/io/BufferedReader", "reset", "()V", ()).await),
     ];
 
     for (name, result) in operations {

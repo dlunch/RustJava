@@ -115,13 +115,20 @@ async fn formatter_substitutes_message_parameters() -> Result<()> {
     jvm.store_array(&mut parameters, 10, [JavaLangString::from_rust_string(&jvm, "parameter ten").await?])
         .await?;
     let _: () = jvm
-        .invoke_virtual(&record, "setParameters", "([Ljava/lang/Object;)V", (parameters,))
+        .invoke_virtual(
+            &record,
+            "java/util/logging/LogRecord",
+            "setParameters",
+            "([Ljava/lang/Object;)V",
+            (parameters,),
+        )
         .await?;
 
     let formatter: ClassInstanceRef<SimpleFormatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
     let formatted: ClassInstanceRef<String> = jvm
         .invoke_virtual(
             &formatter,
+            "java/util/logging/SimpleFormatter",
             "formatMessage",
             "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
             (record,),
@@ -161,11 +168,19 @@ async fn simple_formatter_includes_throwable_stack_trace() -> Result<()> {
     )
     .await?;
     jvm.put_field(&mut thrown, "stackTrace", "[Ljava/lang/String;", stack_trace).await?;
-    let _: () = jvm.invoke_virtual(&record, "setThrown", "(Ljava/lang/Throwable;)V", (thrown,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&record, "java/util/logging/LogRecord", "setThrown", "(Ljava/lang/Throwable;)V", (thrown,))
+        .await?;
 
     let formatter: ClassInstanceRef<SimpleFormatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
     let formatted: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&formatter, "format", "(Ljava/util/logging/LogRecord;)Ljava/lang/String;", (record,))
+        .invoke_virtual(
+            &formatter,
+            "java/util/logging/SimpleFormatter",
+            "format",
+            "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
+            (record,),
+        )
         .await?;
     let formatted = JavaLangString::to_rust_string(&jvm, &formatted).await?;
     assert!(formatted.contains("java.lang.RuntimeException: boom"));
@@ -199,7 +214,13 @@ async fn stream_handler_reports_output_failures_without_propagating_them() -> Re
         .into();
 
     let _: () = jvm
-        .invoke_virtual(&handler, "publish", "(Ljava/util/logging/LogRecord;)V", (record,))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "publish",
+            "(Ljava/util/logging/LogRecord;)V",
+            (record,),
+        )
         .await?;
     Ok(())
 }
@@ -221,12 +242,24 @@ async fn stream_handler_applies_level_and_custom_filter_before_writing() -> Resu
         .get_static_field("java/util/logging/Level", "WARNING", "Ljava/util/logging/Level;")
         .await?;
     let _: () = jvm
-        .invoke_virtual(&handler, "setLevel", "(Ljava/util/logging/Level;)V", (warning.clone(),))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "setLevel",
+            "(Ljava/util/logging/Level;)V",
+            (warning.clone(),),
+        )
         .await?;
 
     let denied: ClassInstanceRef<Filter> = jvm.new_class("ConfigurableLoggingFilter", "(Z)V", (false,)).await?.into();
     let _: () = jvm
-        .invoke_virtual(&handler, "setFilter", "(Ljava/util/logging/Filter;)V", (denied,))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "setFilter",
+            "(Ljava/util/logging/Filter;)V",
+            (denied,),
+        )
         .await?;
     let denied_record: ClassInstanceRef<LogRecord> = jvm
         .new_class(
@@ -237,12 +270,24 @@ async fn stream_handler_applies_level_and_custom_filter_before_writing() -> Resu
         .await?
         .into();
     let _: () = jvm
-        .invoke_virtual(&handler, "publish", "(Ljava/util/logging/LogRecord;)V", (denied_record,))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "publish",
+            "(Ljava/util/logging/LogRecord;)V",
+            (denied_record,),
+        )
         .await?;
 
     let allowed: ClassInstanceRef<Filter> = jvm.new_class("ConfigurableLoggingFilter", "(Z)V", (true,)).await?.into();
     let _: () = jvm
-        .invoke_virtual(&handler, "setFilter", "(Ljava/util/logging/Filter;)V", (allowed,))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "setFilter",
+            "(Ljava/util/logging/Filter;)V",
+            (allowed,),
+        )
         .await?;
     let allowed_record: ClassInstanceRef<LogRecord> = jvm
         .new_class(
@@ -253,11 +298,21 @@ async fn stream_handler_applies_level_and_custom_filter_before_writing() -> Resu
         .await?
         .into();
     let _: () = jvm
-        .invoke_virtual(&handler, "publish", "(Ljava/util/logging/LogRecord;)V", (allowed_record,))
+        .invoke_virtual(
+            &handler,
+            "java/util/logging/StreamHandler",
+            "publish",
+            "(Ljava/util/logging/LogRecord;)V",
+            (allowed_record,),
+        )
         .await?;
-    let _: () = jvm.invoke_virtual(&handler, "flush", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&handler, "java/util/logging/StreamHandler", "flush", "()V", ())
+        .await?;
 
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toString", "()Ljava/lang/String;", ())
+        .await?;
     let text = JavaLangString::to_rust_string(&jvm, &text).await?;
     assert!(!text.contains("denied"));
     assert!(text.contains("allowed"));

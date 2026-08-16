@@ -142,7 +142,13 @@ impl BufferedInputStream {
         jvm.put_field(this, "count", "I", position).await?;
 
         let read: i32 = jvm
-            .invoke_virtual(&r#in, "read", "([BII)I", (buffer, position, buffer_length - position))
+            .invoke_virtual(
+                &r#in,
+                "java/io/InputStream",
+                "read",
+                "([BII)I",
+                (buffer, position, buffer_length - position),
+            )
             .await?;
         if read > 0 {
             jvm.put_field(this, "count", "I", position + read).await?;
@@ -233,7 +239,7 @@ impl BufferedInputStream {
             total += copied;
 
             if total < length {
-                let available: i32 = jvm.invoke_virtual(&r#in, "available", "()I", ()).await?;
+                let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
                 if available == 0 {
                     break;
                 }
@@ -260,7 +266,7 @@ impl BufferedInputStream {
         if position >= count {
             let mark_position: i32 = jvm.get_field(&this, "markpos", "I").await?;
             if mark_position < 0 {
-                return jvm.invoke_virtual(&r#in, "skip", "(J)J", (amount,)).await;
+                return jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (amount,)).await;
             }
             if Self::fill(jvm, &mut this).await? == -1 {
                 return Ok(0);
@@ -284,7 +290,7 @@ impl BufferedInputStream {
         }
         let position: i32 = jvm.get_field(&this, "pos", "I").await?;
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let underlying: i32 = jvm.invoke_virtual(&r#in, "available", "()I", ()).await?;
+        let underlying: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
         Ok((count - position).saturating_add(underlying))
     }
 
@@ -327,6 +333,6 @@ impl BufferedInputStream {
         let null_buffer: ClassInstanceRef<Array<i8>> = None.into();
         jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", null_input).await?;
         jvm.put_field(&mut this, "buf", "[B", null_buffer).await?;
-        jvm.invoke_virtual(&r#in, "close", "()V", ()).await
+        jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await
     }
 }

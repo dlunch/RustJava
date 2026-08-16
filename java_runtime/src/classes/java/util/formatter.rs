@@ -398,7 +398,9 @@ impl Formatter {
     }
 
     async fn locale(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Locale>> {
-        let _: ClassInstanceRef<Appendable> = jvm.invoke_virtual(&this, "out", "()Ljava/lang/Appendable;", ()).await?;
+        let _: ClassInstanceRef<Appendable> = jvm
+            .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+            .await?;
         jvm.get_field(&this, "l", "Ljava/util/Locale;").await
     }
 
@@ -413,16 +415,24 @@ impl Formatter {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let appendable: ClassInstanceRef<Appendable> = jvm.invoke_virtual(&this, "out", "()Ljava/lang/Appendable;", ()).await?;
-        jvm.invoke_virtual(&appendable, "toString", "()Ljava/lang/String;", ()).await
+        let appendable: ClassInstanceRef<Appendable> = jvm
+            .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+            .await?;
+        jvm.invoke_virtual(&appendable, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let appendable: ClassInstanceRef<Appendable> = jvm.invoke_virtual(&this, "out", "()Ljava/lang/Appendable;", ()).await?;
+        let appendable: ClassInstanceRef<Appendable> = jvm
+            .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+            .await?;
         if !jvm.is_instance(&**appendable, "java/io/Flushable") {
             return Ok(());
         }
-        match jvm.invoke_virtual(&appendable, "flush", "()V", ()).await {
+        match jvm
+            .invoke_virtual(&appendable, &appendable.class_definition().name(), "flush", "()V", ())
+            .await
+        {
             Ok(()) => Ok(()),
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                 jvm.put_field(
@@ -443,7 +453,8 @@ impl Formatter {
             return Ok(());
         }
         let result = if jvm.is_instance(&**appendable, "java/io/Closeable") {
-            jvm.invoke_virtual(&appendable, "close", "()V", ()).await
+            jvm.invoke_virtual(&appendable, &appendable.class_definition().name(), "close", "()V", ())
+                .await
         } else {
             Ok(())
         };
@@ -472,10 +483,18 @@ impl Formatter {
         if characters.is_empty() {
             return Ok(());
         }
-        let appendable: ClassInstanceRef<Appendable> = jvm.invoke_virtual(this, "out", "()Ljava/lang/Appendable;", ()).await?;
+        let appendable: ClassInstanceRef<Appendable> = jvm
+            .invoke_virtual(this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+            .await?;
         let text: ClassInstanceRef<CharSequence> = JavaLangString::from_utf16(jvm, characters).await?.into();
         match jvm
-            .invoke_virtual::<_, ClassInstanceRef<Appendable>>(&appendable, "append", "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;", (text,))
+            .invoke_virtual::<_, ClassInstanceRef<Appendable>>(
+                &appendable,
+                &appendable.class_definition().name(),
+                "append",
+                "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+                (text,),
+            )
             .await
         {
             Ok(_) => Ok(()),
@@ -502,6 +521,7 @@ impl Formatter {
         let locale: ClassInstanceRef<Locale> = jvm.get_field(&this, "l", "Ljava/util/Locale;").await?;
         jvm.invoke_virtual(
             &this,
+            "java/util/Formatter",
             "format",
             "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (locale, format, arguments),
@@ -517,7 +537,9 @@ impl Formatter {
         format: ClassInstanceRef<String>,
         arguments: ClassInstanceRef<Array<Object>>,
     ) -> Result<ClassInstanceRef<Self>> {
-        let _: ClassInstanceRef<Appendable> = jvm.invoke_virtual(&this, "out", "()Ljava/lang/Appendable;", ()).await?;
+        let _: ClassInstanceRef<Appendable> = jvm
+            .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+            .await?;
         if format.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "format is null").await);
         }
@@ -910,7 +932,9 @@ impl Formatter {
                     {
                         formatter.clone()
                     } else {
-                        let appendable: ClassInstanceRef<Appendable> = jvm.invoke_virtual(formatter, "out", "()Ljava/lang/Appendable;", ()).await?;
+                        let appendable: ClassInstanceRef<Appendable> = jvm
+                            .invoke_virtual(formatter, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
+                            .await?;
                         jvm.new_class(
                             "java/util/Formatter",
                             "(Ljava/lang/Appendable;Ljava/util/Locale;)V",
@@ -922,6 +946,7 @@ impl Formatter {
                     let _: () = jvm
                         .invoke_virtual(
                             &argument,
+                            &argument.class_definition().name(),
                             "formatTo",
                             "(Ljava/util/Formatter;III)V",
                             (
@@ -948,7 +973,9 @@ impl Formatter {
                 let mut text = if argument.is_null() {
                     "null".encode_utf16().collect()
                 } else {
-                    let value: ClassInstanceRef<String> = jvm.invoke_virtual(&argument, "toString", "()Ljava/lang/String;", ()).await?;
+                    let value: ClassInstanceRef<String> = jvm
+                        .invoke_virtual(&argument, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                        .await?;
                     JavaLangString::to_utf16(jvm, &value).await?
                 };
                 if let Some(precision) = specifier.precision {
@@ -963,7 +990,8 @@ impl Formatter {
                 let value = if argument.is_null() {
                     false
                 } else if jvm.is_instance(&**argument, "java/lang/Boolean") {
-                    jvm.invoke_virtual(&argument, "booleanValue", "()Z", ()).await?
+                    jvm.invoke_virtual(&argument, &argument.class_definition().name(), "booleanValue", "()Z", ())
+                        .await?
                 } else {
                     true
                 };
@@ -980,7 +1008,7 @@ impl Formatter {
                 let mut text: Vec<JavaChar> = if argument.is_null() {
                     "null".encode_utf16().collect()
                 } else {
-                    let hash: i32 = jvm.invoke_virtual(&argument, "hashCode", "()I", ()).await?;
+                    let hash: i32 = jvm.invoke_virtual(&argument, "java/lang/Object", "hashCode", "()I", ()).await?;
                     format!("{:x}", hash as u32).encode_utf16().collect()
                 };
                 if let Some(precision) = specifier.precision {
@@ -997,12 +1025,14 @@ impl Formatter {
                     return Ok(Some(Self::apply_width(jvm, text, specifier, ' ' as JavaChar).await?));
                 }
                 let code_point = if jvm.is_instance(&**argument, "java/lang/Character") {
-                    jvm.invoke_virtual::<_, JavaChar>(&argument, "charValue", "()C", ()).await? as i32
+                    jvm.invoke_virtual::<_, JavaChar>(&argument, &argument.class_definition().name(), "charValue", "()C", ())
+                        .await? as i32
                 } else if jvm.is_instance(&**argument, "java/lang/Byte")
                     || jvm.is_instance(&**argument, "java/lang/Short")
                     || jvm.is_instance(&**argument, "java/lang/Integer")
                 {
-                    jvm.invoke_virtual(&argument, "intValue", "()I", ()).await?
+                    jvm.invoke_virtual(&argument, &argument.class_definition().name(), "intValue", "()I", ())
+                        .await?
                 } else {
                     return Err(Self::illegal_conversion(jvm, specifier, &argument).await?);
                 };
@@ -1087,7 +1117,9 @@ impl Formatter {
         if conversion != 'd' {
             Self::validate_flags(jvm, specifier, "-#0").await?;
         }
-        let value: i64 = jvm.invoke_virtual(&argument, "longValue", "()J", ()).await?;
+        let value: i64 = jvm
+            .invoke_virtual(&argument, &argument.class_definition().name(), "longValue", "()J", ())
+            .await?;
         let (digits, negative, prefix) = if conversion == 'd' {
             (value.unsigned_abs().to_string(), value < 0, RustString::new())
         } else {
@@ -1143,7 +1175,9 @@ impl Formatter {
         if !jvm.is_instance(&**argument, "java/lang/Float") && !jvm.is_instance(&**argument, "java/lang/Double") {
             return Err(Self::illegal_conversion(jvm, specifier, &argument).await?);
         }
-        let value: f64 = jvm.invoke_virtual(&argument, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm
+            .invoke_virtual(&argument, &argument.class_definition().name(), "doubleValue", "()D", ())
+            .await?;
         let negative = value.is_sign_negative() && !value.is_nan();
         let magnitude = libm::fabs(value);
         let precision = specifier.precision.unwrap_or(6);

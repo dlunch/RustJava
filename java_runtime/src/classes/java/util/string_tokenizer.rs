@@ -103,7 +103,7 @@ impl StringTokenizer {
         }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        let max_position: i32 = jvm.invoke_virtual(&string, "length", "()I", ()).await?;
+        let max_position: i32 = jvm.invoke_virtual(&string, "java/lang/String", "length", "()I", ()).await?;
         jvm.put_field(&mut this, "str", "Ljava/lang/String;", string).await?;
         jvm.put_field(&mut this, "delimiters", "Ljava/lang/String;", delimiters).await?;
         jvm.put_field(&mut this, "currentPosition", "I", 0).await?;
@@ -140,7 +140,13 @@ impl StringTokenizer {
         };
 
         let token: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (start as i32, end as i32))
+            .invoke_virtual(
+                &string,
+                "java/lang/String",
+                "substring",
+                "(II)Ljava/lang/String;",
+                (start as i32, end as i32),
+            )
             .await?;
         jvm.put_field(&mut this, "currentPosition", "I", end as i32).await?;
         Ok(token)
@@ -155,7 +161,8 @@ impl StringTokenizer {
         tracing::debug!("java.util.StringTokenizer::nextToken({this:?}, {delimiters:?})");
 
         jvm.put_field(&mut this, "delimiters", "Ljava/lang/String;", delimiters).await?;
-        jvm.invoke_virtual(&this, "nextToken", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&this, "java/util/StringTokenizer", "nextToken", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn count_tokens(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -175,11 +182,13 @@ impl StringTokenizer {
     }
 
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        jvm.invoke_virtual(&this, "hasMoreTokens", "()Z", ()).await
+        jvm.invoke_virtual(&this, "java/util/StringTokenizer", "hasMoreTokens", "()Z", ()).await
     }
 
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let token: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "nextToken", "()Ljava/lang/String;", ()).await?;
+        let token: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&this, "java/util/StringTokenizer", "nextToken", "()Ljava/lang/String;", ())
+            .await?;
         Ok(ClassInstanceRef::new(token.instance))
     }
 

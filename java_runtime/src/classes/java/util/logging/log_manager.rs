@@ -105,11 +105,18 @@ impl LogManager {
         jvm.put_field(&mut root, "useParentHandlers", "Z", false).await?;
         let console: ClassInstanceRef<ConsoleHandler> = jvm.new_class("java/util/logging/ConsoleHandler", "()V", ()).await?.into();
         let _: () = jvm
-            .invoke_virtual(&root, "addHandler", "(Ljava/util/logging/Handler;)V", (console,))
+            .invoke_virtual(
+                &root,
+                "java/util/logging/Logger",
+                "addHandler",
+                "(Ljava/util/logging/Handler;)V",
+                (console,),
+            )
             .await?;
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &loggers,
+                "java/util/Hashtable",
                 "put",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 (root_name, root.clone()),
@@ -127,6 +134,7 @@ impl LogManager {
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &loggers,
+                "java/util/Hashtable",
                 "put",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 (global_name, global),
@@ -146,7 +154,9 @@ impl LogManager {
         if logger.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "logger").await);
         }
-        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&logger, "getName", "()Ljava/lang/String;", ()).await?;
+        let name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&logger, "java/util/logging/Logger", "getName", "()Ljava/lang/String;", ())
+            .await?;
         if name.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "logger name").await);
         }
@@ -170,7 +180,13 @@ impl LogManager {
     ) -> Result<bool> {
         let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
         let existing: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&loggers, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name.clone(),))
+            .invoke_virtual(
+                &loggers,
+                "java/util/Hashtable",
+                "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (name.clone(),),
+            )
             .await?;
         if !existing.is_null() {
             return Ok(false);
@@ -178,6 +194,7 @@ impl LogManager {
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &loggers,
+                "java/util/Hashtable",
                 "put",
                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 (name, logger),
@@ -198,14 +215,15 @@ impl LogManager {
             return Err(jvm.exception("java/lang/NullPointerException", "name").await);
         }
         let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
-        jvm.invoke_virtual(&loggers, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name,))
+        jvm.invoke_virtual(&loggers, "java/util/Hashtable", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name,))
             .await
     }
 
     async fn get_logger_names(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.logging.LogManager::getLoggerNames({this:?})");
         let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
-        jvm.invoke_virtual(&loggers, "keys", "()Ljava/util/Enumeration;", ()).await
+        jvm.invoke_virtual(&loggers, "java/util/Hashtable", "keys", "()Ljava/util/Enumeration;", ())
+            .await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
@@ -235,7 +253,7 @@ impl LogManager {
             let length = jvm.array_length(&handlers).await?;
             let handlers: Vec<ClassInstanceRef<Handler>> = jvm.load_array(&handlers, 0, length).await?;
             for handler in handlers {
-                let _: () = jvm.invoke_virtual(&handler, "close", "()V", ()).await?;
+                let _: () = jvm.invoke_virtual(&handler, "java/util/logging/Handler", "close", "()V", ()).await?;
             }
         }
         Ok(())
@@ -243,10 +261,18 @@ impl LogManager {
 
     async fn snapshot_loggers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Logger>>> {
         let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
-        let values: ClassInstanceRef<Object> = jvm.invoke_virtual(&loggers, "elements", "()Ljava/util/Enumeration;", ()).await?;
+        let values: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&loggers, "java/util/Hashtable", "elements", "()Ljava/util/Enumeration;", ())
+            .await?;
         let mut snapshot: Vec<ClassInstanceRef<Logger>> = Vec::new();
-        while jvm.invoke_virtual::<_, bool>(&values, "hasMoreElements", "()Z", ()).await? {
-            snapshot.push(jvm.invoke_virtual(&values, "nextElement", "()Ljava/lang/Object;", ()).await?);
+        while jvm
+            .invoke_virtual::<_, bool>(&values, &values.class_definition().name(), "hasMoreElements", "()Z", ())
+            .await?
+        {
+            snapshot.push(
+                jvm.invoke_virtual(&values, &values.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
+                    .await?,
+            );
         }
 
         let mut result: ClassInstanceRef<Array<Logger>> = jvm.instantiate_array("Ljava/util/logging/Logger;", snapshot.len()).await?.into();
@@ -262,10 +288,18 @@ impl LogManager {
     }
 
     async fn reconnect_parents(jvm: &Jvm, manager: &ClassInstanceRef<Self>, loggers: &ClassInstanceRef<Hashtable>) -> Result<()> {
-        let names: ClassInstanceRef<Object> = jvm.invoke_virtual(loggers, "keys", "()Ljava/util/Enumeration;", ()).await?;
+        let names: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(loggers, "java/util/Hashtable", "keys", "()Ljava/util/Enumeration;", ())
+            .await?;
         let mut keys = Vec::new();
-        while jvm.invoke_virtual::<_, bool>(&names, "hasMoreElements", "()Z", ()).await? {
-            keys.push(jvm.invoke_virtual(&names, "nextElement", "()Ljava/lang/Object;", ()).await?);
+        while jvm
+            .invoke_virtual::<_, bool>(&names, &names.class_definition().name(), "hasMoreElements", "()Z", ())
+            .await?
+        {
+            keys.push(
+                jvm.invoke_virtual(&names, &names.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
+                    .await?,
+            );
         }
 
         let root: ClassInstanceRef<Logger> = jvm.get_field(manager, "root", "Ljava/util/logging/Logger;").await?;
@@ -275,7 +309,7 @@ impl LogManager {
                 continue;
             }
             let mut logger: ClassInstanceRef<Logger> = jvm
-                .invoke_virtual(loggers, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+                .invoke_virtual(loggers, "java/util/Hashtable", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
                 .await?;
             let mut parent = root.clone();
             let mut prefix = name.as_str();
@@ -283,7 +317,13 @@ impl LogManager {
                 prefix = &prefix[..index];
                 let candidate_name = JavaLangString::from_rust_string(jvm, prefix).await?;
                 let candidate: ClassInstanceRef<Logger> = jvm
-                    .invoke_virtual(loggers, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (candidate_name,))
+                    .invoke_virtual(
+                        loggers,
+                        "java/util/Hashtable",
+                        "get",
+                        "(Ljava/lang/Object;)Ljava/lang/Object;",
+                        (candidate_name,),
+                    )
                     .await?;
                 if !candidate.is_null() {
                     parent = candidate;

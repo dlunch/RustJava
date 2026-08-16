@@ -16,27 +16,27 @@ impl ArrayList {
             parent_class: Some("java/util/AbstractList"),
             interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/util/Collection;)V",
                     Self::init_from_collection,
                     MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, Default::default()),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, Default::default()),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, Default::default()),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, Default::default()),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, Default::default()),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, Default::default()),
-                JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, Default::default()),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
+                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "listIterator",
                     "()Ljava/util/ListIterator;",
@@ -95,9 +95,13 @@ impl ArrayList {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
-        let size: i32 = jvm.invoke_virtual(&collection, "size", "()I", ()).await?;
+        let size: i32 = jvm
+            .invoke_virtual(&collection, &collection.class_definition().name(), "size", "()I", ())
+            .await?;
         let _: () = jvm.invoke_special(&this, "java/util/ArrayList", "<init>", "(I)V", (size,)).await?;
-        let _: bool = jvm.invoke_virtual(&this, "addAll", "(Ljava/util/Collection;)Z", (collection,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&this, "java/util/ArrayList", "addAll", "(Ljava/util/Collection;)Z", (collection,))
+            .await?;
 
         Ok(())
     }
@@ -207,12 +211,16 @@ impl ArrayList {
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::remove({this:?}, {element:?})");
 
-        let index: i32 = jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/Object;)I", (element,)).await?;
+        let index: i32 = jvm
+            .invoke_virtual(&this, "java/util/ArrayList", "indexOf", "(Ljava/lang/Object;)I", (element,))
+            .await?;
         if index < 0 {
             return Ok(false);
         }
 
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "remove", "(I)Ljava/lang/Object;", (index,)).await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/ArrayList", "remove", "(I)Ljava/lang/Object;", (index,))
+            .await?;
 
         Ok(true)
     }
@@ -234,7 +242,9 @@ impl ArrayList {
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::contains({this:?}, {element:?})");
 
-        let index: i32 = jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/Object;)I", (element,)).await?;
+        let index: i32 = jvm
+            .invoke_virtual(&this, "java/util/ArrayList", "indexOf", "(Ljava/lang/Object;)I", (element,))
+            .await?;
 
         Ok(index >= 0)
     }
@@ -334,7 +344,8 @@ impl ArrayList {
             return Ok(false);
         }
 
-        jvm.invoke_virtual(left, "equals", "(Ljava/lang/Object;)Z", (right.clone(),)).await
+        jvm.invoke_virtual(left, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (right.clone(),))
+            .await
     }
 
     async fn copy_to_array(jvm: &Jvm, source: &ClassInstanceRef<Array<Object>>, len: i32) -> Result<ClassInstanceRef<Array<Object>>> {

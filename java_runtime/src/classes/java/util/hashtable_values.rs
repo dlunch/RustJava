@@ -45,7 +45,7 @@ impl HashtableValues {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "size", "()I", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "size", "()I", ()).await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -53,7 +53,7 @@ impl HashtableValues {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "isEmpty", "()Z", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
@@ -61,7 +61,8 @@ impl HashtableValues {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "containsValue", "(Ljava/lang/Object;)Z", (value,)).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "containsValue", "(Ljava/lang/Object;)Z", (value,))
+            .await
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
@@ -75,12 +76,18 @@ impl HashtableValues {
         let entries = Hashtable::entries_snapshot(jvm, &map).await?;
         let count = jvm.array_length(&entries).await?;
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
-            let entry_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
-            let equal: bool = jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (entry_value,)).await?;
+            let entry_value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
+            let equal: bool = jvm
+                .invoke_virtual(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (entry_value,))
+                .await?;
             if equal {
-                let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
+                let key: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                    .await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+                    .invoke_virtual(&map, "java/util/Hashtable", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
                     .await?;
                 return Ok(true);
             }
@@ -94,7 +101,7 @@ impl HashtableValues {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "clear", "()V", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {

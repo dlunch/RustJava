@@ -335,7 +335,13 @@ impl Logger {
             .invoke_static("java/util/logging/LogManager", "getLogManager", "()Ljava/util/logging/LogManager;", ())
             .await?;
         let mut logger: ClassInstanceRef<Self> = jvm
-            .invoke_virtual(&manager, "getLogger", "(Ljava/lang/String;)Ljava/util/logging/Logger;", (name.clone(),))
+            .invoke_virtual(
+                &manager,
+                "java/util/logging/LogManager",
+                "getLogger",
+                "(Ljava/lang/String;)Ljava/util/logging/Logger;",
+                (name.clone(),),
+            )
             .await?;
         if logger.is_null() {
             let candidate: ClassInstanceRef<Self> = jvm
@@ -347,13 +353,25 @@ impl Logger {
                 .await?
                 .into();
             let added: bool = jvm
-                .invoke_virtual(&manager, "addLogger", "(Ljava/util/logging/Logger;)Z", (candidate.clone(),))
+                .invoke_virtual(
+                    &manager,
+                    "java/util/logging/LogManager",
+                    "addLogger",
+                    "(Ljava/util/logging/Logger;)Z",
+                    (candidate.clone(),),
+                )
                 .await?;
             logger = if added {
                 candidate
             } else {
-                jvm.invoke_virtual(&manager, "getLogger", "(Ljava/lang/String;)Ljava/util/logging/Logger;", (name,))
-                    .await?
+                jvm.invoke_virtual(
+                    &manager,
+                    "java/util/logging/LogManager",
+                    "getLogger",
+                    "(Ljava/lang/String;)Ljava/util/logging/Logger;",
+                    (name,),
+                )
+                .await?
             };
         }
 
@@ -427,7 +445,13 @@ impl Logger {
             .await?;
         let root_name = JavaLangString::from_rust_string(jvm, "").await?;
         let root: ClassInstanceRef<Self> = jvm
-            .invoke_virtual(&manager, "getLogger", "(Ljava/lang/String;)Ljava/util/logging/Logger;", (root_name,))
+            .invoke_virtual(
+                &manager,
+                "java/util/logging/LogManager",
+                "getLogger",
+                "(Ljava/lang/String;)Ljava/util/logging/Logger;",
+                (root_name,),
+            )
             .await?;
         jvm.put_field(&mut logger, "parent", "Ljava/util/logging/Logger;", root).await?;
         Ok(logger)
@@ -493,7 +517,8 @@ impl Logger {
             return Err(jvm.exception("java/lang/NullPointerException", "handler").await);
         }
         let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
-        jvm.invoke_virtual(&handlers, "addElement", "(Ljava/lang/Object;)V", (handler,)).await
+        jvm.invoke_virtual(&handlers, "java/util/Vector", "addElement", "(Ljava/lang/Object;)V", (handler,))
+            .await
     }
 
     async fn remove_handler(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, handler: ClassInstanceRef<Handler>) -> Result<()> {
@@ -503,7 +528,7 @@ impl Logger {
         }
         let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
         let _: bool = jvm
-            .invoke_virtual(&handlers, "removeElement", "(Ljava/lang/Object;)Z", (handler,))
+            .invoke_virtual(&handlers, "java/util/Vector", "removeElement", "(Ljava/lang/Object;)Z", (handler,))
             .await?;
         Ok(())
     }
@@ -511,10 +536,12 @@ impl Logger {
     async fn get_handlers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Handler>>> {
         tracing::debug!("java.util.logging.Logger::getHandlers({this:?})");
         let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
-        let size: i32 = jvm.invoke_virtual(&handlers, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&handlers, "java/util/Vector", "size", "()I", ()).await?;
         let mut result: ClassInstanceRef<Array<Handler>> = jvm.instantiate_array("Ljava/util/logging/Handler;", size as usize).await?.into();
         for index in 0..size {
-            let handler: ClassInstanceRef<Handler> = jvm.invoke_virtual(&handlers, "elementAt", "(I)Ljava/lang/Object;", (index,)).await?;
+            let handler: ClassInstanceRef<Handler> = jvm
+                .invoke_virtual(&handlers, "java/util/Vector", "elementAt", "(I)Ljava/lang/Object;", (index,))
+                .await?;
             jvm.store_array(&mut result, index as usize, [handler]).await?;
         }
         Ok(result)
@@ -526,19 +553,19 @@ impl Logger {
             return Err(jvm.exception("java/lang/NullPointerException", "level").await);
         }
 
-        let requested: i32 = jvm.invoke_virtual(&level, "intValue", "()I", ()).await?;
+        let requested: i32 = jvm.invoke_virtual(&level, "java/util/logging/Level", "intValue", "()I", ()).await?;
         let mut logger = this;
         let effective = loop {
             let configured: ClassInstanceRef<Level> = jvm.get_field(&logger, "level", "Ljava/util/logging/Level;").await?;
             if !configured.is_null() {
-                break jvm.invoke_virtual(&configured, "intValue", "()I", ()).await?;
+                break jvm.invoke_virtual(&configured, "java/util/logging/Level", "intValue", "()I", ()).await?;
             }
             let parent: ClassInstanceRef<Self> = jvm.get_field(&logger, "parent", "Ljava/util/logging/Logger;").await?;
             if parent.is_null() {
                 let info: ClassInstanceRef<Level> = jvm
                     .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
                     .await?;
-                break jvm.invoke_virtual(&info, "intValue", "()I", ()).await?;
+                break jvm.invoke_virtual(&info, "java/util/logging/Level", "intValue", "()I", ()).await?;
             }
             logger = parent;
         };
@@ -551,9 +578,11 @@ impl Logger {
         if record.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "record").await);
         }
-        let level: ClassInstanceRef<Level> = jvm.invoke_virtual(&record, "getLevel", "()Ljava/util/logging/Level;", ()).await?;
+        let level: ClassInstanceRef<Level> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getLevel", "()Ljava/util/logging/Level;", ())
+            .await?;
         if !jvm
-            .invoke_virtual::<_, bool>(&this, "isLoggable", "(Ljava/util/logging/Level;)Z", (level,))
+            .invoke_virtual::<_, bool>(&this, "java/util/logging/Logger", "isLoggable", "(Ljava/util/logging/Level;)Z", (level,))
             .await?
         {
             return Ok(());
@@ -562,13 +591,21 @@ impl Logger {
         let filter: ClassInstanceRef<Filter> = jvm.get_field(&this, "filter", "Ljava/util/logging/Filter;").await?;
         if !filter.is_null()
             && !jvm
-                .invoke_virtual::<_, bool>(&filter, "isLoggable", "(Ljava/util/logging/LogRecord;)Z", (record.clone(),))
+                .invoke_virtual::<_, bool>(
+                    &filter,
+                    &filter.class_definition().name(),
+                    "isLoggable",
+                    "(Ljava/util/logging/LogRecord;)Z",
+                    (record.clone(),),
+                )
                 .await?
         {
             return Ok(());
         }
 
-        let logger_name: ClassInstanceRef<String> = jvm.invoke_virtual(&record, "getLoggerName", "()Ljava/lang/String;", ()).await?;
+        let logger_name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getLoggerName", "()Ljava/lang/String;", ())
+            .await?;
         if logger_name.is_null() {
             let name: ClassInstanceRef<String> = jvm.get_field(&this, "name", "Ljava/lang/String;").await?;
             jvm.put_field(&mut record, "loggerName", "Ljava/lang/String;", name).await?;
@@ -576,12 +613,20 @@ impl Logger {
 
         let mut logger = this;
         loop {
-            let handlers: ClassInstanceRef<Array<Handler>> = jvm.invoke_virtual(&logger, "getHandlers", "()[Ljava/util/logging/Handler;", ()).await?;
+            let handlers: ClassInstanceRef<Array<Handler>> = jvm
+                .invoke_virtual(&logger, "java/util/logging/Logger", "getHandlers", "()[Ljava/util/logging/Handler;", ())
+                .await?;
             let length = jvm.array_length(&handlers).await?;
             let handlers: Vec<ClassInstanceRef<Handler>> = jvm.load_array(&handlers, 0, length).await?;
             for handler in handlers {
                 let _: () = jvm
-                    .invoke_virtual(&handler, "publish", "(Ljava/util/logging/LogRecord;)V", (record.clone(),))
+                    .invoke_virtual(
+                        &handler,
+                        "java/util/logging/Handler",
+                        "publish",
+                        "(Ljava/util/logging/LogRecord;)V",
+                        (record.clone(),),
+                    )
                     .await?;
             }
 
@@ -1135,13 +1180,15 @@ impl Logger {
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, root: bool) -> Result<ClassInstanceRef<Array<Handler>>> {
         let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
-        let size: i32 = jvm.invoke_virtual(&handlers, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&handlers, "java/util/Vector", "size", "()I", ()).await?;
         let mut removed: ClassInstanceRef<Array<Handler>> = jvm.instantiate_array("Ljava/util/logging/Handler;", size as usize).await?.into();
         for index in 0..size {
-            let handler: ClassInstanceRef<Handler> = jvm.invoke_virtual(&handlers, "elementAt", "(I)Ljava/lang/Object;", (index,)).await?;
+            let handler: ClassInstanceRef<Handler> = jvm
+                .invoke_virtual(&handlers, "java/util/Vector", "elementAt", "(I)Ljava/lang/Object;", (index,))
+                .await?;
             jvm.store_array(&mut removed, index as usize, [handler]).await?;
         }
-        let _: () = jvm.invoke_virtual(&handlers, "removeAllElements", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&handlers, "java/util/Vector", "removeAllElements", "()V", ()).await?;
 
         let level: ClassInstanceRef<Level> = if root {
             jvm.get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
@@ -1157,8 +1204,14 @@ impl Logger {
         let level: ClassInstanceRef<Level> = jvm
             .get_static_field("java/util/logging/Level", field, "Ljava/util/logging/Level;")
             .await?;
-        jvm.invoke_virtual(&this, "log", "(Ljava/util/logging/Level;Ljava/lang/String;)V", (level, message))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/util/logging/Logger",
+            "log",
+            "(Ljava/util/logging/Level;Ljava/lang/String;)V",
+            (level, message),
+        )
+        .await
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1174,7 +1227,13 @@ impl Logger {
         resource_bundle_name: ClassInstanceRef<String>,
     ) -> Result<()> {
         if !jvm
-            .invoke_virtual::<_, bool>(&this, "isLoggable", "(Ljava/util/logging/Level;)Z", (level.clone(),))
+            .invoke_virtual::<_, bool>(
+                &this,
+                "java/util/logging/Logger",
+                "isLoggable",
+                "(Ljava/util/logging/Level;)Z",
+                (level.clone(),),
+            )
             .await?
         {
             return Ok(());
@@ -1205,6 +1264,7 @@ impl Logger {
             jvm.put_field(&mut record, "resourceBundleName", "Ljava/lang/String;", resource_bundle_name)
                 .await?;
         }
-        jvm.invoke_virtual(&this, "log", "(Ljava/util/logging/LogRecord;)V", (record,)).await
+        jvm.invoke_virtual(&this, "java/util/logging/Logger", "log", "(Ljava/util/logging/LogRecord;)V", (record,))
+            .await
     }
 }

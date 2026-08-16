@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -22,17 +22,22 @@ impl Throwable {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Throwable;)V", Self::init_with_cause, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Throwable;)V", Self::init_with_cause, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/lang/String;Ljava/lang/Throwable;)V",
                     Self::init_with_message_and_cause,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("getCause", "()Ljava/lang/Throwable;", Self::get_cause, Default::default()),
-                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, Default::default()),
+                JavaMethodProto::new(
+                    "getCause",
+                    "()Ljava/lang/Throwable;",
+                    Self::get_cause,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getLocalizedMessage",
                     "()Ljava/lang/String;",
@@ -43,27 +48,27 @@ impl Throwable {
                     "initCause",
                     "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
                     Self::init_cause,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "fillInStackTrace",
                     "()Ljava/lang/Throwable;",
                     Self::fill_in_stack_trace,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
-                JavaMethodProto::new("printStackTrace", "()V", Self::print_stack_trace, Default::default()),
+                JavaMethodProto::new("printStackTrace", "()V", Self::print_stack_trace, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "printStackTrace",
                     "(Ljava/io/PrintStream;)V",
                     Self::print_stack_trace_to_print_stream,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
                 JavaMethodProto::new(
                     "printStackTrace",
                     "(Ljava/io/PrintWriter;)V",
                     Self::print_stack_trace_to_print_writer,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
             ],
             fields: vec![
@@ -71,7 +76,7 @@ impl Throwable {
                 JavaFieldProto::new("cause", "Ljava/lang/Throwable;", Default::default()),
                 JavaFieldProto::new("stackTrace", "[Ljava/lang/String;", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -80,7 +85,9 @@ impl Throwable {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "fillInStackTrace", "()Ljava/lang/Throwable;", ()).await?;
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
+            .await?;
 
         Ok(())
     }
@@ -92,7 +99,9 @@ impl Throwable {
 
         jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "fillInStackTrace", "()Ljava/lang/Throwable;", ()).await?;
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
+            .await?;
 
         Ok(())
     }
@@ -105,12 +114,15 @@ impl Throwable {
         let message: ClassInstanceRef<String> = if cause.is_null() {
             None.into()
         } else {
-            jvm.invoke_virtual(&cause, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&cause, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
         jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
         jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "fillInStackTrace", "()Ljava/lang/Throwable;", ()).await?;
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
+            .await?;
 
         Ok(())
     }
@@ -129,7 +141,9 @@ impl Throwable {
         jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
         jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "fillInStackTrace", "()Ljava/lang/Throwable;", ()).await?;
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
+            .await?;
 
         Ok(())
     }
@@ -149,7 +163,8 @@ impl Throwable {
     async fn get_localized_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::getLocalizedMessage({this:?})");
 
-        jvm.invoke_virtual(&this, "getMessage", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&this, "java/lang/Throwable", "getMessage", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn init_cause(
@@ -184,7 +199,9 @@ impl Throwable {
 
         let err: ClassInstanceRef<PrintStream> = jvm.get_static_field("java/lang/System", "err", "Ljava/io/PrintStream;").await?;
 
-        let _: () = jvm.invoke_virtual(&this, "printStackTrace", "(Ljava/io/PrintStream;)V", (err,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/lang/Throwable", "printStackTrace", "(Ljava/io/PrintStream;)V", (err,))
+            .await?;
 
         Ok(())
     }
@@ -218,8 +235,12 @@ impl Throwable {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::toString({this:?})");
 
-        let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
-        let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;
+        let class = jvm
+            .invoke_virtual(&this, "java/lang/Object", "getClass", "()Ljava/lang/Class;", ())
+            .await?;
+        let class_name = jvm
+            .invoke_virtual(&class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
+            .await?;
 
         let message: ClassInstanceRef<String> = jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await?;
 
@@ -246,7 +267,9 @@ impl Throwable {
 
         // a malformed initCause could create a cycle, so cap the depth
         for _ in 0..32 {
-            let string: ClassInstanceRef<String> = jvm.invoke_virtual(&current, "toString", "()Ljava/lang/String;", ()).await?;
+            let string: ClassInstanceRef<String> = jvm
+                .invoke_virtual(&current, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?;
             let prefix: ClassInstanceRef<String> = match header {
                 Some(x) => {
                     let string = JavaLangString::to_rust_string(jvm, &string).await?;
@@ -255,7 +278,13 @@ impl Throwable {
                 None => string,
             };
             let _: () = jvm
-                .invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (prefix,))
+                .invoke_virtual(
+                    &stream_or_writer,
+                    &stream_or_writer.class_definition().name(),
+                    "println",
+                    "(Ljava/lang/String;)V",
+                    (prefix,),
+                )
                 .await?;
 
             let stack_trace: ClassInstanceRef<Array<ClassInstanceRef<String>>> = jvm.get_field(&current, "stackTrace", "[Ljava/lang/String;").await?;
@@ -266,11 +295,21 @@ impl Throwable {
                     let line = JavaLangString::to_rust_string(jvm, &line_ref).await?;
                     let line = format!("\tat {line}");
                     let line = JavaLangString::from_rust_string(jvm, &line).await?;
-                    let _: () = jvm.invoke_virtual(&stream_or_writer, "println", "(Ljava/lang/String;)V", (line,)).await?;
+                    let _: () = jvm
+                        .invoke_virtual(
+                            &stream_or_writer,
+                            &stream_or_writer.class_definition().name(),
+                            "println",
+                            "(Ljava/lang/String;)V",
+                            (line,),
+                        )
+                        .await?;
                 }
             }
 
-            let cause: ClassInstanceRef<Self> = jvm.invoke_virtual(&current, "getCause", "()Ljava/lang/Throwable;", ()).await?;
+            let cause: ClassInstanceRef<Self> = jvm
+                .invoke_virtual(&current, "java/lang/Throwable", "getCause", "()Ljava/lang/Throwable;", ())
+                .await?;
             if cause.is_null() {
                 break;
             }

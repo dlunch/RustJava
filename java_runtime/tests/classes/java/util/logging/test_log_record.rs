@@ -29,10 +29,18 @@ async fn log_record_initializes_event_metadata_and_round_trips_properties() -> R
         .await?
         .into();
 
-    let first_sequence: i64 = jvm.invoke_virtual(&first, "getSequenceNumber", "()J", ()).await?;
-    let second_sequence: i64 = jvm.invoke_virtual(&second, "getSequenceNumber", "()J", ()).await?;
+    let first_sequence: i64 = jvm
+        .invoke_virtual(&first, "java/util/logging/LogRecord", "getSequenceNumber", "()J", ())
+        .await?;
+    let second_sequence: i64 = jvm
+        .invoke_virtual(&second, "java/util/logging/LogRecord", "getSequenceNumber", "()J", ())
+        .await?;
     assert_eq!(second_sequence, first_sequence + 1);
-    assert!(jvm.invoke_virtual::<_, i64>(&first, "getMillis", "()J", ()).await? > 0);
+    assert!(
+        jvm.invoke_virtual::<_, i64>(&first, "java/util/logging/LogRecord", "getMillis", "()J", ())
+            .await?
+            > 0
+    );
 
     let logger_name = JavaLangString::from_rust_string(&jvm, "app").await?;
     let source_class = JavaLangString::from_rust_string(&jvm, "App").await?;
@@ -41,25 +49,57 @@ async fn log_record_initializes_event_metadata_and_round_trips_properties() -> R
     let parameter = JavaLangString::from_rust_string(&jvm, "value").await?;
     jvm.store_array(&mut parameters, 0, [parameter]).await?;
     let _: () = jvm
-        .invoke_virtual(&first, "setLoggerName", "(Ljava/lang/String;)V", (logger_name,))
+        .invoke_virtual(
+            &first,
+            "java/util/logging/LogRecord",
+            "setLoggerName",
+            "(Ljava/lang/String;)V",
+            (logger_name,),
+        )
         .await?;
     let _: () = jvm
-        .invoke_virtual(&first, "setSourceClassName", "(Ljava/lang/String;)V", (source_class,))
+        .invoke_virtual(
+            &first,
+            "java/util/logging/LogRecord",
+            "setSourceClassName",
+            "(Ljava/lang/String;)V",
+            (source_class,),
+        )
         .await?;
     let _: () = jvm
-        .invoke_virtual(&first, "setSourceMethodName", "(Ljava/lang/String;)V", (source_method,))
+        .invoke_virtual(
+            &first,
+            "java/util/logging/LogRecord",
+            "setSourceMethodName",
+            "(Ljava/lang/String;)V",
+            (source_method,),
+        )
         .await?;
     let _: () = jvm
-        .invoke_virtual(&first, "setParameters", "([Ljava/lang/Object;)V", (parameters,))
+        .invoke_virtual(
+            &first,
+            "java/util/logging/LogRecord",
+            "setParameters",
+            "([Ljava/lang/Object;)V",
+            (parameters,),
+        )
         .await?;
 
-    let actual: ClassInstanceRef<String> = jvm.invoke_virtual(&first, "getLoggerName", "()Ljava/lang/String;", ()).await?;
+    let actual: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&first, "java/util/logging/LogRecord", "getLoggerName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "app");
-    let actual: ClassInstanceRef<String> = jvm.invoke_virtual(&first, "getSourceClassName", "()Ljava/lang/String;", ()).await?;
+    let actual: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&first, "java/util/logging/LogRecord", "getSourceClassName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "App");
-    let actual: ClassInstanceRef<String> = jvm.invoke_virtual(&first, "getSourceMethodName", "()Ljava/lang/String;", ()).await?;
+    let actual: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&first, "java/util/logging/LogRecord", "getSourceMethodName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "run");
-    let actual: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&first, "getParameters", "()[Ljava/lang/Object;", ()).await?;
+    let actual: ClassInstanceRef<Array<Object>> = jvm
+        .invoke_virtual(&first, "java/util/logging/LogRecord", "getParameters", "()[Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(jvm.array_length(&actual).await?, 1);
 
     Ok(())

@@ -91,7 +91,11 @@ async fn standard_levels_have_java_values_and_parse_names_or_numbers() -> Result
         ("ALL", i32::MIN),
     ] {
         let level: ClassInstanceRef<Level> = jvm.get_static_field("java/util/logging/Level", name, "Ljava/util/logging/Level;").await?;
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&level, "intValue", "()I", ()).await?, value);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&level, "java/util/logging/Level", "intValue", "()I", ())
+                .await?,
+            value
+        );
         let parsed: ClassInstanceRef<Level> = jvm
             .invoke_static(
                 "java/util/logging/Level",
@@ -112,8 +116,14 @@ async fn standard_levels_have_java_values_and_parse_names_or_numbers() -> Result
             (custom_name,),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&custom, "intValue", "()I", ()).await?, 42);
-    let name: ClassInstanceRef<String> = jvm.invoke_virtual(&custom, "getName", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&custom, "java/util/logging/Level", "intValue", "()I", ())
+            .await?,
+        42
+    );
+    let name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&custom, "java/util/logging/Level", "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "42");
 
     Ok(())

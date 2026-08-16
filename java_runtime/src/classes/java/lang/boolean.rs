@@ -126,12 +126,12 @@ impl Boolean {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: bool = jvm.invoke_virtual(&this, "booleanValue", "()Z", ()).await?;
+        let value: bool = jvm.invoke_virtual(&this, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?.into())
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: bool = jvm.invoke_virtual(&this, "booleanValue", "()Z", ()).await?;
+        let value: bool = jvm.invoke_virtual(&this, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
         Ok(if value { 1231 } else { 1237 })
     }
 
@@ -140,8 +140,8 @@ impl Boolean {
             return Ok(false);
         }
 
-        let this_value: bool = jvm.invoke_virtual(&this, "booleanValue", "()Z", ()).await?;
-        let other_value: bool = jvm.invoke_virtual(&other, "booleanValue", "()Z", ()).await?;
+        let this_value: bool = jvm.invoke_virtual(&this, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
+        let other_value: bool = jvm.invoke_virtual(&other, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
         Ok(this_value == other_value)
     }
 

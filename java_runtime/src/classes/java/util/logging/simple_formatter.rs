@@ -55,9 +55,15 @@ impl SimpleFormatter {
             return Err(jvm.exception("java/lang/NullPointerException", "record").await);
         }
 
-        let source_class: ClassInstanceRef<String> = jvm.invoke_virtual(&record, "getSourceClassName", "()Ljava/lang/String;", ()).await?;
-        let source_method: ClassInstanceRef<String> = jvm.invoke_virtual(&record, "getSourceMethodName", "()Ljava/lang/String;", ()).await?;
-        let logger_name: ClassInstanceRef<String> = jvm.invoke_virtual(&record, "getLoggerName", "()Ljava/lang/String;", ()).await?;
+        let source_class: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getSourceClassName", "()Ljava/lang/String;", ())
+            .await?;
+        let source_method: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getSourceMethodName", "()Ljava/lang/String;", ())
+            .await?;
+        let logger_name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getLoggerName", "()Ljava/lang/String;", ())
+            .await?;
         let mut source = if source_class.is_null() {
             if logger_name.is_null() {
                 RustString::new()
@@ -74,12 +80,17 @@ impl SimpleFormatter {
             source.push_str(&JavaLangString::to_rust_string(jvm, &source_method).await?);
         }
 
-        let level: ClassInstanceRef<Level> = jvm.invoke_virtual(&record, "getLevel", "()Ljava/util/logging/Level;", ()).await?;
-        let level_name: ClassInstanceRef<String> = jvm.invoke_virtual(&level, "getName", "()Ljava/lang/String;", ()).await?;
+        let level: ClassInstanceRef<Level> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getLevel", "()Ljava/util/logging/Level;", ())
+            .await?;
+        let level_name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&level, "java/util/logging/Level", "getName", "()Ljava/lang/String;", ())
+            .await?;
         let level_name = JavaLangString::to_rust_string(jvm, &level_name).await?;
         let message: ClassInstanceRef<String> = jvm
             .invoke_virtual(
                 &this,
+                "java/util/logging/SimpleFormatter",
                 "formatMessage",
                 "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
                 (record.clone(),),
@@ -96,7 +107,9 @@ impl SimpleFormatter {
         } else {
             format!("{source} {level_name}: {message}\n")
         };
-        let thrown: ClassInstanceRef<Throwable> = jvm.invoke_virtual(&record, "getThrown", "()Ljava/lang/Throwable;", ()).await?;
+        let thrown: ClassInstanceRef<Throwable> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getThrown", "()Ljava/lang/Throwable;", ())
+            .await?;
         if !thrown.is_null() {
             let string_writer: ClassInstanceRef<StringWriter> = jvm.new_class("java/io/StringWriter", "()V", ()).await?.into();
             let print_writer: ClassInstanceRef<PrintWriter> = jvm
@@ -104,9 +117,17 @@ impl SimpleFormatter {
                 .await?
                 .into();
             let _: () = jvm
-                .invoke_virtual(&thrown, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+                .invoke_virtual(
+                    &thrown,
+                    "java/lang/Throwable",
+                    "printStackTrace",
+                    "(Ljava/io/PrintWriter;)V",
+                    (print_writer,),
+                )
                 .await?;
-            let trace: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+            let trace: ClassInstanceRef<String> = jvm
+                .invoke_virtual(&string_writer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?;
             formatted.push_str(&JavaLangString::to_rust_string(jvm, &trace).await?);
         }
 

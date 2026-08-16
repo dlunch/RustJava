@@ -185,7 +185,7 @@ impl CharArrayWriter {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "string is null").await);
         }
-        let source_length: i32 = jvm.invoke_virtual(&value, "length", "()I", ()).await?;
+        let source_length: i32 = jvm.invoke_virtual(&value, "java/lang/String", "length", "()I", ()).await?;
         if offset < 0 || length < 0 || offset > source_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
@@ -193,7 +193,13 @@ impl CharArrayWriter {
         Self::ensure_capacity(jvm, &mut this, count + length).await?;
         let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
         let _: () = jvm
-            .invoke_virtual(&value, "getChars", "(II[CI)V", (offset, offset + length, buffer, count))
+            .invoke_virtual(
+                &value,
+                "java/lang/String",
+                "getChars",
+                "(II[CI)V",
+                (offset, offset + length, buffer, count),
+            )
             .await?;
         jvm.put_field(&mut this, "count", "I", count + length).await
     }
@@ -211,7 +217,7 @@ impl CharArrayWriter {
         }
         let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&out, "write", "([CII)V", (buffer, 0, count)).await
+        jvm.invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (buffer, 0, count)).await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {

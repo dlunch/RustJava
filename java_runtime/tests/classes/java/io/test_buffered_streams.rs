@@ -33,7 +33,11 @@ async fn bio_01_bio_02_bio_03_buffered_input_stream_contract() -> Result<()> {
     jvm.store_array(&mut data, 0, [7i8]).await?;
     let input = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data,)).await?;
     let default_stream = jvm.new_class("java/io/BufferedInputStream", "(Ljava/io/InputStream;)V", (input,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&default_stream, "read", "()I", ()).await?, 7);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&default_stream, &default_stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        7
+    );
 
     let mut data = jvm.instantiate_array("B", 6).await?;
     jvm.store_array(&mut data, 0, [10i8, 20, 30, 40, 50, 60]).await?;
@@ -42,24 +46,71 @@ async fn bio_01_bio_02_bio_03_buffered_input_stream_contract() -> Result<()> {
         .new_class("java/io/BufferedInputStream", "(Ljava/io/InputStream;I)V", (input, 2))
         .await?;
 
-    assert!(jvm.invoke_virtual::<_, bool>(&stream, "markSupported", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "available", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "()I", ()).await?, 10);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&stream, &stream.class_definition().name(), "markSupported", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "available", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        10
+    );
 
-    let _: () = jvm.invoke_virtual(&stream, "mark", "(I)V", (4,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "mark", "(I)V", (4,))
+        .await?;
     let target = jvm.instantiate_array("B", 6).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "([BII)I", (target.clone(), 1, 3)).await?, 3);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "([BII)I", (target.clone(), 1, 3))
+            .await?,
+        3
+    );
     assert_eq!(jvm.load_array::<i8>(&target, 0, 6).await?, [0, 20, 30, 40, 0, 0]);
-    let _: () = jvm.invoke_virtual(&stream, "reset", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "()I", ()).await?, 20);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&stream, "skip", "(J)J", (2i64,)).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "()I", ()).await?, 50);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&stream, "skip", "(J)J", (-1i64,)).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "()I", ()).await?, 60);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "()I", ()).await?, -1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "([BII)I", (target.clone(), 0, 0)).await?, 0);
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "reset", "()V", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        20
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&stream, &stream.class_definition().name(), "skip", "(J)J", (2i64,))
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        50
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&stream, &stream.class_definition().name(), "skip", "(J)J", (-1i64,))
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        60
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "()I", ())
+            .await?,
+        -1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "([BII)I", (target.clone(), 0, 0))
+            .await?,
+        0
+    );
 
-    let invalid: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (target, -1, 1)).await;
+    let invalid: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (target, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = invalid else {
         panic!("invalid range must throw IndexOutOfBoundsException");
     };
@@ -72,60 +123,80 @@ async fn bio_01_bio_02_bio_03_buffered_input_stream_contract() -> Result<()> {
         .new_class("java/io/BufferedInputStream", "(Ljava/io/InputStream;I)V", (input, 2))
         .await?;
     let null_bytes: ClassInstanceRef<Array<i8>> = None.into();
-    let invalid: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (null_bytes, -1, 1)).await;
+    let invalid: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (null_bytes, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = invalid else {
         panic!("open stream must reject a null array with NullPointerException before validating the range");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    let _: () = jvm.invoke_virtual(&stream, "mark", "(I)V", (2,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "mark", "(I)V", (2,))
+        .await?;
     let bytes = jvm.instantiate_array("B", 3).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&stream, "read", "([BII)I", (bytes, 0, 3)).await?, 3);
-    let reset: Result<()> = jvm.invoke_virtual(&stream, "reset", "()V", ()).await;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&stream, &stream.class_definition().name(), "read", "([BII)I", (bytes, 0, 3))
+            .await?,
+        3
+    );
+    let reset: Result<()> = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "reset", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = reset else {
         panic!("reading past mark limit must invalidate the mark");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
 
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    let closed: Result<i32> = jvm.invoke_virtual(&stream, "read", "()I", ()).await;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "close", "()V", ()).await?;
+    let closed: Result<i32> = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "read", "()I", ()).await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("read after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    let closed: Result<i32> = jvm.invoke_virtual(&stream, "available", "()I", ()).await;
+    let closed: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "available", "()I", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("available after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let empty = jvm.instantiate_array("B", 0).await?;
-    let closed: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (empty, 0, 0)).await;
+    let closed: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (empty, 0, 0))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("zero-length read after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let null_bytes: ClassInstanceRef<Array<i8>> = None.into();
-    let closed: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (null_bytes, -1, 1)).await;
+    let closed: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (null_bytes, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("closed stream must reject a null array with IOException before validating arguments");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let bytes = jvm.instantiate_array("B", 1).await?;
-    let closed: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (bytes, -1, 1)).await;
+    let closed: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (bytes, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("closed stream must reject an invalid range with IOException before validating arguments");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    let closed: Result<i64> = jvm.invoke_virtual(&stream, "skip", "(J)J", (0i64,)).await;
+    let closed: Result<i64> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "skip", "(J)J", (0i64,))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("zero skip after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let position: i32 = jvm.get_field(&stream, "pos", "I").await?;
-    let _: () = jvm.invoke_virtual(&stream, "mark", "(I)V", (17,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "mark", "(I)V", (17,))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&stream, "marklimit", "I").await?, 17);
     assert_eq!(jvm.get_field::<i32>(&stream, "markpos", "I").await?, position);
-    let closed: Result<()> = jvm.invoke_virtual(&stream, "reset", "()V", ()).await;
+    let closed: Result<()> = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "reset", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("reset after a post-close mark must still throw IOException");
     };
@@ -160,9 +231,15 @@ async fn bio_04_bio_05_buffered_output_stream_contract() -> Result<()> {
     let default_stream = jvm
         .new_class("java/io/BufferedOutputStream", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&default_stream, "write", "(I)V", (8,)).await?;
-    let _: () = jvm.invoke_virtual(&default_stream, "flush", "()V", ()).await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&default_stream, &default_stream.class_definition().name(), "write", "(I)V", (8,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&default_stream, &default_stream.class_definition().name(), "flush", "()V", ())
+        .await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.load_array::<i8>(&bytes, 0, 1).await?, [8]);
 
     let output = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
@@ -170,42 +247,65 @@ async fn bio_04_bio_05_buffered_output_stream_contract() -> Result<()> {
         .new_class("java/io/BufferedOutputStream", "(Ljava/io/OutputStream;I)V", (output.clone(), 3))
         .await?;
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (1,))
+        .await?;
     let mut bytes = jvm.instantiate_array("B", 5).await?;
     jvm.store_array(&mut bytes, 0, [10i8, 20, 30, 40, 50]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes.clone(), 1, 2)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&output, "size", "()I", ()).await?, 0);
-
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes.clone(), 2, 3)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (bytes.clone(), 1, 2))
+        .await?;
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&output, "size", "()I", ()).await?,
+        jvm.invoke_virtual::<_, i32>(&output, &output.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
+
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (bytes.clone(), 2, 3))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&output, &output.class_definition().name(), "size", "()I", ())
+            .await?,
         6,
         "a large write must flush buffered bytes before writing through"
     );
 
-    let invalid: Result<()> = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes.clone(), -1, 1)).await;
+    let invalid: Result<()> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (bytes.clone(), -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = invalid else {
         panic!("invalid range must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes, 5, 0)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (bytes, 5, 0))
+        .await?;
 
-    let _: () = jvm.invoke_virtual(&stream, "flush", "()V", ()).await?;
-    let actual: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "flush", "()V", ()).await?;
+    let actual: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.load_array::<i8>(&actual, 0, 6).await?, [1, 20, 30, 30, 40, 50]);
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (99,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    let actual: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (99,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "close", "()V", ()).await?;
+    let actual: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.load_array::<i8>(&actual, 0, 7).await?, [1, 20, 30, 30, 40, 50, 99]);
 
-    let closed: Result<()> = jvm.invoke_virtual(&stream, "write", "(I)V", (100,)).await;
+    let closed: Result<()> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (100,))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("write after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    let closed: Result<()> = jvm.invoke_virtual(&stream, "flush", "()V", ()).await;
+    let closed: Result<()> = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "flush", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("flush after close must throw IOException");
     };
@@ -247,10 +347,21 @@ async fn bio_06_bio_07_buffered_writer_contract() -> Result<()> {
     let default_writer = jvm
         .new_class("java/io/BufferedWriter", "(Ljava/io/Writer;)V", (default_output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&default_writer, "write", "(I)V", ('V' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&default_writer, "flush", "()V", ()).await?;
-    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> =
-        jvm.invoke_virtual(&default_output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&default_writer, &default_writer.class_definition().name(), "write", "(I)V", ('V' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&default_writer, &default_writer.class_definition().name(), "flush", "()V", ())
+        .await?;
+    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> = jvm
+        .invoke_virtual(
+            &default_output,
+            &default_output.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "V");
 
     let output = jvm.new_class("java/io/StringWriter", "()V", ()).await?;
@@ -263,7 +374,9 @@ async fn bio_06_bio_07_buffered_writer_contract() -> Result<()> {
         output.identity(),
         "BufferedWriter must use its backing writer as Writer.lock"
     );
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", ('A' as i32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", ('A' as i32,))
+        .await?;
     let mut chars = jvm.instantiate_array("C", 5).await?;
     jvm.store_array(
         &mut chars,
@@ -271,52 +384,81 @@ async fn bio_06_bio_07_buffered_writer_contract() -> Result<()> {
         ['0' as JavaChar, 'B' as JavaChar, 'C' as JavaChar, 'D' as JavaChar, '4' as JavaChar],
     )
     .await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "([CII)V", (chars.clone(), 1, 2)).await?;
-    let value: ClassInstanceRef<java_runtime::classes::java::lang::String> =
-        jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "([CII)V", (chars.clone(), 1, 2))
+        .await?;
+    let value: ClassInstanceRef<java_runtime::classes::java::lang::String> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "");
 
     let value = JavaLangString::from_rust_string(&jvm, "xyZ!").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;II)V", (value, 1, 3)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "newLine", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &writer,
+            &writer.class_definition().name(),
+            "write",
+            "(Ljava/lang/String;II)V",
+            (value, 1, 3),
+        )
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "newLine", "()V", ())
+        .await?;
 
-    let invalid: Result<()> = jvm.invoke_virtual(&writer, "write", "([CII)V", (chars, -1, 1)).await;
+    let invalid: Result<()> = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "([CII)V", (chars, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = invalid else {
         panic!("invalid range must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
 
-    let _: () = jvm.invoke_virtual(&writer, "flush", "()V", ()).await?;
-    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> =
-        jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "flush", "()V", ()).await?;
+    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "ABCyZ!|");
 
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", ('Q' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
-    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> =
-        jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", ('Q' as i32,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
+    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "ABCyZ!|Q");
 
-    let closed: Result<()> = jvm.invoke_virtual(&writer, "write", "(I)V", ('R' as i32,)).await;
+    let closed: Result<()> = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", ('R' as i32,))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("write after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    let closed: Result<()> = jvm.invoke_virtual(&writer, "flush", "()V", ()).await;
+    let closed: Result<()> = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "flush", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("flush after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let null_chars: ClassInstanceRef<Array<JavaChar>> = None.into();
-    let closed: Result<()> = jvm.invoke_virtual(&writer, "write", "([CII)V", (null_chars, -1, 1)).await;
+    let closed: Result<()> = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "([CII)V", (null_chars, -1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("closed writer must reject a null array with IOException before validating arguments");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let null_string: ClassInstanceRef<java_runtime::classes::java::lang::String> = None.into();
     let closed: Result<()> = jvm
-        .invoke_virtual(&writer, "write", "(Ljava/lang/String;II)V", (null_string, -1, 1))
+        .invoke_virtual(
+            &writer,
+            &writer.class_definition().name(),
+            "write",
+            "(Ljava/lang/String;II)V",
+            (null_string, -1, 1),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("closed writer must reject a null string with IOException before validating arguments");
@@ -327,13 +469,18 @@ async fn bio_06_bio_07_buffered_writer_contract() -> Result<()> {
     let writer = jvm
         .new_class("java/io/BufferedWriter", "(Ljava/io/Writer;I)V", (output.clone(), 2))
         .await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", ('P' as i32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", ('P' as i32,))
+        .await?;
     let mut chars = jvm.instantiate_array("C", 3).await?;
     jvm.store_array(&mut chars, 0, ['A' as JavaChar, 'B' as JavaChar, 'C' as JavaChar])
         .await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "([CII)V", (chars, 0, 3)).await?;
-    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> =
-        jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "([CII)V", (chars, 0, 3))
+        .await?;
+    let actual: ClassInstanceRef<java_runtime::classes::java::lang::String> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &actual).await?,
         "PABC",

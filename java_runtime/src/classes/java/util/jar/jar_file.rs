@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -26,19 +27,19 @@ impl JarFile {
             parent_class: Some("java/util/zip/ZipFile"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getJarEntry",
                     "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
                     Self::get_jar_entry,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, Default::default()),
-                JavaMethodProto::new("getManifest", "()Ljava/util/jar/Manifest;", Self::get_manifest, Default::default()),
+                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getManifest", "()Ljava/util/jar/Manifest;", Self::get_manifest, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -73,7 +74,13 @@ impl JarFile {
         tracing::debug!("java.util.jar.JarFile::getJarEntry({this:?}, {name:?})");
 
         let zip_entry: ClassInstanceRef<ZipEntry> = jvm
-            .invoke_virtual(&this, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (name,))
+            .invoke_virtual(
+                &this,
+                "java/util/jar/JarFile",
+                "getEntry",
+                "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
+                (name,),
+            )
             .await?;
 
         if zip_entry.is_null() {
@@ -106,12 +113,19 @@ impl JarFile {
 
         let manifest_name = JavaLangString::from_rust_string(jvm, "META-INF/MANIFEST.MF").await?;
         let manifest_file: ClassInstanceRef<JarEntry> = jvm
-            .invoke_virtual(&this, "getJarEntry", "(Ljava/lang/String;)Ljava/util/jar/JarEntry;", (manifest_name,))
+            .invoke_virtual(
+                &this,
+                "java/util/jar/JarFile",
+                "getJarEntry",
+                "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
+                (manifest_name,),
+            )
             .await?;
 
         let input_stream: ClassInstanceRef<InputStream> = jvm
             .invoke_virtual(
                 &this,
+                "java/util/jar/JarFile",
                 "getInputStream",
                 "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;",
                 (manifest_file,),

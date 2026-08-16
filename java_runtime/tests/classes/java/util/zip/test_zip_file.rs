@@ -16,17 +16,31 @@ async fn test_zip_entry() -> Result<()> {
 
     let entry_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
     let entry = jvm
-        .invoke_virtual(&zip, "getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;", (entry_name,))
+        .invoke_virtual(
+            &zip,
+            &zip.class_definition().name(),
+            "getEntry",
+            "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
+            (entry_name,),
+        )
         .await?;
 
-    let size: i64 = jvm.invoke_virtual(&entry, "getSize", "()J", ()).await?;
+    let size: i64 = jvm.invoke_virtual(&entry, &entry.class_definition().name(), "getSize", "()J", ()).await?;
 
     let is = jvm
-        .invoke_virtual(&zip, "getInputStream", "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;", (entry,))
+        .invoke_virtual(
+            &zip,
+            &zip.class_definition().name(),
+            "getInputStream",
+            "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;",
+            (entry,),
+        )
         .await?;
 
     let buf = jvm.instantiate_array("B", size as _).await?;
-    let _: i32 = jvm.invoke_virtual(&is, "read", "([B)I", (buf.clone(),)).await?;
+    let _: i32 = jvm
+        .invoke_virtual(&is, &is.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; size as _];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data).unwrap();

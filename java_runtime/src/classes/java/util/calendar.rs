@@ -22,30 +22,45 @@ impl Calendar {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/io/Serializable", "java/lang/Cloneable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("getInstance", "()Ljava/util/Calendar;", Self::get_instance, MethodAccessFlags::STATIC),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new(
+                    "getInstance",
+                    "()Ljava/util/Calendar;",
+                    Self::get_instance,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                ),
                 JavaMethodProto::new(
                     "getInstance",
                     "(Ljava/util/TimeZone;)Ljava/util/Calendar;",
                     Self::get_instance_with_time_zone,
-                    MethodAccessFlags::STATIC,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
-                JavaMethodProto::new("setTime", "(Ljava/util/Date;)V", Self::set_time, Default::default()),
-                JavaMethodProto::new("getTime", "()Ljava/util/Date;", Self::get_time, Default::default()),
-                JavaMethodProto::new("setTimeInMillis", "(J)V", Self::set_time_in_millis, Default::default()),
-                JavaMethodProto::new("getTimeInMillis", "()J", Self::get_time_in_millis, Default::default()),
-                JavaMethodProto::new("getTimeZone", "()Ljava/util/TimeZone;", Self::get_time_zone, Default::default()),
-                JavaMethodProto::new("setTimeZone", "(Ljava/util/TimeZone;)V", Self::set_time_zone, Default::default()),
-                JavaMethodProto::new("isLenient", "()Z", Self::is_lenient, Default::default()),
-                JavaMethodProto::new("setLenient", "(Z)V", Self::set_lenient, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("before", "(Ljava/lang/Object;)Z", Self::before, Default::default()),
-                JavaMethodProto::new("after", "(Ljava/lang/Object;)Z", Self::after, Default::default()),
-                JavaMethodProto::new("set", "(II)V", Self::set, Default::default()),
-                JavaMethodProto::new("get", "(I)I", Self::get, Default::default()),
-                JavaMethodProto::new_abstract("computeTime", "()V", Default::default()),
-                JavaMethodProto::new_abstract("computeFields", "()V", Default::default()),
+                JavaMethodProto::new(
+                    "setTime",
+                    "(Ljava/util/Date;)V",
+                    Self::set_time,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "getTime",
+                    "()Ljava/util/Date;",
+                    Self::get_time,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("setTimeInMillis", "(J)V", Self::set_time_in_millis, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getTimeInMillis", "()J", Self::get_time_in_millis, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getTimeZone", "()Ljava/util/TimeZone;", Self::get_time_zone, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setTimeZone", "(Ljava/util/TimeZone;)V", Self::set_time_zone, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isLenient", "()Z", Self::is_lenient, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setLenient", "(Z)V", Self::set_lenient, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("before", "(Ljava/lang/Object;)Z", Self::before, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("after", "(Ljava/lang/Object;)Z", Self::after, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("set", "(II)V", Self::set, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("get", "(I)I", Self::get, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new_abstract("computeTime", "()V", MethodAccessFlags::PROTECTED | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("computeFields", "()V", MethodAccessFlags::PROTECTED | MethodAccessFlags::ABSTRACT),
             ],
             fields: vec![
                 JavaFieldProto::new("time", "J", Default::default()),
@@ -53,7 +68,7 @@ impl Calendar {
                 JavaFieldProto::new("timeZone", "Ljava/util/TimeZone;", Default::default()),
                 JavaFieldProto::new("lenient", "Z", Default::default()),
             ],
-            access_flags: ClassAccessFlags::ABSTRACT,
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }
     }
 
@@ -107,10 +122,10 @@ impl Calendar {
             return Err(jvm.exception("java/lang/NullPointerException", "date").await);
         }
 
-        let time: i64 = jvm.invoke_virtual(&date, "getTime", "()J", ()).await?;
+        let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
         jvm.put_field(&mut this, "time", "J", time).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "computeFields", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await?;
 
         Ok(())
     }
@@ -128,7 +143,7 @@ impl Calendar {
         tracing::debug!("java.util.Calendar::setTimeInMillis({this:?}, {time:?})");
 
         jvm.put_field(&mut this, "time", "J", time).await?;
-        jvm.invoke_virtual(&this, "computeFields", "()V", ()).await
+        jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
     }
 
     async fn get_time_in_millis(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
@@ -147,7 +162,7 @@ impl Calendar {
             return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
         }
         jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
-        jvm.invoke_virtual(&this, "computeFields", "()V", ()).await
+        jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
     }
 
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -182,15 +197,22 @@ impl Calendar {
 
         let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
         let other_time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&other, "timeZone", "Ljava/util/TimeZone;").await?;
-        let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
-        let other_raw_offset: i32 = jvm.invoke_virtual(&other_time_zone, "getRawOffset", "()I", ()).await?;
+        let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
+        let other_raw_offset: i32 = jvm
+            .invoke_virtual(&other_time_zone, "java/util/TimeZone", "getRawOffset", "()I", ())
+            .await?;
         if raw_offset != other_raw_offset {
             return Ok(false);
         }
 
-        let id: ClassInstanceRef<String> = jvm.invoke_virtual(&time_zone, "getID", "()Ljava/lang/String;", ()).await?;
-        let other_id: ClassInstanceRef<String> = jvm.invoke_virtual(&other_time_zone, "getID", "()Ljava/lang/String;", ()).await?;
-        jvm.invoke_virtual(&id, "equals", "(Ljava/lang/Object;)Z", (other_id,)).await
+        let id: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&time_zone, "java/util/TimeZone", "getID", "()Ljava/lang/String;", ())
+            .await?;
+        let other_id: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&other_time_zone, "java/util/TimeZone", "getID", "()Ljava/lang/String;", ())
+            .await?;
+        jvm.invoke_virtual(&id, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other_id,))
+            .await
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -198,9 +220,11 @@ impl Calendar {
 
         let time: i64 = jvm.get_field(&this, "time", "J").await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
-        let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
-        let id: ClassInstanceRef<String> = jvm.invoke_virtual(&time_zone, "getID", "()Ljava/lang/String;", ()).await?;
-        let id_hash: i32 = jvm.invoke_virtual(&id, "hashCode", "()I", ()).await?;
+        let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
+        let id: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&time_zone, "java/util/TimeZone", "getID", "()Ljava/lang/String;", ())
+            .await?;
+        let id_hash: i32 = jvm.invoke_virtual(&id, "java/lang/Object", "hashCode", "()I", ()).await?;
         let lenient: bool = jvm.get_field(&this, "lenient", "Z").await?;
         Ok((time ^ ((time as u64 >> 32) as i64)) as i32 ^ raw_offset ^ id_hash ^ if lenient { 1 } else { 0 })
     }
@@ -241,8 +265,8 @@ impl Calendar {
         let mut fields = jvm.get_field(&this, "fields", "[I").await?;
         jvm.store_array(&mut fields, field as usize, vec![value]).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "computeTime", "()V", ()).await?;
-        let _: () = jvm.invoke_virtual(&this, "computeFields", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeTime", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await?;
 
         Ok(())
     }

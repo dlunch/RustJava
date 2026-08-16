@@ -324,6 +324,6 @@ impl Math {
             jvm.put_static_field("java/lang/Math", "randomNumberGenerator", "Ljava/util/Random;", random.clone())
                 .await?;
         }
-        jvm.invoke_virtual(&random, "nextDouble", "()D", ()).await
+        jvm.invoke_virtual(&random, "java/util/Random", "nextDouble", "()D", ()).await
     }
 }

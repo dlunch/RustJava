@@ -303,10 +303,15 @@ impl AbstractStringBuilder {
         if jvm.is_instance(&***sequence, "java/lang/String") {
             return JavaLangString::to_utf16(jvm, sequence).await;
         }
-        let length: i32 = jvm.invoke_virtual(sequence, "length", "()I", ()).await?;
+        let length: i32 = jvm
+            .invoke_virtual(sequence, &sequence.class_definition().name(), "length", "()I", ())
+            .await?;
         let mut characters = Vec::with_capacity(length as usize);
         for index in 0..length {
-            characters.push(jvm.invoke_virtual(sequence, "charAt", "(I)C", (index,)).await?);
+            characters.push(
+                jvm.invoke_virtual(sequence, &sequence.class_definition().name(), "charAt", "(I)C", (index,))
+                    .await?,
+            );
         }
         Ok(characters)
     }
@@ -506,10 +511,17 @@ impl AbstractStringBuilder {
         let string: ClassInstanceRef<String> = if object.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&object, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&object, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_string(
@@ -537,10 +549,17 @@ impl AbstractStringBuilder {
         let string: ClassInstanceRef<String> = if buffer.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_char_sequence(
@@ -583,8 +602,14 @@ impl AbstractStringBuilder {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
         let length = jvm.array_length(&array).await? as i32;
-        jvm.invoke_virtual(&this, "append", "([CII)Ljava/lang/AbstractStringBuilder;", (array, 0, length))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "([CII)Ljava/lang/AbstractStringBuilder;",
+            (array, 0, length),
+        )
+        .await
     }
 
     async fn append_char_array_range(
@@ -610,8 +635,14 @@ impl AbstractStringBuilder {
 
     async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
         let string = JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
@@ -623,30 +654,54 @@ impl AbstractStringBuilder {
 
     async fn append_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<ClassInstanceRef<Self>> {
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<Self>> {
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<ClassInstanceRef<Self>> {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Float", "toString", "(F)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<ClassInstanceRef<Self>> {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Double", "toString", "(D)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_code_point(
@@ -714,7 +769,14 @@ impl AbstractStringBuilder {
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, start: i32) -> Result<ClassInstanceRef<String>> {
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (start, count)).await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "substring",
+            "(II)Ljava/lang/String;",
+            (start, count),
+        )
+        .await
     }
 
     async fn substring_range(
@@ -742,7 +804,14 @@ impl AbstractStringBuilder {
         start: i32,
         end: i32,
     ) -> Result<ClassInstanceRef<CharSequence>> {
-        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (start, end)).await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "substring",
+            "(II)Ljava/lang/String;",
+            (start, end),
+        )
+        .await
     }
 
     async fn insert_char_array_range(
@@ -776,10 +845,12 @@ impl AbstractStringBuilder {
         let string: ClassInstanceRef<String> = if object.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&object, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&object, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -814,8 +885,14 @@ impl AbstractStringBuilder {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
         }
         let length = jvm.array_length(&array).await? as i32;
-        jvm.invoke_virtual(&this, "insert", "(I[CII)Ljava/lang/AbstractStringBuilder;", (offset, array, 0, length))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "insert",
+            "(I[CII)Ljava/lang/AbstractStringBuilder;",
+            (offset, array, 0, length),
+        )
+        .await
     }
 
     async fn insert_char_sequence(
@@ -857,6 +934,7 @@ impl AbstractStringBuilder {
         let string = JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?;
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -879,6 +957,7 @@ impl AbstractStringBuilder {
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -890,6 +969,7 @@ impl AbstractStringBuilder {
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -909,6 +989,7 @@ impl AbstractStringBuilder {
             .await?;
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -928,6 +1009,7 @@ impl AbstractStringBuilder {
             .await?;
         jvm.invoke_virtual(
             &this,
+            "java/lang/AbstractStringBuilder",
             "insert",
             "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
             (offset, string),
@@ -936,7 +1018,8 @@ impl AbstractStringBuilder {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<i32> {
-        jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/String;I)I", (string, 0)).await
+        jvm.invoke_virtual(&this, "java/lang/AbstractStringBuilder", "indexOf", "(Ljava/lang/String;I)I", (string, 0))
+            .await
     }
 
     async fn index_of_from(
@@ -966,7 +1049,14 @@ impl AbstractStringBuilder {
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<i32> {
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/String;I)I", (string, count)).await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/AbstractStringBuilder",
+            "lastIndexOf",
+            "(Ljava/lang/String;I)I",
+            (string, count),
+        )
+        .await
     }
 
     async fn last_index_of_from(

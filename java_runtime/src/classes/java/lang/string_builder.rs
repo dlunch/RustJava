@@ -397,7 +397,9 @@ impl StringBuilder {
         if sequence.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "seq is null").await);
         }
-        let length: i32 = jvm.invoke_virtual(&sequence, "length", "()I", ()).await?;
+        let length: i32 = jvm
+            .invoke_virtual(&sequence, &sequence.class_definition().name(), "length", "()I", ())
+            .await?;
         let _: () = jvm
             .invoke_special(&this, "java/lang/AbstractStringBuilder", "<init>", "(I)V", (length + 16,))
             .await?;

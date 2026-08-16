@@ -120,7 +120,7 @@ impl LinkedHashMap {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
         }
-        let size: i32 = jvm.invoke_virtual(&map, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await?;
         let capacity = size.saturating_mul(2).max(DEFAULT_INITIAL_CAPACITY);
         let _: () = jvm
             .invoke_special(
@@ -132,13 +132,21 @@ impl LinkedHashMap {
             )
             .await?;
 
-        let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entry_set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let entry_set: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&entry_set, &entry_set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let count = jvm.array_length(&entries).await?;
         let mut hash_map: ClassInstanceRef<HashMap> = ClassInstanceRef::new(this.instance);
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                .await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
             HashMap::put_for_create(jvm, &mut hash_map, key, value).await?;
         }
 
@@ -174,7 +182,8 @@ impl LinkedHashMap {
             } else if entry_value.is_null() {
                 false
             } else {
-                jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (entry_value,)).await?
+                jvm.invoke_virtual(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (entry_value,))
+                    .await?
             };
             if equal {
                 return Ok(true);
@@ -191,7 +200,9 @@ impl LinkedHashMap {
         if entry.is_null() {
             return Ok(None.into());
         }
-        let _: () = jvm.invoke_virtual(&entry, "onAccess", "(Ljava/util/HashMap;)V", (map,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&entry, "java/util/HashMap$Entry", "onAccess", "(Ljava/util/HashMap;)V", (map,))
+            .await?;
 
         jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
     }
@@ -260,6 +271,7 @@ impl LinkedHashMap {
         let _: () = jvm
             .invoke_virtual(
                 &this,
+                "java/util/HashMap",
                 "storeNewEntry",
                 "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                 (hash, key, value, bucket_index),
@@ -270,12 +282,24 @@ impl LinkedHashMap {
         let eldest: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
         let eldest_entry: ClassInstanceRef<Object> = ClassInstanceRef::new(eldest.instance.clone());
         if jvm
-            .invoke_virtual::<_, bool>(&this, "removeEldestEntry", "(Ljava/util/Map$Entry;)Z", (eldest_entry,))
+            .invoke_virtual::<_, bool>(
+                &this,
+                "java/util/LinkedHashMap",
+                "removeEldestEntry",
+                "(Ljava/util/Map$Entry;)Z",
+                (eldest_entry,),
+            )
             .await?
         {
             let key: ClassInstanceRef<Object> = jvm.get_field(&eldest, "key", "Ljava/lang/Object;").await?;
             let _: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&this, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+                .invoke_virtual(
+                    &this,
+                    "java/util/LinkedHashMap",
+                    "remove",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    (key,),
+                )
                 .await?;
         } else {
             let threshold: i32 = jvm.get_field(&this, "threshold", "I").await?;

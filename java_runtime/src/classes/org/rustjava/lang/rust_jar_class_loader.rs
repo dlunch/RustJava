@@ -1,6 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -18,8 +19,18 @@ impl RustJarClassLoader {
             parent_class: Some("java/lang/ClassLoader"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/lang/String;Ljava/lang/ClassLoader;)V", Self::init, Default::default()),
-                JavaMethodProto::new("findClass", "(Ljava/lang/String;)Ljava/lang/Class;", Self::find_class, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "([Ljava/lang/String;Ljava/lang/ClassLoader;)V",
+                    Self::init,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "findClass",
+                    "(Ljava/lang/String;)Ljava/lang/Class;",
+                    Self::find_class,
+                    MethodAccessFlags::PROTECTED,
+                ),
             ],
             fields: vec![JavaFieldProto::new("classPaths", "[Ljava/lang/String;", Default::default())],
             access_flags: Default::default(),

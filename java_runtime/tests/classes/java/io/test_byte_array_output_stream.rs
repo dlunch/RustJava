@@ -43,13 +43,25 @@ async fn test_byte_array_output_stream() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let stream = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'H' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'e' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'l' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'l' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'o' as i32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'H' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'e' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'l' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'l' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'o' as i32,))
+        .await?;
 
-    let buf = jvm.invoke_virtual(&stream, "toByteArray", "()[B", ()).await?;
+    let buf = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
 
     let mut bytes = vec![0; 5];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut bytes)?;
@@ -65,13 +77,17 @@ async fn null_byte_arrays_throw_null_pointer_exception() -> Result<()> {
     let stream = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
     let null: ClassInstanceRef<Array<i8>> = None.into();
 
-    let result: Result<()> = jvm.invoke_virtual(&stream, "write", "([B)V", (null.clone(),)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([B)V", (null.clone(),))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null write buffer must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
-    let result: Result<()> = jvm.invoke_virtual(&stream, "write", "([BII)V", (null, 0, 0)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (null, 0, 0))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null ranged write buffer must throw NullPointerException");
     };
@@ -87,26 +103,46 @@ async fn baos_01_write_to_and_named_encoding_use_only_logical_count_after_close(
     let stream = jvm.new_class("java/io/ByteArrayOutputStream", "(I)V", (16,)).await?;
     let mut bytes = jvm.instantiate_array("B", 2).await?;
     jvm.store_array(&mut bytes, 0, [b'O' as i8, b'K' as i8]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes, 0, 2)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "([BII)V", (bytes, 0, 2))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "close", "()V", ()).await?;
 
     let destination = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
     let destination_output: ClassInstanceRef<OutputStream> = destination.clone().into();
     let _: () = jvm
-        .invoke_virtual(&stream, "writeTo", "(Ljava/io/OutputStream;)V", (destination_output,))
+        .invoke_virtual(
+            &stream,
+            &stream.class_definition().name(),
+            "writeTo",
+            "(Ljava/io/OutputStream;)V",
+            (destination_output,),
+        )
         .await?;
-    let copied: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&destination, "toByteArray", "()[B", ()).await?;
+    let copied: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&destination, &destination.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.array_length(&copied).await?, 2);
     assert_eq!(jvm.load_array::<i8>(&copied, 0, 2).await?, [b'O' as i8, b'K' as i8]);
 
     let encoding = JavaLangString::from_rust_string(&jvm, "UTF-8").await?;
     let text = jvm
-        .invoke_virtual(&stream, "toString", "(Ljava/lang/String;)Ljava/lang/String;", (encoding,))
+        .invoke_virtual(
+            &stream,
+            &stream.class_definition().name(),
+            "toString",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (encoding,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "OK");
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (b'!' as i32,)).await?;
-    let text = jvm.invoke_virtual(&stream, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'!' as i32,))
+        .await?;
+    let text = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "OK!");
 
     Ok(())
@@ -118,7 +154,15 @@ async fn baos_01_rejects_null_and_unknown_encoding() -> Result<()> {
     let stream = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
 
     let null_output: ClassInstanceRef<OutputStream> = None.into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "writeTo", "(Ljava/io/OutputStream;)V", (null_output,)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(
+            &stream,
+            &stream.class_definition().name(),
+            "writeTo",
+            "(Ljava/io/OutputStream;)V",
+            (null_output,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null output must throw NullPointerException");
     };
@@ -128,6 +172,7 @@ async fn baos_01_rejects_null_and_unknown_encoding() -> Result<()> {
     let result = jvm
         .invoke_virtual::<_, ClassInstanceRef<java_runtime::classes::java::lang::String>>(
             &stream,
+            &stream.class_definition().name(),
             "toString",
             "(Ljava/lang/String;)Ljava/lang/String;",
             (null_encoding,),
@@ -142,6 +187,7 @@ async fn baos_01_rejects_null_and_unknown_encoding() -> Result<()> {
     let result = jvm
         .invoke_virtual::<_, ClassInstanceRef<java_runtime::classes::java::lang::String>>(
             &stream,
+            &stream.class_definition().name(),
             "toString",
             "(Ljava/lang/String;)Ljava/lang/String;",
             (unknown,),

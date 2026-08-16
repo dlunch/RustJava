@@ -67,12 +67,14 @@ impl Format {
         let buffer: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/Format",
                 "format",
                 "(Ljava/lang/Object;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
                 (object, buffer, position),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn parse_object(
@@ -89,14 +91,17 @@ impl Format {
         let result: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/Format",
                 "parseObject",
                 "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Object;",
                 (source, position.clone()),
             )
             .await?;
-        let index: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
+        let index: i32 = jvm.invoke_virtual(&position, "java/text/ParsePosition", "getIndex", "()I", ()).await?;
         if index == 0 {
-            let error_index: i32 = jvm.invoke_virtual(&position, "getErrorIndex", "()I", ()).await?;
+            let error_index: i32 = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+                .await?;
             let message = JavaLangString::from_rust_string(jvm, "Format.parseObject(String) failed").await?;
             let exception: ClassInstanceRef<ParseException> = jvm
                 .new_class("java/text/ParseException", "(Ljava/lang/String;I)V", (message, error_index))

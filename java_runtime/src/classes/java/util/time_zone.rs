@@ -110,7 +110,9 @@ impl TimeZone {
                 .await?;
         }
 
-        let cloned: ClassInstanceRef<Object> = jvm.invoke_virtual(&default, "clone", "()Ljava/lang/Object;", ()).await?;
+        let cloned: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&default, "java/lang/Object", "clone", "()Ljava/lang/Object;", ())
+            .await?;
         Ok(ClassInstanceRef::new(cloned.instance))
     }
 
@@ -123,7 +125,9 @@ impl TimeZone {
                 .await?
                 .into()
         } else {
-            let cloned: ClassInstanceRef<Object> = jvm.invoke_virtual(&timezone, "clone", "()Ljava/lang/Object;", ()).await?;
+            let cloned: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&timezone, "java/lang/Object", "clone", "()Ljava/lang/Object;", ())
+                .await?;
             ClassInstanceRef::new(cloned.instance)
         };
         jvm.put_static_field("java/util/TimeZone", "defaultTimeZone", "Ljava/util/TimeZone;", stored)

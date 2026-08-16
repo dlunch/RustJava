@@ -120,7 +120,9 @@ impl BufferedWriter {
         }
         let next_char: i32 = jvm.get_field(this, "nextChar", "I").await?;
         if next_char > 0 {
-            let _: () = jvm.invoke_virtual(&out, "write", "([CII)V", (buffer, 0, next_char)).await?;
+            let _: () = jvm
+                .invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (buffer, 0, next_char))
+                .await?;
             jvm.put_field(this, "nextChar", "I", 0).await?;
         }
         Ok(())
@@ -189,7 +191,9 @@ impl BufferedWriter {
         let n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
         if length >= n_chars {
             Self::flush_buffer(jvm, &mut this).await?;
-            return jvm.invoke_virtual(&out, "write", "([CII)V", (chars, offset, length)).await;
+            return jvm
+                .invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (chars, offset, length))
+                .await;
         }
 
         let mut source_position = offset;
@@ -245,7 +249,7 @@ impl BufferedWriter {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "string is null").await);
         }
-        let string_length: i32 = jvm.invoke_virtual(&value, "length", "()I", ()).await?;
+        let string_length: i32 = jvm.invoke_virtual(&value, "java/lang/String", "length", "()I", ()).await?;
         if offset < 0 || length < 0 || offset > string_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
@@ -259,6 +263,7 @@ impl BufferedWriter {
             let _: () = jvm
                 .invoke_virtual(
                     &value,
+                    "java/lang/String",
                     "getChars",
                     "(II[CI)V",
                     (source_position, source_position + copied, buffer, next_char),
@@ -283,7 +288,7 @@ impl BufferedWriter {
         tracing::debug!("java.io.BufferedWriter::newLine({this:?})");
 
         let line_separator: ClassInstanceRef<String> = jvm.get_field(&this, "lineSeparator", "Ljava/lang/String;").await?;
-        let length: i32 = jvm.invoke_virtual(&line_separator, "length", "()I", ()).await?;
+        let length: i32 = jvm.invoke_virtual(&line_separator, "java/lang/String", "length", "()I", ()).await?;
         Self::write_string_locked(jvm, this, line_separator, 0, length).await
     }
 
@@ -297,7 +302,7 @@ impl BufferedWriter {
 
         Self::flush_buffer(jvm, &mut this).await?;
         let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
-        jvm.invoke_virtual(&out, "flush", "()V", ()).await
+        jvm.invoke_virtual(&out, "java/io/Writer", "flush", "()V", ()).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
@@ -313,7 +318,7 @@ impl BufferedWriter {
             return Ok(());
         }
         let flush_result = Self::flush_buffer(jvm, &mut this).await;
-        let close_result: Result<()> = jvm.invoke_virtual(&out, "close", "()V", ()).await;
+        let close_result: Result<()> = jvm.invoke_virtual(&out, "java/io/Writer", "close", "()V", ()).await;
         let null_writer: ClassInstanceRef<Writer> = None.into();
         let null_buffer: ClassInstanceRef<Array<JavaChar>> = None.into();
         let clear_out_result = jvm.put_field(&mut this, "out", "Ljava/io/Writer;", null_writer).await;

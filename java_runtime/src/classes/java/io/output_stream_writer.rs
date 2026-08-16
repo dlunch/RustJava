@@ -1,6 +1,7 @@
 use alloc::{string::String as RustString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -21,16 +22,16 @@ impl OutputStreamWriter {
             parent_class: Some("java/io/Writer"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/io/OutputStream;Ljava/lang/String;)V",
                     Self::init_with_encoding,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
-                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
                 JavaFieldProto::new("out", "Ljava/io/OutputStream;", Default::default()),
@@ -38,7 +39,7 @@ impl OutputStreamWriter {
                 JavaFieldProto::new("pendingHighSurrogate", "C", Default::default()),
                 JavaFieldProto::new("hasPendingHighSurrogate", "Z", Default::default()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -139,13 +140,13 @@ impl OutputStreamWriter {
         jvm.store_array(&mut java_bytes, 0, bytes.into_iter().map(|value| value as i8)).await?;
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "write", "([B)V", (java_bytes,)).await
+        jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (java_bytes,)).await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::flush({this:?})");
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "flush", "()V", ()).await
+        jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
@@ -156,10 +157,12 @@ impl OutputStreamWriter {
             jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", false).await?;
             let mut replacement = jvm.instantiate_array("C", 1).await?;
             jvm.store_array(&mut replacement, 0, ['?' as JavaChar]).await?;
-            let _: () = jvm.invoke_virtual(&this, "write", "([CII)V", (replacement, 0, 1)).await?;
+            let _: () = jvm
+                .invoke_virtual(&this, "java/io/OutputStreamWriter", "write", "([CII)V", (replacement, 0, 1))
+                .await?;
         }
 
         let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        jvm.invoke_virtual(&out, "close", "()V", ()).await
+        jvm.invoke_virtual(&out, "java/io/OutputStream", "close", "()V", ()).await
     }
 }

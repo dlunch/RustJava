@@ -140,7 +140,9 @@ async fn test_runtime_api_exception_and_error_message_constructors() -> Result<(
     ] {
         let message = JavaLangString::from_rust_string(&jvm, class_name).await?;
         let instance = jvm.new_class(class_name, "(Ljava/lang/String;)V", (message,)).await?;
-        let message: ClassInstanceRef<String> = jvm.invoke_virtual(&instance, "getMessage", "()Ljava/lang/String;", ()).await?;
+        let message: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&instance, &instance.class_definition().name(), "getMessage", "()Ljava/lang/String;", ())
+            .await?;
 
         assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, class_name);
     }

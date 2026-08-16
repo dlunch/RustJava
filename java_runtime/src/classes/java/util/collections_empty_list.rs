@@ -79,7 +79,7 @@ impl CollectionsEmptyList {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/List") {
             return Ok(false);
         }
-        jvm.invoke_virtual(&other, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&other, &other.class_definition().name(), "isEmpty", "()Z", ()).await
     }
 
     async fn hash_code(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<i32> {

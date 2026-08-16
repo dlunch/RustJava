@@ -37,7 +37,9 @@ async fn named_loggers_are_reused_and_reparented_when_ancestor_is_added_late() -
             (parent_name,),
         )
         .await?;
-    let actual: ClassInstanceRef<Logger> = jvm.invoke_virtual(&child, "getParent", "()Ljava/util/logging/Logger;", ()).await?;
+    let actual: ClassInstanceRef<Logger> = jvm
+        .invoke_virtual(&child, "java/util/logging/Logger", "getParent", "()Ljava/util/logging/Logger;", ())
+        .await?;
     assert_eq!(actual.identity(), parent.identity());
     Ok(())
 }
@@ -64,7 +66,9 @@ async fn existing_logger_preserves_and_validates_resource_bundle_name() -> Resul
         )
         .await?;
     assert_eq!(logger.identity(), bundled.identity());
-    let actual: ClassInstanceRef<String> = jvm.invoke_virtual(&logger, "getResourceBundleName", "()Ljava/lang/String;", ()).await?;
+    let actual: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&logger, "java/util/logging/Logger", "getResourceBundleName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "messages");
 
     let same: ClassInstanceRef<Logger> = jvm
@@ -103,7 +107,9 @@ async fn logger_inherits_levels_and_publishes_convenience_methods() -> Result<()
             (JavaLangString::from_rust_string(&jvm, "output.test").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&logger, "setUseParentHandlers", "(Z)V", (false,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&logger, "java/util/logging/Logger", "setUseParentHandlers", "(Z)V", (false,))
+        .await?;
 
     let output: ClassInstanceRef<ByteArrayOutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
     let formatter: ClassInstanceRef<Formatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
@@ -116,18 +122,31 @@ async fn logger_inherits_levels_and_publishes_convenience_methods() -> Result<()
         .await?
         .into();
     let _: () = jvm
-        .invoke_virtual(&logger, "addHandler", "(Ljava/util/logging/Handler;)V", (handler.clone(),))
+        .invoke_virtual(
+            &logger,
+            "java/util/logging/Logger",
+            "addHandler",
+            "(Ljava/util/logging/Handler;)V",
+            (handler.clone(),),
+        )
         .await?;
 
     let warning: ClassInstanceRef<Level> = jvm
         .get_static_field("java/util/logging/Level", "WARNING", "Ljava/util/logging/Level;")
         .await?;
     let _: () = jvm
-        .invoke_virtual(&logger, "setLevel", "(Ljava/util/logging/Level;)V", (warning,))
+        .invoke_virtual(
+            &logger,
+            "java/util/logging/Logger",
+            "setLevel",
+            "(Ljava/util/logging/Level;)V",
+            (warning,),
+        )
         .await?;
     let _: () = jvm
         .invoke_virtual(
             &logger,
+            "java/util/logging/Logger",
             "info",
             "(Ljava/lang/String;)V",
             (JavaLangString::from_rust_string(&jvm, "hidden").await?,),
@@ -136,14 +155,17 @@ async fn logger_inherits_levels_and_publishes_convenience_methods() -> Result<()
     let _: () = jvm
         .invoke_virtual(
             &logger,
+            "java/util/logging/Logger",
             "warning",
             "(Ljava/lang/String;)V",
             (JavaLangString::from_rust_string(&jvm, "visible").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&handler, "flush", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&handler, "java/util/logging/Handler", "flush", "()V", ()).await?;
 
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toString", "()Ljava/lang/String;", ())
+        .await?;
     let text = JavaLangString::to_rust_string(&jvm, &text).await?;
     assert!(!text.contains("hidden"));
     assert!(text.contains("visible"));
@@ -169,7 +191,9 @@ async fn logger_publishes_to_parent_handlers_until_propagation_is_disabled() -> 
             (JavaLangString::from_rust_string(&jvm, "propagation.child").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&parent, "setUseParentHandlers", "(Z)V", (false,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&parent, "java/util/logging/Logger", "setUseParentHandlers", "(Z)V", (false,))
+        .await?;
 
     let output: ClassInstanceRef<ByteArrayOutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
     let formatter: ClassInstanceRef<Formatter> = jvm.new_class("java/util/logging/SimpleFormatter", "()V", ()).await?.into();
@@ -182,32 +206,46 @@ async fn logger_publishes_to_parent_handlers_until_propagation_is_disabled() -> 
         .await?
         .into();
     let _: () = jvm
-        .invoke_virtual(&parent, "addHandler", "(Ljava/util/logging/Handler;)V", (handler.clone(),))
+        .invoke_virtual(
+            &parent,
+            "java/util/logging/Logger",
+            "addHandler",
+            "(Ljava/util/logging/Handler;)V",
+            (handler.clone(),),
+        )
         .await?;
 
     let _: () = jvm
         .invoke_virtual(
             &child,
+            "java/util/logging/Logger",
             "info",
             "(Ljava/lang/String;)V",
             (JavaLangString::from_rust_string(&jvm, "from child").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&handler, "flush", "()V", ()).await?;
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm.invoke_virtual(&handler, "java/util/logging/Handler", "flush", "()V", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert!(JavaLangString::to_rust_string(&jvm, &text).await?.contains("from child"));
 
-    let _: () = jvm.invoke_virtual(&child, "setUseParentHandlers", "(Z)V", (false,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&child, "java/util/logging/Logger", "setUseParentHandlers", "(Z)V", (false,))
+        .await?;
     let _: () = jvm
         .invoke_virtual(
             &child,
+            "java/util/logging/Logger",
             "info",
             "(Ljava/lang/String;)V",
             (JavaLangString::from_rust_string(&jvm, "not propagated").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&handler, "flush", "()V", ()).await?;
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&output, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm.invoke_virtual(&handler, "java/util/logging/Handler", "flush", "()V", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert!(!JavaLangString::to_rust_string(&jvm, &text).await?.contains("not propagated"));
     Ok(())
 }
@@ -240,27 +278,42 @@ async fn log_manager_reset_removes_handlers_and_restores_levels() -> Result<()> 
         .get_static_field("java/util/logging/Level", "SEVERE", "Ljava/util/logging/Level;")
         .await?;
     let _: () = jvm
-        .invoke_virtual(&logger, "addHandler", "(Ljava/util/logging/Handler;)V", (handler,))
+        .invoke_virtual(
+            &logger,
+            "java/util/logging/Logger",
+            "addHandler",
+            "(Ljava/util/logging/Handler;)V",
+            (handler,),
+        )
         .await?;
-    let _: () = jvm.invoke_virtual(&logger, "setLevel", "(Ljava/util/logging/Level;)V", (severe,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&logger, "java/util/logging/Logger", "setLevel", "(Ljava/util/logging/Level;)V", (severe,))
+        .await?;
 
-    let _: () = jvm.invoke_virtual(&manager, "reset", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&manager, "java/util/logging/LogManager", "reset", "()V", ()).await?;
 
-    let handlers: ClassInstanceRef<Array<Handler>> = jvm.invoke_virtual(&logger, "getHandlers", "()[Ljava/util/logging/Handler;", ()).await?;
+    let handlers: ClassInstanceRef<Array<Handler>> = jvm
+        .invoke_virtual(&logger, "java/util/logging/Logger", "getHandlers", "()[Ljava/util/logging/Handler;", ())
+        .await?;
     assert_eq!(jvm.array_length(&handlers).await?, 0);
-    let level: ClassInstanceRef<Level> = jvm.invoke_virtual(&logger, "getLevel", "()Ljava/util/logging/Level;", ()).await?;
+    let level: ClassInstanceRef<Level> = jvm
+        .invoke_virtual(&logger, "java/util/logging/Logger", "getLevel", "()Ljava/util/logging/Level;", ())
+        .await?;
     assert!(level.is_null());
 
     let root: ClassInstanceRef<Logger> = jvm
         .invoke_virtual(
             &manager,
+            "java/util/logging/LogManager",
             "getLogger",
             "(Ljava/lang/String;)Ljava/util/logging/Logger;",
             (JavaLangString::from_rust_string(&jvm, "").await?,),
         )
         .await?;
-    let root_level: ClassInstanceRef<Level> = jvm.invoke_virtual(&root, "getLevel", "()Ljava/util/logging/Level;", ()).await?;
-    let value: i32 = jvm.invoke_virtual(&root_level, "intValue", "()I", ()).await?;
+    let root_level: ClassInstanceRef<Level> = jvm
+        .invoke_virtual(&root, "java/util/logging/Logger", "getLevel", "()Ljava/util/logging/Level;", ())
+        .await?;
+    let value: i32 = jvm.invoke_virtual(&root_level, "java/util/logging/Level", "intValue", "()I", ()).await?;
     assert_eq!(value, 800);
     Ok(())
 }
@@ -276,7 +329,13 @@ async fn global_logger_and_manager_initialize_in_either_entry_order() -> Result<
         .await?;
     let name = JavaLangString::from_rust_string(&jvm, "global").await?;
     let registered: ClassInstanceRef<Logger> = jvm
-        .invoke_virtual(&manager, "getLogger", "(Ljava/lang/String;)Ljava/util/logging/Logger;", (name,))
+        .invoke_virtual(
+            &manager,
+            "java/util/logging/LogManager",
+            "getLogger",
+            "(Ljava/lang/String;)Ljava/util/logging/Logger;",
+            (name,),
+        )
         .await?;
     assert_eq!(global.identity(), registered.identity());
 
@@ -289,7 +348,13 @@ async fn global_logger_and_manager_initialize_in_either_entry_order() -> Result<
         .await?;
     let name = JavaLangString::from_rust_string(&jvm, "global").await?;
     let registered: ClassInstanceRef<Logger> = jvm
-        .invoke_virtual(&manager, "getLogger", "(Ljava/lang/String;)Ljava/util/logging/Logger;", (name,))
+        .invoke_virtual(
+            &manager,
+            "java/util/logging/LogManager",
+            "getLogger",
+            "(Ljava/lang/String;)Ljava/util/logging/Logger;",
+            (name,),
+        )
         .await?;
     assert_eq!(global.identity(), registered.identity());
     Ok(())

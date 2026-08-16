@@ -38,7 +38,9 @@ async fn test_to_utf16_on_substring_preserves_unpaired_surrogate() -> Result<()>
     jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0xd800, 0x62]).await?;
 
     let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
-    let sub = jvm.invoke_virtual(&string, "substring", "(II)Ljava/lang/String;", (1, 3)).await?;
+    let sub = jvm
+        .invoke_virtual(&string, &string.class_definition().name(), "substring", "(II)Ljava/lang/String;", (1, 3))
+        .await?;
 
     assert_eq!(JavaLangString::to_utf16(&jvm, &sub).await?, [0xd800, 0x62]);
 
@@ -50,14 +52,20 @@ async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
-    let sub = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+    let sub = jvm
+        .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (2, 7))
+        .await?;
 
-    let interned: Box<dyn ClassInstance> = jvm.invoke_virtual(&sub, "intern", "()Ljava/lang/String;", ()).await?;
+    let interned: Box<dyn ClassInstance> = jvm
+        .invoke_virtual(&sub, &sub.class_definition().name(), "intern", "()Ljava/lang/String;", ())
+        .await?;
     let pooled = jvm.intern_string("Hello").await?;
     assert!(interned == pooled);
 
     let independent = JavaLangString::from_rust_string(&jvm, "Hello").await?;
-    let independent_interned: Box<dyn ClassInstance> = jvm.invoke_virtual(&independent, "intern", "()Ljava/lang/String;", ()).await?;
+    let independent_interned: Box<dyn ClassInstance> = jvm
+        .invoke_virtual(&independent, &independent.class_definition().name(), "intern", "()Ljava/lang/String;", ())
+        .await?;
     assert!(interned == independent_interned);
 
     Ok(())

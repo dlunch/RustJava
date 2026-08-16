@@ -140,6 +140,7 @@ async fn test_properties_inherits_hashtable_map_contract() -> Result<()> {
     let old: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "setProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
             (key.clone(), value.clone()),
@@ -148,7 +149,13 @@ async fn test_properties_inherits_hashtable_map_contract() -> Result<()> {
     assert!(old.is_null());
 
     let found: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&properties, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (equal_key,))
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (equal_key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &found).await?, "value");
 
@@ -158,6 +165,7 @@ async fn test_properties_inherits_hashtable_map_contract() -> Result<()> {
     let old: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (inherited_key, inherited_value),
@@ -166,13 +174,23 @@ async fn test_properties_inherits_hashtable_map_contract() -> Result<()> {
     assert!(old.is_null());
 
     let found: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&properties, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (inherited_equal_key,))
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "get",
+            "(Ljava/lang/Object;)Ljava/lang/Object;",
+            (inherited_equal_key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &found).await?, "map-value");
 
-    let size: i32 = jvm.invoke_virtual(&properties, "size", "()I", ()).await?;
+    let size: i32 = jvm
+        .invoke_virtual(&properties, &properties.class_definition().name(), "size", "()I", ())
+        .await?;
     assert_eq!(size, 2);
-    let key_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&properties, "keySet", "()Ljava/util/Set;", ()).await?;
+    let key_set: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&properties, &properties.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
+        .await?;
     assert!(jvm.is_instance(&**key_set, "java/util/Set"));
 
     Ok(())
@@ -209,13 +227,20 @@ async fn prop_01_constructors_and_defaults_field() -> Result<()> {
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &actual,
+            "java/util/Properties",
             "setProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
             (key.clone(), value),
         )
         .await?;
     let inherited: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&parent, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .invoke_virtual(
+            &parent,
+            &parent.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &inherited).await?, "yes");
 
@@ -244,6 +269,7 @@ async fn prop_02_get_property_uses_string_values_and_defaults_chain() -> Result<
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 properties,
+                &properties.class_definition().name(),
                 "setProperty",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
                 (key, value),
@@ -254,7 +280,13 @@ async fn prop_02_get_property_uses_string_values_and_defaults_chain() -> Result<
     for (key, expected) in [("root", "root-value"), ("middle", "middle-value"), ("shared", "child-shared")] {
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let value: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&child, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .invoke_virtual(
+                &child,
+                &child.class_definition().name(),
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, expected);
     }
@@ -264,13 +296,20 @@ async fn prop_02_get_property_uses_string_values_and_defaults_chain() -> Result<
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &child,
+            &child.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (key.clone(), non_string),
         )
         .await?;
     let inherited: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&child, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .invoke_virtual(
+            &child,
+            &child.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &inherited).await?, "root-value");
 
@@ -279,6 +318,7 @@ async fn prop_02_get_property_uses_string_values_and_defaults_chain() -> Result<
     let value: ClassInstanceRef<String> = jvm
         .invoke_virtual(
             &child,
+            &child.class_definition().name(),
             "getProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
             (missing, fallback),
@@ -313,7 +353,15 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     jvm.store_array(&mut bytes, 0, source.iter().map(|byte| *byte as i8)).await?;
     let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
     let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&properties, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (input,),
+        )
+        .await?;
 
     for (key, expected) in [
         ("continued", "helloworld"),
@@ -324,7 +372,13 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     ] {
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let value: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&properties, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .invoke_virtual(
+                &properties,
+                &properties.class_definition().name(),
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, expected);
     }
@@ -336,6 +390,7 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &defaults,
+                "java/util/Properties",
                 "setProperty",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
                 (key, value),
@@ -349,16 +404,24 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &child,
+                &child.class_definition().name(),
                 "setProperty",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
                 (key, value),
             )
             .await?;
     }
-    let names: ClassInstanceRef<Object> = jvm.invoke_virtual(&child, "propertyNames", "()Ljava/util/Enumeration;", ()).await?;
+    let names: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&child, &child.class_definition().name(), "propertyNames", "()Ljava/util/Enumeration;", ())
+        .await?;
     let mut actual_names = Vec::new();
-    while jvm.invoke_virtual::<_, bool>(&names, "hasMoreElements", "()Z", ()).await? {
-        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&names, "nextElement", "()Ljava/lang/Object;", ()).await?;
+    while jvm
+        .invoke_virtual::<_, bool>(&names, &names.class_definition().name(), "hasMoreElements", "()Z", ())
+        .await?
+    {
+        let name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&names, &names.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
+            .await?;
         actual_names.push(JavaLangString::to_rust_string(&jvm, &name).await?);
     }
     actual_names.sort();
@@ -368,12 +431,15 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(
             &child,
+            &child.class_definition().name(),
             "store",
             "(Ljava/io/OutputStream;Ljava/lang/String;)V",
             (child_output.clone(), ClassInstanceRef::<String>::from(None)),
         )
         .await?;
-    let child_bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&child_output, "toByteArray", "()[B", ()).await?;
+    let child_bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&child_output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let child_values: Vec<i8> = jvm.load_array(&child_bytes, 0, jvm.array_length(&child_bytes).await?).await?;
     let child_text = RustString::from_utf8(child_values.iter().map(|byte| *byte as u8).collect()).expect("ASCII properties output");
     assert!(child_text.contains("local=yes"));
@@ -385,12 +451,15 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "store",
             "(Ljava/io/OutputStream;Ljava/lang/String;)V",
             (output.clone(), comments),
         )
         .await?;
-    let stored: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let stored: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let stored_values: Vec<i8> = jvm.load_array(&stored, 0, jvm.array_length(&stored).await?).await?;
     let stored_ascii = RustString::from_utf8(stored_values.iter().map(|byte| *byte as u8).collect()).expect("ASCII properties output");
     assert!(stored_ascii.contains("#round trip"));
@@ -398,10 +467,24 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
 
     let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (stored,)).await?.into();
     let round_trip = jvm.new_class("java/util/Properties", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&round_trip, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &round_trip,
+            &round_trip.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (input,),
+        )
+        .await?;
     let latin = JavaLangString::from_rust_string(&jvm, "latin").await?;
     let value: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&round_trip, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (latin,))
+        .invoke_virtual(
+            &round_trip,
+            &round_trip.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (latin,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "é");
 
@@ -409,14 +492,28 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let mut bytes = jvm.instantiate_array("B", malformed.len()).await?;
     jvm.store_array(&mut bytes, 0, malformed.iter().map(|byte| *byte as i8)).await?;
     let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
-    let malformed_result: Result<()> = jvm.invoke_virtual(&properties, "load", "(Ljava/io/InputStream;)V", (input,)).await;
+    let malformed_result: Result<()> = jvm
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (input,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = malformed_result else {
         panic!("malformed unicode escape must throw IllegalArgumentException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
     let broken = JavaLangString::from_rust_string(&jvm, "broken").await?;
     let broken_value: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&properties, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (broken,))
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (broken,),
+        )
         .await?;
     assert!(broken_value.is_null(), "a malformed logical line must not be committed");
 
@@ -427,7 +524,13 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let partial_input: ClassInstanceRef<InputStream> = jvm.new_class("FailingAfterInputStream", "([B)V", (partial_bytes,)).await?.into();
     let partial_properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
     let partial_result: Result<()> = jvm
-        .invoke_virtual(&partial_properties, "load", "(Ljava/io/InputStream;)V", (partial_input,))
+        .invoke_virtual(
+            &partial_properties,
+            &partial_properties.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (partial_input,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = partial_result else {
         panic!("an IOException after a complete property must propagate");
@@ -435,7 +538,13 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
     let committed = JavaLangString::from_rust_string(&jvm, "committed").await?;
     let committed_value: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&partial_properties, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (committed,))
+        .invoke_virtual(
+            &partial_properties,
+            &partial_properties.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (committed,),
+        )
         .await?;
     assert!(
         !committed_value.is_null(),
@@ -446,6 +555,7 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let unfinished_value: ClassInstanceRef<String> = jvm
         .invoke_virtual(
             &partial_properties,
+            &partial_properties.class_definition().name(),
             "getProperty",
             "(Ljava/lang/String;)Ljava/lang/String;",
             (unfinished,),
@@ -455,7 +565,13 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
 
     let failing_input: ClassInstanceRef<InputStream> = jvm.new_class("FailingInputStream", "()V", ()).await?.into();
     let failed_load: Result<()> = jvm
-        .invoke_virtual(&properties, "load", "(Ljava/io/InputStream;)V", (failing_input,))
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (failing_input,),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = failed_load else {
         panic!("load IOException must propagate");
@@ -463,7 +579,15 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
 
     let null_input: ClassInstanceRef<InputStream> = None.into();
-    let null_load: Result<()> = jvm.invoke_virtual(&properties, "load", "(Ljava/io/InputStream;)V", (null_input,)).await;
+    let null_load: Result<()> = jvm
+        .invoke_virtual(
+            &properties,
+            &properties.class_definition().name(),
+            "load",
+            "(Ljava/io/InputStream;)V",
+            (null_input,),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = null_load else {
         panic!("null input must throw NullPointerException before stream processing");
     };
@@ -473,6 +597,7 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
     let failed_store: Result<()> = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "store",
             "(Ljava/io/OutputStream;Ljava/lang/String;)V",
             (failing_output, ClassInstanceRef::<String>::from(None)),
@@ -493,12 +618,19 @@ async fn prop_03_load_store_property_names_and_failures() -> Result<()> {
             (string.into(), object.into())
         };
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&invalid, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                &invalid,
+                &invalid.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
         let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
         let result: Result<()> = jvm
             .invoke_virtual(
                 &invalid,
+                &invalid.class_definition().name(),
                 "store",
                 "(Ljava/io/OutputStream;Ljava/lang/String;)V",
                 (output, ClassInstanceRef::<String>::from(None)),
@@ -527,11 +659,25 @@ async fn prop_03_eof_backslash_parity_and_incomplete_logical_line() -> Result<()
 
         let input = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?;
         let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
-        let _: () = jvm.invoke_virtual(&properties, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &properties,
+                &properties.class_definition().name(),
+                "load",
+                "(Ljava/io/InputStream;)V",
+                (input,),
+            )
+            .await?;
 
         let key = JavaLangString::from_rust_string(&jvm, key).await?;
         let value: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&properties, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .invoke_virtual(
+                &properties,
+                &properties.class_definition().name(),
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, expected);
     }
@@ -544,14 +690,31 @@ async fn prop_store_and_load_with_substring_key_and_value() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let key_parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
-    let key: ClassInstanceRef<String> = jvm.invoke_virtual(&key_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+    let key: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &key_parent,
+            &key_parent.class_definition().name(),
+            "substring",
+            "(II)Ljava/lang/String;",
+            (2, 7),
+        )
+        .await?;
     let value_parent = JavaLangString::from_rust_string(&jvm, "zzWorldzz").await?;
-    let value: ClassInstanceRef<String> = jvm.invoke_virtual(&value_parent, "substring", "(II)Ljava/lang/String;", (2, 7)).await?;
+    let value: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &value_parent,
+            &value_parent.class_definition().name(),
+            "substring",
+            "(II)Ljava/lang/String;",
+            (2, 7),
+        )
+        .await?;
 
     let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "setProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
             (key.clone(), value),
@@ -562,22 +725,33 @@ async fn prop_store_and_load_with_substring_key_and_value() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "store",
             "(Ljava/io/OutputStream;Ljava/lang/String;)V",
             (output.clone(), ClassInstanceRef::<String>::from(None)),
         )
         .await?;
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
     let text = RustString::from_utf8(values.iter().map(|byte| *byte as u8).collect()).expect("ASCII properties output");
     assert!(text.contains("Hello=World"));
 
     let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
     let loaded = jvm.new_class("java/util/Properties", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&loaded, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&loaded, &loaded.class_definition().name(), "load", "(Ljava/io/InputStream;)V", (input,))
+        .await?;
     let result: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&loaded, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .invoke_virtual(
+            &loaded,
+            &loaded.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "World");
 
@@ -589,13 +763,16 @@ async fn prop_empty_substring_key_round_trip() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let parent = JavaLangString::from_rust_string(&jvm, "HelloWorld").await?;
-    let empty_key: ClassInstanceRef<String> = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (5, 5)).await?;
+    let empty_key: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (5, 5))
+        .await?;
     let value = JavaLangString::from_rust_string(&jvm, "World").await?;
 
     let properties = jvm.new_class("java/util/Properties", "()V", ()).await?;
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "setProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
             (empty_key.clone(), value),
@@ -606,22 +783,33 @@ async fn prop_empty_substring_key_round_trip() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(
             &properties,
+            &properties.class_definition().name(),
             "store",
             "(Ljava/io/OutputStream;Ljava/lang/String;)V",
             (output.clone(), ClassInstanceRef::<String>::from(None)),
         )
         .await?;
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
     let text = RustString::from_utf8(values.iter().map(|byte| *byte as u8).collect()).unwrap();
     assert!(text.contains("=World"), "store output: {text:?}");
 
     let input: ClassInstanceRef<InputStream> = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?.into();
     let loaded = jvm.new_class("java/util/Properties", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&loaded, "load", "(Ljava/io/InputStream;)V", (input,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&loaded, &loaded.class_definition().name(), "load", "(Ljava/io/InputStream;)V", (input,))
+        .await?;
     let result: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&loaded, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (empty_key,))
+        .invoke_virtual(
+            &loaded,
+            &loaded.class_definition().name(),
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (empty_key,),
+        )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "World");
 

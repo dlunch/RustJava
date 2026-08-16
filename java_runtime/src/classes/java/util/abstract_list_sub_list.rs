@@ -86,7 +86,8 @@ impl AbstractListSubList {
         }
         let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
         let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
-        jvm.invoke_virtual(&root, "get", "(I)Ljava/lang/Object;", (offset + index,)).await
+        jvm.invoke_virtual(&root, &root.class_definition().name(), "get", "(I)Ljava/lang/Object;", (offset + index,))
+            .await
     }
 
     async fn set(
@@ -102,13 +103,21 @@ impl AbstractListSubList {
         }
         let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
         let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
-        jvm.invoke_virtual(&root, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (offset + index, element))
-            .await
+        jvm.invoke_virtual(
+            &root,
+            &root.class_definition().name(),
+            "set",
+            "(ILjava/lang/Object;)Ljava/lang/Object;",
+            (offset + index, element),
+        )
+        .await
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        let _: () = jvm.invoke_virtual(&this, "add", "(ILjava/lang/Object;)V", (size, element)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/util/AbstractList$SubList", "add", "(ILjava/lang/Object;)V", (size, element))
+            .await?;
         Ok(true)
     }
 
@@ -120,15 +129,27 @@ impl AbstractListSubList {
         let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
         let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
         let _: () = jvm
-            .invoke_virtual(&root, "add", "(ILjava/lang/Object;)V", (offset + index, element))
+            .invoke_virtual(
+                &root,
+                &root.class_definition().name(),
+                "add",
+                "(ILjava/lang/Object;)V",
+                (offset + index, element),
+            )
             .await?;
         Self::update_sizes(jvm, this, 1).await
     }
 
     async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        jvm.invoke_virtual(&this, "addAll", "(ILjava/util/Collection;)Z", (size, collection))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/util/AbstractList$SubList",
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (size, collection),
+        )
+        .await
     }
 
     async fn add_all_at(
@@ -145,17 +166,27 @@ impl AbstractListSubList {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
-        if jvm.invoke_virtual::<_, i32>(&collection, "size", "()I", ()).await? == 0 {
+        if jvm
+            .invoke_virtual::<_, i32>(&collection, &collection.class_definition().name(), "size", "()I", ())
+            .await?
+            == 0
+        {
             return Ok(false);
         }
         let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
         let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
-        let old_root_size: i32 = jvm.invoke_virtual(&root, "size", "()I", ()).await?;
+        let old_root_size: i32 = jvm.invoke_virtual(&root, &root.class_definition().name(), "size", "()I", ()).await?;
         let modified: bool = jvm
-            .invoke_virtual(&root, "addAll", "(ILjava/util/Collection;)Z", (offset + index, collection))
+            .invoke_virtual(
+                &root,
+                &root.class_definition().name(),
+                "addAll",
+                "(ILjava/util/Collection;)Z",
+                (offset + index, collection),
+            )
             .await?;
         if modified {
-            let new_root_size: i32 = jvm.invoke_virtual(&root, "size", "()I", ()).await?;
+            let new_root_size: i32 = jvm.invoke_virtual(&root, &root.class_definition().name(), "size", "()I", ()).await?;
             Self::update_sizes(jvm, this, new_root_size - old_root_size).await?;
         }
         Ok(modified)
@@ -168,28 +199,42 @@ impl AbstractListSubList {
         }
         let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
         let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
-        let removed = jvm.invoke_virtual(&root, "remove", "(I)Ljava/lang/Object;", (offset + index,)).await?;
+        let removed = jvm
+            .invoke_virtual(
+                &root,
+                &root.class_definition().name(),
+                "remove",
+                "(I)Ljava/lang/Object;",
+                (offset + index,),
+            )
+            .await?;
         Self::update_sizes(jvm, this, -1).await?;
         Ok(removed)
     }
 
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let index: i32 = jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/Object;)I", (element,)).await?;
+        let index: i32 = jvm
+            .invoke_virtual(&this, "java/util/AbstractList$SubList", "indexOf", "(Ljava/lang/Object;)I", (element,))
+            .await?;
         if index < 0 {
             return Ok(false);
         }
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "remove", "(I)Ljava/lang/Object;", (index,)).await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractList$SubList", "remove", "(I)Ljava/lang/Object;", (index,))
+            .await?;
         Ok(true)
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "size", "I").await?;
         for index in 0..size {
-            let current: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "get", "(I)Ljava/lang/Object;", (index,)).await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&this, "java/util/AbstractList$SubList", "get", "(I)Ljava/lang/Object;", (index,))
+                .await?;
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
-                        .invoke_virtual::<_, bool>(&element, "equals", "(Ljava/lang/Object;)Z", (current,))
+                        .invoke_virtual::<_, bool>(&element, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
                         .await?)
             {
                 return Ok(index);
@@ -201,11 +246,13 @@ impl AbstractListSubList {
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "size", "I").await?;
         for index in (0..size).rev() {
-            let current: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "get", "(I)Ljava/lang/Object;", (index,)).await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&this, "java/util/AbstractList$SubList", "get", "(I)Ljava/lang/Object;", (index,))
+                .await?;
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
-                        .invoke_virtual::<_, bool>(&element, "equals", "(Ljava/lang/Object;)Z", (current,))
+                        .invoke_virtual::<_, bool>(&element, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
                         .await?)
             {
                 return Ok(index);
@@ -216,7 +263,9 @@ impl AbstractListSubList {
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         while jvm.get_field::<i32>(&this, "size", "I").await? > 0 {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "remove", "(I)Ljava/lang/Object;", (0,)).await?;
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&this, "java/util/AbstractList$SubList", "remove", "(I)Ljava/lang/Object;", (0,))
+                .await?;
         }
         Ok(())
     }

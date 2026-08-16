@@ -22,13 +22,29 @@ async fn test_jar_loading() -> Result<()> {
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
     let resource = jvm
-        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (resource_name,),
+        )
         .await?;
 
-    let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+    let stream = jvm
+        .invoke_virtual(
+            &resource,
+            &resource.class_definition().name(),
+            "openStream",
+            "()Ljava/io/InputStream;",
+            (),
+        )
+        .await?;
 
     let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+    let len: i32 = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; len as _];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
@@ -57,6 +73,7 @@ async fn test_jar_loading_with_slash() -> Result<()> {
     let stream = jvm
         .invoke_virtual(
             &class_loader,
+            &class_loader.class_definition().name(),
             "getResourceAsStream",
             "(Ljava/lang/String;)Ljava/io/InputStream;",
             (resource_name,),
@@ -64,7 +81,9 @@ async fn test_jar_loading_with_slash() -> Result<()> {
         .await?;
 
     let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+    let len: i32 = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; len as _];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
@@ -90,13 +109,29 @@ async fn test_load_from_dir() -> Result<()> {
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
     let resource = jvm
-        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (resource_name,),
+        )
         .await?;
 
-    let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+    let stream = jvm
+        .invoke_virtual(
+            &resource,
+            &resource.class_definition().name(),
+            "openStream",
+            "()Ljava/io/InputStream;",
+            (),
+        )
+        .await?;
 
     let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+    let len: i32 = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; len as _];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
@@ -123,7 +158,13 @@ async fn test_jar_loading_no_file() -> Result<()> {
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "does_not_exists.txt").await?;
     let resource: ClassInstanceRef<URL> = jvm
-        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (resource_name,),
+        )
         .await?;
 
     assert!(resource.is_null());
@@ -147,7 +188,13 @@ async fn test_load_from_dir_no_file() -> Result<()> {
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "does_not_exists.txt").await?;
     let resource: ClassInstanceRef<URL> = jvm
-        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (resource_name,),
+        )
         .await?;
     assert!(resource.is_null());
 
@@ -172,7 +219,13 @@ async fn test_missing_url_does_not_prevent_later_jar_lookup() -> Result<()> {
         .await?;
     let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
     let resource: ClassInstanceRef<URL> = jvm
-        .invoke_virtual(&class_loader, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (resource_name,),
+        )
         .await?;
 
     assert!(!resource.is_null());
@@ -194,7 +247,13 @@ async fn test_url_class_loader_does_not_load_rustjar_classes() -> Result<()> {
 
     let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
     let class: ClassInstanceRef<Class> = jvm
-        .invoke_virtual(&class_loader, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+        .invoke_virtual(
+            &class_loader,
+            &class_loader.class_definition().name(),
+            "findClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            (name,),
+        )
         .await?;
 
     assert!(class.is_null());

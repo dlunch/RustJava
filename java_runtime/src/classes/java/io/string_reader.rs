@@ -48,7 +48,7 @@ impl StringReader {
             return Err(jvm.exception("java/lang/NullPointerException", "string is null").await);
         }
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
-        let length: i32 = jvm.invoke_virtual(&value, "length", "()I", ()).await?;
+        let length: i32 = jvm.invoke_virtual(&value, "java/lang/String", "length", "()I", ()).await?;
         jvm.put_field(&mut this, "str", "Ljava/lang/String;", value).await?;
         jvm.put_field(&mut this, "length", "I", length).await?;
         jvm.put_field(&mut this, "next", "I", 0).await?;
@@ -91,7 +91,7 @@ impl StringReader {
         if next >= length {
             return Ok(-1);
         }
-        let result: JavaChar = jvm.invoke_virtual(&value, "charAt", "(I)C", (next,)).await?;
+        let result: JavaChar = jvm.invoke_virtual(&value, "java/lang/String", "charAt", "(I)C", (next,)).await?;
         jvm.put_field(&mut this, "next", "I", next + 1).await?;
         Ok(result as i32)
     }
@@ -139,7 +139,7 @@ impl StringReader {
         }
         let copied = length.min(source_length - next);
         let _: () = jvm
-            .invoke_virtual(&value, "getChars", "(II[CI)V", (next, next + copied, target, offset))
+            .invoke_virtual(&value, "java/lang/String", "getChars", "(II[CI)V", (next, next + copied, target, offset))
             .await?;
         jvm.put_field(&mut this, "next", "I", next + copied).await?;
         Ok(copied)

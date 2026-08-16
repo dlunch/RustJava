@@ -232,27 +232,27 @@ impl Double {
     }
 
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok((value as i32) as i8)
     }
 
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok((value as i32) as i16)
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as i32)
     }
 
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as i64)
     }
 
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as f32)
     }
 
@@ -298,7 +298,7 @@ impl Double {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
@@ -307,7 +307,7 @@ impl Double {
     }
 
     async fn is_nan(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value.is_nan())
     }
 
@@ -316,7 +316,7 @@ impl Double {
     }
 
     async fn is_infinite(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value.is_infinite())
     }
 
@@ -333,7 +333,7 @@ impl Double {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         let bits = if value.is_nan() { 0x7ff8_0000_0000_0000 } else { value.to_bits() };
         Ok((bits ^ (bits >> 32)) as i32)
     }
@@ -342,8 +342,8 @@ impl Double {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Double") {
             return Ok(false);
         }
-        let left: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
-        let right: f64 = jvm.invoke_virtual(&other, "doubleValue", "()D", ()).await?;
+        let left: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
+        let right: f64 = jvm.invoke_virtual(&other, "java/lang/Double", "doubleValue", "()D", ()).await?;
         let left_bits = if left.is_nan() { 0x7ff8_0000_0000_0000 } else { left.to_bits() as i64 };
         let right_bits = if right.is_nan() { 0x7ff8_0000_0000_0000 } else { right.to_bits() as i64 };
         Ok(left_bits == right_bits)
@@ -353,8 +353,8 @@ impl Double {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let left: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
-        let right: f64 = jvm.invoke_virtual(&other, "doubleValue", "()D", ()).await?;
+        let left: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
+        let right: f64 = jvm.invoke_virtual(&other, "java/lang/Double", "doubleValue", "()D", ()).await?;
         if left < right {
             return Ok(-1);
         }
@@ -374,8 +374,8 @@ impl Double {
             return Err(jvm.exception("java/lang/ClassCastException", "not Double").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let left: f64 = jvm.invoke_virtual(&this, "doubleValue", "()D", ()).await?;
-        let right: f64 = jvm.invoke_virtual(&other, "doubleValue", "()D", ()).await?;
+        let left: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
+        let right: f64 = jvm.invoke_virtual(&other, "java/lang/Double", "doubleValue", "()D", ()).await?;
         if left < right {
             return Ok(-1);
         }

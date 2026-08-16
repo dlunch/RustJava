@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use java_constants::ClassAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -16,16 +16,16 @@ impl InputStream {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read_offset, Default::default()),
-                JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
-                JavaMethodProto::new_abstract("read", "()I", Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
-                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("available", "()I", Self::available, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([B)I", Self::read, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new_abstract("read", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
             access_flags: ClassAccessFlags::ABSTRACT,
@@ -48,7 +48,8 @@ impl InputStream {
         }
         let array_length = jvm.array_length(&b).await? as i32;
 
-        jvm.invoke_virtual(&this, "read", "([BII)I", (b, 0, array_length)).await
+        jvm.invoke_virtual(&this, "java/io/InputStream", "read", "([BII)I", (b, 0, array_length))
+            .await
     }
 
     async fn read_offset(
@@ -72,7 +73,7 @@ impl InputStream {
             return Ok(0);
         }
 
-        let first: i32 = jvm.invoke_virtual(&this, "read", "()I", ()).await?;
+        let first: i32 = jvm.invoke_virtual(&this, "java/io/InputStream", "read", "()I", ()).await?;
         if first == -1 {
             return Ok(-1);
         }
@@ -80,7 +81,7 @@ impl InputStream {
 
         let mut count = 1;
         while count < len {
-            let value: i32 = jvm.invoke_virtual(&this, "read", "()I", ()).await?;
+            let value: i32 = jvm.invoke_virtual(&this, "java/io/InputStream", "read", "()I", ()).await?;
             if value == -1 {
                 break;
             }
@@ -114,7 +115,9 @@ impl InputStream {
         let mut remaining = n;
         while remaining > 0 {
             let len_to_read = remaining.min(scratch_size) as i32;
-            let read: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (scratch.clone(), 0, len_to_read)).await?;
+            let read: i32 = jvm
+                .invoke_virtual(&this, "java/io/InputStream", "read", "([BII)I", (scratch.clone(), 0, len_to_read))
+                .await?;
             if read <= 0 {
                 break;
             }

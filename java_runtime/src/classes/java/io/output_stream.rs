@@ -44,7 +44,9 @@ impl OutputStream {
         }
         let length = jvm.array_length(&buffer).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "write", "([BII)V", (buffer, 0, length as i32)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/OutputStream", "write", "([BII)V", (buffer, 0, length as i32))
+            .await?;
 
         Ok(())
     }
@@ -65,7 +67,7 @@ impl OutputStream {
         let mut bytes = vec![0; length as usize];
         jvm.array_raw_buffer(&buffer).await?.read(offset as _, &mut bytes)?;
         for byte in bytes {
-            let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (byte as i32,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/OutputStream", "write", "(I)V", (byte as i32,)).await?;
         }
 
         Ok(())

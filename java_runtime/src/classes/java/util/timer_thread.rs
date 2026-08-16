@@ -88,7 +88,7 @@ impl TimerThread {
                         if !jvm.get_field::<bool>(this, "newTasksMayBeScheduled", "Z").await? {
                             return Ok(WorkerAction::Stop);
                         }
-                        let wait_result: Result<()> = jvm.invoke_virtual(&queue, "wait", "()V", ()).await;
+                        let wait_result: Result<()> = jvm.invoke_virtual(&queue, "java/lang/Object", "wait", "()V", ()).await;
                         if let Err(error) = wait_result
                             && !matches!(
                                 &error,
@@ -165,7 +165,9 @@ impl TimerThread {
                     if next_execution_time <= now {
                         continue;
                     }
-                    let wait_result: Result<()> = jvm.invoke_virtual(&queue, "wait", "(J)V", (next_execution_time - now,)).await;
+                    let wait_result: Result<()> = jvm
+                        .invoke_virtual(&queue, "java/lang/Object", "wait", "(J)V", (next_execution_time - now,))
+                        .await;
                     if let Err(error) = wait_result
                         && !matches!(
                             &error,
@@ -193,7 +195,7 @@ impl TimerThread {
             match action {
                 WorkerAction::Continue => {}
                 WorkerAction::Run(task) => {
-                    let _: () = jvm.invoke_virtual(&task, "run", "()V", ()).await?;
+                    let _: () = jvm.invoke_virtual(&task, "java/util/TimerTask", "run", "()V", ()).await?;
                 }
                 WorkerAction::Stop => return Ok(()),
             }

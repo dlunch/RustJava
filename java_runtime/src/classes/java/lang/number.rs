@@ -34,12 +34,12 @@ impl Number {
     }
 
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Number", "intValue", "()I", ()).await?;
         Ok(value as i8)
     }
 
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        let value: i32 = jvm.invoke_virtual(&this, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&this, "java/lang/Number", "intValue", "()I", ()).await?;
         Ok(value as i16)
     }
 }

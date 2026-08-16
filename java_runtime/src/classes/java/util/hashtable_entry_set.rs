@@ -45,7 +45,7 @@ impl HashtableEntrySet {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "size", "()I", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "size", "()I", ()).await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -53,7 +53,7 @@ impl HashtableEntrySet {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "isEmpty", "()Z", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
@@ -63,7 +63,9 @@ impl HashtableEntrySet {
             return Ok(false);
         }
 
-        let candidate_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let candidate_key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
         if candidate_key.is_null() {
             return Ok(false);
         }
@@ -74,7 +76,9 @@ impl HashtableEntrySet {
             return Ok(false);
         }
 
-        let candidate_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
+        let candidate_value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
         let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
 
         Self::object_equals(jvm, &entry_value, &candidate_value).await
@@ -87,7 +91,9 @@ impl HashtableEntrySet {
             return Ok(false);
         }
 
-        let candidate_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let candidate_key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
         if candidate_key.is_null() {
             return Ok(false);
         }
@@ -96,14 +102,22 @@ impl HashtableEntrySet {
         if entry.is_null() {
             return Ok(false);
         }
-        let candidate_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
+        let candidate_value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
         let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
         if !Self::object_equals(jvm, &entry_value, &candidate_value).await? {
             return Ok(false);
         }
 
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (candidate_key,))
+            .invoke_virtual(
+                &map,
+                "java/util/Hashtable",
+                "remove",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (candidate_key,),
+            )
             .await?;
 
         Ok(true)
@@ -114,7 +128,7 @@ impl HashtableEntrySet {
 
         let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
 
-        jvm.invoke_virtual(&map, "clear", "()V", ()).await
+        jvm.invoke_virtual(&map, "java/util/Hashtable", "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -134,6 +148,7 @@ impl HashtableEntrySet {
             return Ok(right.is_null());
         }
 
-        jvm.invoke_virtual(left, "equals", "(Ljava/lang/Object;)Z", (right.clone(),)).await
+        jvm.invoke_virtual(left, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (right.clone(),))
+            .await
     }
 }

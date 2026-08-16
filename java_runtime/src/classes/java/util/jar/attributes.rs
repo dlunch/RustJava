@@ -52,7 +52,13 @@ impl Attributes {
         // TODO we should store key in Attributes.Name type
         let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
         let old = jvm
-            .invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (name, value))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (name, value),
+            )
             .await?;
 
         Ok(old)
@@ -67,7 +73,15 @@ impl Attributes {
         tracing::debug!("java.util.jar.Attributes::getValue({this:?}, {name:?})");
 
         let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
-        let value = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name,)).await?;
+        let value = jvm
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (name,),
+            )
+            .await?;
 
         Ok(value)
     }

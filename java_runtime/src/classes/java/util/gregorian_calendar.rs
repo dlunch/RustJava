@@ -3,6 +3,7 @@ use alloc::{vec, vec::Vec};
 use chrono::{DateTime, Datelike, TimeZone as ChronoTimeZone, Timelike, Utc};
 
 use java_class_proto::JavaMethodProto;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::TimeZone};
@@ -17,13 +18,13 @@ impl GregorianCalendar {
             parent_class: Some("java/util/Calendar"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/util/TimeZone;)V", Self::init_with_time_zone, Default::default()),
-                JavaMethodProto::new("computeTime", "()V", Self::compute_time, Default::default()),
-                JavaMethodProto::new("computeFields", "()V", Self::compute_fields, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(Ljava/util/TimeZone;)V", Self::init_with_time_zone, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("computeTime", "()V", Self::compute_time, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new("computeFields", "()V", Self::compute_fields, MethodAccessFlags::PROTECTED),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -32,7 +33,7 @@ impl GregorianCalendar {
 
         let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "time", "J", context.now() as i64).await?;
-        jvm.invoke_virtual(&this, "computeFields", "()V", ()).await
+        jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
     async fn init_with_time_zone(
@@ -50,7 +51,7 @@ impl GregorianCalendar {
         let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
         jvm.put_field(&mut this, "time", "J", context.now() as i64).await?;
-        jvm.invoke_virtual(&this, "computeFields", "()V", ()).await
+        jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
     async fn compute_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
@@ -107,7 +108,7 @@ impl GregorianCalendar {
 
         let time: i64 = jvm.get_field(&this, "time", "J").await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
-        let zone_offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
+        let zone_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let Some(adjusted_time) = time.checked_add(zone_offset as i64) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);
         };

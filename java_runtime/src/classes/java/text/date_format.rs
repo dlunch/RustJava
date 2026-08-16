@@ -314,6 +314,7 @@ impl DateFormat {
         let date: ClassInstanceRef<Date> = ClassInstanceRef::new(object.instance);
         jvm.invoke_virtual(
             &this,
+            "java/text/DateFormat",
             "format",
             "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
             (date, buffer, position),
@@ -335,12 +336,14 @@ impl DateFormat {
         let buffer: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/DateFormat",
                 "format",
                 "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
                 (date, buffer, position),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn parse(
@@ -356,14 +359,17 @@ impl DateFormat {
         let date: ClassInstanceRef<Date> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/DateFormat",
                 "parse",
                 "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
                 (source, position.clone()),
             )
             .await?;
-        let index: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
+        let index: i32 = jvm.invoke_virtual(&position, "java/text/ParsePosition", "getIndex", "()I", ()).await?;
         if index == 0 {
-            let error_index: i32 = jvm.invoke_virtual(&position, "getErrorIndex", "()I", ()).await?;
+            let error_index: i32 = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+                .await?;
             let message = JavaLangString::from_rust_string(jvm, "Unparseable date").await?;
             let exception: ClassInstanceRef<ParseException> = jvm
                 .new_class("java/text/ParseException", "(Ljava/lang/String;I)V", (message, error_index))
@@ -384,6 +390,7 @@ impl DateFormat {
         let date: ClassInstanceRef<Date> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/DateFormat",
                 "parse",
                 "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
                 (source, position),
@@ -540,23 +547,25 @@ impl DateFormat {
 
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TimeZone>> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        jvm.invoke_virtual(&calendar, "getTimeZone", "()Ljava/util/TimeZone;", ()).await
+        jvm.invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
+            .await
     }
 
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        jvm.invoke_virtual(&calendar, "setTimeZone", "(Ljava/util/TimeZone;)V", (time_zone,))
+        jvm.invoke_virtual(&calendar, "java/util/Calendar", "setTimeZone", "(Ljava/util/TimeZone;)V", (time_zone,))
             .await
     }
 
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        jvm.invoke_virtual(&calendar, "isLenient", "()Z", ()).await
+        jvm.invoke_virtual(&calendar, "java/util/Calendar", "isLenient", "()Z", ()).await
     }
 
     async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        jvm.invoke_virtual(&calendar, "setLenient", "(Z)V", (lenient,)).await
+        jvm.invoke_virtual(&calendar, "java/util/Calendar", "setLenient", "(Z)V", (lenient,))
+            .await
     }
 
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {

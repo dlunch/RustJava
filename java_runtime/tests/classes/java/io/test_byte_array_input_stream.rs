@@ -22,13 +22,17 @@ async fn null_byte_arrays_throw_null_pointer_exception() -> Result<()> {
     let data = jvm.instantiate_array("B", 1).await?;
     let stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (data,)).await?;
 
-    let result: Result<i32> = jvm.invoke_virtual(&stream, "read", "([B)I", (null.clone(),)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (null.clone(),))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null read buffer must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
-    let result: Result<i32> = jvm.invoke_virtual(&stream, "read", "([BII)I", (null, 0, 0)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([BII)I", (null, 0, 0))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null ranged read buffer must throw NullPointerException");
     };
@@ -46,17 +50,19 @@ async fn test_mark_reset() -> Result<()> {
 
     let stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (buffer,)).await?;
 
-    let first: i32 = jvm.invoke_virtual(&stream, "read", "()I", ()).await?;
+    let first: i32 = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "read", "()I", ()).await?;
     assert_eq!(first, 10);
 
-    let _: () = jvm.invoke_virtual(&stream, "mark", "(I)V", (100,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "mark", "(I)V", (100,))
+        .await?;
 
-    let second: i32 = jvm.invoke_virtual(&stream, "read", "()I", ()).await?;
+    let second: i32 = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "read", "()I", ()).await?;
     assert_eq!(second, 20);
 
-    let _: () = jvm.invoke_virtual(&stream, "reset", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "reset", "()V", ()).await?;
 
-    let again: i32 = jvm.invoke_virtual(&stream, "read", "()I", ()).await?;
+    let again: i32 = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "read", "()I", ()).await?;
     assert_eq!(again, 20);
 
     Ok(())

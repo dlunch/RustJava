@@ -352,7 +352,7 @@ impl Long {
         result.chars().rev().collect()
     }
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        let value: i64 = jvm.invoke_virtual(&this, "java/lang/Long", "longValue", "()J", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value, 10)).await?.into())
     }
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i64) -> Result<ClassInstanceRef<String>> {
@@ -388,24 +388,22 @@ impl Long {
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
+        let value: i64 = jvm.invoke_virtual(&this, "java/lang/Long", "longValue", "()J", ()).await?;
         Ok((value ^ (value >> 32)) as i32)
     }
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Long") {
             return Ok(false);
         }
-        Ok(
-            jvm.invoke_virtual::<_, i64>(&this, "longValue", "()J", ()).await?
-                == jvm.invoke_virtual::<_, i64>(&other, "longValue", "()J", ()).await?,
-        )
+        Ok(jvm.invoke_virtual::<_, i64>(&this, "java/lang/Long", "longValue", "()J", ()).await?
+            == jvm.invoke_virtual::<_, i64>(&other, "java/lang/Long", "longValue", "()J", ()).await?)
     }
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let left: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
-        let right: i64 = jvm.invoke_virtual(&other, "longValue", "()J", ()).await?;
+        let left: i64 = jvm.invoke_virtual(&this, "java/lang/Long", "longValue", "()J", ()).await?;
+        let right: i64 = jvm.invoke_virtual(&other, "java/lang/Long", "longValue", "()J", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
@@ -416,8 +414,8 @@ impl Long {
             return Err(jvm.exception("java/lang/ClassCastException", "not Long").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let left: i64 = jvm.invoke_virtual(&this, "longValue", "()J", ()).await?;
-        let right: i64 = jvm.invoke_virtual(&other, "longValue", "()J", ()).await?;
+        let left: i64 = jvm.invoke_virtual(&this, "java/lang/Long", "longValue", "()J", ()).await?;
+        let right: i64 = jvm.invoke_virtual(&other, "java/lang/Long", "longValue", "()J", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
 }

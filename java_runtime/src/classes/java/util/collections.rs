@@ -192,10 +192,18 @@ impl Collections {
             if !jvm.is_instance(left.as_ref(), "java/lang/Comparable") {
                 return Err(jvm.exception("java/lang/ClassCastException", &left.class_definition().name()).await);
             }
-            jvm.invoke_virtual(left, "compareTo", "(Ljava/lang/Object;)I", (right.clone(),)).await
+            jvm.invoke_virtual(
+                left,
+                &left.class_definition().name(),
+                "compareTo",
+                "(Ljava/lang/Object;)I",
+                (right.clone(),),
+            )
+            .await
         } else {
             jvm.invoke_virtual(
                 comparator,
+                &comparator.class_definition().name(),
                 "compare",
                 "(Ljava/lang/Object;Ljava/lang/Object;)I",
                 (left.clone(), right.clone()),
@@ -206,10 +214,16 @@ impl Collections {
 
     async fn write_list(jvm: &Jvm, list: &ClassInstanceRef<Object>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let length = jvm.array_length(&elements).await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+            .await?;
         for element in jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, length).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (element,)).await?;
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "set", "(Ljava/lang/Object;)V", (element,))
+                .await?;
         }
         Ok(())
     }
@@ -219,7 +233,9 @@ impl Collections {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&list, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         if comparator.is_null() {
             let _: () = jvm
                 .invoke_static("java/util/Arrays", "sort", "([Ljava/lang/Object;)V", (elements.clone(),))
@@ -252,10 +268,12 @@ impl Collections {
         }
 
         let mut low = 0i32;
-        let mut high: i32 = jvm.invoke_virtual(&list, "size", "()I", ()).await?;
+        let mut high: i32 = jvm.invoke_virtual(&list, &list.class_definition().name(), "size", "()I", ()).await?;
         while low < high {
             let middle = low + (high - low) / 2;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "get", "(I)Ljava/lang/Object;", (middle,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&list, &list.class_definition().name(), "get", "(I)Ljava/lang/Object;", (middle,))
+                .await?;
             let comparison = Self::compare(jvm, &comparator, &value, &key).await?;
             if comparison < 0 {
                 low = middle + 1;
@@ -287,17 +305,35 @@ impl Collections {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
         }
 
-        let size: i32 = jvm.invoke_virtual(&list, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&list, &list.class_definition().name(), "size", "()I", ()).await?;
         if size < 2 {
             return Ok(());
         }
-        let forward: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
-        let backward: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (size,)).await?;
+        let forward: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+            .await?;
+        let backward: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &list,
+                &list.class_definition().name(),
+                "listIterator",
+                "(I)Ljava/util/ListIterator;",
+                (size,),
+            )
+            .await?;
         for _ in 0..size / 2 {
-            let left: ClassInstanceRef<Object> = jvm.invoke_virtual(&forward, "next", "()Ljava/lang/Object;", ()).await?;
-            let right: ClassInstanceRef<Object> = jvm.invoke_virtual(&backward, "previous", "()Ljava/lang/Object;", ()).await?;
-            let _: () = jvm.invoke_virtual(&forward, "set", "(Ljava/lang/Object;)V", (right,)).await?;
-            let _: () = jvm.invoke_virtual(&backward, "set", "(Ljava/lang/Object;)V", (left,)).await?;
+            let left: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&forward, &forward.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let right: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&backward, &backward.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&forward, &forward.class_definition().name(), "set", "(Ljava/lang/Object;)V", (right,))
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&backward, &backward.class_definition().name(), "set", "(Ljava/lang/Object;)V", (left,))
+                .await?;
         }
         Ok(())
     }
@@ -307,10 +343,25 @@ impl Collections {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
         }
 
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (element.clone(),)).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(
+                    &iterator,
+                    &iterator.class_definition().name(),
+                    "set",
+                    "(Ljava/lang/Object;)V",
+                    (element.clone(),),
+                )
+                .await?;
         }
         Ok(())
     }
@@ -319,22 +370,38 @@ impl Collections {
         if source.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "source").await);
         }
-        let source_size: i32 = jvm.invoke_virtual(&source, "size", "()I", ()).await?;
+        let source_size: i32 = jvm.invoke_virtual(&source, &source.class_definition().name(), "size", "()I", ()).await?;
         if destination.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "destination").await);
         }
-        let destination_size: i32 = jvm.invoke_virtual(&destination, "size", "()I", ()).await?;
+        let destination_size: i32 = jvm
+            .invoke_virtual(&destination, &destination.class_definition().name(), "size", "()I", ())
+            .await?;
         if source_size > destination_size {
             return Err(jvm
                 .exception("java/lang/IndexOutOfBoundsException", "source does not fit in destination")
                 .await);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&source, "toArray", "()[Ljava/lang/Object;", ()).await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&destination, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&source, &source.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &destination,
+                &destination.class_definition().name(),
+                "listIterator",
+                "()Ljava/util/ListIterator;",
+                (),
+            )
+            .await?;
         for element in jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, source_size as usize).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (element,)).await?;
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "set", "(Ljava/lang/Object;)V", (element,))
+                .await?;
         }
         Ok(())
     }
@@ -343,7 +410,9 @@ impl Collections {
         if list.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
         }
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&list, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let length = jvm.array_length(&elements).await?;
         if length < 2 {
             return Ok(());
@@ -353,7 +422,9 @@ impl Collections {
         }
         let mut values = jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, length).await?;
         for index in (1..length).rev() {
-            let swap_index: i32 = jvm.invoke_virtual(&random, "nextInt", "(I)I", ((index + 1) as i32,)).await?;
+            let swap_index: i32 = jvm
+                .invoke_virtual(&random, "java/util/Random", "nextInt", "(I)I", ((index + 1) as i32,))
+                .await?;
             if swap_index < 0 || swap_index as usize > index {
                 return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "random index").await);
             }
@@ -386,14 +457,32 @@ impl Collections {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
 
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&collection, "iterator", "()Ljava/util/Iterator;", ()).await?;
-        if !jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &collection,
+                &collection.class_definition().name(),
+                "iterator",
+                "()Ljava/util/Iterator;",
+                (),
+            )
+            .await?;
+        if !jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
             return Err(jvm.exception("java/util/NoSuchElementException", "empty collection").await);
         }
-        let mut candidate: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        let mut candidate: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await?;
 
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let next: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let next: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             let comparison = Self::compare(jvm, &comparator, &next, &candidate).await?;
             if (find_minimum && comparison < 0) || (!find_minimum && comparison > 0) {
                 candidate = next;

@@ -245,10 +245,11 @@ impl NumberFormat {
             || jvm.is_instance(&**object, "java/lang/Integer")
             || jvm.is_instance(&**object, "java/lang/Long")
         {
-            let value: i64 = jvm.invoke_virtual(&object, "longValue", "()J", ()).await?;
+            let value: i64 = jvm.invoke_virtual(&object, "java/lang/Number", "longValue", "()J", ()).await?;
             return jvm
                 .invoke_virtual(
                     &this,
+                    "java/text/NumberFormat",
                     "format",
                     "(JLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
                     (value, buffer, position),
@@ -256,9 +257,10 @@ impl NumberFormat {
                 .await;
         }
 
-        let value: f64 = jvm.invoke_virtual(&object, "doubleValue", "()D", ()).await?;
+        let value: f64 = jvm.invoke_virtual(&object, "java/lang/Number", "doubleValue", "()D", ()).await?;
         jvm.invoke_virtual(
             &this,
+            "java/text/NumberFormat",
             "format",
             "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
             (value, buffer, position),
@@ -272,12 +274,14 @@ impl NumberFormat {
         let buffer: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/NumberFormat",
                 "format",
                 "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
                 (value, buffer, position),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn format_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<String>> {
@@ -286,12 +290,14 @@ impl NumberFormat {
         let buffer: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/NumberFormat",
                 "format",
                 "(JLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
                 (value, buffer, position),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn parse(
@@ -307,14 +313,17 @@ impl NumberFormat {
         let result: ClassInstanceRef<Number> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/NumberFormat",
                 "parse",
                 "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
                 (source, position.clone()),
             )
             .await?;
-        let index: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
+        let index: i32 = jvm.invoke_virtual(&position, "java/text/ParsePosition", "getIndex", "()I", ()).await?;
         if index == 0 {
-            let error_index: i32 = jvm.invoke_virtual(&position, "getErrorIndex", "()I", ()).await?;
+            let error_index: i32 = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+                .await?;
             let message = JavaLangString::from_rust_string(jvm, "Unparseable number").await?;
             let exception: ClassInstanceRef<ParseException> = jvm
                 .new_class("java/text/ParseException", "(Ljava/lang/String;I)V", (message, error_index))
@@ -335,6 +344,7 @@ impl NumberFormat {
         let number: ClassInstanceRef<Number> = jvm
             .invoke_virtual(
                 &this,
+                "java/text/NumberFormat",
                 "parse",
                 "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
                 (source, position),
@@ -400,7 +410,9 @@ impl NumberFormat {
             .new_class("java/text/DecimalFormat", "(Ljava/lang/String;)V", (pattern,))
             .await?
             .into();
-        let _: () = jvm.invoke_virtual(&format, "setParseIntegerOnly", "(Z)V", (true,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&format, "java/text/NumberFormat", "setParseIntegerOnly", "(Z)V", (true,))
+            .await?;
         Ok(format)
     }
 

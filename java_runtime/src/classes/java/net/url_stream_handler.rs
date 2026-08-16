@@ -1,6 +1,6 @@
 use alloc::{borrow::ToOwned, string::ToString, vec};
 
-use java_constants::ClassAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use url::Url;
 
 use java_class_proto::JavaMethodProto;
@@ -21,14 +21,19 @@ impl URLStreamHandler {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new_abstract("openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", Default::default()),
-                JavaMethodProto::new("parseURL", "(Ljava/net/URL;Ljava/lang/String;II)V", Self::parse_url, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new_abstract("openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new(
+                    "parseURL",
+                    "(Ljava/net/URL;Ljava/lang/String;II)V",
+                    Self::parse_url,
+                    MethodAccessFlags::PROTECTED,
+                ),
                 JavaMethodProto::new(
                     "setURL",
                     "(Ljava/net/URL;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
                     Self::set_url,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED,
                 ),
             ],
             fields: vec![],
@@ -64,6 +69,7 @@ impl URLStreamHandler {
         let _: () = jvm
             .invoke_virtual(
                 &url,
+                "java/net/URL",
                 "set",
                 "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
                 (protocol, host, port, file, r#ref),
@@ -109,6 +115,7 @@ impl URLStreamHandler {
         let _: () = jvm
             .invoke_virtual(
                 &this,
+                "java/net/URLStreamHandler",
                 "setURL",
                 "(Ljava/net/URL;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
                 (url, protocol, host, port, file, None),

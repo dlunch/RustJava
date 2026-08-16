@@ -127,6 +127,7 @@ impl URL {
         let _: () = jvm
             .invoke_virtual(
                 &handler,
+                "java/net/URLStreamHandler",
                 "parseURL",
                 "(Ljava/net/URL;Ljava/lang/String;II)V",
                 (this, spec, 0, spec_str.len() as i32),
@@ -180,6 +181,7 @@ impl URL {
         let _: () = jvm
             .invoke_virtual(
                 &this,
+                "java/net/URL",
                 "set",
                 "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
                 (protocol.clone(), host, port, file, None),
@@ -222,7 +224,13 @@ impl URL {
 
         let handler = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection = jvm
-            .invoke_virtual(&handler, "openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", (this,))
+            .invoke_virtual(
+                &handler,
+                "java/net/URLStreamHandler",
+                "openConnection",
+                "(Ljava/net/URL;)Ljava/net/URLConnection;",
+                (this,),
+            )
             .await?;
 
         Ok(connection)
@@ -231,9 +239,13 @@ impl URL {
     async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URL::openStream({this:?})");
 
-        let connection = jvm.invoke_virtual(&this, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+        let connection = jvm
+            .invoke_virtual(&this, "java/net/URL", "openConnection", "()Ljava/net/URLConnection;", ())
+            .await?;
 
-        let stream = jvm.invoke_virtual(&connection, "getInputStream", "()Ljava/io/InputStream;", ()).await?;
+        let stream = jvm
+            .invoke_virtual(&connection, "java/net/URLConnection", "getInputStream", "()Ljava/io/InputStream;", ())
+            .await?;
 
         Ok(stream)
     }

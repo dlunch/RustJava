@@ -22,44 +22,54 @@ impl ClassLoader {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/ClassLoader;)V", Self::init, Default::default()),
-                JavaMethodProto::new("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", Self::load_class, Default::default()),
-                JavaMethodProto::new("findClass", "(Ljava/lang/String;)Ljava/lang/Class;", Self::find_class, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/ClassLoader;)V", Self::init, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new(
+                    "loadClass",
+                    "(Ljava/lang/String;)Ljava/lang/Class;",
+                    Self::load_class,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "findClass",
+                    "(Ljava/lang/String;)Ljava/lang/Class;",
+                    Self::find_class,
+                    MethodAccessFlags::PROTECTED,
+                ),
                 JavaMethodProto::new(
                     "findLoadedClass",
                     "(Ljava/lang/String;)Ljava/lang/Class;",
                     Self::find_loaded_class,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL,
                 ),
                 JavaMethodProto::new(
                     "getSystemClassLoader",
                     "()Ljava/lang/ClassLoader;",
                     Self::get_system_class_loader,
-                    MethodAccessFlags::STATIC,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
                 ),
                 JavaMethodProto::new(
                     "getResource",
                     "(Ljava/lang/String;)Ljava/net/URL;",
                     Self::get_resource,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
                 JavaMethodProto::new(
                     "getResourceAsStream",
                     "(Ljava/lang/String;)Ljava/io/InputStream;",
                     Self::get_resource_as_stream,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
                 JavaMethodProto::new(
                     "findResource",
                     "(Ljava/lang/String;)Ljava/net/URL;",
                     Self::find_resource,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED,
                 ),
                 JavaMethodProto::new(
                     "defineClass",
                     "(Ljava/lang/String;[BII)Ljava/lang/Class;",
                     Self::define_class,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL,
                 ),
             ],
             fields: vec![
@@ -178,7 +188,13 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::loadClass({this:?}, {name:?})");
 
         let class: ClassInstanceRef<Class> = jvm
-            .invoke_virtual(&this, "findLoadedClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
+            .invoke_virtual(
+                &this,
+                "java/lang/ClassLoader",
+                "findLoadedClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;",
+                (name.clone(),),
+            )
             .await?;
 
         if !class.is_null() {
@@ -193,7 +209,13 @@ impl ClassLoader {
             let defining_loader = if let Some(element_class_name) = ultimate_element_type.strip_prefix('L').and_then(|name| name.strip_suffix(';')) {
                 let element_class_name = JavaLangString::from_rust_string(jvm, element_class_name).await?;
                 let element_class: ClassInstanceRef<Class> = jvm
-                    .invoke_virtual(&this, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (element_class_name,))
+                    .invoke_virtual(
+                        &this,
+                        "java/lang/ClassLoader",
+                        "loadClass",
+                        "(Ljava/lang/String;)Ljava/lang/Class;",
+                        (element_class_name,),
+                    )
                     .await?;
                 jvm.get_field(&element_class, "classLoader", "Ljava/lang/ClassLoader;").await?
             } else {
@@ -208,8 +230,14 @@ impl ClassLoader {
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
         let class: ClassInstanceRef<Class> = if !parent.is_null() {
-            jvm.invoke_virtual(&parent, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name.clone(),))
-                .await?
+            jvm.invoke_virtual(
+                &parent,
+                "java/lang/ClassLoader",
+                "loadClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;",
+                (name.clone(),),
+            )
+            .await?
         } else {
             jvm.load_bootstrap_class(&internal_name).await?.into()
         };
@@ -219,7 +247,13 @@ impl ClassLoader {
         }
 
         let class = jvm
-            .invoke_virtual(&this, "findClass", "(Ljava/lang/String;)Ljava/lang/Class;", (name,))
+            .invoke_virtual(
+                &this,
+                "java/lang/ClassLoader",
+                "findClass",
+                "(Ljava/lang/String;)Ljava/lang/Class;",
+                (name,),
+            )
             .await?;
 
         Ok(class)
@@ -265,8 +299,14 @@ impl ClassLoader {
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
 
         let result: ClassInstanceRef<URL> = if !parent.is_null() {
-            jvm.invoke_virtual(&parent, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
-                .await?
+            jvm.invoke_virtual(
+                &parent,
+                "java/lang/ClassLoader",
+                "getResource",
+                "(Ljava/lang/String;)Ljava/net/URL;",
+                (name.clone(),),
+            )
+            .await?
         } else {
             None.into()
         };
@@ -276,7 +316,13 @@ impl ClassLoader {
         }
 
         let result = jvm
-            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (name,))
+            .invoke_virtual(
+                &this,
+                "java/lang/ClassLoader",
+                "findResource",
+                "(Ljava/lang/String;)Ljava/net/URL;",
+                (name,),
+            )
             .await?;
 
         Ok(result)
@@ -291,14 +337,22 @@ impl ClassLoader {
         tracing::debug!("java.lang.ClassLoader::getResourceAsStream({this:?})");
 
         let resource_url: ClassInstanceRef<URL> = jvm
-            .invoke_virtual(&this, "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name.clone(),))
+            .invoke_virtual(
+                &this,
+                "java/lang/ClassLoader",
+                "getResource",
+                "(Ljava/lang/String;)Ljava/net/URL;",
+                (name.clone(),),
+            )
             .await?;
 
         if resource_url.is_null() {
             return Ok(None.into());
         }
 
-        let stream = jvm.invoke_virtual(&resource_url, "openStream", "()Ljava/io/InputStream;", ()).await?;
+        let stream = jvm
+            .invoke_virtual(&resource_url, "java/net/URL", "openStream", "()Ljava/io/InputStream;", ())
+            .await?;
 
         Ok(stream)
     }

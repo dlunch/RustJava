@@ -14,12 +14,24 @@ async fn test_jar_entry() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm.invoke_virtual(&url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+    let connection = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
+        .await?;
 
-    let stream = jvm.invoke_virtual(&connection, "getInputStream", "()Ljava/io/InputStream;", ()).await?;
+    let stream = jvm
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getInputStream",
+            "()Ljava/io/InputStream;",
+            (),
+        )
+        .await?;
 
     let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+    let len: i32 = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; len as usize];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data).unwrap();
@@ -38,15 +50,29 @@ async fn test_jar_file() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm.invoke_virtual(&url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+    let connection = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
+        .await?;
 
     let attributes = jvm
-        .invoke_virtual(&connection, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getMainAttributes",
+            "()Ljava/util/jar/Attributes;",
+            (),
+        )
         .await?;
 
     let key = JavaLangString::from_rust_string(&jvm, "Main-Class").await?;
     let value = jvm
-        .invoke_virtual(&attributes, "getValue", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+        .invoke_virtual(
+            &attributes,
+            &attributes.class_definition().name(),
+            "getValue",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (key,),
+        )
         .await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "JarTest");
@@ -63,12 +89,38 @@ async fn test_jar_cache() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm.invoke_virtual(&url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+    let connection = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
+        .await?;
 
-    let jar_file = jvm.invoke_virtual(&connection, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
-    let jar_file2: ClassInstanceRef<JarFile> = jvm.invoke_virtual(&connection, "getJarFile", "()Ljava/util/jar/JarFile;", ()).await?;
+    let jar_file = jvm
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getJarFile",
+            "()Ljava/util/jar/JarFile;",
+            (),
+        )
+        .await?;
+    let jar_file2: ClassInstanceRef<JarFile> = jvm
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getJarFile",
+            "()Ljava/util/jar/JarFile;",
+            (),
+        )
+        .await?;
 
-    let equals: bool = jvm.invoke_virtual(&jar_file, "equals", "(Ljava/lang/Object;)Z", (jar_file2,)).await?;
+    let equals: bool = jvm
+        .invoke_virtual(
+            &jar_file,
+            &jar_file.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (jar_file2,),
+        )
+        .await?;
 
     assert!(equals);
 

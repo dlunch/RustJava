@@ -9,10 +9,16 @@ async fn test_file_url() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "file:test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let protocol = jvm.invoke_virtual(&url, "getProtocol", "()Ljava/lang/String;", ()).await?;
-    let host = jvm.invoke_virtual(&url, "getHost", "()Ljava/lang/String;", ()).await?;
-    let port: i32 = jvm.invoke_virtual(&url, "getPort", "()I", ()).await?;
-    let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
+    let protocol = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "getProtocol", "()Ljava/lang/String;", ())
+        .await?;
+    let host = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "getHost", "()Ljava/lang/String;", ())
+        .await?;
+    let port: i32 = jvm.invoke_virtual(&url, &url.class_definition().name(), "getPort", "()I", ()).await?;
+    let file = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "getFile", "()Ljava/lang/String;", ())
+        .await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "file");
     assert_eq!(port, -1);

@@ -24,7 +24,13 @@ async fn split(jvm: &Jvm, input: &str, source: &str, limit: i32) -> Result<Vec<R
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(jvm, input).await?.into();
     let values: ClassInstanceRef<Array<String>> = jvm
-        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, limit))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, limit),
+        )
         .await?;
     let mut result = Vec::new();
     for value in jvm
@@ -125,10 +131,22 @@ async fn split_without_limit_matches_an_explicit_zero_limit() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = JavaLangString::from_rust_string(&jvm, "boo:and:foo").await?.into();
     let implicit: ClassInstanceRef<Array<String>> = jvm
-        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;)[Ljava/lang/String;", (input.clone(),))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;)[Ljava/lang/String;",
+            (input.clone(),),
+        )
         .await?;
     let explicit: ClassInstanceRef<Array<String>> = jvm
-        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, 0))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, 0),
+        )
         .await?;
 
     let implicit = jvm
@@ -164,7 +182,13 @@ async fn split_accepts_string_buffer_and_returns_a_java_string_array() -> Result
     let buffer = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (value,)).await?;
     let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(Some(buffer));
     let values: ClassInstanceRef<Array<String>> = jvm
-        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, -1))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, -1),
+        )
         .await?;
     assert_eq!(values.class_definition().name(), "[Ljava/lang/String;");
 
@@ -194,7 +218,13 @@ async fn split_rejects_a_null_input() -> Result<()> {
         .await?;
     let input: ClassInstanceRef<CharSequence> = None.into();
     let result: Result<ClassInstanceRef<Array<String>>> = jvm
-        .invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, 0))
+        .invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, 0),
+        )
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Pattern.split(null) must throw");

@@ -11,14 +11,46 @@ async fn test_jar_filename() -> Result<()> {
 
     let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 
-    let jar_file_url = jvm.invoke_virtual(&connection, "getJarFileURL", "()Ljava/net/URL;", ()).await?;
-    let file = jvm.invoke_virtual(&jar_file_url, "getFile", "()Ljava/lang/String;", ()).await?;
-    let protocol = jvm.invoke_virtual(&jar_file_url, "getProtocol", "()Ljava/lang/String;", ()).await?;
+    let jar_file_url = jvm
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getJarFileURL",
+            "()Ljava/net/URL;",
+            (),
+        )
+        .await?;
+    let file = jvm
+        .invoke_virtual(
+            &jar_file_url,
+            &jar_file_url.class_definition().name(),
+            "getFile",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
+    let protocol = jvm
+        .invoke_virtual(
+            &jar_file_url,
+            &jar_file_url.class_definition().name(),
+            "getProtocol",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "path/to/file.jar");
     assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "file");
 
-    let entry_name = jvm.invoke_virtual(&connection, "getEntryName", "()Ljava/lang/String;", ()).await?;
+    let entry_name = jvm
+        .invoke_virtual(
+            &connection,
+            &connection.class_definition().name(),
+            "getEntryName",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &entry_name).await?, "path/to/entry");
 
     Ok(())

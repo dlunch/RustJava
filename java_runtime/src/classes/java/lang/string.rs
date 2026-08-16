@@ -383,7 +383,9 @@ impl String {
     ) -> Result<()> {
         tracing::debug!("java.lang.String::<init>({this:?}, {value:?})");
 
-        let string: ClassInstanceRef<Self> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
+        let string: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&value, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await?;
 
         let _: () = jvm
             .invoke_special(&this, "java/lang/String", "<init>", "(Ljava/lang/String;)V", (string,))
@@ -653,7 +655,7 @@ impl String {
     ) -> Result<ClassInstanceRef<CharSequence>> {
         tracing::debug!("java.lang.String::subSequence({this:?}, {begin_index}, {end_index})");
 
-        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (begin_index, end_index))
+        jvm.invoke_virtual(&this, "java/lang/String", "substring", "(II)Ljava/lang/String;", (begin_index, end_index))
             .await
     }
 
@@ -681,14 +683,15 @@ impl String {
         Ok(if value.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&value, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         })
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({this:?}, {ch:?})");
 
-        jvm.invoke_virtual(&this, "indexOf", "(II)I", (ch, 0)).await
+        jvm.invoke_virtual(&this, "java/lang/String", "indexOf", "(II)I", (ch, 0)).await
     }
 
     async fn index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
@@ -711,7 +714,8 @@ impl String {
     async fn index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::indexOf({this:?}, {str:?})");
 
-        jvm.invoke_virtual(&this, "indexOf", "(Ljava/lang/String;I)I", (str, 0)).await
+        jvm.invoke_virtual(&this, "java/lang/String", "indexOf", "(Ljava/lang/String;I)I", (str, 0))
+            .await
     }
 
     async fn index_of_string_from(
@@ -795,13 +799,15 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "locale is null").await);
         }
 
-        jvm.invoke_virtual(&this, "toUpperCase", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&this, "java/lang/String", "toUpperCase", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn starts_with(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, prefix: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.String::startsWith({this:?}, {prefix:?})");
 
-        jvm.invoke_virtual(&this, "startsWith", "(Ljava/lang/String;I)Z", (prefix, 0)).await
+        jvm.invoke_virtual(&this, "java/lang/String", "startsWith", "(Ljava/lang/String;I)Z", (prefix, 0))
+            .await
     }
 
     async fn starts_with_offset(
@@ -958,7 +964,8 @@ impl String {
             return Err(jvm.exception("java/lang/NullPointerException", "locale is null").await);
         }
 
-        jvm.invoke_virtual(&this, "toLowerCase", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&this, "java/lang/String", "toLowerCase", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn replace(
@@ -1015,10 +1022,22 @@ impl String {
             .await?;
         let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
-        jvm.invoke_virtual(&matcher, "replaceFirst", "(Ljava/lang/String;)Ljava/lang/String;", (replacement,))
-            .await
+        jvm.invoke_virtual(
+            &matcher,
+            "java/util/regex/Matcher",
+            "replaceFirst",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (replacement,),
+        )
+        .await
     }
 
     async fn replace_all(
@@ -1040,10 +1059,22 @@ impl String {
             .await?;
         let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
         let matcher: ClassInstanceRef<Matcher> = jvm
-            .invoke_virtual(&pattern, "matcher", "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;", (input,))
+            .invoke_virtual(
+                &pattern,
+                "java/util/regex/Pattern",
+                "matcher",
+                "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+                (input,),
+            )
             .await?;
-        jvm.invoke_virtual(&matcher, "replaceAll", "(Ljava/lang/String;)Ljava/lang/String;", (replacement,))
-            .await
+        jvm.invoke_virtual(
+            &matcher,
+            "java/util/regex/Matcher",
+            "replaceAll",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            (replacement,),
+        )
+        .await
     }
 
     async fn split(
@@ -1063,8 +1094,14 @@ impl String {
             )
             .await?;
         let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
-        jvm.invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;)[Ljava/lang/String;", (input,))
-            .await
+        jvm.invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;)[Ljava/lang/String;",
+            (input,),
+        )
+        .await
     }
 
     async fn split_with_limit(
@@ -1085,8 +1122,14 @@ impl String {
             )
             .await?;
         let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(this.instance);
-        jvm.invoke_virtual(&pattern, "split", "(Ljava/lang/CharSequence;I)[Ljava/lang/String;", (input, limit))
-            .await
+        jvm.invoke_virtual(
+            &pattern,
+            "java/util/regex/Pattern",
+            "split",
+            "(Ljava/lang/CharSequence;I)[Ljava/lang/String;",
+            (input, limit),
+        )
+        .await
     }
 
     async fn format(
@@ -1099,12 +1142,14 @@ impl String {
         let _: ClassInstanceRef<Formatter> = jvm
             .invoke_virtual(
                 &formatter,
+                "java/util/Formatter",
                 "format",
                 "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
                 (format, arguments),
             )
             .await?;
-        jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&formatter, "java/util/Formatter", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn format_with_locale(
@@ -1118,12 +1163,14 @@ impl String {
         let _: ClassInstanceRef<Formatter> = jvm
             .invoke_virtual(
                 &formatter,
+                "java/util/Formatter",
                 "format",
                 "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
                 (format, arguments),
             )
             .await?;
-        jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&formatter, "java/util/Formatter", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1184,8 +1231,14 @@ impl String {
     ) -> Result<bool> {
         tracing::debug!("java.lang.String::regionMatches({this:?}, {toffset}, {other:?}, {ooffset}, {len})");
 
-        jvm.invoke_virtual(&this, "regionMatches", "(ZILjava/lang/String;II)Z", (false, toffset, other, ooffset, len))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/String",
+            "regionMatches",
+            "(ZILjava/lang/String;II)Z",
+            (false, toffset, other, ooffset, len),
+        )
+        .await
     }
 
     async fn last_index_of_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, ch: i32, from_index: i32) -> Result<i32> {
@@ -1211,7 +1264,8 @@ impl String {
         tracing::debug!("java.lang.String::lastIndexOf({this:?}, {str:?})");
 
         let length: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&this, "lastIndexOf", "(Ljava/lang/String;I)I", (str, length)).await
+        jvm.invoke_virtual(&this, "java/lang/String", "lastIndexOf", "(Ljava/lang/String;I)I", (str, length))
+            .await
     }
 
     async fn last_index_of_string_from(

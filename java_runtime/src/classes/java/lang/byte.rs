@@ -169,7 +169,7 @@ impl Byte {
         let integer = jvm
             .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (value,))
             .await?;
-        let value: i32 = jvm.invoke_virtual(&integer, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&integer, "java/lang/Integer", "intValue", "()I", ()).await?;
         if !(i32::from(i8::MIN)..=i32::from(i8::MAX)).contains(&value) {
             return Err(jvm.exception("java/lang/NumberFormatException", "Value out of range").await);
         }
@@ -181,32 +181,32 @@ impl Byte {
     }
 
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as i16)
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as i32)
     }
 
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as i64)
     }
 
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as f32)
     }
 
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as f64)
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &format!("{value}")).await?.into())
     }
 
@@ -215,7 +215,7 @@ impl Byte {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
+        let value: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(value as i32)
     }
 
@@ -223,8 +223,8 @@ impl Byte {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Byte") {
             return Ok(false);
         }
-        let left: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
-        let right: i8 = jvm.invoke_virtual(&other, "byteValue", "()B", ()).await?;
+        let left: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
+        let right: i8 = jvm.invoke_virtual(&other, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(left == right)
     }
 
@@ -232,8 +232,8 @@ impl Byte {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let left: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
-        let right: i8 = jvm.invoke_virtual(&other, "byteValue", "()B", ()).await?;
+        let left: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
+        let right: i8 = jvm.invoke_virtual(&other, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
 
@@ -245,8 +245,8 @@ impl Byte {
             return Err(jvm.exception("java/lang/ClassCastException", "not Byte").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let left: i8 = jvm.invoke_virtual(&this, "byteValue", "()B", ()).await?;
-        let right: i8 = jvm.invoke_virtual(&other, "byteValue", "()B", ()).await?;
+        let left: i8 = jvm.invoke_virtual(&this, "java/lang/Byte", "byteValue", "()B", ()).await?;
+        let right: i8 = jvm.invoke_virtual(&other, "java/lang/Byte", "byteValue", "()B", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
 }

@@ -12,10 +12,14 @@ async fn test_file_url() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "file:test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let stream = jvm.invoke_virtual(&url, "openStream", "()Ljava/io/InputStream;", ()).await?;
+    let stream = jvm
+        .invoke_virtual(&url, &url.class_definition().name(), "openStream", "()Ljava/io/InputStream;", ())
+        .await?;
 
     let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm.invoke_virtual(&stream, "read", "([B)I", (buf.clone(),)).await?;
+    let len: i32 = jvm
+        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
+        .await?;
 
     let mut data = vec![0; len as usize];
     jvm.array_raw_buffer(&buf).await?.read(0, &mut data).unwrap();

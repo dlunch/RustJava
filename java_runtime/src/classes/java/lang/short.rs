@@ -169,7 +169,7 @@ impl Short {
         let integer = jvm
             .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (value,))
             .await?;
-        let value: i32 = jvm.invoke_virtual(&integer, "intValue", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&integer, "java/lang/Integer", "intValue", "()I", ()).await?;
         if !(i32::from(i16::MIN)..=i32::from(i16::MAX)).contains(&value) {
             return Err(jvm.exception("java/lang/NumberFormatException", "Value out of range").await);
         }
@@ -196,7 +196,7 @@ impl Short {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: i16 = jvm.invoke_virtual(&this, "shortValue", "()S", ()).await?;
+        let value: i16 = jvm.invoke_virtual(&this, "java/lang/Short", "shortValue", "()S", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &format!("{value}")).await?.into())
     }
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i16) -> Result<ClassInstanceRef<String>> {
@@ -209,15 +209,15 @@ impl Short {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Short") {
             return Ok(false);
         }
-        Ok(jvm.invoke_virtual::<_, i16>(&this, "shortValue", "()S", ()).await?
-            == jvm.invoke_virtual::<_, i16>(&other, "shortValue", "()S", ()).await?)
+        Ok(jvm.invoke_virtual::<_, i16>(&this, "java/lang/Short", "shortValue", "()S", ()).await?
+            == jvm.invoke_virtual::<_, i16>(&other, "java/lang/Short", "shortValue", "()S", ()).await?)
     }
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
         }
-        let left: i16 = jvm.invoke_virtual(&this, "shortValue", "()S", ()).await?;
-        let right: i16 = jvm.invoke_virtual(&other, "shortValue", "()S", ()).await?;
+        let left: i16 = jvm.invoke_virtual(&this, "java/lang/Short", "shortValue", "()S", ()).await?;
+        let right: i16 = jvm.invoke_virtual(&other, "java/lang/Short", "shortValue", "()S", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
@@ -228,8 +228,8 @@ impl Short {
             return Err(jvm.exception("java/lang/ClassCastException", "not Short").await);
         }
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let left: i16 = jvm.invoke_virtual(&this, "shortValue", "()S", ()).await?;
-        let right: i16 = jvm.invoke_virtual(&other, "shortValue", "()S", ()).await?;
+        let left: i16 = jvm.invoke_virtual(&this, "java/lang/Short", "shortValue", "()S", ()).await?;
+        let right: i16 = jvm.invoke_virtual(&other, "java/lang/Short", "shortValue", "()S", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
 }

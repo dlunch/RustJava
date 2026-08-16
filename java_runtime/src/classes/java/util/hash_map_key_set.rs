@@ -44,7 +44,7 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "size", "()I", ()).await
+        jvm.invoke_virtual(&map, "java/util/HashMap", "size", "()I", ()).await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -52,7 +52,7 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&map, "java/util/HashMap", "isEmpty", "()Z", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
@@ -60,20 +60,23 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "containsKey", "(Ljava/lang/Object;)Z", (key,)).await
+        jvm.invoke_virtual(&map, "java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z", (key,))
+            .await
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$KeySet::remove({this:?}, {key:?})");
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
-        let contains: bool = jvm.invoke_virtual(&map, "containsKey", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+        let contains: bool = jvm
+            .invoke_virtual(&map, "java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z", (key.clone(),))
+            .await?;
         if !contains {
             return Ok(false);
         }
 
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .invoke_virtual(&map, "java/util/HashMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
             .await?;
 
         Ok(true)
@@ -84,7 +87,7 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "clear", "()V", ()).await
+        jvm.invoke_virtual(&map, "java/util/HashMap", "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -92,6 +95,7 @@ impl HashMapKeySet {
 
         let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
 
-        jvm.invoke_virtual(&map, "keyIterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual(&map, "java/util/HashMap", "keyIterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 }

@@ -19,10 +19,14 @@ async fn test_output_stream_writer_utf8() -> Result<()> {
         .await?;
 
     let value = JavaLangString::from_rust_string(&jvm, "A한😀").await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "flush", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "flush", "()V", ()).await?;
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     let length = jvm.array_length(&bytes).await?;
     let actual: Vec<i8> = jvm.load_array(&bytes, 0, length).await?;
     assert_eq!(actual, "A한😀".as_bytes().iter().map(|value| *value as i8).collect::<Vec<_>>());
@@ -38,11 +42,17 @@ async fn test_output_stream_writer_preserves_surrogate_across_writes() -> Result
         .new_class("java/io/OutputStreamWriter", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
 
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", (0xd83d,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", (0xde00,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", (0xd83d,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", (0xde00,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     let actual: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
     assert_eq!(actual, "😀".as_bytes().iter().map(|value| *value as i8).collect::<Vec<_>>());
 
@@ -50,10 +60,14 @@ async fn test_output_stream_writer_preserves_surrogate_across_writes() -> Result
     let writer = jvm
         .new_class("java/io/OutputStreamWriter", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&writer, "write", "(I)V", (0xd83d,)).await?;
-    let _: () = jvm.invoke_virtual(&writer, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer, &writer.class_definition().name(), "write", "(I)V", (0xd83d,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&writer, &writer.class_definition().name(), "close", "()V", ()).await?;
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, &output.class_definition().name(), "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?, [b'?' as i8]);
 
     Ok(())

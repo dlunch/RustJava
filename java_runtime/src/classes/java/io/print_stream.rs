@@ -159,7 +159,13 @@ impl PrintStream {
         } else {
             let key = JavaLangString::from_rust_string(jvm, "file.encoding").await?;
             let encoding: ClassInstanceRef<String> = jvm
-                .invoke_virtual(&props, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+                .invoke_virtual(
+                    &props,
+                    "java/util/Properties",
+                    "getProperty",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    (key,),
+                )
                 .await?;
             if encoding.is_null() {
                 JavaLangString::from_rust_string(jvm, "UTF-8").await?.into()
@@ -294,9 +300,9 @@ impl PrintStream {
         Self::with_monitor(jvm, &this, async {
             let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
             if !out.is_null() {
-                let _: () = jvm.invoke_virtual(&this, "flush", "()V", ()).await?;
+                let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "flush", "()V", ()).await?;
                 if jvm.is_instance(&**out, "java/io/PrintStream") {
-                    return jvm.invoke_virtual(&out, "checkError", "()Z", ()).await;
+                    return jvm.invoke_virtual(&out, "java/io/PrintStream", "checkError", "()Z", ()).await;
                 }
             }
             jvm.get_field(&this, "trouble", "Z").await
@@ -320,7 +326,7 @@ impl PrintStream {
             let mut this = this.clone();
             jvm.put_field(&mut this, "closing", "Z", true).await?;
             let char_out: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(&this, "charOut", "Ljava/io/OutputStreamWriter;").await?;
-            let char_out_result = jvm.invoke_virtual(&char_out, "close", "()V", ()).await;
+            let char_out_result = jvm.invoke_virtual(&char_out, "java/io/OutputStreamWriter", "close", "()V", ()).await;
             let close_out = match char_out_result {
                 Ok(()) => true,
                 Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
@@ -331,7 +337,7 @@ impl PrintStream {
             };
 
             if close_out {
-                match jvm.invoke_virtual(&out, "close", "()V", ()).await {
+                match jvm.invoke_virtual(&out, "java/io/OutputStream", "close", "()V", ()).await {
                     Ok(()) => {}
                     Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                         jvm.put_field(&mut this, "trouble", "Z", true).await?;
@@ -359,7 +365,7 @@ impl PrintStream {
                 return Ok(());
             }
 
-            let result = jvm.invoke_virtual(&out, "flush", "()V", ()).await;
+            let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await;
             Self::suppress_io_exception(jvm, &this, result).await.map(|_| ())
         })
         .await
@@ -376,12 +382,12 @@ impl PrintStream {
                 return Ok(());
             }
 
-            let result = jvm.invoke_virtual(&out, "write", "(I)V", (value,)).await;
+            let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "(I)V", (value,)).await;
             if Self::suppress_io_exception(jvm, &this, result).await?
                 && value == b'\n' as i32
                 && jvm.get_field::<bool>(&this, "autoFlush", "Z").await?
             {
-                let result = jvm.invoke_virtual(&out, "flush", "()V", ()).await;
+                let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await;
                 Self::suppress_io_exception(jvm, &this, result).await?;
             }
             Ok(())
@@ -415,9 +421,11 @@ impl PrintStream {
                 return Ok(());
             }
 
-            let result = jvm.invoke_virtual(&out, "write", "([BII)V", (bytes, off, len)).await;
+            let result = jvm
+                .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (bytes, off, len))
+                .await;
             if Self::suppress_io_exception(jvm, &this, result).await? && jvm.get_field::<bool>(&this, "autoFlush", "Z").await? {
-                let result = jvm.invoke_virtual(&out, "flush", "()V", ()).await;
+                let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await;
                 Self::suppress_io_exception(jvm, &this, result).await?;
             }
             Ok(())
@@ -497,7 +505,9 @@ impl PrintStream {
             .invoke_static("java/lang/String", "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", (value,))
             .await?;
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (value,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&this, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (value,))
+                .await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -505,7 +515,9 @@ impl PrintStream {
 
     async fn println_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (value,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&this, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (value,))
+                .await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -513,7 +525,7 @@ impl PrintStream {
 
     async fn println_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(I)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(I)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -521,7 +533,7 @@ impl PrintStream {
 
     async fn println_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(J)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(J)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -529,7 +541,7 @@ impl PrintStream {
 
     async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(C)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(C)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -537,7 +549,7 @@ impl PrintStream {
 
     async fn println_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "([C)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "([C)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -545,7 +557,7 @@ impl PrintStream {
 
     async fn println_bool(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(Z)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(Z)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -553,7 +565,7 @@ impl PrintStream {
 
     async fn println_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(F)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(F)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -561,7 +573,7 @@ impl PrintStream {
 
     async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         Self::with_monitor(jvm, &this, async {
-            let _: () = jvm.invoke_virtual(&this, "print", "(D)V", (value,)).await?;
+            let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(D)V", (value,)).await?;
             Self::new_line(jvm, &this).await
         })
         .await
@@ -576,6 +588,7 @@ impl PrintStream {
     ) -> Result<ClassInstanceRef<Self>> {
         jvm.invoke_virtual(
             &this,
+            "java/io/PrintStream",
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
             (format, arguments),
@@ -593,6 +606,7 @@ impl PrintStream {
     ) -> Result<ClassInstanceRef<Self>> {
         jvm.invoke_virtual(
             &this,
+            "java/io/PrintStream",
             "format",
             "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
             (locale, format, arguments),
@@ -610,6 +624,7 @@ impl PrintStream {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_virtual(
             &this,
+            "java/io/PrintStream",
             "format",
             "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
             (locale, format, arguments),
@@ -634,6 +649,7 @@ impl PrintStream {
             let _: ClassInstanceRef<Formatter> = jvm
                 .invoke_virtual(
                     &formatter,
+                    "java/util/Formatter",
                     "format",
                     "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
                     (format, arguments),
@@ -653,9 +669,12 @@ impl PrintStream {
         let string: ClassInstanceRef<String> = if sequence.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&sequence, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&sequence, &sequence.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (string,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (string,))
+            .await?;
         Ok(this)
     }
 
@@ -673,20 +692,36 @@ impl PrintStream {
             sequence
         };
         let subsequence: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&sequence, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .invoke_virtual(
+                &sequence,
+                &sequence.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (start, end),
+            )
             .await?;
-        let string: ClassInstanceRef<String> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
-        let _: () = jvm.invoke_virtual(&this, "print", "(Ljava/lang/String;)V", (string,)).await?;
+        let string: ClassInstanceRef<String> = jvm
+            .invoke_virtual(
+                &subsequence,
+                &subsequence.class_definition().name(),
+                "toString",
+                "()Ljava/lang/String;",
+                (),
+            )
+            .await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (string,))
+            .await?;
         Ok(this)
     }
 
     async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>> {
-        let _: () = jvm.invoke_virtual(&this, "print", "(C)V", (character,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/io/PrintStream", "print", "(C)V", (character,)).await?;
         Ok(this)
     }
 
     async fn write_string(jvm: &Jvm, this: &ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
-        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&value, "toCharArray", "()[C", ()).await?;
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&value, "java/lang/String", "toCharArray", "()[C", ()).await?;
         Self::write_characters(jvm, this, chars).await
     }
 
@@ -706,13 +741,15 @@ impl PrintStream {
             let length = jvm.array_length(&chars).await?;
             let values: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
             let char_out: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(this, "charOut", "Ljava/io/OutputStreamWriter;").await?;
-            let result = jvm.invoke_virtual(&char_out, "write", "([CII)V", (chars, 0, length as i32)).await;
+            let result = jvm
+                .invoke_virtual(&char_out, "java/io/OutputStreamWriter", "write", "([CII)V", (chars, 0, length as i32))
+                .await;
             if !Self::suppress_io_exception(jvm, this, result).await? {
                 return Ok(());
             }
 
             if jvm.get_field::<bool>(this, "autoFlush", "Z").await? && values.contains(&('\n' as JavaChar)) {
-                let result = jvm.invoke_virtual(&out, "flush", "()V", ()).await;
+                let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await;
                 Self::suppress_io_exception(jvm, this, result).await?;
             }
             Ok(())
@@ -738,16 +775,18 @@ impl PrintStream {
             } else {
                 separator
             };
-            let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&separator, "toCharArray", "()[C", ()).await?;
+            let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&separator, "java/lang/String", "toCharArray", "()[C", ()).await?;
             let length = jvm.array_length(&chars).await?;
             let char_out: ClassInstanceRef<OutputStreamWriter> = jvm.get_field(this, "charOut", "Ljava/io/OutputStreamWriter;").await?;
-            let result = jvm.invoke_virtual(&char_out, "write", "([CII)V", (chars, 0, length as i32)).await;
+            let result = jvm
+                .invoke_virtual(&char_out, "java/io/OutputStreamWriter", "write", "([CII)V", (chars, 0, length as i32))
+                .await;
             if !Self::suppress_io_exception(jvm, this, result).await? {
                 return Ok(());
             }
 
             if jvm.get_field::<bool>(this, "autoFlush", "Z").await? {
-                let result = jvm.invoke_virtual(&out, "flush", "()V", ()).await;
+                let result = jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await;
                 Self::suppress_io_exception(jvm, this, result).await?;
             }
             Ok(())

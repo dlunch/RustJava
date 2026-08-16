@@ -108,7 +108,9 @@ impl TreeMap {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
         }
-        let comparator: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "comparator", "()Ljava/util/Comparator;", ()).await?;
+        let comparator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, &map.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
+            .await?;
         let _: () = jvm
             .invoke_special(&this, "java/util/TreeMap", "<init>", "(Ljava/util/Comparator;)V", (comparator,))
             .await?;
@@ -130,7 +132,8 @@ impl TreeMap {
             let equal = if value.is_null() {
                 current.is_null()
             } else {
-                jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (current,)).await?
+                jvm.invoke_virtual(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
+                    .await?
             };
             if equal {
                 return Ok(true);
@@ -383,14 +386,33 @@ impl TreeMap {
     }
 
     async fn copy_from_map(jvm: &Jvm, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
-        let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry_set, "iterator", "()Ljava/util/Iterator;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+        let entry_set: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entry_set, &entry_set.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let entry: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                .await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
             let _: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+                .invoke_virtual(
+                    &this,
+                    "java/util/TreeMap",
+                    "put",
+                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                    (key, value),
+                )
                 .await?;
         }
         Ok(())
@@ -407,6 +429,7 @@ impl TreeMap {
             return jvm
                 .invoke_virtual(
                     &comparator,
+                    &comparator.class_definition().name(),
                     "compare",
                     "(Ljava/lang/Object;Ljava/lang/Object;)I",
                     (left.clone(), right.clone()),
@@ -419,7 +442,14 @@ impl TreeMap {
         if !jvm.is_instance(left.as_ref(), "java/lang/Comparable") {
             return Err(jvm.exception("java/lang/ClassCastException", "key is not Comparable").await);
         }
-        jvm.invoke_virtual(left, "compareTo", "(Ljava/lang/Object;)I", (right.clone(),)).await
+        jvm.invoke_virtual(
+            left,
+            &left.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Object;)I",
+            (right.clone(),),
+        )
+        .await
     }
 
     pub(super) async fn find_entry(
@@ -441,10 +471,12 @@ impl TreeMap {
         while !entry.is_null() {
             let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
             let comparison: i32 = if comparator.is_null() {
-                jvm.invoke_virtual(key, "compareTo", "(Ljava/lang/Object;)I", (stored_key,)).await?
+                jvm.invoke_virtual(key, &key.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (stored_key,))
+                    .await?
             } else {
                 jvm.invoke_virtual(
                     &comparator,
+                    &comparator.class_definition().name(),
                     "compare",
                     "(Ljava/lang/Object;Ljava/lang/Object;)I",
                     (key.clone(), stored_key),

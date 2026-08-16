@@ -52,22 +52,39 @@ impl CollectionsUnmodifiableCollection {
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "size", "()I", ()).await
+        jvm.invoke_virtual(&collection, &collection.class_definition().name(), "size", "()I", ())
+            .await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&collection, &collection.class_definition().name(), "isEmpty", "()Z", ())
+            .await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "contains", "(Ljava/lang/Object;)Z", (element,)).await
+        jvm.invoke_virtual(
+            &collection,
+            &collection.class_definition().name(),
+            "contains",
+            "(Ljava/lang/Object;)Z",
+            (element,),
+        )
+        .await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&collection, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &collection,
+                &collection.class_definition().name(),
+                "iterator",
+                "()Ljava/util/Iterator;",
+                (),
+            )
+            .await?;
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableCollection$1", "(Ljava/util/Iterator;)V", (iterator,))
             .await?
@@ -76,7 +93,8 @@ impl CollectionsUnmodifiableCollection {
 
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "toArray", "()[Ljava/lang/Object;", ()).await
+        jvm.invoke_virtual(&collection, &collection.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await
     }
 
     async fn to_typed_array(
@@ -86,19 +104,32 @@ impl CollectionsUnmodifiableCollection {
         array: ClassInstanceRef<Array<Object>>,
     ) -> Result<ClassInstanceRef<Array<Object>>> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (array,))
-            .await
+        jvm.invoke_virtual(
+            &collection,
+            &collection.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (array,),
+        )
+        .await
     }
 
     async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         let backing: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&backing, "containsAll", "(Ljava/util/Collection;)Z", (collection,))
-            .await
+        jvm.invoke_virtual(
+            &backing,
+            &backing.class_definition().name(),
+            "containsAll",
+            "(Ljava/util/Collection;)Z",
+            (collection,),
+        )
+        .await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let collection: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&collection, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&collection, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {

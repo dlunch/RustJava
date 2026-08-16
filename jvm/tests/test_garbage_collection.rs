@@ -60,6 +60,7 @@ async fn test_garbage_collection() -> JvmResult<()> {
     let _: () = jvm
         .invoke_virtual(
             &vector,
+            &vector.class_definition().name(),
             "addElement",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "test").await?,),
@@ -94,6 +95,7 @@ async fn test_garbage_collection_hashtable() -> JvmResult<()> {
     let _: JavaValue = jvm
         .invoke_virtual(
             &hashtable,
+            &hashtable.class_definition().name(),
             "put",
             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
             (key.clone(), value.clone()),
@@ -124,7 +126,9 @@ async fn substring_keeps_shared_array_alive_after_parent_collection() -> JvmResu
 
     jvm.push_native_frame();
     let parent = JavaLangString::from_rust_string(&jvm, "HelloWorld").await?;
-    let child: ClassInstanceRef<String> = jvm.invoke_virtual(&parent, "substring", "(II)Ljava/lang/String;", (2, 5)).await?;
+    let child: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (2, 5))
+        .await?;
     let child = jvm.new_global_ref(&child).unwrap();
     jvm.pop_frame();
 
@@ -217,7 +221,9 @@ async fn field_and_method_results_are_local_references() -> JvmResult<()> {
     jvm.push_native_frame();
     let vector: ClassInstanceRef<Vector> = jvm.new_class("java/util/Vector", "(I)V", (1,)).await?.into();
     let object: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
-    let _: () = jvm.invoke_virtual(&vector, "addElement", "(Ljava/lang/Object;)V", (object,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&vector, "java/util/Vector", "addElement", "(Ljava/lang/Object;)V", (object,))
+        .await?;
     let vector = jvm.new_global_ref(&vector).unwrap();
     jvm.pop_frame();
 
@@ -243,12 +249,16 @@ async fn field_and_method_results_are_local_references() -> JvmResult<()> {
     jvm.push_native_frame();
     let vector: ClassInstanceRef<Vector> = jvm.new_class("java/util/Vector", "(I)V", (1,)).await?.into();
     let object: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
-    let _: () = jvm.invoke_virtual(&vector, "addElement", "(Ljava/lang/Object;)V", (object,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&vector, "java/util/Vector", "addElement", "(Ljava/lang/Object;)V", (object,))
+        .await?;
     let vector = jvm.new_global_ref(&vector).unwrap();
     jvm.pop_frame();
 
     jvm.push_native_frame();
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&vector, "remove", "(I)Ljava/lang/Object;", (0,)).await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&vector, "java/util/Vector", "remove", "(I)Ljava/lang/Object;", (0,))
+        .await?;
     assert_eq!(jvm.collect_garbage()?, 0);
     jvm.pop_frame();
 
@@ -288,7 +298,7 @@ async fn returned_exception_is_a_local_reference() -> JvmResult<()> {
     jvm.push_native_frame();
     let vector: ClassInstanceRef<Vector> = jvm.new_class("java/util/Vector", "()V", ()).await?.into();
     let _: jvm::JavaError = jvm
-        .invoke_virtual::<_, ClassInstanceRef<()>>(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,))
+        .invoke_virtual::<_, ClassInstanceRef<()>>(&vector, "java/util/Vector", "elementAt", "(I)Ljava/lang/Object;", (0,))
         .await
         .unwrap_err();
     jvm.pop_frame();
@@ -297,7 +307,7 @@ async fn returned_exception_is_a_local_reference() -> JvmResult<()> {
     jvm.push_native_frame();
     let vector: ClassInstanceRef<Vector> = jvm.new_class("java/util/Vector", "()V", ()).await?.into();
     let _: jvm::JavaError = jvm
-        .invoke_virtual::<_, ClassInstanceRef<()>>(&vector, "elementAt", "(I)Ljava/lang/Object;", (0,))
+        .invoke_virtual::<_, ClassInstanceRef<()>>(&vector, "java/util/Vector", "elementAt", "(I)Ljava/lang/Object;", (0,))
         .await
         .unwrap_err();
 
@@ -317,7 +327,7 @@ async fn thread_start_keeps_the_thread_alive_until_spawn_callback_runs() -> JvmR
 
     jvm.push_native_frame();
     let thread = jvm.new_class("java/lang/Thread", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&thread, "start", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "start", "()V", ()).await?;
     jvm.pop_frame();
 
     assert_eq!(jvm.collect_garbage()?, 0);

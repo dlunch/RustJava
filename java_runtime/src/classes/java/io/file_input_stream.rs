@@ -40,7 +40,7 @@ impl FileInputStream {
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileInputStream::<init>({this:?}, {file:?})");
 
-        let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
+        let path = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
         let fd = context

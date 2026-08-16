@@ -24,21 +24,46 @@ impl Hashtable {
             parent_class: Some("java/util/Dictionary"),
             interfaces: vec!["java/util/Map", "java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, Default::default()),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, Default::default()),
-                JavaMethodProto::new("keys", "()Ljava/util/Enumeration;", Self::keys, Default::default()),
-                JavaMethodProto::new("elements", "()Ljava/util/Enumeration;", Self::elements, Default::default()),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new(
+                    "isEmpty",
+                    "()Z",
+                    Self::is_empty,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "contains",
+                    "(Ljava/lang/Object;)Z",
+                    Self::contains,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "containsKey",
+                    "(Ljava/lang/Object;)Z",
+                    Self::contains_key,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "keys",
+                    "()Ljava/util/Enumeration;",
+                    Self::keys,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "elements",
+                    "()Ljava/util/Enumeration;",
+                    Self::elements,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
                 JavaMethodProto::new(
                     "put",
                     "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                     Self::put,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
                 JavaMethodProto::new(
                     "putAll",
@@ -46,12 +71,22 @@ impl Hashtable {
                     Self::put_all,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, Default::default()),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::remove, Default::default()),
-                JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, Default::default()),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, Default::default()),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, Default::default()),
+                JavaMethodProto::new(
+                    "get",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::get,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new(
+                    "remove",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::remove,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("rehash", "()V", Self::rehash, MethodAccessFlags::PROTECTED),
                 JavaMethodProto::new(
                     "equals",
@@ -65,7 +100,12 @@ impl Hashtable {
                     Self::hash_code,
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
                 ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
+                JavaMethodProto::new(
+                    "toString",
+                    "()Ljava/lang/String;",
+                    Self::to_string,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
             ],
             fields: vec![
                 JavaFieldProto::new("table", "[Ljava/util/Hashtable$Entry;", Default::default()),
@@ -110,17 +150,20 @@ impl Hashtable {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
         }
-        let size: i32 = jvm.invoke_virtual(&map, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await?;
         let capacity = size.saturating_mul(2).max(DEFAULT_INITIAL_CAPACITY);
         let _: () = jvm.invoke_special(&this, "java/util/Hashtable", "<init>", "(I)V", (capacity,)).await?;
-        let _: () = jvm.invoke_virtual(&this, "putAll", "(Ljava/util/Map;)V", (map,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/util/Hashtable", "putAll", "(Ljava/util/Map;)V", (map,))
+            .await?;
 
         Ok(())
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::contains({this:?}, {value:?})");
-        jvm.invoke_virtual(&this, "containsValue", "(Ljava/lang/Object;)Z", (value,)).await
+        jvm.invoke_virtual(&this, "java/util/Hashtable", "containsValue", "(Ljava/lang/Object;)Z", (value,))
+            .await
     }
 
     async fn keys(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -170,7 +213,9 @@ impl Hashtable {
             let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
             if entry_hash == key_hash {
                 let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                let equals: bool = jvm.invoke_virtual(&entry_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+                let equals: bool = jvm
+                    .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
+                    .await?;
                 if equals {
                     return Ok(true);
                 }
@@ -218,7 +263,9 @@ impl Hashtable {
             let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
             if entry_hash == key_hash {
                 let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                let equals: bool = jvm.invoke_virtual(&entry_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+                let equals: bool = jvm
+                    .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
+                    .await?;
                 if equals {
                     return jvm.get_field(&entry, "value", "Ljava/lang/Object;").await;
                 }
@@ -249,7 +296,9 @@ impl Hashtable {
             let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
             if entry_hash == key_hash {
                 let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                let equals: bool = jvm.invoke_virtual(&entry_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+                let equals: bool = jvm
+                    .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
+                    .await?;
                 if equals {
                     let next: ClassInstanceRef<HashtableEntry> = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
                     if prev.is_null() {
@@ -294,7 +343,9 @@ impl Hashtable {
             let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
             if entry_hash == key_hash {
                 let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                let equals: bool = jvm.invoke_virtual(&entry_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+                let equals: bool = jvm
+                    .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
+                    .await?;
                 if equals {
                     let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
                     jvm.put_field(&mut entry, "value", "Ljava/lang/Object;", value).await?;
@@ -349,13 +400,21 @@ impl Hashtable {
             return Ok(());
         }
 
-        let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entry_set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let entry_set: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&entry_set, &entry_set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let count = jvm.array_length(&entries).await?;
         let mut validated = Vec::with_capacity(count);
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                .await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
             if key.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "Hashtable key is null").await);
             }
@@ -367,7 +426,13 @@ impl Hashtable {
 
         for (key, value) in validated {
             let _: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+                .invoke_virtual(
+                    &this,
+                    "java/util/Hashtable",
+                    "put",
+                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                    (key, value),
+                )
                 .await?;
         }
 
@@ -439,7 +504,9 @@ impl Hashtable {
             let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
             if entry_hash == key_hash {
                 let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                let equals: bool = jvm.invoke_virtual(&entry_key, "equals", "(Ljava/lang/Object;)Z", (key.clone(),)).await?;
+                let equals: bool = jvm
+                    .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
+                    .await?;
                 if equals {
                     return Ok(entry);
                 }
@@ -496,7 +563,7 @@ impl Hashtable {
         }
 
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let other_size: i32 = jvm.invoke_virtual(&other, "size", "()I", ()).await?;
+        let other_size: i32 = jvm.invoke_virtual(&other, &other.class_definition().name(), "size", "()I", ()).await?;
         if count != other_size {
             return Ok(false);
         }
@@ -510,18 +577,24 @@ impl Hashtable {
                     let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
                     let value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
                     let other_value: ClassInstanceRef<Object> = jvm
-                        .invoke_virtual(&other, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+                        .invoke_virtual(
+                            &other,
+                            &other.class_definition().name(),
+                            "get",
+                            "(Ljava/lang/Object;)Ljava/lang/Object;",
+                            (key.clone(),),
+                        )
                         .await?;
                     if value.is_null() {
                         if !other_value.is_null()
                             || !jvm
-                                .invoke_virtual::<_, bool>(&other, "containsKey", "(Ljava/lang/Object;)Z", (key,))
+                                .invoke_virtual::<_, bool>(&other, &other.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (key,))
                                 .await?
                         {
                             return Ok(false);
                         }
                     } else if !jvm
-                        .invoke_virtual::<_, bool>(&value, "equals", "(Ljava/lang/Object;)Z", (other_value,))
+                        .invoke_virtual::<_, bool>(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other_value,))
                         .await?
                     {
                         return Ok(false);
@@ -562,7 +635,7 @@ impl Hashtable {
             for bucket_index in 0..table_len {
                 let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
                 while !entry.is_null() {
-                    hash = hash.wrapping_add(jvm.invoke_virtual::<_, i32>(&entry, "hashCode", "()I", ()).await?);
+                    hash = hash.wrapping_add(jvm.invoke_virtual::<_, i32>(&entry, "java/lang/Object", "hashCode", "()I", ()).await?);
                     entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
                 }
             }
@@ -591,7 +664,9 @@ impl Hashtable {
             if key.instance.as_ref().unwrap().equals(&**this)? {
                 result.push_str("(this Map)");
             } else {
-                let text: ClassInstanceRef<String> = jvm.invoke_virtual(&key, "toString", "()Ljava/lang/String;", ()).await?;
+                let text: ClassInstanceRef<String> = jvm
+                    .invoke_virtual(&key, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                    .await?;
                 result.push_str(&JavaLangString::to_rust_string(jvm, &text).await?);
             }
             result.push('=');
@@ -600,7 +675,9 @@ impl Hashtable {
             if value.instance.as_ref().unwrap().equals(&**this)? {
                 result.push_str("(this Map)");
             } else {
-                let text: ClassInstanceRef<String> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
+                let text: ClassInstanceRef<String> = jvm
+                    .invoke_virtual(&value, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                    .await?;
                 result.push_str(&JavaLangString::to_rust_string(jvm, &text).await?);
             }
         }
@@ -622,7 +699,7 @@ impl Hashtable {
             return Err(jvm.exception("java/lang/NullPointerException", "Hashtable key is null").await);
         }
 
-        jvm.invoke_virtual(key, "hashCode", "()I", ()).await
+        jvm.invoke_virtual(key, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {
@@ -634,7 +711,8 @@ impl Hashtable {
             return Ok(false);
         }
 
-        jvm.invoke_virtual(left, "equals", "(Ljava/lang/Object;)Z", (right.clone(),)).await
+        jvm.invoke_virtual(left, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (right.clone(),))
+            .await
     }
 
     async fn snapshot_entries(jvm: &Jvm, this: &ClassInstanceRef<Self>, kind: SnapshotKind) -> Result<ClassInstanceRef<Array<Object>>> {

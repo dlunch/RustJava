@@ -12,15 +12,27 @@ async fn test_to_string() -> Result<()> {
     let message = JavaLangString::from_rust_string(&jvm, "test message").await?;
 
     let throwable = jvm.new_class("java/lang/Throwable", "(Ljava/lang/String;)V", (message,)).await?;
-    let to_string = jvm.invoke_virtual(&throwable, "toString", "()Ljava/lang/String;", ()).await?;
+    let to_string = jvm
+        .invoke_virtual(&throwable, &throwable.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
 
     let result = JavaLangString::to_rust_string(&jvm, &to_string).await?;
 
     assert_eq!(result, "java.lang.Throwable: test message");
 
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&throwable, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&throwable, &throwable.class_definition().name(), "getMessage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "test message");
-    let localized: ClassInstanceRef<String> = jvm.invoke_virtual(&throwable, "getLocalizedMessage", "()Ljava/lang/String;", ()).await?;
+    let localized: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &throwable,
+            &throwable.class_definition().name(),
+            "getLocalizedMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(localized.identity(), message.identity());
 
     Ok(())
@@ -42,10 +54,24 @@ async fn test_stacktrace() -> Result<()> {
         .await?;
 
     let _: () = jvm
-        .invoke_virtual(&exception, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+        .invoke_virtual(
+            &exception,
+            &exception.class_definition().name(),
+            "printStackTrace",
+            "(Ljava/io/PrintWriter;)V",
+            (print_writer,),
+        )
         .await?;
 
-    let result: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+    let result: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     let result = JavaLangString::to_rust_string(&jvm, &result).await?;
 
     assert_eq!(
@@ -85,10 +111,24 @@ async fn test_print_stack_trace_with_cause() -> Result<()> {
         .await?;
 
     let _: () = jvm
-        .invoke_virtual(&throwable, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+        .invoke_virtual(
+            &throwable,
+            &throwable.class_definition().name(),
+            "printStackTrace",
+            "(Ljava/io/PrintWriter;)V",
+            (print_writer,),
+        )
         .await?;
 
-    let result: ClassInstanceRef<String> = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+    let result: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     let result = JavaLangString::to_rust_string(&jvm, &result).await?;
 
     assert_eq!(

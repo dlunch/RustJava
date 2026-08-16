@@ -50,7 +50,7 @@ impl VectorItr {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, list: ClassInstanceRef<Object>, index: i32) -> Result<()> {
-        let size: i32 = jvm.invoke_virtual(&list, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&list, "java/util/Vector", "size", "()I", ()).await?;
         if index < 0 || index > size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "list iterator index").await);
         }
@@ -63,16 +63,18 @@ impl VectorItr {
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
         let cursor: i32 = jvm.get_field(&this, "cursor", "I").await?;
-        Ok(cursor < jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?)
+        Ok(cursor < jvm.invoke_virtual::<_, i32>(&list, "java/util/Vector", "size", "()I", ()).await?)
     }
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
         let cursor: i32 = jvm.get_field(&this, "cursor", "I").await?;
-        if cursor >= jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await? {
+        if cursor >= jvm.invoke_virtual::<_, i32>(&list, "java/util/Vector", "size", "()I", ()).await? {
             return Err(jvm.exception("java/util/NoSuchElementException", "Vector iterator exhausted").await);
         }
-        let element = jvm.invoke_virtual(&list, "get", "(I)Ljava/lang/Object;", (cursor,)).await?;
+        let element = jvm
+            .invoke_virtual(&list, "java/util/Vector", "get", "(I)Ljava/lang/Object;", (cursor,))
+            .await?;
         jvm.put_field(&mut this, "cursor", "I", cursor + 1).await?;
         jvm.put_field(&mut this, "lastReturned", "I", cursor).await?;
         Ok(element)
@@ -89,7 +91,9 @@ impl VectorItr {
         }
         let index = cursor - 1;
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
-        let element = jvm.invoke_virtual(&list, "get", "(I)Ljava/lang/Object;", (index,)).await?;
+        let element = jvm
+            .invoke_virtual(&list, "java/util/Vector", "get", "(I)Ljava/lang/Object;", (index,))
+            .await?;
         jvm.put_field(&mut this, "cursor", "I", index).await?;
         jvm.put_field(&mut this, "lastReturned", "I", index).await?;
         Ok(element)
@@ -109,7 +113,9 @@ impl VectorItr {
             return Err(jvm.exception("java/lang/IllegalStateException", "iterator state").await);
         }
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
-        let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "remove", "(I)Ljava/lang/Object;", (last_returned,)).await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&list, "java/util/Vector", "remove", "(I)Ljava/lang/Object;", (last_returned,))
+            .await?;
         let cursor: i32 = jvm.get_field(&this, "cursor", "I").await?;
         if last_returned < cursor {
             jvm.put_field(&mut this, "cursor", "I", cursor - 1).await?;
@@ -124,7 +130,13 @@ impl VectorItr {
         }
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&list, "set", "(ILjava/lang/Object;)Ljava/lang/Object;", (last_returned, element))
+            .invoke_virtual(
+                &list,
+                "java/util/Vector",
+                "set",
+                "(ILjava/lang/Object;)Ljava/lang/Object;",
+                (last_returned, element),
+            )
             .await?;
         Ok(())
     }
@@ -132,7 +144,9 @@ impl VectorItr {
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let cursor: i32 = jvm.get_field(&this, "cursor", "I").await?;
         let list: ClassInstanceRef<Object> = jvm.get_field(&this, "list", "Ljava/util/Vector;").await?;
-        let _: () = jvm.invoke_virtual(&list, "add", "(ILjava/lang/Object;)V", (cursor, element)).await?;
+        let _: () = jvm
+            .invoke_virtual(&list, "java/util/Vector", "add", "(ILjava/lang/Object;)V", (cursor, element))
+            .await?;
         jvm.put_field(&mut this, "cursor", "I", cursor + 1).await?;
         jvm.put_field(&mut this, "lastReturned", "I", -1).await
     }

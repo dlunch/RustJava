@@ -427,10 +427,12 @@ impl SimpleDateFormat {
         let Some(tokens) = Self::tokenize_pattern(&pattern) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern").await);
         };
-        let time: i64 = jvm.invoke_virtual(&date, "getTime", "()J", ()).await?;
+        let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.invoke_virtual(&calendar, "getTimeZone", "()Ljava/util/TimeZone;", ()).await?;
-        let offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm
+            .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
+            .await?;
+        let offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let Some(adjusted) = time.checked_add(i64::from(offset)) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "date out of range").await);
         };
@@ -455,8 +457,8 @@ impl SimpleDateFormat {
         let short_months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         let weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         let short_weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        let requested_field: i32 = jvm.invoke_virtual(&position, "getField", "()I", ()).await?;
-        let base: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
+        let requested_field: i32 = jvm.invoke_virtual(&position, "java/text/FieldPosition", "getField", "()I", ()).await?;
+        let base: i32 = jvm.invoke_virtual(&buffer, "java/lang/StringBuffer", "length", "()I", ()).await?;
         let mut field_position_set = false;
         let mut formatted = RustString::new();
         for token in tokens {
@@ -510,9 +512,17 @@ impl SimpleDateFormat {
                         _ => return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern").await),
                     }
                     if !field_position_set && Self::date_field(character) == Some(requested_field) {
-                        let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (base + begin,)).await?;
                         let _: () = jvm
-                            .invoke_virtual(&position, "setEndIndex", "(I)V", (base + formatted.encode_utf16().count() as i32,))
+                            .invoke_virtual(&position, "java/text/FieldPosition", "setBeginIndex", "(I)V", (base + begin,))
+                            .await?;
+                        let _: () = jvm
+                            .invoke_virtual(
+                                &position,
+                                "java/text/FieldPosition",
+                                "setEndIndex",
+                                "(I)V",
+                                (base + formatted.encode_utf16().count() as i32,),
+                            )
                             .await?;
                         field_position_set = true;
                     }
@@ -520,8 +530,14 @@ impl SimpleDateFormat {
             }
         }
         let text = JavaLangString::from_rust_string(jvm, &formatted).await?;
-        jvm.invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (text,))
-            .await
+        jvm.invoke_virtual(
+            &buffer,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (text,),
+        )
+        .await
     }
 
     async fn parse(
@@ -548,27 +564,43 @@ impl SimpleDateFormat {
             utf16_index += character.len_utf16();
         }
         utf16_indices.push(utf16_index);
-        let start: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
+        let start: i32 = jvm.invoke_virtual(&position, "java/text/ParsePosition", "getIndex", "()I", ()).await?;
         if start < 0 {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         }
         let Some(start_index) = utf16_indices.iter().position(|index| *index == start as usize) else {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         };
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.invoke_virtual(&calendar, "getTimeZone", "()Ljava/util/TimeZone;", ()).await?;
-        let offset: i32 = jvm.invoke_virtual(&time_zone, "getRawOffset", "()I", ()).await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm
+            .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
+            .await?;
+        let offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         match Self::parse_timestamp(&tokens, &characters, start_index, offset) {
             Ok((timestamp, index)) => {
-                let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (utf16_indices[index] as i32,)).await?;
-                let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (-1,)).await?;
+                let _: () = jvm
+                    .invoke_virtual(&position, "java/text/ParsePosition", "setIndex", "(I)V", (utf16_indices[index] as i32,))
+                    .await?;
+                let _: () = jvm
+                    .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (-1,))
+                    .await?;
                 Ok(jvm.new_class("java/util/Date", "(J)V", (timestamp,)).await?.into())
             }
             Err(error_index) => {
                 let _: () = jvm
-                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[error_index] as i32,))
+                    .invoke_virtual(
+                        &position,
+                        "java/text/ParsePosition",
+                        "setErrorIndex",
+                        "(I)V",
+                        (utf16_indices[error_index] as i32,),
+                    )
                     .await?;
                 Ok(ClassInstanceRef::new(None))
             }

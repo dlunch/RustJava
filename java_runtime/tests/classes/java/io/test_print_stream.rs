@@ -97,7 +97,8 @@ impl ProbeOutputStream {
         }
 
         let content: ClassInstanceRef<ByteArrayOutputStream> = jvm.get_field(&this, "content", "Ljava/io/ByteArrayOutputStream;").await?;
-        jvm.invoke_virtual(&content, "write", "(I)V", (value,)).await
+        jvm.invoke_virtual(&content, "java/io/ByteArrayOutputStream", "write", "(I)V", (value,))
+            .await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
@@ -236,7 +237,7 @@ impl PrintStreamRunner {
         jvm.put_field(&mut this, "started", "Z", true).await?;
         let stream: ClassInstanceRef<PrintStream> = jvm.get_field(&this, "stream", "Ljava/io/PrintStream;").await?;
         let value: i32 = jvm.get_field(&this, "value", "I").await?;
-        let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (value,)).await?;
+        let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (value,)).await?;
         jvm.put_field(&mut this, "done", "Z", true).await
     }
 }
@@ -272,7 +273,7 @@ impl PrintStreamCloseRunner {
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.put_field(&mut this, "started", "Z", true).await?;
         let stream: ClassInstanceRef<PrintStream> = jvm.get_field(&this, "stream", "Ljava/io/PrintStream;").await?;
-        let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
         jvm.put_field(&mut this, "done", "Z", true).await
     }
 }
@@ -414,7 +415,7 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;Z)V", (output.clone(), true))
         .await?;
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('x' as i32,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", ('x' as i32,)).await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 0);
 
     let formatted_output = jvm.new_class("ProbeOutputStream", "(III)V", (0, 0, 0)).await?;
@@ -428,6 +429,7 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
     let _: ClassInstanceRef<PrintStream> = jvm
         .invoke_virtual(
             &formatted_stream,
+            &formatted_stream.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
             (format, arguments),
@@ -437,30 +439,40 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
     assert!(format_writes > 0);
     assert_eq!(jvm.get_field::<i32>(&formatted_output, "flushCount", "I").await?, 1);
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('\n' as i32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", ('\n' as i32,))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 1);
 
     let mut bytes = jvm.instantiate_array("B", 2).await?;
     jvm.store_array(&mut bytes, 0, [b'a' as i8, b'b' as i8]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes, 0, 2)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "([BII)V", (bytes, 0, 2))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 2);
 
     let text = JavaLangString::from_rust_string(&jvm, "s").await?;
     let object: ClassInstanceRef<Object> = text.clone().into();
     let mut chars = jvm.instantiate_array("C", 1).await?;
     jvm.store_array(&mut chars, 0, ['c' as JavaChar]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/Object;)V", (object,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (text,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (1,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(J)V", (2i64,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(C)V", ('d' as JavaChar,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "([C)V", (chars,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (3,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (4,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Z)V", (true,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(F)V", (1.5f32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(D)V", (2.5f64,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", (object,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", (text,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (1,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(J)V", (2i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(C)V", ('d' as JavaChar,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "([C)V", (chars,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (3,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (4,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(Z)V", (true,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(F)V", (1.5f32,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(D)V", (2.5f64,)).await?;
     assert!(jvm.get_field::<i32>(&output, "flushCount", "I").await? >= 14);
 
     let output = jvm.new_class("ProbeOutputStream", "(III)V", (0, 0, 0)).await?;
@@ -469,11 +481,18 @@ async fn ps_02_auto_flush_matches_public_write_and_println_contracts() -> Result
         .await?;
     let mut bytes = jvm.instantiate_array("B", 1).await?;
     jvm.store_array(&mut bytes, 0, [b'\n' as i8]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('\n' as i32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes, 0, 1)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", ('\n' as i32,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "([BII)V", (bytes, 0, 1))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "()V", ()).await?;
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 0);
-    assert!(!jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
     assert_eq!(jvm.get_field::<i32>(&output, "flushCount", "I").await?, 1);
 
     Ok(())
@@ -509,9 +528,13 @@ async fn ps_02_uses_default_encoding_split_surrogate_state_and_line_separator() 
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
     let value = JavaLangString::from_rust_string(&jvm, "가").await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(Ljava/lang/String;)V", (value,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "()V", ()).await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (value,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "()V", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?,
         [0xb0u8 as i8, 0xa1u8 as i8, b'\r' as i8, b'\n' as i8]
@@ -531,11 +554,19 @@ async fn ps_02_uses_default_encoding_split_surrogate_state_and_line_separator() 
     let stream = jvm
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(C)V", (0xd83d as JavaChar,)).await?;
-    let pending: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(C)V", (0xd83d as JavaChar,))
+        .await?;
+    let pending: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.array_length(&pending).await?, 0);
-    let _: () = jvm.invoke_virtual(&stream, "print", "(C)V", (0xde00 as JavaChar,)).await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(C)V", (0xde00 as JavaChar,))
+        .await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?,
         [0xf0u8 as i8, 0x9fu8 as i8, 0x98u8 as i8, 0x80u8 as i8]
@@ -552,11 +583,13 @@ async fn ps_02_typed_println_is_atomic_and_preserves_virtual_dispatch() -> Resul
     let stream = jvm
         .new_class("OverridePrintStream", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (7,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (7,)).await?;
     assert_eq!(jvm.get_field::<i32>(&stream, "printCount", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&stream, "printlnCount", "I").await?, 0);
     assert!(jvm.get_field::<i32>(&stream, "writeCount", "I").await? >= 2);
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?,
         b"<7>\n".iter().map(|value| *value as i8).collect::<Vec<_>>()
@@ -581,7 +614,9 @@ async fn ps_02_typed_println_is_atomic_and_preserves_virtual_dispatch() -> Resul
         .new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (second_runner.clone(),))
         .await?;
 
-    let _: () = jvm.invoke_virtual(&first_thread, "start", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&first_thread, &first_thread.class_definition().name(), "start", "()V", ())
+        .await?;
     let mut first_write_entered = false;
     for _ in 0..1000 {
         first_write_entered = jvm.get_field::<bool>(&blocking_output, "firstWriteEntered", "Z").await?;
@@ -592,7 +627,9 @@ async fn ps_02_typed_println_is_atomic_and_preserves_virtual_dispatch() -> Resul
     }
     assert!(first_write_entered, "first println did not reach its backing write");
 
-    let _: () = jvm.invoke_virtual(&second_thread, "start", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&second_thread, &second_thread.class_definition().name(), "start", "()V", ())
+        .await?;
     let mut second_started = false;
     for _ in 0..1000 {
         second_started = jvm.get_field::<bool>(&second_runner, "started", "Z").await?;
@@ -607,10 +644,16 @@ async fn ps_02_typed_println_is_atomic_and_preserves_virtual_dispatch() -> Resul
     assert!(!jvm.get_field::<bool>(&second_runner, "done", "Z").await?);
 
     jvm.put_field(&mut blocking_output, "releaseFirstWrite", "Z", true).await?;
-    let _: () = jvm.invoke_virtual(&first_thread, "join", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&second_thread, "join", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&first_thread, &first_thread.class_definition().name(), "join", "()V", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&second_thread, &second_thread.class_definition().name(), "join", "()V", ())
+        .await?;
     let content: ClassInstanceRef<ByteArrayOutputStream> = jvm.get_field(&blocking_output, "content", "Ljava/io/ByteArrayOutputStream;").await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&content, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&content, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?,
         b"1\n2\n".iter().map(|value| *value as i8).collect::<Vec<_>>()
@@ -637,7 +680,9 @@ async fn ps_02_write_and_close_are_serialized_on_the_stream_monitor() -> Result<
     let writer_thread = jvm.new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (writer,)).await?;
     let close_thread = jvm.new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (closer.clone(),)).await?;
 
-    let _: () = jvm.invoke_virtual(&writer_thread, "start", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer_thread, &writer_thread.class_definition().name(), "start", "()V", ())
+        .await?;
     let mut first_write_entered = false;
     for _ in 0..1000 {
         first_write_entered = jvm.get_field::<bool>(&output, "firstWriteEntered", "Z").await?;
@@ -648,7 +693,9 @@ async fn ps_02_write_and_close_are_serialized_on_the_stream_monitor() -> Result<
     }
     assert!(first_write_entered);
 
-    let _: () = jvm.invoke_virtual(&close_thread, "start", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&close_thread, &close_thread.class_definition().name(), "start", "()V", ())
+        .await?;
     let mut close_started = false;
     for _ in 0..1000 {
         close_started = jvm.get_field::<bool>(&closer, "started", "Z").await?;
@@ -663,11 +710,17 @@ async fn ps_02_write_and_close_are_serialized_on_the_stream_monitor() -> Result<
     assert!(!jvm.get_field::<bool>(&closer, "done", "Z").await?);
 
     jvm.put_field(&mut output, "releaseFirstWrite", "Z", true).await?;
-    let _: () = jvm.invoke_virtual(&writer_thread, "join", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&close_thread, "join", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&writer_thread, &writer_thread.class_definition().name(), "join", "()V", ())
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&close_thread, &close_thread.class_definition().name(), "join", "()V", ())
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&output, "closeCount", "I").await?, 1);
     let content: ClassInstanceRef<ByteArrayOutputStream> = jvm.get_field(&output, "content", "Ljava/io/ByteArrayOutputStream;").await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&content, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&content, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(
         jvm.load_array::<i8>(&bytes, 0, jvm.array_length(&bytes).await?).await?,
         b"1\n".iter().map(|value| *value as i8).collect::<Vec<_>>()
@@ -686,12 +739,19 @@ async fn ps_02_failure_phases_continue_like_jdk_and_nested_error_is_visible() ->
         .await?
         .into();
     let value = JavaLangString::from_rust_string(&jvm, "V").await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (value,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", (value,))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&value_failure, "writeCount", "I").await?, 2);
     let content: ClassInstanceRef<ByteArrayOutputStream> = jvm.get_field(&value_failure, "content", "Ljava/io/ByteArrayOutputStream;").await?;
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&content, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&content, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     assert_eq!(jvm.load_array::<i8>(&bytes, 0, 1).await?, [b'\n' as i8]);
-    assert!(jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
     assert_monitor_released(&jvm, &stream).await?;
 
     let newline_failure = jvm.new_class("ProbeOutputStream", "(III)V", (4, 0, 0)).await?;
@@ -700,10 +760,15 @@ async fn ps_02_failure_phases_continue_like_jdk_and_nested_error_is_visible() ->
         .await?
         .into();
     let value = JavaLangString::from_rust_string(&jvm, "V").await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (value,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", (value,))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&newline_failure, "writeCount", "I").await?, 2);
     assert_eq!(jvm.get_field::<i32>(&newline_failure, "flushCount", "I").await?, 2);
-    assert!(jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
 
     let final_flush_failure = jvm.new_class("ProbeOutputStream", "(III)V", (0, 3, 0)).await?;
     let stream: ClassInstanceRef<PrintStream> = jvm
@@ -711,7 +776,9 @@ async fn ps_02_failure_phases_continue_like_jdk_and_nested_error_is_visible() ->
         .await?
         .into();
     let value = JavaLangString::from_rust_string(&jvm, "V").await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (value,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", (value,))
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&final_flush_failure, "flushCount", "I").await?, 3);
     assert!(jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
 
@@ -721,7 +788,10 @@ async fn ps_02_failure_phases_continue_like_jdk_and_nested_error_is_visible() ->
         .await?
         .into();
     let outer = jvm.new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (inner,)).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&outer, "checkError", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&outer, &outer.class_definition().name(), "checkError", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -732,7 +802,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
 
     let io_failure = jvm.new_class("ProbeOutputStream", "(III)V", (1, 0, 0)).await?;
     let stream = jvm.new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (io_failure,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", (1,)).await?;
     assert!(jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
     let stream: ClassInstanceRef<PrintStream> = stream.into();
     assert_monitor_released(&jvm, &stream).await?;
@@ -742,7 +812,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (runtime_failure,))
         .await?
         .into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", (1,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("non-IOException from write must propagate");
     };
@@ -753,13 +823,17 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
     let clean_output = jvm.new_class("ProbeOutputStream", "(III)V", (0, 0, 0)).await?;
     let stream = jvm.new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (clean_output,)).await?;
     let null_bytes: ClassInstanceRef<Array<i8>> = None.into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "write", "([BII)V", (null_bytes, 0, 0)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "([BII)V", (null_bytes, 0, 0))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("null byte array must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
     let bytes = jvm.instantiate_array("B", 1).await?;
-    let result: Result<()> = jvm.invoke_virtual(&stream, "write", "([BII)V", (bytes, 1, 1)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "write", "([BII)V", (bytes, 1, 1))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("invalid byte range must throw IndexOutOfBoundsException");
     };
@@ -770,7 +844,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
     let stream = jvm
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (flush_failure,))
         .await?;
-    let _: () = jvm.invoke_virtual(&stream, "flush", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "flush", "()V", ()).await?;
     assert!(jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
 
     let runtime_flush_failure = jvm.new_class("ProbeOutputStream", "(III)V", (0, 2, 0)).await?;
@@ -778,13 +852,13 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (runtime_flush_failure,))
         .await?
         .into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "flush", "()V", ()).await;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "java/io/PrintStream", "flush", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("non-IOException from flush must propagate");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
     assert_monitor_released(&jvm, &stream).await?;
-    let result: Result<bool> = jvm.invoke_virtual(&stream, "checkError", "()Z", ()).await;
+    let result: Result<bool> = jvm.invoke_virtual(&stream, "java/io/PrintStream", "checkError", "()Z", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("checkError must propagate a non-IOException from flush");
     };
@@ -796,8 +870,8 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (close_failure.clone(),))
         .await?
         .into();
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
     assert_eq!(jvm.get_field::<i32>(&close_failure, "closeCount", "I").await?, 1);
     assert!(jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
     assert!(jvm.get_field::<bool>(&stream, "closing", "Z").await?);
@@ -812,7 +886,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (runtime_close_failure.clone(),))
         .await?
         .into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "close", "()V", ()).await;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("non-IOException from close must propagate");
     };
@@ -826,7 +900,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
     assert!(!jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
     assert_monitor_released(&jvm, &stream).await?;
     jvm.put_field(&mut runtime_close_failure, "closeMode", "I", 0).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
     assert_eq!(jvm.get_field::<i32>(&runtime_close_failure, "closeCount", "I").await?, 1);
     let stored_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
     assert_eq!(stored_output.identity(), runtime_close_failure.identity());
@@ -837,8 +911,10 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (encoder_close_failure.clone(),))
         .await?
         .into();
-    let _: () = jvm.invoke_virtual(&stream, "print", "(C)V", (0xd83d as JavaChar,)).await?;
-    let result: Result<()> = jvm.invoke_virtual(&stream, "close", "()V", ()).await;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(C)V", (0xd83d as JavaChar,))
+        .await?;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("non-IOException from encoder close must propagate");
     };
@@ -849,7 +925,7 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
     assert!(!jvm.get_field::<bool>(&stream, "trouble", "Z").await?);
     assert_monitor_released(&jvm, &stream).await?;
     jvm.put_field(&mut encoder_close_failure, "writeMode", "I", 0).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
     assert_eq!(jvm.get_field::<i32>(&encoder_close_failure, "writeCount", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&encoder_close_failure, "closeCount", "I").await?, 0);
     assert_monitor_released(&jvm, &stream).await?;
@@ -858,10 +934,16 @@ async fn ps_02_suppresses_only_ioexception_and_closes_once() -> Result<()> {
     let stream = jvm
         .new_class("java/io/PrintStream", "(Ljava/io/OutputStream;)V", (closed_output.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", (1,)).await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
     assert_eq!(jvm.get_field::<i32>(&closed_output, "writeCount", "I").await?, 0);
 
     Ok(())
@@ -877,22 +959,31 @@ async fn test_print_stream_cldc_api() -> Result<()> {
         .await?;
 
     let prefix = JavaLangString::from_rust_string(&jvm, "v=").await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(Ljava/lang/String;)V", (prefix,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(I)V", (7,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(C)V", (' ' as u16,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(Z)V", (true,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (prefix,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "(I)V", (7,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "(C)V", (' ' as u16,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "(Z)V", (true,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "()V", ()).await?;
 
     let mut chars = jvm.instantiate_array("C", 2).await?;
     jvm.store_array(&mut chars, 0, ['O' as JavaChar, 'K' as JavaChar]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "([C)V", (chars,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(D)V", (1.5f64,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(F)V", (1.0f32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(D)V", (f64::INFINITY,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "flush", "()V", ()).await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "([C)V", (chars,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(D)V", (1.5f64,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "(F)V", (1.0f32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(D)V", (f64::INFINITY,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "flush", "()V", ()).await?;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
     let values = values.into_iter().map(|value| value as u8).collect::<Vec<_>>();
     assert_eq!(values, b"v=7 true\nOK1.5\n1.0Infinity\n");
@@ -913,31 +1004,46 @@ async fn test_print_stream_remaining_overloads_and_close() -> Result<()> {
     let null_object: ClassInstanceRef<Object> = None.into();
     let null_string: ClassInstanceRef<String> = None.into();
 
-    let _: () = jvm.invoke_virtual(&stream, "print", "(Ljava/lang/Object;)V", (object.clone(),)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(Ljava/lang/Object;)V", (null_object,)).await?;
     let _: () = jvm
-        .invoke_virtual(&stream, "print", "(Ljava/lang/String;)V", (null_string.clone(),))
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(Ljava/lang/Object;)V", (object.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&stream, "print", "(J)V", (9i64,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", ('|' as i32,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(Ljava/lang/Object;)V", (null_object,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "print", "(Ljava/lang/String;)V", (null_string.clone(),))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "print", "(J)V", (9i64,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "write", "(I)V", ('|' as i32,)).await?;
 
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/Object;)V", (object,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Ljava/lang/String;)V", (null_string,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (-1,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(J)V", (2i64,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(C)V", ('A' as JavaChar,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", (object,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", (null_string,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (-1,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(J)V", (2i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "java/io/PrintStream", "println", "(C)V", ('A' as JavaChar,))
+        .await?;
 
     let mut chars = jvm.instantiate_array("C", 2).await?;
     jvm.store_array(&mut chars, 0, ['B' as JavaChar, 'C' as JavaChar]).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "([C)V", (chars,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (-3,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(I)V", (4,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(Z)V", (false,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "println", "(F)V", (2.5f32,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&stream, "checkError", "()Z", ()).await?);
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "([C)V", (chars,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (-3,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(I)V", (4,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(Z)V", (false,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "println", "(F)V", (2.5f32,)).await?;
+    let _: () = jvm.invoke_virtual(&stream, "java/io/PrintStream", "close", "()V", ()).await?;
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&stream, "java/io/PrintStream", "checkError", "()Z", ())
+            .await?
+    );
 
-    let bytes: ClassInstanceRef<Array<i8>> = jvm.invoke_virtual(&output, "toByteArray", "()[B", ()).await?;
+    let bytes: ClassInstanceRef<Array<i8>> = jvm
+        .invoke_virtual(&output, "java/io/ByteArrayOutputStream", "toByteArray", "()[B", ())
+        .await?;
     let values: Vec<i8> = jvm.load_array(&bytes, 0, jvm.array_length(&bytes).await?).await?;
     assert_eq!(
         values.into_iter().map(|value| value as u8).collect::<Vec<_>>(),

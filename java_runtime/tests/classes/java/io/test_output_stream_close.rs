@@ -146,8 +146,12 @@ async fn buffered_output_stream_inherited_close_dispatches_virtual_flush() -> Re
         .into();
     let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&stream, "buf", "[B").await?;
 
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (7,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "write", "(I)V", (7,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
+        .await?;
 
     assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&backing, "bytesWritten", "I").await?, 1);
@@ -159,7 +163,9 @@ async fn buffered_output_stream_inherited_close_dispatches_virtual_flush() -> Re
     let closed_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
     assert!(closed_output.is_null());
 
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 1);
     Ok(())
@@ -175,8 +181,12 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
         .new_class("FlushOverrideBufferedOutputStream", "(Ljava/io/OutputStream;II)V", (output, 4, 1))
         .await?
         .into();
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await?;
-    let _: () = jvm.invoke_virtual(&stream, "close", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "write", "(I)V", (1,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
+        .await?;
     assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&stream, "count", "I").await?, 1);
     assert_eq!(jvm.get_field::<i32>(&backing, "bytesWritten", "I").await?, 0);
@@ -190,7 +200,7 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
         .new_class("FlushOverrideBufferedOutputStream", "(Ljava/io/OutputStream;II)V", (output, 4, 2))
         .await?
         .into();
-    let result: Result<()> = jvm.invoke_virtual(&stream, "close", "()V", ()).await;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("unchecked flush failure must escape inherited close");
     };
@@ -205,8 +215,10 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
         .new_class("FlushOverrideBufferedOutputStream", "(Ljava/io/OutputStream;II)V", (output, 4, 0))
         .await?
         .into();
-    let _: () = jvm.invoke_virtual(&stream, "write", "(I)V", (1,)).await?;
-    let result: Result<()> = jvm.invoke_virtual(&stream, "close", "()V", ()).await;
+    let _: () = jvm
+        .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "write", "(I)V", (1,))
+        .await?;
+    let result: Result<()> = jvm.invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("backing close failure must escape inherited close");
     };

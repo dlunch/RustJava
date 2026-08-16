@@ -63,17 +63,20 @@ impl CollectionsUnmodifiableSortedSet {
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
-        jvm.invoke_virtual(&set, "comparator", "()Ljava/util/Comparator;", ()).await
+        jvm.invoke_virtual(&set, &set.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
+            .await
     }
 
     async fn first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
-        jvm.invoke_virtual(&set, "first", "()Ljava/lang/Object;", ()).await
+        jvm.invoke_virtual(&set, &set.class_definition().name(), "first", "()Ljava/lang/Object;", ())
+            .await
     }
 
     async fn last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
-        jvm.invoke_virtual(&set, "last", "()Ljava/lang/Object;", ()).await
+        jvm.invoke_virtual(&set, &set.class_definition().name(), "last", "()Ljava/lang/Object;", ())
+            .await
     }
 
     async fn sub_set(
@@ -85,7 +88,13 @@ impl CollectionsUnmodifiableSortedSet {
     ) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
         let range: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&set, "subSet", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;", (from, to))
+            .invoke_virtual(
+                &set,
+                &set.class_definition().name(),
+                "subSet",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
+                (from, to),
+            )
             .await?;
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSortedSet", "(Ljava/util/SortedSet;)V", (range,))
@@ -101,7 +110,13 @@ impl CollectionsUnmodifiableSortedSet {
     ) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
         let range: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&set, "headSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (to,))
+            .invoke_virtual(
+                &set,
+                &set.class_definition().name(),
+                "headSet",
+                "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+                (to,),
+            )
             .await?;
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSortedSet", "(Ljava/util/SortedSet;)V", (range,))
@@ -117,7 +132,13 @@ impl CollectionsUnmodifiableSortedSet {
     ) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "ss", "Ljava/util/SortedSet;").await?;
         let range: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&set, "tailSet", "(Ljava/lang/Object;)Ljava/util/SortedSet;", (from,))
+            .invoke_virtual(
+                &set,
+                &set.class_definition().name(),
+                "tailSet",
+                "(Ljava/lang/Object;)Ljava/util/SortedSet;",
+                (from,),
+            )
             .await?;
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSortedSet", "(Ljava/util/SortedSet;)V", (range,))

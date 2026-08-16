@@ -513,12 +513,16 @@ async fn format_exception_state_messages_and_null_contracts_match_java_5() -> Re
     ] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
         let exception = jvm.new_class(class, "(Ljava/lang/String;)V", (value.clone(),)).await?;
-        let stored: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&exception, getter, "()Ljava/lang/String;", ()).await?;
+        let stored: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(&exception, &exception.class_definition().name(), getter, "()Ljava/lang/String;", ())
+            .await?;
         assert_eq!(
             JavaLangString::to_rust_string(&jvm, &stored).await?,
             JavaLangString::to_rust_string(&jvm, &value).await?
         );
-        let message: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+        let message: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(&exception, &exception.class_definition().name(), "getMessage", "()Ljava/lang/String;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, expected_message);
 
         let null = ClassInstanceRef::<JavaString>::new(None);
@@ -537,10 +541,18 @@ async fn format_exception_state_messages_and_null_contracts_match_java_5() -> Re
             (flags, 'b' as u16),
         )
         .await?;
-    let stored_flags: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&mismatch, "getFlags", "()Ljava/lang/String;", ()).await?;
+    let stored_flags: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&mismatch, &mismatch.class_definition().name(), "getFlags", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &stored_flags).await?, "#");
-    assert_eq!(jvm.invoke_virtual::<_, u16>(&mismatch, "getConversion", "()C", ()).await?, 'b' as u16);
-    let message: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&mismatch, "getMessage", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, u16>(&mismatch, &mismatch.class_definition().name(), "getConversion", "()C", ())
+            .await?,
+        'b' as u16
+    );
+    let message: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(&mismatch, &mismatch.class_definition().name(), "getMessage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "Conversion = b, Flags = #");
     let null_flags = ClassInstanceRef::<JavaString>::new(None);
     let result = jvm
@@ -556,8 +568,20 @@ async fn format_exception_state_messages_and_null_contracts_match_java_5() -> Re
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
     let code_point = jvm.new_class("java/util/IllegalFormatCodePointException", "(I)V", (-1,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&code_point, "getCodePoint", "()I", ()).await?, -1);
-    let message: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&code_point, "getMessage", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&code_point, &code_point.class_definition().name(), "getCodePoint", "()I", ())
+            .await?,
+        -1
+    );
+    let message: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(
+            &code_point,
+            &code_point.class_definition().name(),
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "Code point = 0xffffffff");
 
     let string_class: ClassInstanceRef<JavaClass> = jvm.resolve_class("java/lang/String").await?.java_class().into();
@@ -568,10 +592,30 @@ async fn format_exception_state_messages_and_null_contracts_match_java_5() -> Re
             ('d' as u16, string_class.clone()),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, u16>(&conversion, "getConversion", "()C", ()).await?, 'd' as u16);
-    let stored_class: ClassInstanceRef<JavaClass> = jvm.invoke_virtual(&conversion, "getArgumentClass", "()Ljava/lang/Class;", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, u16>(&conversion, &conversion.class_definition().name(), "getConversion", "()C", ())
+            .await?,
+        'd' as u16
+    );
+    let stored_class: ClassInstanceRef<JavaClass> = jvm
+        .invoke_virtual(
+            &conversion,
+            &conversion.class_definition().name(),
+            "getArgumentClass",
+            "()Ljava/lang/Class;",
+            (),
+        )
+        .await?;
     assert_eq!(stored_class.identity(), string_class.identity());
-    let message: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&conversion, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<JavaString> = jvm
+        .invoke_virtual(
+            &conversion,
+            &conversion.class_definition().name(),
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "d != java.lang.String");
     let null_class = ClassInstanceRef::<JavaClass>::new(None);
     let result = jvm
@@ -591,8 +635,14 @@ async fn format_exception_state_messages_and_null_contracts_match_java_5() -> Re
         ("java/util/IllegalFormatWidthException", "getWidth", -3),
     ] {
         let exception = jvm.new_class(class, "(I)V", (value,)).await?;
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&exception, getter, "()I", ()).await?, value);
-        let message: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&exception, &exception.class_definition().name(), getter, "()I", ())
+                .await?,
+            value
+        );
+        let message: ClassInstanceRef<JavaString> = jvm
+            .invoke_virtual(&exception, &exception.class_definition().name(), "getMessage", "()Ljava/lang/String;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, value.to_string());
     }
 
@@ -609,9 +659,21 @@ async fn formatter_big_decimal_layout_form_has_java_5_enum_identity_and_order() 
             "Ljava/util/Formatter$BigDecimalLayoutForm;",
         )
         .await?;
-    let name = jvm.invoke_virtual(&scientific, "name", "()Ljava/lang/String;", ()).await?;
+    let name = jvm
+        .invoke_virtual(
+            &scientific,
+            "java/util/Formatter$BigDecimalLayoutForm",
+            "name",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "SCIENTIFIC");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&scientific, "ordinal", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&scientific, "java/util/Formatter$BigDecimalLayoutForm", "ordinal", "()I", ())
+            .await?,
+        0
+    );
 
     let values: ClassInstanceRef<Array<FormatterBigDecimalLayoutForm>> = jvm
         .invoke_static(
@@ -631,7 +693,11 @@ async fn formatter_big_decimal_layout_form_has_java_5_enum_identity_and_order() 
             (requested,),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&decimal, "ordinal", "()I", ()).await?, 1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&decimal, "java/util/Formatter$BigDecimalLayoutForm", "ordinal", "()I", ())
+            .await?,
+        1
+    );
 
     Ok(())
 }
@@ -655,12 +721,15 @@ async fn formatter_formats_common_java_5_conversions() -> Result<()> {
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "ok     0007 12.50 % \n");
 
     Ok(())
@@ -679,12 +748,15 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "two|26|1a|26");
 
     let formatter = jvm.new_class("java/util/Formatter", "()V", ()).await?;
@@ -693,12 +765,15 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "null|false");
 
     let format = JavaLangString::from_rust_string(&jvm, "|%+x").await?;
@@ -706,12 +781,15 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "null|false|null");
 
     Ok(())
@@ -731,12 +809,15 @@ async fn formatter_uppercase_preserves_unpaired_utf16_surrogates() -> Result<()>
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_utf16(&jvm, &result).await?,
         vec!['A' as u16, 0xd800, 'B' as u16, '|' as u16, 0xd800]
@@ -762,13 +843,16 @@ async fn print_stream_and_print_writer_use_formatter_for_varargs_output() -> Res
     let returned: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &stream,
+            &stream.class_definition().name(),
             "printf",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintStream;",
             (format.clone(), arguments.clone()),
         )
         .await?;
     assert_eq!(returned.identity(), stream.identity());
-    let stream_text = jvm.invoke_virtual(&bytes, "toString", "()Ljava/lang/String;", ()).await?;
+    let stream_text = jvm
+        .invoke_virtual(&bytes, &bytes.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &stream_text).await?, "n=007");
 
     let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await?;
@@ -778,13 +862,22 @@ async fn print_stream_and_print_writer_use_formatter_for_varargs_output() -> Res
     let returned: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &writer,
+            &writer.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;",
             (format, arguments),
         )
         .await?;
     assert_eq!(returned.identity(), writer.identity());
-    let writer_text = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", ()).await?;
+    let writer_text = jvm
+        .invoke_virtual(
+            &string_writer,
+            &string_writer.class_definition().name(),
+            "toString",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &writer_text).await?, "n=007");
 
     Ok(())
@@ -841,12 +934,16 @@ async fn formatter_and_print_file_constructors_enforce_java_5_null_contracts() -
     let formatter = jvm
         .new_class("java/util/Formatter", "(Ljava/lang/Appendable;)V", (null_appendable,))
         .await?;
-    let out: ClassInstanceRef<Appendable> = jvm.invoke_virtual(&formatter, "out", "()Ljava/lang/Appendable;", ()).await?;
+    let out: ClassInstanceRef<Appendable> = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "out", "()Ljava/lang/Appendable;", ())
+        .await?;
     assert!(jvm.is_instance(&**out, "java/lang/StringBuilder"));
 
     let null_locale = ClassInstanceRef::<Locale>::new(None);
     let formatter = jvm.new_class("java/util/Formatter", "(Ljava/util/Locale;)V", (null_locale,)).await?;
-    let locale: ClassInstanceRef<Locale> = jvm.invoke_virtual(&formatter, "locale", "()Ljava/util/Locale;", ()).await?;
+    let locale: ClassInstanceRef<Locale> = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "locale", "()Ljava/util/Locale;", ())
+        .await?;
     assert!(locale.is_null());
 
     let null_path = ClassInstanceRef::<JavaString>::new(None);
@@ -944,12 +1041,15 @@ async fn formatter_handles_numeric_radix_grouping_and_uppercase_conversions() ->
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &result).await?,
         "(1,234)|ffffffff|37777777777|1.23e+03|1234|A|TRUE"
@@ -985,12 +1085,15 @@ async fn formatter_matches_java_5_radix_and_non_finite_number_rules() -> Result<
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "00|0x00f|1.e+00|NaN|  Infinity");
 
     for (format, expected) in [
@@ -1005,6 +1108,7 @@ async fn formatter_matches_java_5_radix_and_non_finite_number_rules() -> Result<
         let result: Result<ClassInstanceRef<Object>> = jvm
             .invoke_virtual(
                 &formatter,
+                &formatter.class_definition().name(),
                 "format",
                 "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
                 (format, arguments),
@@ -1052,12 +1156,15 @@ async fn formatter_rounds_fixed_scientific_and_general_values_like_java_5() -> R
     let _: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
         )
         .await?;
-    let result = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &result).await?,
         "2.68|10.000|1|1.00e+01|0.00000|9.99999e-05|1.00000e-05|1.00000e+06|1.000e+04|10.00|-0.00000|1.20000|4.90e-324|4.90e-324|1.80e+308|2|1.01"
@@ -1090,6 +1197,7 @@ async fn formatter_throws_java_5_format_exceptions_and_rejects_use_after_close()
         let result: Result<ClassInstanceRef<Object>> = jvm
             .invoke_virtual(
                 &formatter,
+                &formatter.class_definition().name(),
                 "format",
                 "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
                 (format, arguments),
@@ -1102,8 +1210,12 @@ async fn formatter_throws_java_5_format_exceptions_and_rejects_use_after_close()
     }
 
     let formatter = jvm.new_class("java/util/Formatter", "()V", ()).await?;
-    let _: () = jvm.invoke_virtual(&formatter, "close", "()V", ()).await?;
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&formatter, "out", "()Ljava/lang/Appendable;", ()).await;
+    let _: () = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "close", "()V", ())
+        .await?;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "out", "()Ljava/lang/Appendable;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("FormatterClosedException must be thrown");
     };
@@ -1124,6 +1236,7 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
@@ -1133,7 +1246,9 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
         panic!("the trailing unknown conversion must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/UnknownFormatConversionException"));
-    let text = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let text = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "");
 
     let formatter = jvm.new_class("java/util/Formatter", "()V", ()).await?;
@@ -1144,6 +1259,7 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &formatter,
+            &formatter.class_definition().name(),
             "format",
             "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
             (format, arguments),
@@ -1153,7 +1269,9 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
         panic!("the incompatible runtime argument must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/IllegalFormatConversionException"));
-    let text = jvm.invoke_virtual(&formatter, "toString", "()Ljava/lang/String;", ()).await?;
+    let text = jvm
+        .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "before ");
 
     Ok(())

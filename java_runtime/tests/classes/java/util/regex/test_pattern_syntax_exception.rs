@@ -80,13 +80,41 @@ async fn pattern_syntax_exception_formats_index_and_caret_with_the_initial_line_
         .await?
         .into();
 
-    let actual_description: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getDescription", "()Ljava/lang/String;", ()).await?;
+    let actual_description: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getDescription",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual_description).await?, "Unclosed group");
-    let actual_pattern: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getPattern", "()Ljava/lang/String;", ()).await?;
+    let actual_pattern: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getPattern",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual_pattern).await?, "a(");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&exception, "getIndex", "()I", ()).await?, 1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&exception, "java/util/regex/PatternSyntaxException", "getIndex", "()I", ())
+            .await?,
+        1
+    );
 
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "Unclosed group near index 1|a(| ^");
 
     let changed_separator = JavaLangString::from_rust_string(&jvm, "~").await?;
@@ -98,7 +126,15 @@ async fn pattern_syntax_exception_formats_index_and_caret_with_the_initial_line_
             (key, changed_separator),
         )
         .await?;
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "Unclosed group near index 1|a(| ^");
 
     Ok(())
@@ -127,11 +163,35 @@ async fn pattern_syntax_exception_preserves_nulls_and_keeps_java_14_caret_format
         )
         .await?
         .into();
-    let description: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getDescription", "()Ljava/lang/String;", ()).await?;
+    let description: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getDescription",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert!(description.is_null());
-    let pattern: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getPattern", "()Ljava/lang/String;", ()).await?;
+    let pattern: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getPattern",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert!(pattern.is_null());
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, "null\nnull");
 
     let description = JavaLangString::from_rust_string(&jvm, "Bad pattern").await?;
@@ -144,7 +204,15 @@ async fn pattern_syntax_exception_preserves_nulls_and_keeps_java_14_caret_format
         )
         .await?
         .into();
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &message).await?,
         "Bad pattern near index 3\nabc\n   ^"
@@ -160,7 +228,15 @@ async fn pattern_syntax_exception_preserves_nulls_and_keeps_java_14_caret_format
         )
         .await?
         .into();
-    let message: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    let message: ClassInstanceRef<String> = jvm
+        .invoke_virtual(
+            &exception,
+            "java/util/regex/PatternSyntaxException",
+            "getMessage",
+            "()Ljava/lang/String;",
+            (),
+        )
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &message).await?,
         "Missing pattern near index 2\nnull\n  ^"

@@ -35,35 +35,49 @@ impl TreeMapKeySet {
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "size", "()I", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "containsKey", "(Ljava/lang/Object;)Z", (key,)).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (key,))
+            .await
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
         if !jvm
-            .invoke_virtual::<_, bool>(&map, "containsKey", "(Ljava/lang/Object;)Z", (key.clone(),))
+            .invoke_virtual::<_, bool>(
+                &map,
+                &map.class_definition().name(),
+                "containsKey",
+                "(Ljava/lang/Object;)Z",
+                (key.clone(),),
+            )
             .await?
         {
             return Ok(false);
         }
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "remove",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key,),
+            )
             .await?;
         Ok(true)
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "clear", "()V", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "keyIterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "keyIterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 }

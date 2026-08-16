@@ -44,7 +44,8 @@ impl CollectionsEmptySet {
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let list: ClassInstanceRef<Object> = jvm.get_static_field("java/util/Collections", "EMPTY_LIST", "Ljava/util/List;").await?;
-        jvm.invoke_virtual(&list, "iterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual(&list, &list.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 
     async fn clear(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
@@ -59,7 +60,7 @@ impl CollectionsEmptySet {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Set") {
             return Ok(false);
         }
-        jvm.invoke_virtual(&other, "isEmpty", "()Z", ()).await
+        jvm.invoke_virtual(&other, &other.class_definition().name(), "isEmpty", "()Z", ()).await
     }
 
     async fn hash_code(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<i32> {

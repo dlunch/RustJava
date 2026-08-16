@@ -12,23 +12,61 @@ async fn list_01_iterators_are_live_and_support_every_state_transition() -> Resu
         let list = jvm.new_class(class_name, "()V", ()).await?;
         for value in ["a", "b", "c"] {
             let value = JavaLangString::from_rust_string(&jvm, value).await?;
-            let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+            let _: bool = jvm
+                .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+                .await?;
         }
 
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (1,)).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &list,
+                &list.class_definition().name(),
+                "listIterator",
+                "(I)Ljava/util/ListIterator;",
+                (1,),
+            )
+            .await?;
         assert!(jvm.is_instance(&**iterator, "java/util/ListIterator"));
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 1);
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "previousIndex", "()I", ()).await?, 0);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+                .await?,
+            1
+        );
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
+                .await?,
+            0
+        );
 
-        let previous: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await?;
+        let previous: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &previous).await?, "a");
 
         let replacement = JavaLangString::from_rust_string(&jvm, "A").await?;
-        let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (replacement,)).await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &iterator,
+                &iterator.class_definition().name(),
+                "set",
+                "(Ljava/lang/Object;)V",
+                (replacement,),
+            )
+            .await?;
         let inserted = JavaLangString::from_rust_string(&jvm, "x").await?;
-        let _: () = jvm.invoke_virtual(&iterator, "add", "(Ljava/lang/Object;)V", (inserted,)).await?;
+        let _: () = jvm
+            .invoke_virtual(
+                &iterator,
+                &iterator.class_definition().name(),
+                "add",
+                "(Ljava/lang/Object;)V",
+                (inserted,),
+            )
+            .await?;
 
-        let result: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+        let result: Result<()> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("remove after add must fail");
         };
@@ -36,6 +74,7 @@ async fn list_01_iterators_are_live_and_support_every_state_transition() -> Resu
         let result: Result<()> = jvm
             .invoke_virtual(
                 &iterator,
+                &iterator.class_definition().name(),
                 "set",
                 "(Ljava/lang/Object;)V",
                 (JavaLangString::from_rust_string(&jvm, "invalid").await?,),
@@ -46,18 +85,35 @@ async fn list_01_iterators_are_live_and_support_every_state_transition() -> Resu
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
 
-        let next: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        let next: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &next).await?, "A");
-        let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+            .await?;
 
         let tail = JavaLangString::from_rust_string(&jvm, "d").await?;
-        let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (tail,)).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        let _: bool = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (tail,))
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
         }
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 4);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+                .await?,
+            4
+        );
 
-        let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await;
+        let result: Result<ClassInstanceRef<Object>> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("exhausted iterator must fail");
         };
@@ -65,7 +121,13 @@ async fn list_01_iterators_are_live_and_support_every_state_transition() -> Resu
 
         for invalid_index in [-1, 5] {
             let result: Result<ClassInstanceRef<Object>> = jvm
-                .invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (invalid_index,))
+                .invoke_virtual(
+                    &list,
+                    &list.class_definition().name(),
+                    "listIterator",
+                    "(I)Ljava/util/ListIterator;",
+                    (invalid_index,),
+                )
                 .await;
             let Err(JavaError::JavaException(exception)) = result else {
                 panic!("invalid list iterator index must fail");
@@ -168,22 +230,42 @@ async fn list_01_descriptors_flags_and_iterator_state_fields_match_contract() ->
 async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition() -> Result<()> {
     let jvm = test_jvm().await?;
     let list = jvm.new_class("java/util/LinkedList", "()V", ()).await?;
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "()Ljava/util/ListIterator;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "listIterator", "()Ljava/util/ListIterator;", ())
+        .await?;
     assert!(jvm.is_instance(&**iterator, "java/util/ListIterator"));
     assert!(jvm.is_instance(&**iterator, "java/util/Iterator"));
-    assert!(!jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await?);
-    assert!(!jvm.invoke_virtual::<_, bool>(&iterator, "hasPrevious", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "previousIndex", "()I", ()).await?, -1);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasPrevious", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
+            .await?,
+        -1
+    );
 
     for method in ["next", "previous"] {
-        let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, method, "()Ljava/lang/Object;", ()).await;
+        let result: Result<ClassInstanceRef<Object>> = jvm
+            .invoke_virtual(&iterator, &iterator.class_definition().name(), method, "()Ljava/lang/Object;", ())
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("{method} on an empty iterator must fail");
         };
         assert!(jvm.is_instance(&*exception, "java/util/NoSuchElementException"));
     }
-    let result: Result<()> = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("remove before traversal must fail");
     };
@@ -191,6 +273,7 @@ async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition(
     let result: Result<()> = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "set",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "invalid").await?,),
@@ -203,30 +286,55 @@ async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition(
 
     for value in ["a", "b", "c"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (0,)).await?;
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "listIterator",
+            "(I)Ljava/util/ListIterator;",
+            (0,),
+        )
+        .await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "a");
     let _: () = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "set",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "A").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "previousIndex", "()I", ()).await?, -1);
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
+            .await?,
+        -1
+    );
 
     for method in ["remove", "set"] {
         let result: Result<()> = if method == "remove" {
-            jvm.invoke_virtual(&iterator, method, "()V", ()).await
+            jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), method, "()V", ())
+                .await
         } else {
             jvm.invoke_virtual(
                 &iterator,
+                &iterator.class_definition().name(),
                 method,
                 "(Ljava/lang/Object;)V",
                 (JavaLangString::from_rust_string(&jvm, "invalid").await?,),
@@ -242,19 +350,30 @@ async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition(
     let _: () = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "add",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "x").await?,),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "previousIndex", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
+            .await?,
+        0
+    );
     for method in ["remove", "set"] {
         let result: Result<()> = if method == "remove" {
-            jvm.invoke_virtual(&iterator, method, "()V", ()).await
+            jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), method, "()V", ())
+                .await
         } else {
             jvm.invoke_virtual(
                 &iterator,
+                &iterator.class_definition().name(),
                 method,
                 "(Ljava/lang/Object;)V",
                 (JavaLangString::from_rust_string(&jvm, "invalid").await?,),
@@ -267,63 +386,113 @@ async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition(
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
     }
 
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "x");
     let _: () = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "set",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "X").await?,),
         )
         .await?;
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&iterator, "nextIndex", "()I", ()).await?, 0);
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        0
+    );
 
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("previous at the start boundary must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/NoSuchElementException"));
 
-    let middle: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (1,)).await?;
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&middle, "previous", "()Ljava/lang/Object;", ()).await?;
+    let middle: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "listIterator",
+            "(I)Ljava/util/ListIterator;",
+            (1,),
+        )
+        .await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "b");
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&middle, "next", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "b");
     let _: () = jvm
         .invoke_virtual(
             &middle,
+            &middle.class_definition().name(),
             "set",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "B").await?,),
         )
         .await?;
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&middle, "next", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "c");
-    assert!(!jvm.invoke_virtual::<_, bool>(&middle, "hasNext", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&middle, &middle.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+    );
 
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&middle, "next", "()Ljava/lang/Object;", ()).await;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("next at the end boundary must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/NoSuchElementException"));
 
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&middle, "previous", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "c");
-    let _: () = jvm.invoke_virtual(&middle, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&middle, "nextIndex", "()I", ()).await?, 1);
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&middle, "previous", "()Ljava/lang/Object;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&middle, &middle.class_definition().name(), "nextIndex", "()I", ())
+            .await?,
+        1
+    );
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "B");
-    let _: () = jvm.invoke_virtual(&middle, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?, 0);
+    let _: () = jvm
+        .invoke_virtual(&middle, &middle.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
 
     let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
     let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
     let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (next,)).await?);
     assert!(
-        jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (previous,))
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (previous,))
             .await?
     );
 
@@ -336,14 +505,24 @@ async fn linked_list_sentinel_unlinks_middle_single_and_last_entries() -> Result
     let list = jvm.new_class("java/util/LinkedList", "()V", ()).await?;
     for value in ["first", "middle", "last"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
 
-    let removed: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "remove", "(I)Ljava/lang/Object;", (1,)).await?;
+    let removed: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "remove", "(I)Ljava/lang/Object;", (1,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "middle");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
     for (index, expected) in ["first", "last"].into_iter().enumerate() {
-        let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+        let value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&list, &list.class_definition().name(), "get", "(I)Ljava/lang/Object;", (index as i32,))
+            .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, expected);
     }
 
@@ -353,31 +532,50 @@ async fn linked_list_sentinel_unlinks_middle_single_and_last_entries() -> Result
     let first_next: ClassInstanceRef<Object> = jvm.get_field(&first, "next", "Ljava/util/LinkedList$Entry;").await?;
     let last_previous: ClassInstanceRef<Object> = jvm.get_field(&last, "previous", "Ljava/util/LinkedList$Entry;").await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&last, "equals", "(Ljava/lang/Object;)Z", (first_next,))
+        jvm.invoke_virtual::<_, bool>(&last, &last.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (first_next,))
             .await?
     );
     assert!(
-        jvm.invoke_virtual::<_, bool>(&first, "equals", "(Ljava/lang/Object;)Z", (last_previous,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &first,
+            &first.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (last_previous,)
+        )
+        .await?
     );
 
-    let removed: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "removeFirst", "()Ljava/lang/Object;", ()).await?;
+    let removed: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "removeFirst", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "first");
     let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
     let only_next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
     let only_previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&only_next, "equals", "(Ljava/lang/Object;)Z", (only_previous,))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &only_next,
+            &only_next.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (only_previous,)
+        )
+        .await?
     );
 
-    let removed: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "removeLast", "()Ljava/lang/Object;", ()).await?;
+    let removed: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "removeLast", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "last");
     let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
     let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (next,)).await?);
     assert!(
-        jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (previous,))
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (previous,))
             .await?
     );
 
@@ -413,13 +611,18 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
     let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
     let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
     let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (next,)).await?);
     assert!(
-        jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (previous,))
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (previous,))
             .await?
     );
 
-    let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&list, "getFirst", "()Ljava/lang/Object;", ()).await;
+    let result: Result<ClassInstanceRef<Object>> = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "getFirst", "()Ljava/lang/Object;", ())
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("empty LinkedList.getFirst must fail");
     };
@@ -428,22 +631,51 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
     let null: ClassInstanceRef<Object> = None.into();
     let first = JavaLangString::from_rust_string(&jvm, "first").await?;
     let last = JavaLangString::from_rust_string(&jvm, "last").await?;
-    let _: () = jvm.invoke_virtual(&list, "addFirst", "(Ljava/lang/Object;)V", (first,)).await?;
-    let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (null,)).await?;
-    let _: () = jvm.invoke_virtual(&list, "addLast", "(Ljava/lang/Object;)V", (last,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?, 3);
+    let _: () = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "addFirst", "(Ljava/lang/Object;)V", (first,))
+        .await?;
+    let _: bool = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (null,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "addLast", "(Ljava/lang/Object;)V", (last,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "size", "()I", ())
+            .await?,
+        3
+    );
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&list, "listIterator", "(I)Ljava/util/ListIterator;", (3,)).await?;
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &list,
+            &list.class_definition().name(),
+            "listIterator",
+            "(I)Ljava/util/ListIterator;",
+            (3,),
+        )
+        .await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "last");
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&list, "size", "()I", ()).await?, 2);
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&list, &list.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     let duplicate = JavaLangString::from_rust_string(&jvm, "first").await?;
-    let _: bool = jvm.invoke_virtual(&list, "add", "(Ljava/lang/Object;)Z", (duplicate,)).await?;
+    let _: bool = jvm
+        .invoke_virtual(&list, &list.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (duplicate,))
+        .await?;
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(
             &list,
+            &list.class_definition().name(),
             "indexOf",
             "(Ljava/lang/Object;)I",
             (JavaLangString::from_rust_string(&jvm, "first").await?,)
@@ -454,6 +686,7 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(
             &list,
+            &list.class_definition().name(),
             "lastIndexOf",
             "(Ljava/lang/Object;)I",
             (JavaLangString::from_rust_string(&jvm, "first").await?,),
@@ -467,17 +700,26 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
         .await?;
     let destination: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/String;", 4).await?.into();
     let array: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&copy, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (destination,))
+        .invoke_virtual(
+            &copy,
+            &copy.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination,),
+        )
         .await?;
     assert_eq!(jvm.array_length(&array).await?, 4);
 
-    let _: () = jvm.invoke_virtual(&list, "clear", "()V", ()).await?;
+    let _: () = jvm.invoke_virtual(&list, &list.class_definition().name(), "clear", "()V", ()).await?;
     let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
     let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
     let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (next,)).await?);
     assert!(
-        jvm.invoke_virtual::<_, bool>(&header, "equals", "(Ljava/lang/Object;)Z", (previous,))
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (previous,))
             .await?
     );
 
@@ -490,30 +732,78 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
     let root: ClassInstanceRef<Object> = jvm.new_class("java/util/ArrayList", "()V", ()).await?.into();
     for value in ["a", "b", "c", "d", "e", "f", "g", "h"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&root, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&root, &root.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
 
-    let first: ClassInstanceRef<Object> = jvm.invoke_virtual(&root, "subList", "(II)Ljava/util/List;", (1, 7)).await?;
-    let second: ClassInstanceRef<Object> = jvm.invoke_virtual(&first, "subList", "(II)Ljava/util/List;", (1, 5)).await?;
-    let third: ClassInstanceRef<Object> = jvm.invoke_virtual(&second, "subList", "(II)Ljava/util/List;", (1, 3)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 8);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 4);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 2);
+    let first: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&root, &root.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 7))
+        .await?;
+    let second: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&first, &first.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 5))
+        .await?;
+    let third: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&second, &second.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 3))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        8
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     let source = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
     for value in ["x", "y"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&source, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&source, &source.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
     assert!(
-        jvm.invoke_virtual::<_, bool>(&third, "addAll", "(ILjava/util/Collection;)Z", (1, source))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &third,
+            &third.class_definition().name(),
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (1, source)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 10);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 8);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 4);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        10
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        8
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "d", "x", "y", "e", "f", "g", "h"][..]),
         (first.clone(), &["b", "c", "d", "x", "y", "e", "f", "g"][..]),
@@ -521,17 +811,43 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &["d", "x", "y", "e"][..]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
 
-    let removed: ClassInstanceRef<Object> = jvm.invoke_virtual(&third, "remove", "(I)Ljava/lang/Object;", (0,)).await?;
+    let removed: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&third, &third.class_definition().name(), "remove", "(I)Ljava/lang/Object;", (0,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "d");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 9);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 7);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 3);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        9
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        7
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        3
+    );
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "x", "y", "e", "f", "g", "h"][..]),
         (first.clone(), &["b", "c", "x", "y", "e", "f", "g"][..]),
@@ -539,17 +855,36 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &["x", "y", "e"][..]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&third, "listIterator", "(I)Ljava/util/ListIterator;", (1,)).await?;
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &third,
+            &third.class_definition().name(),
+            "listIterator",
+            "(I)Ljava/util/ListIterator;",
+            (1,),
+        )
+        .await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "y");
     let _: () = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "set",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "Y").await?,),
@@ -558,15 +893,32 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
     let _: () = jvm
         .invoke_virtual(
             &iterator,
+            &iterator.class_definition().name(),
             "add",
             "(Ljava/lang/Object;)V",
             (JavaLangString::from_rust_string(&jvm, "z").await?,),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 10);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 8);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 4);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        10
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        8
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "x", "Y", "z", "e", "f", "g", "h"][..]),
         (first.clone(), &["b", "c", "x", "Y", "z", "e", "f", "g"][..]),
@@ -574,18 +926,46 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &["x", "Y", "z", "e"][..]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
 
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "z");
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 9);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 7);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 3);
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        9
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        7
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        3
+    );
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "x", "Y", "e", "f", "g", "h"][..]),
         (first.clone(), &["b", "c", "x", "Y", "e", "f", "g"][..]),
@@ -593,18 +973,46 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &["x", "Y", "e"][..]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
 
-    let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "previous", "()Ljava/lang/Object;", ()).await?;
+    let value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "Y");
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 8);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 4);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 2);
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        8
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "x", "e", "f", "g", "h"][..]),
@@ -613,7 +1021,15 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &["x", "e"][..]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
@@ -627,7 +1043,13 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
     )
     .await?;
     let typed: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&third, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (destination,))
+        .invoke_virtual(
+            &third,
+            &third.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (destination,),
+        )
         .await?;
     let values: Vec<ClassInstanceRef<Object>> = jvm.load_array(&typed, 0, 4).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &values[0]).await?, "x");
@@ -635,11 +1057,27 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
     assert!(values[2].is_null());
     assert_eq!(JavaLangString::to_rust_string(&jvm, &values[3]).await?, "sentinel");
 
-    let _: () = jvm.invoke_virtual(&third, "clear", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&first, "size", "()I", ()).await?, 4);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&second, "size", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&third, "size", "()I", ()).await?, 0);
+    let _: () = jvm.invoke_virtual(&third, &third.class_definition().name(), "clear", "()V", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&first, &first.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&second, &second.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&third, &third.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
     for (target, expected) in [
         (root.clone(), &["a", "b", "c", "f", "g", "h"][..]),
         (first.clone(), &["b", "c", "f", "g"][..]),
@@ -647,7 +1085,15 @@ async fn nested_sub_lists_propagate_every_mutation_through_three_ancestors() -> 
         (third.clone(), &[] as &[&str]),
     ] {
         for (index, expected) in expected.iter().enumerate() {
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&target, "get", "(I)Ljava/lang/Object;", (index as i32,)).await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(
+                    &target,
+                    &target.class_definition().name(),
+                    "get",
+                    "(I)Ljava/lang/Object;",
+                    (index as i32,),
+                )
+                .await?;
             assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, *expected);
         }
     }
@@ -661,51 +1107,149 @@ async fn sl_01_to_02_nested_sub_lists_are_live_in_both_directions() -> Result<()
     let root = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
     for value in ["a", "b", "c", "d", "e"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&root, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&root, &root.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
 
-    let view: ClassInstanceRef<Object> = jvm.invoke_virtual(&root, "subList", "(II)Ljava/util/List;", (1, 5)).await?;
-    let nested: ClassInstanceRef<Object> = jvm.invoke_virtual(&view, "subList", "(II)Ljava/util/List;", (1, 3)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&view, "size", "()I", ()).await?, 4);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&nested, "size", "()I", ()).await?, 2);
+    let view: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&root, &root.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 5))
+        .await?;
+    let nested: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&view, &view.class_definition().name(), "subList", "(II)Ljava/util/List;", (1, 3))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&view, &view.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&nested, &nested.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
     let inserted = JavaLangString::from_rust_string(&jvm, "x").await?;
-    let _: () = jvm.invoke_virtual(&nested, "add", "(ILjava/lang/Object;)V", (1, inserted)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&view, "size", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&nested, "size", "()I", ()).await?, 3);
+    let _: () = jvm
+        .invoke_virtual(&nested, &nested.class_definition().name(), "add", "(ILjava/lang/Object;)V", (1, inserted))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&view, &view.class_definition().name(), "size", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&nested, &nested.class_definition().name(), "size", "()I", ())
+            .await?,
+        3
+    );
 
-    let root_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&root, "get", "(I)Ljava/lang/Object;", (3,)).await?;
+    let root_value: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&root, &root.class_definition().name(), "get", "(I)Ljava/lang/Object;", (3,))
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &root_value).await?, "x");
 
-    let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&nested, "listIterator", "(I)Ljava/util/ListIterator;", (0,)).await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+    let iterator: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &nested,
+            &nested.class_definition().name(),
+            "listIterator",
+            "(I)Ljava/util/ListIterator;",
+            (0,),
+        )
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+        .await?;
     let replacement = JavaLangString::from_rust_string(&jvm, "C").await?;
-    let _: () = jvm.invoke_virtual(&iterator, "set", "(Ljava/lang/Object;)V", (replacement,)).await?;
-    let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &iterator,
+            &iterator.class_definition().name(),
+            "set",
+            "(Ljava/lang/Object;)V",
+            (replacement,),
+        )
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+        .await?;
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&view, "size", "()I", ()).await?, 4);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&nested, "size", "()I", ()).await?, 2);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&view, &view.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&nested, &nested.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
 
-    let _: () = jvm.invoke_virtual(&nested, "clear", "()V", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 3);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&view, "size", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&nested, "size", "()I", ()).await?, 0);
+    let _: () = jvm.invoke_virtual(&nested, &nested.class_definition().name(), "clear", "()V", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        3
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&view, &view.class_definition().name(), "size", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&nested, &nested.class_definition().name(), "size", "()I", ())
+            .await?,
+        0
+    );
 
     let source = jvm.new_class("java/util/ArrayList", "()V", ()).await?;
     for value in ["y", "z"] {
         let value = JavaLangString::from_rust_string(&jvm, value).await?;
-        let _: bool = jvm.invoke_virtual(&source, "add", "(Ljava/lang/Object;)Z", (value,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&source, &source.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (value,))
+            .await?;
     }
-    let modified: bool = jvm.invoke_virtual(&view, "addAll", "(ILjava/util/Collection;)Z", (1, source)).await?;
+    let modified: bool = jvm
+        .invoke_virtual(
+            &view,
+            &view.class_definition().name(),
+            "addAll",
+            "(ILjava/util/Collection;)Z",
+            (1, source),
+        )
+        .await?;
     assert!(modified);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&root, "size", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&view, "size", "()I", ()).await?, 4);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&root, &root.class_definition().name(), "size", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&view, &view.class_definition().name(), "size", "()I", ())
+            .await?,
+        4
+    );
 
     let typed: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/String;", 0).await?.into();
     let typed: ClassInstanceRef<Array<Object>> = jvm
-        .invoke_virtual(&view, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", (typed,))
+        .invoke_virtual(
+            &view,
+            &view.class_definition().name(),
+            "toArray",
+            "([Ljava/lang/Object;)[Ljava/lang/Object;",
+            (typed,),
+        )
         .await?;
     assert_eq!(jvm.array_length(&typed).await?, 4);
 
@@ -714,7 +1258,9 @@ async fn sl_01_to_02_nested_sub_lists_are_live_in_both_directions() -> Result<()
         (0, 5, "java/lang/IndexOutOfBoundsException"),
         (3, 2, "java/lang/IllegalArgumentException"),
     ] {
-        let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&view, "subList", "(II)Ljava/util/List;", (from, to)).await;
+        let result: Result<ClassInstanceRef<Object>> = jvm
+            .invoke_virtual(&view, &view.class_definition().name(), "subList", "(II)Ljava/util/List;", (from, to))
+            .await;
         let Err(JavaError::JavaException(exception)) = result else {
             panic!("invalid subList range must fail");
         };

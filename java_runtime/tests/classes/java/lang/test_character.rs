@@ -8,10 +8,19 @@ async fn test_character_value_constants_and_type() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let value: ClassInstanceRef<Character> = jvm.new_class("java/lang/Character", "(C)V", ('A' as JavaChar,)).await?.into();
-    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&value, "charValue", "()C", ()).await?, 'A' as JavaChar);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "hashCode", "()I", ()).await?, 'A' as i32);
+    assert_eq!(
+        jvm.invoke_virtual::<_, JavaChar>(&value, "java/lang/Character", "charValue", "()C", ())
+            .await?,
+        'A' as JavaChar
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, "java/lang/Character", "hashCode", "()I", ()).await?,
+        'A' as i32
+    );
 
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&value, "java/lang/Character", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "A");
 
     assert_eq!(jvm.get_static_field::<JavaChar>("java/lang/Character", "MIN_VALUE", "C").await?, 0);
@@ -53,16 +62,25 @@ async fn test_character_value_constants_and_type() -> Result<()> {
     }
 
     let typ = jvm.get_static_field("java/lang/Character", "TYPE", "Ljava/lang/Class;").await?;
-    let name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "char");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
     assert!(jvm.is_instance(&**value, "java/lang/Comparable"));
     assert!(jvm.is_instance(&**value, "java/io/Serializable"));
 
     let result: ClassInstanceRef<Character> = jvm
         .invoke_static("java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", ('A' as JavaChar,))
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&result, "charValue", "()C", ()).await?, 'A' as JavaChar);
+    assert_eq!(
+        jvm.invoke_virtual::<_, JavaChar>(&result, "java/lang/Character", "charValue", "()C", ())
+            .await?,
+        'A' as JavaChar
+    );
 
     Ok(())
 }
@@ -270,9 +288,19 @@ async fn test_character_surrogate_and_compare_errors() -> Result<()> {
     let surrogate = 0xd800 as JavaChar;
 
     let value: ClassInstanceRef<Character> = jvm.new_class("java/lang/Character", "(C)V", (surrogate,)).await?.into();
-    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&value, "charValue", "()C", ()).await?, surrogate);
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&value, "toString", "()Ljava/lang/String;", ()).await?;
-    assert_eq!(jvm.invoke_virtual::<_, JavaChar>(&text, "charAt", "(I)C", (0,)).await?, surrogate);
+    assert_eq!(
+        jvm.invoke_virtual::<_, JavaChar>(&value, "java/lang/Character", "charValue", "()C", ())
+            .await?,
+        surrogate
+    );
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&value, "java/lang/Character", "toString", "()Ljava/lang/String;", ())
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, JavaChar>(&text, "java/lang/String", "charAt", "(I)C", (0,))
+            .await?,
+        surrogate
+    );
 
     for method in [
         "isLowerCase",
@@ -319,19 +347,19 @@ async fn test_character_surrogate_and_compare_errors() -> Result<()> {
 
     let other: ClassInstanceRef<Character> = jvm.new_class("java/lang/Character", "(C)V", ('Z' as JavaChar,)).await?.into();
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&value, "compareTo", "(Ljava/lang/Character;)I", (other.clone(),))
+        jvm.invoke_virtual::<_, i32>(&value, "java/lang/Character", "compareTo", "(Ljava/lang/Character;)I", (other.clone(),))
             .await?,
         1
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&other, "compareTo", "(Ljava/lang/Object;)I", (value.clone(),))
+        jvm.invoke_virtual::<_, i32>(&other, "java/lang/Character", "compareTo", "(Ljava/lang/Object;)I", (value.clone(),))
             .await?,
         -1
     );
 
     let null_character: ClassInstanceRef<Character> = None.into();
     let result: Result<i32> = jvm
-        .invoke_virtual(&value, "compareTo", "(Ljava/lang/Character;)I", (null_character,))
+        .invoke_virtual(&value, "java/lang/Character", "compareTo", "(Ljava/lang/Character;)I", (null_character,))
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Character.compareTo(Character) must reject null");
@@ -339,7 +367,9 @@ async fn test_character_surrogate_and_compare_errors() -> Result<()> {
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
     let null_object: ClassInstanceRef<Character> = None.into();
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (null_object,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, "java/lang/Character", "compareTo", "(Ljava/lang/Object;)I", (null_object,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Character.compareTo(Object) must reject null");
     };
@@ -347,14 +377,16 @@ async fn test_character_surrogate_and_compare_errors() -> Result<()> {
 
     let wrong = jvm.new_class("java/lang/Object", "()V", ()).await?;
     let result: Result<i32> = jvm
-        .invoke_virtual(&value, "compareTo", "(Ljava/lang/Character;)I", (wrong.clone(),))
+        .invoke_virtual(&value, "java/lang/Character", "compareTo", "(Ljava/lang/Character;)I", (wrong.clone(),))
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("typed Character.compareTo must reject a non-Character instance");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/ClassCastException"));
 
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (wrong,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, "java/lang/Character", "compareTo", "(Ljava/lang/Object;)I", (wrong,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("raw Character.compareTo must reject a non-Character instance");
     };

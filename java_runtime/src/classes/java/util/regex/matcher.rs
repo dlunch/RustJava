@@ -215,7 +215,7 @@ impl Matcher {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Illegal start index").await);
         }
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
-        let length: i32 = jvm.invoke_virtual(&text, "length", "()I", ()).await?;
+        let length: i32 = jvm.invoke_virtual(&text, &text.class_definition().name(), "length", "()I", ()).await?;
         if start > length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Illegal start index").await);
         }
@@ -257,9 +257,16 @@ impl Matcher {
         let (start, end) = Self::group_range(jvm, &this, 0).await?;
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
         let group: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&text, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .invoke_virtual(
+                &text,
+                &text.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (start, end),
+            )
             .await?;
-        jvm.invoke_virtual(&group, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&group, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn group_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, group: i32) -> Result<ClassInstanceRef<String>> {
@@ -271,9 +278,16 @@ impl Matcher {
         }
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
         let group: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&text, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .invoke_virtual(
+                &text,
+                &text.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (start, end),
+            )
             .await?;
-        jvm.invoke_virtual(&group, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&group, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn group_count(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -303,19 +317,39 @@ impl Matcher {
         let append_position: i32 = jvm.get_field(&this, "appendPosition", "I").await?;
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
         let prefix: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&text, "subSequence", "(II)Ljava/lang/CharSequence;", (append_position, match_range[0]))
+            .invoke_virtual(
+                &text,
+                &text.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (append_position, match_range[0]),
+            )
             .await?;
-        let prefix: ClassInstanceRef<String> = jvm.invoke_virtual(&prefix, "toString", "()Ljava/lang/String;", ()).await?;
+        let prefix: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&prefix, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await?;
         let expanded = JavaLangString::from_utf16(jvm, expanded).await?;
 
         if buffer.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "buffer is null").await);
         }
         let _: ClassInstanceRef<StringBuffer> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (prefix,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (prefix,),
+            )
             .await?;
         let _: ClassInstanceRef<StringBuffer> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (expanded,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (expanded,),
+            )
             .await?;
         jvm.put_field(&mut this, "appendPosition", "I", match_range[1]).await?;
         Ok(this)
@@ -335,13 +369,27 @@ impl Matcher {
 
         let append_position: i32 = jvm.get_field(&this, "appendPosition", "I").await?;
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
-        let length: i32 = jvm.invoke_virtual(&text, "length", "()I", ()).await?;
+        let length: i32 = jvm.invoke_virtual(&text, &text.class_definition().name(), "length", "()I", ()).await?;
         let tail: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&text, "subSequence", "(II)Ljava/lang/CharSequence;", (append_position, length))
+            .invoke_virtual(
+                &text,
+                &text.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (append_position, length),
+            )
             .await?;
-        let tail: ClassInstanceRef<String> = jvm.invoke_virtual(&tail, "toString", "()Ljava/lang/String;", ()).await?;
-        jvm.invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (tail,))
-            .await
+        let tail: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&tail, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await?;
+        jvm.invoke_virtual(
+            &buffer,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (tail,),
+        )
+        .await
     }
 
     async fn replace_all(
@@ -352,10 +400,14 @@ impl Matcher {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.Matcher::replaceAll({this:?}, {replacement:?})");
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "reset", "()Ljava/util/regex/Matcher;", ()).await?;
-        if !jvm.invoke_virtual::<_, bool>(&this, "find", "()Z", ()).await? {
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/util/regex/Matcher", "reset", "()Ljava/util/regex/Matcher;", ())
+            .await?;
+        if !jvm.invoke_virtual::<_, bool>(&this, "java/util/regex/Matcher", "find", "()Z", ()).await? {
             let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
-            return jvm.invoke_virtual(&text, "toString", "()Ljava/lang/String;", ()).await;
+            return jvm
+                .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await;
         }
 
         let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
@@ -363,24 +415,27 @@ impl Matcher {
             let _: ClassInstanceRef<Self> = jvm
                 .invoke_virtual(
                     &this,
+                    "java/util/regex/Matcher",
                     "appendReplacement",
                     "(Ljava/lang/StringBuffer;Ljava/lang/String;)Ljava/util/regex/Matcher;",
                     (buffer.clone(), replacement.clone()),
                 )
                 .await?;
-            if !jvm.invoke_virtual::<_, bool>(&this, "find", "()Z", ()).await? {
+            if !jvm.invoke_virtual::<_, bool>(&this, "java/util/regex/Matcher", "find", "()Z", ()).await? {
                 break;
             }
         }
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/util/regex/Matcher",
                 "appendTail",
                 "(Ljava/lang/StringBuffer;)Ljava/lang/StringBuffer;",
                 (buffer.clone(),),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn replace_first(
@@ -391,16 +446,21 @@ impl Matcher {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.Matcher::replaceFirst({this:?}, {replacement:?})");
 
-        let _: ClassInstanceRef<Self> = jvm.invoke_virtual(&this, "reset", "()Ljava/util/regex/Matcher;", ()).await?;
-        if !jvm.invoke_virtual::<_, bool>(&this, "find", "()Z", ()).await? {
+        let _: ClassInstanceRef<Self> = jvm
+            .invoke_virtual(&this, "java/util/regex/Matcher", "reset", "()Ljava/util/regex/Matcher;", ())
+            .await?;
+        if !jvm.invoke_virtual::<_, bool>(&this, "java/util/regex/Matcher", "find", "()Z", ()).await? {
             let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
-            return jvm.invoke_virtual(&text, "toString", "()Ljava/lang/String;", ()).await;
+            return jvm
+                .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await;
         }
 
         let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let _: ClassInstanceRef<Self> = jvm
             .invoke_virtual(
                 &this,
+                "java/util/regex/Matcher",
                 "appendReplacement",
                 "(Ljava/lang/StringBuffer;Ljava/lang/String;)Ljava/util/regex/Matcher;",
                 (buffer.clone(), replacement),
@@ -409,12 +469,14 @@ impl Matcher {
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &this,
+                "java/util/regex/Matcher",
                 "appendTail",
                 "(Ljava/lang/StringBuffer;)Ljava/lang/StringBuffer;",
                 (buffer.clone(),),
             )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn group_range(jvm: &Jvm, this: &ClassInstanceRef<Self>, group: i32) -> Result<(i32, i32)> {
@@ -485,9 +547,17 @@ impl Matcher {
                     let start = ranges[group * 2];
                     if start >= 0 {
                         let group: ClassInstanceRef<CharSequence> = jvm
-                            .invoke_virtual(&text, "subSequence", "(II)Ljava/lang/CharSequence;", (start, ranges[group * 2 + 1]))
+                            .invoke_virtual(
+                                &text,
+                                &text.class_definition().name(),
+                                "subSequence",
+                                "(II)Ljava/lang/CharSequence;",
+                                (start, ranges[group * 2 + 1]),
+                            )
                             .await?;
-                        let group: ClassInstanceRef<String> = jvm.invoke_virtual(&group, "toString", "()Ljava/lang/String;", ()).await?;
+                        let group: ClassInstanceRef<String> = jvm
+                            .invoke_virtual(&group, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                            .await?;
                         expanded.extend(JavaLangString::to_utf16(jvm, &group).await?);
                     }
                 }
@@ -512,7 +582,9 @@ impl Matcher {
         }
 
         let text: ClassInstanceRef<CharSequence> = jvm.get_field(this, "text", "Ljava/lang/CharSequence;").await?;
-        let snapshot: ClassInstanceRef<String> = jvm.invoke_virtual(&text, "toString", "()Ljava/lang/String;", ()).await?;
+        let snapshot: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await?;
         let utf16 = JavaLangString::to_utf16(jvm, &snapshot).await?;
         let rust = RustString::from_utf16_lossy(&utf16);
 

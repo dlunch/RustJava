@@ -8,23 +8,38 @@ async fn test_boolean_string_constants_and_type() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let true_value: ClassInstanceRef<Boolean> = jvm.new_class("java/lang/Boolean", "(Z)V", (true,)).await?.into();
-    assert!(jvm.invoke_virtual::<_, bool>(&true_value, "booleanValue", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&true_value, "hashCode", "()I", ()).await?, 1231);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&true_value, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&true_value, "java/lang/Boolean", "hashCode", "()I", ())
+            .await?,
+        1231
+    );
 
-    let text: ClassInstanceRef<String> = jvm.invoke_virtual(&true_value, "toString", "()Ljava/lang/String;", ()).await?;
+    let text: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&true_value, "java/lang/Boolean", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "true");
 
     let mixed_case = JavaLangString::from_rust_string(&jvm, "TrUe").await?;
     let parsed: ClassInstanceRef<Boolean> = jvm
         .invoke_static("java/lang/Boolean", "valueOf", "(Ljava/lang/String;)Ljava/lang/Boolean;", (mixed_case,))
         .await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&parsed, "booleanValue", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&parsed, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
 
     let padded = JavaLangString::from_rust_string(&jvm, " true").await?;
     let parsed: ClassInstanceRef<Boolean> = jvm
         .invoke_static("java/lang/Boolean", "valueOf", "(Ljava/lang/String;)Ljava/lang/Boolean;", (padded,))
         .await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&parsed, "booleanValue", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&parsed, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
 
     let null_string: ClassInstanceRef<String> = None.into();
     let parsed: ClassInstanceRef<Boolean> = jvm
@@ -35,36 +50,57 @@ async fn test_boolean_string_constants_and_type() -> Result<()> {
             (null_string.clone(),),
         )
         .await?;
-    assert!(!jvm.invoke_virtual::<_, bool>(&parsed, "booleanValue", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&parsed, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
 
     let from_null: ClassInstanceRef<Boolean> = jvm.new_class("java/lang/Boolean", "(Ljava/lang/String;)V", (null_string,)).await?.into();
-    assert!(!jvm.invoke_virtual::<_, bool>(&from_null, "booleanValue", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&from_null, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
 
     let true_constant: ClassInstanceRef<Boolean> = jvm.get_static_field("java/lang/Boolean", "TRUE", "Ljava/lang/Boolean;").await?;
     let false_constant: ClassInstanceRef<Boolean> = jvm.get_static_field("java/lang/Boolean", "FALSE", "Ljava/lang/Boolean;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&true_constant, "booleanValue", "()Z", ()).await?);
-    assert!(!jvm.invoke_virtual::<_, bool>(&false_constant, "booleanValue", "()Z", ()).await?);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&false_constant, "hashCode", "()I", ()).await?, 1237);
     assert!(
-        jvm.invoke_virtual::<_, bool>(&true_constant, "equals", "(Ljava/lang/Object;)Z", (true_value,))
+        jvm.invoke_virtual::<_, bool>(&true_constant, "java/lang/Boolean", "booleanValue", "()Z", ())
             .await?
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&false_constant, "equals", "(Ljava/lang/Object;)Z", (None,))
+        !jvm.invoke_virtual::<_, bool>(&false_constant, "java/lang/Boolean", "booleanValue", "()Z", ())
+            .await?
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&false_constant, "java/lang/Boolean", "hashCode", "()I", ())
+            .await?,
+        1237
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&true_constant, "java/lang/Boolean", "equals", "(Ljava/lang/Object;)Z", (true_value,))
+            .await?
+    );
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&false_constant, "java/lang/Boolean", "equals", "(Ljava/lang/Object;)Z", (None,))
             .await?
     );
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&false_constant, "equals", "(Ljava/lang/Object;)Z", (object,))
+        !jvm.invoke_virtual::<_, bool>(&false_constant, "java/lang/Boolean", "equals", "(Ljava/lang/Object;)Z", (object,))
             .await?
     );
     assert!(!jvm.is_instance(&**true_constant, "java/lang/Comparable"));
     assert!(jvm.is_instance(&**true_constant, "java/io/Serializable"));
 
     let typ = jvm.get_static_field("java/lang/Boolean", "TYPE", "Ljava/lang/Class;").await?;
-    let name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "boolean");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -121,12 +157,22 @@ async fn test_boolean_property_and_java_5_primitive_value_of() -> Result<()> {
 
     let left = jvm.new_class("java/lang/Boolean", "(Z)V", (false,)).await?;
     let right = jvm.new_class("java/lang/Boolean", "(Z)V", (true,)).await?;
-    let result: Result<i32> = jvm.invoke_virtual(&left, "compareTo", "(Ljava/lang/Boolean;)I", (right.clone(),)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(
+            &left,
+            &left.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Boolean;)I",
+            (right.clone(),),
+        )
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Boolean typed compareTo must remain outside the Java 1.2 API");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NoSuchMethodError"));
-    let result: Result<i32> = jvm.invoke_virtual(&left, "compareTo", "(Ljava/lang/Object;)I", (right,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&left, &left.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (right,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Boolean raw compareTo must remain outside the Java 1.2 API");
     };

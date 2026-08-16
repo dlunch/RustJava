@@ -396,12 +396,12 @@ impl Character {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let value: JavaChar = jvm.invoke_virtual(&this, "charValue", "()C", ()).await?;
+        let value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
         jvm.invoke_static("java/lang/String", "valueOf", "(C)Ljava/lang/String;", (value,)).await
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: JavaChar = jvm.invoke_virtual(&this, "charValue", "()C", ()).await?;
+        let value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
         Ok(i32::from(value))
     }
 
@@ -410,8 +410,8 @@ impl Character {
             return Ok(false);
         }
 
-        let this_value: JavaChar = jvm.invoke_virtual(&this, "charValue", "()C", ()).await?;
-        let other_value: JavaChar = jvm.invoke_virtual(&other, "charValue", "()C", ()).await?;
+        let this_value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
+        let other_value: JavaChar = jvm.invoke_virtual(&other, "java/lang/Character", "charValue", "()C", ()).await?;
         Ok(this_value == other_value)
     }
 
@@ -423,8 +423,8 @@ impl Character {
             return Err(jvm.exception("java/lang/ClassCastException", "not Character").await);
         }
 
-        let this_value: JavaChar = jvm.invoke_virtual(&this, "charValue", "()C", ()).await?;
-        let other_value: JavaChar = jvm.invoke_virtual(&other, "charValue", "()C", ()).await?;
+        let this_value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
+        let other_value: JavaChar = jvm.invoke_virtual(&other, "java/lang/Character", "charValue", "()C", ()).await?;
         Ok(this_value.cmp(&other_value) as i32)
     }
 
@@ -437,8 +437,8 @@ impl Character {
         }
 
         let other = ClassInstanceRef::<Self>::from(other.instance);
-        let this_value: JavaChar = jvm.invoke_virtual(&this, "charValue", "()C", ()).await?;
-        let other_value: JavaChar = jvm.invoke_virtual(&other, "charValue", "()C", ()).await?;
+        let this_value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
+        let other_value: JavaChar = jvm.invoke_virtual(&other, "java/lang/Character", "charValue", "()C", ()).await?;
         Ok(this_value.cmp(&other_value) as i32)
     }
 

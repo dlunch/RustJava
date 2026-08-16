@@ -435,10 +435,18 @@ impl Arrays {
             if !jvm.is_instance(left.as_ref(), "java/lang/Comparable") {
                 return Err(jvm.exception("java/lang/ClassCastException", &left.class_definition().name()).await);
             }
-            jvm.invoke_virtual(left, "compareTo", "(Ljava/lang/Object;)I", (right.clone(),)).await
+            jvm.invoke_virtual(
+                left,
+                &left.class_definition().name(),
+                "compareTo",
+                "(Ljava/lang/Object;)I",
+                (right.clone(),),
+            )
+            .await
         } else {
             jvm.invoke_virtual(
                 comparator,
+                &comparator.class_definition().name(),
                 "compare",
                 "(Ljava/lang/Object;Ljava/lang/Object;)I",
                 (left.clone(), right.clone()),
@@ -688,7 +696,10 @@ impl Arrays {
                 if !right.is_null() {
                     return Ok(false);
                 }
-            } else if !jvm.invoke_virtual::<_, bool>(&left, "equals", "(Ljava/lang/Object;)Z", (right,)).await? {
+            } else if !jvm
+                .invoke_virtual::<_, bool>(&left, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (right,))
+                .await?
+            {
                 return Ok(false);
             }
         }

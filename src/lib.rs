@@ -31,11 +31,14 @@ where
             .unwrap();
 
         let _: () = jvm
-            .invoke_virtual(&x, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+            .invoke_virtual(&x, "java/lang/Throwable", "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
             .await
             .unwrap();
 
-        let trace = jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", []).await.unwrap();
+        let trace = jvm
+            .invoke_virtual(&string_writer, "java/io/StringWriter", "toString", "()Ljava/lang/String;", [])
+            .await
+            .unwrap();
 
         Err(anyhow::anyhow!(
             "Java Exception:\n{}",
@@ -101,14 +104,23 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (filename,)).await?;
     let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
-    let manifest = jvm.invoke_virtual(&jar_file, "getManifest", "()Ljava/util/jar/Manifest;", ()).await?;
+    let manifest = jvm
+        .invoke_virtual(&jar_file, "java/util/jar/JarFile", "getManifest", "()Ljava/util/jar/Manifest;", ())
+        .await?;
     let attributes = jvm
-        .invoke_virtual(&manifest, "getMainAttributes", "()Ljava/util/jar/Attributes;", ())
+        .invoke_virtual(
+            &manifest,
+            "java/util/jar/Manifest",
+            "getMainAttributes",
+            "()Ljava/util/jar/Attributes;",
+            (),
+        )
         .await?;
 
     let main_class = jvm
         .invoke_virtual(
             &attributes,
+            "java/util/jar/Attributes",
             "getValue",
             "(Ljava/lang/String;)Ljava/lang/String;",
             (JavaLangString::from_rust_string(jvm, "Main-Class").await?,),

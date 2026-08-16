@@ -40,7 +40,7 @@ impl AbstractMap {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.AbstractMap::isEmpty({this:?})");
 
-        let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&this, "java/util/AbstractMap", "size", "()I", ()).await?;
 
         Ok(size == 0)
     }
@@ -55,14 +55,28 @@ impl AbstractMap {
             return Ok(());
         }
 
-        let entry_set: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let entries: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&entry_set, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let entry_set: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let entries: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&entry_set, &entry_set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let count = jvm.array_length(&entries).await?;
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                .await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
             let _: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+                .invoke_virtual(
+                    &this,
+                    "java/util/AbstractMap",
+                    "put",
+                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                    (key, value),
+                )
                 .await?;
         }
 
@@ -76,32 +90,51 @@ impl AbstractMap {
         if this.identity() == other.identity() {
             return Ok(true);
         }
-        let this_size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
-        let other_size: i32 = jvm.invoke_virtual(&other, "size", "()I", ()).await?;
+        let this_size: i32 = jvm.invoke_virtual(&this, "java/util/AbstractMap", "size", "()I", ()).await?;
+        let other_size: i32 = jvm.invoke_virtual(&other, &other.class_definition().name(), "size", "()I", ()).await?;
         if this_size != other_size {
             return Ok(false);
         }
 
         let comparison: Result<bool> = async {
-            let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "entrySet", "()Ljava/util/Set;", ()).await?;
-            let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entries, "iterator", "()Ljava/util/Iterator;", ()).await?;
-            while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-                let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-                let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-                let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let entries: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&this, "java/util/AbstractMap", "entrySet", "()Ljava/util/Set;", ())
+                .await?;
+            let iterator: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entries, &entries.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+                .await?;
+            while jvm
+                .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+                .await?
+            {
+                let entry: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                    .await?;
+                let key: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                    .await?;
+                let value: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                    .await?;
                 let other_value: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&other, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+                    .invoke_virtual(
+                        &other,
+                        &other.class_definition().name(),
+                        "get",
+                        "(Ljava/lang/Object;)Ljava/lang/Object;",
+                        (key.clone(),),
+                    )
                     .await?;
                 if value.is_null() {
                     if !other_value.is_null()
                         || !jvm
-                            .invoke_virtual::<_, bool>(&other, "containsKey", "(Ljava/lang/Object;)Z", (key,))
+                            .invoke_virtual::<_, bool>(&other, &other.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (key,))
                             .await?
                     {
                         return Ok(false);
                     }
                 } else if !jvm
-                    .invoke_virtual::<_, bool>(&value, "equals", "(Ljava/lang/Object;)Z", (other_value,))
+                    .invoke_virtual::<_, bool>(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other_value,))
                     .await?
                 {
                     return Ok(false);
@@ -122,12 +155,21 @@ impl AbstractMap {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entries, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let entries: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractMap", "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entries, &entries.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         let mut hash = 0i32;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            hash = hash.wrapping_add(jvm.invoke_virtual::<_, i32>(&entry, "hashCode", "()I", ()).await?);
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let entry: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            hash = hash.wrapping_add(jvm.invoke_virtual::<_, i32>(&entry, "java/lang/Object", "hashCode", "()I", ()).await?);
         }
         Ok(hash)
     }
@@ -136,52 +178,114 @@ impl AbstractMap {
         let buffer: ClassInstanceRef<Object> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let open = JavaLangString::from_rust_string(jvm, "{").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (open,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (open,),
+            )
             .await?;
-        let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "entrySet", "()Ljava/util/Set;", ()).await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&entries, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let entries: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractMap", "entrySet", "()Ljava/util/Set;", ())
+            .await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entries, &entries.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         let mut first = true;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
             if first {
                 first = false;
             } else {
                 let separator = JavaLangString::from_rust_string(jvm, ", ").await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (separator,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                        (separator,),
+                    )
                     .await?;
             }
-            let entry: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getKey", "()Ljava/lang/Object;", ()).await?;
-            let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&entry, "getValue", "()Ljava/lang/Object;", ()).await?;
+            let entry: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+                .await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+                .await?;
             if !key.is_null() && key.identity() == this.identity() {
                 let recursive = JavaLangString::from_rust_string(jvm, "(this Map)").await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (recursive,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                        (recursive,),
+                    )
                     .await?;
             } else {
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/Object;)Ljava/lang/StringBuffer;", (key,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/Object;)Ljava/lang/StringBuffer;",
+                        (key,),
+                    )
                     .await?;
             }
             let equals = JavaLangString::from_rust_string(jvm, "=").await?;
             let _: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (equals,))
+                .invoke_virtual(
+                    &buffer,
+                    "java/lang/StringBuffer",
+                    "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                    (equals,),
+                )
                 .await?;
             if !value.is_null() && value.identity() == this.identity() {
                 let recursive = JavaLangString::from_rust_string(jvm, "(this Map)").await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (recursive,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                        (recursive,),
+                    )
                     .await?;
             } else {
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/Object;)Ljava/lang/StringBuffer;", (value,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/Object;)Ljava/lang/StringBuffer;",
+                        (value,),
+                    )
                     .await?;
             }
         }
         let close = JavaLangString::from_rust_string(jvm, "}").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (close,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (close,),
+            )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 }

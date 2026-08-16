@@ -63,7 +63,9 @@ impl IllegalFormatConversionException {
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let conversion: JavaChar = jvm.get_field(&this, "conversion", "C").await?;
         let argument_class: ClassInstanceRef<Class> = jvm.get_field(&this, "argumentClass", "Ljava/lang/Class;").await?;
-        let class_name: ClassInstanceRef<String> = jvm.invoke_virtual(&argument_class, "getName", "()Ljava/lang/String;", ()).await?;
+        let class_name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&argument_class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
+            .await?;
         Ok(JavaLangString::from_rust_string(
             jvm,
             &format!(

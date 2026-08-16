@@ -66,7 +66,9 @@ impl Timer {
             .await?;
         jvm.put_field(&mut this, "thread", "Ljava/util/Timer$TimerThread;", timer_thread.clone())
             .await?;
-        let _: () = jvm.invoke_virtual(&timer_thread, "start", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_virtual(&timer_thread, "java/util/Timer$TimerThread", "start", "()V", ())
+            .await?;
         Ok(())
     }
 
@@ -109,7 +111,7 @@ impl Timer {
         if date.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "time").await);
         }
-        let time: i64 = jvm.invoke_virtual(&date, "getTime", "()J", ()).await?;
+        let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
         if time < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "illegal execution time").await);
         }
@@ -163,7 +165,7 @@ impl Timer {
         if period <= 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "non-positive period").await);
         }
-        let time: i64 = jvm.invoke_virtual(&date, "getTime", "()J", ()).await?;
+        let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
         if time < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "illegal execution time").await);
         }

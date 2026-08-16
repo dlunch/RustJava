@@ -252,8 +252,14 @@ impl Class {
         }
 
         let component_name = JavaLangString::from_rust_string(jvm, component_name).await?;
-        jvm.invoke_virtual(&defining_loader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;", (component_name,))
-            .await
+        jvm.invoke_virtual(
+            &defining_loader,
+            "java/lang/ClassLoader",
+            "loadClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            (component_name,),
+        )
+        .await
     }
 
     async fn get_interfaces(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<jvm::Array<Self>>> {
@@ -295,8 +301,14 @@ impl Class {
             class_loader.into()
         };
 
-        jvm.invoke_virtual(&class_loader, "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;", (name,))
-            .await
+        jvm.invoke_virtual(
+            &class_loader,
+            "java/lang/ClassLoader",
+            "getResourceAsStream",
+            "(Ljava/lang/String;)Ljava/io/InputStream;",
+            (name,),
+        )
+        .await
     }
 
     async fn for_name(jvm: &Jvm, _context: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Class>> {

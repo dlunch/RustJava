@@ -15,7 +15,9 @@ async fn test_file_input_stream_read_buf() -> Result<()> {
     let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
 
     let bytes = jvm.instantiate_array("B", 11).await?;
-    let read: i32 = jvm.invoke_virtual(&fis, "read", "([B)I", (bytes.clone(),)).await?;
+    let read: i32 = jvm
+        .invoke_virtual(&fis, &fis.class_definition().name(), "read", "([B)I", (bytes.clone(),))
+        .await?;
 
     let length = jvm.array_length(&bytes).await?;
     let mut buf = vec![0; length];
@@ -37,7 +39,7 @@ async fn test_file_input_stream_read_int() -> Result<()> {
     let java_file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
     let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
 
-    let read: i32 = jvm.invoke_virtual(&fis, "read", "()I", ()).await?;
+    let read: i32 = jvm.invoke_virtual(&fis, &fis.class_definition().name(), "read", "()I", ()).await?;
 
     assert_eq!(read, 104);
 
@@ -54,7 +56,7 @@ async fn test_file_input_stream_available() -> Result<()> {
     let java_file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
     let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
 
-    let available: i32 = jvm.invoke_virtual(&fis, "available", "()I", ()).await?;
+    let available: i32 = jvm.invoke_virtual(&fis, &fis.class_definition().name(), "available", "()I", ()).await?;
 
     assert!(available > 0);
 
@@ -73,7 +75,10 @@ async fn test_file_input_stream_sequential_read() -> Result<()> {
 
     let mut reads = vec![];
     for _ in 0..6 {
-        reads.push(jvm.invoke_virtual::<_, i32>(&fis, "read", "()I", ()).await?);
+        reads.push(
+            jvm.invoke_virtual::<_, i32>(&fis, &fis.class_definition().name(), "read", "()I", ())
+                .await?,
+        );
     }
 
     assert_eq!(reads, vec![104, 101, 108, 108, 111, -1]);
@@ -91,10 +96,10 @@ async fn test_file_input_stream_skip_past_eof() -> Result<()> {
     let java_file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
     let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
 
-    let skipped: i64 = jvm.invoke_virtual(&fis, "skip", "(J)J", (10i64,)).await?;
+    let skipped: i64 = jvm.invoke_virtual(&fis, &fis.class_definition().name(), "skip", "(J)J", (10i64,)).await?;
     assert_eq!(skipped, 5);
 
-    let read: i32 = jvm.invoke_virtual(&fis, "read", "()I", ()).await?;
+    let read: i32 = jvm.invoke_virtual(&fis, &fis.class_definition().name(), "read", "()I", ()).await?;
     assert_eq!(read, -1);
 
     Ok(())

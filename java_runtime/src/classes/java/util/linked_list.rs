@@ -90,7 +90,9 @@ impl LinkedList {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
         Self::init(jvm, context, this.clone()).await?;
-        let _: bool = jvm.invoke_virtual(&this, "addAll", "(Ljava/util/Collection;)Z", (collection,)).await?;
+        let _: bool = jvm
+            .invoke_virtual(&this, "java/util/LinkedList", "addAll", "(Ljava/util/Collection;)Z", (collection,))
+            .await?;
         Ok(())
     }
 
@@ -197,7 +199,7 @@ impl LinkedList {
             let equal = if element.is_null() {
                 current.is_null()
             } else {
-                jvm.invoke_virtual::<_, bool>(&element, "equals", "(Ljava/lang/Object;)Z", (current,))
+                jvm.invoke_virtual::<_, bool>(&element, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
                     .await?
             };
             if equal {
@@ -216,7 +218,7 @@ impl LinkedList {
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
-                        .invoke_virtual::<_, bool>(&element, "equals", "(Ljava/lang/Object;)Z", (current,))
+                        .invoke_virtual::<_, bool>(&element, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
                         .await?)
             {
                 return Ok(index);
@@ -233,7 +235,7 @@ impl LinkedList {
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
-                        .invoke_virtual::<_, bool>(&element, "equals", "(Ljava/lang/Object;)Z", (current,))
+                        .invoke_virtual::<_, bool>(&element, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
                         .await?)
             {
                 return Ok(index);
@@ -244,7 +246,9 @@ impl LinkedList {
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         while jvm.get_field::<i32>(&this, "size", "I").await? > 0 {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "removeFirst", "()Ljava/lang/Object;", ()).await?;
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&this, "java/util/LinkedList", "removeFirst", "()Ljava/lang/Object;", ())
+                .await?;
         }
         Ok(())
     }

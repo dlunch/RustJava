@@ -1,6 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{
     Array, ClassInstanceRef, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
@@ -25,13 +26,23 @@ impl URLClassLoader {
             parent_class: Some("java/lang/ClassLoader"), // TODO java.security.SecureClassLoader
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", Self::init, Default::default()),
-                JavaMethodProto::new("findClass", "(Ljava/lang/String;)Ljava/lang/Class;", Self::find_class, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "([Ljava/net/URL;Ljava/lang/ClassLoader;)V",
+                    Self::init,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new(
+                    "findClass",
+                    "(Ljava/lang/String;)Ljava/lang/Class;",
+                    Self::find_class,
+                    MethodAccessFlags::PROTECTED,
+                ),
                 JavaMethodProto::new(
                     "findResource",
                     "(Ljava/lang/String;)Ljava/net/URL;",
                     Self::find_resource,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
             ],
             fields: vec![JavaFieldProto::new("urls", "[Ljava/net/URL;", Default::default())],
@@ -71,13 +82,21 @@ impl URLClassLoader {
         let resource_name = JavaLangString::from_rust_string(jvm, &resource_name).await?;
 
         let resource: ClassInstanceRef<URL> = jvm
-            .invoke_virtual(&this, "findResource", "(Ljava/lang/String;)Ljava/net/URL;", (resource_name,))
+            .invoke_virtual(
+                &this,
+                "java/net/URLClassLoader",
+                "findResource",
+                "(Ljava/lang/String;)Ljava/net/URL;",
+                (resource_name,),
+            )
             .await?;
         if resource.is_null() {
             return Ok(None.into());
         }
 
-        let stream = jvm.invoke_virtual(&resource, "openStream", "()Ljava/io/InputStream;", ()).await?;
+        let stream = jvm
+            .invoke_virtual(&resource, "java/net/URL", "openStream", "()Ljava/io/InputStream;", ())
+            .await?;
         let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await?;
 
         let length = bytes.len() as i32;
@@ -87,6 +106,7 @@ impl URLClassLoader {
         let class = jvm
             .invoke_virtual(
                 &this,
+                "java/net/URLClassLoader",
                 "defineClass",
                 "(Ljava/lang/String;[BII)Ljava/lang/Class;",
                 (name, bytes_java.clone(), 0, length),
@@ -110,7 +130,7 @@ impl URLClassLoader {
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
 
         for url in urls {
-            let file = jvm.invoke_virtual(&url, "getFile", "()Ljava/lang/String;", ()).await?;
+            let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
 
             let metadata = runtime.metadata(&file).await;
@@ -148,10 +168,13 @@ impl URLClassLoader {
                 let jar_url_str = format!("jar:file:{file}!/{name_str}"); // TODO url might not be file
                 let jar_url = JavaLangString::from_rust_string(jvm, &jar_url_str).await?;
                 let jar_url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (jar_url,)).await?;
-                let connection: ClassInstanceRef<JarURLConnection> =
-                    jvm.invoke_virtual(&jar_url, "openConnection", "()Ljava/net/URLConnection;", ()).await?;
+                let connection: ClassInstanceRef<JarURLConnection> = jvm
+                    .invoke_virtual(&jar_url, "java/net/URL", "openConnection", "()Ljava/net/URLConnection;", ())
+                    .await?;
 
-                let entry: ClassInstanceRef<JarEntry> = jvm.invoke_virtual(&connection, "getJarEntry", "()Ljava/util/jar/JarEntry;", ()).await?;
+                let entry: ClassInstanceRef<JarEntry> = jvm
+                    .invoke_virtual(&connection, "java/net/JarURLConnection", "getJarEntry", "()Ljava/util/jar/JarEntry;", ())
+                    .await?;
 
                 if !entry.is_null() {
                     return Ok(jar_url.into());

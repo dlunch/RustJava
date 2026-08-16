@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -18,8 +19,13 @@ impl URLConnection {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, Default::default()),
-                JavaMethodProto::new("getInputStream", "()Ljava/io/InputStream;", Self::get_input_stream, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, MethodAccessFlags::PROTECTED),
+                JavaMethodProto::new(
+                    "getInputStream",
+                    "()Ljava/io/InputStream;",
+                    Self::get_input_stream,
+                    MethodAccessFlags::PUBLIC,
+                ),
             ],
             fields: vec![JavaFieldProto::new("url", "Ljava/net/URL;", Default::default())],
             access_flags: Default::default(),

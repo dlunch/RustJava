@@ -155,9 +155,13 @@ impl DataInputStream {
     async fn read_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.DataInputStream::readUTF({this:?})");
 
-        let length: i32 = jvm.invoke_virtual(&this, "readUnsignedShort", "()I", ()).await?;
+        let length: i32 = jvm
+            .invoke_virtual(&this, "java/io/DataInputStream", "readUnsignedShort", "()I", ())
+            .await?;
         let java_array = jvm.instantiate_array("B", length as usize).await?;
-        let _: () = jvm.invoke_virtual(&this, "readFully", "([BII)V", (java_array.clone(), 0, length)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/DataInputStream", "readFully", "([BII)V", (java_array.clone(), 0, length))
+            .await?;
         let bytes: Vec<i8> = jvm.load_array(&java_array, 0, length as usize).await?;
         let bytes: Vec<u8> = bytes.into_iter().map(|value| value as u8).collect();
 
@@ -197,7 +201,8 @@ impl DataInputStream {
 
     async fn read_utf_from_input(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<DataInput>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.DataInputStream::readUTF({input:?})");
-        jvm.invoke_virtual(&input, "readUTF", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&input, &input.class_definition().name(), "readUTF", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn read_fully(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<()> {
@@ -205,7 +210,9 @@ impl DataInputStream {
 
         let length = jvm.array_length(&b).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "readFully", "([BII)V", (b.clone(), 0, length as i32)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/DataInputStream", "readFully", "([BII)V", (b.clone(), 0, length as i32))
+            .await?;
 
         Ok(())
     }
@@ -222,7 +229,9 @@ impl DataInputStream {
 
         let mut read = 0;
         while read < len {
-            let r: i32 = jvm.invoke_virtual(&this, "read", "([BII)I", (b.clone(), off + read, len - read)).await?;
+            let r: i32 = jvm
+                .invoke_virtual(&this, "java/io/DataInputStream", "read", "([BII)I", (b.clone(), off + read, len - read))
+                .await?;
             if r == -1 {
                 return Err(jvm.exception("java/io/EOFException", "End of stream reached before reading fully").await);
             }
@@ -236,14 +245,14 @@ impl DataInputStream {
         tracing::debug!("java.io.DataInputStream::skipBytes({this:?}, {n:?})");
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let skipped: i64 = jvm.invoke_virtual(&r#in, "skip", "(J)J", (n as i64,)).await?;
+        let skipped: i64 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (n as i64,)).await?;
 
         Ok(skipped as _)
     }
 
     async fn read_required_byte(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<u8> {
         let r#in = jvm.get_field(this, "in", "Ljava/io/InputStream;").await?;
-        let value: i32 = jvm.invoke_virtual(&r#in, "read", "()I", ()).await?;
+        let value: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", ()).await?;
         if value == -1 {
             return Err(jvm.exception("java/io/EOFException", "End of stream").await);
         }

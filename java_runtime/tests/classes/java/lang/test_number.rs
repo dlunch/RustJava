@@ -32,16 +32,34 @@ async fn test_number_is_abstract() -> Result<()> {
     let number_class = jvm.resolve_class("java/lang/Number").await?.java_class();
     let serializable_class = jvm.resolve_class("java/io/Serializable").await?.java_class();
     let is_serializable: bool = jvm
-        .invoke_virtual(&serializable_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (number_class.clone(),))
+        .invoke_virtual(
+            &serializable_class,
+            &serializable_class.class_definition().name(),
+            "isAssignableFrom",
+            "(Ljava/lang/Class;)Z",
+            (number_class.clone(),),
+        )
         .await?;
     assert!(is_serializable);
     let comparable_class = jvm.resolve_class("java/lang/Comparable").await?.java_class();
 
     let integer = jvm.new_class("java/lang/Integer", "(I)V", (257,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i8>(&integer, "byteValue", "()B", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i16>(&integer, "shortValue", "()S", ()).await?, 257);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i8>(&integer, &integer.class_definition().name(), "byteValue", "()B", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i16>(&integer, &integer.class_definition().name(), "shortValue", "()S", ())
+            .await?,
+        257
+    );
     let negative = jvm.new_class("java/lang/Integer", "(I)V", (-129,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i8>(&negative, "byteValue", "()B", ()).await?, 127);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i8>(&negative, &negative.class_definition().name(), "byteValue", "()B", ())
+            .await?,
+        127
+    );
 
     for class_name in [
         "java/lang/Byte",
@@ -53,15 +71,33 @@ async fn test_number_is_abstract() -> Result<()> {
     ] {
         let wrapper_class = jvm.resolve_class(class_name).await?.java_class();
         let is_number: bool = jvm
-            .invoke_virtual(&number_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (wrapper_class.clone(),))
+            .invoke_virtual(
+                &number_class,
+                &number_class.class_definition().name(),
+                "isAssignableFrom",
+                "(Ljava/lang/Class;)Z",
+                (wrapper_class.clone(),),
+            )
             .await?;
         assert!(is_number);
         let is_serializable: bool = jvm
-            .invoke_virtual(&serializable_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (wrapper_class.clone(),))
+            .invoke_virtual(
+                &serializable_class,
+                &serializable_class.class_definition().name(),
+                "isAssignableFrom",
+                "(Ljava/lang/Class;)Z",
+                (wrapper_class.clone(),),
+            )
             .await?;
         assert!(is_serializable);
         let is_comparable: bool = jvm
-            .invoke_virtual(&comparable_class, "isAssignableFrom", "(Ljava/lang/Class;)Z", (wrapper_class,))
+            .invoke_virtual(
+                &comparable_class,
+                &comparable_class.class_definition().name(),
+                "isAssignableFrom",
+                "(Ljava/lang/Class;)Z",
+                (wrapper_class,),
+            )
             .await?;
         assert!(is_comparable);
     }

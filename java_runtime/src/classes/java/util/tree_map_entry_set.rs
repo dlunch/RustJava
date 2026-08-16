@@ -35,7 +35,7 @@ impl TreeMapEntrySet {
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "size", "()I", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
@@ -43,19 +43,38 @@ impl TreeMapEntrySet {
             return Ok(false);
         }
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
-        let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
         if !jvm
-            .invoke_virtual::<_, bool>(&map, "containsKey", "(Ljava/lang/Object;)Z", (key.clone(),))
+            .invoke_virtual::<_, bool>(
+                &map,
+                &map.class_definition().name(),
+                "containsKey",
+                "(Ljava/lang/Object;)Z",
+                (key.clone(),),
+            )
             .await?
         {
             return Ok(false);
         }
-        let stored: ClassInstanceRef<Object> = jvm.invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,)).await?;
+        let stored: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key,),
+            )
+            .await?;
         if stored.is_null() {
             Ok(value.is_null())
         } else {
-            jvm.invoke_virtual(&stored, "equals", "(Ljava/lang/Object;)Z", (value,)).await
+            jvm.invoke_virtual(&stored, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (value,))
+                .await
         }
     }
 
@@ -64,39 +83,62 @@ impl TreeMapEntrySet {
             return Ok(false);
         }
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        let value: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getValue", "()Ljava/lang/Object;", ()).await?;
-        let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&candidate, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
         if !jvm
-            .invoke_virtual::<_, bool>(&map, "containsKey", "(Ljava/lang/Object;)Z", (key.clone(),))
+            .invoke_virtual::<_, bool>(
+                &map,
+                &map.class_definition().name(),
+                "containsKey",
+                "(Ljava/lang/Object;)Z",
+                (key.clone(),),
+            )
             .await?
         {
             return Ok(false);
         }
         let stored: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key.clone(),),
+            )
             .await?;
         let equal = if stored.is_null() {
             value.is_null()
         } else {
-            jvm.invoke_virtual::<_, bool>(&stored, "equals", "(Ljava/lang/Object;)Z", (value,))
+            jvm.invoke_virtual::<_, bool>(&stored, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (value,))
                 .await?
         };
         if !equal {
             return Ok(false);
         }
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .invoke_virtual(
+                &map,
+                &map.class_definition().name(),
+                "remove",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key,),
+            )
             .await?;
         Ok(true)
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "clear", "()V", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
-        jvm.invoke_virtual(&map, "entryIterator", "()Ljava/util/Iterator;", ()).await
+        jvm.invoke_virtual(&map, &map.class_definition().name(), "entryIterator", "()Ljava/util/Iterator;", ())
+            .await
     }
 }

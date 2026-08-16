@@ -49,18 +49,28 @@ impl Object {
             parent_class: None,
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("getClass", "()Ljava/lang/Class;", Self::get_class, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::NATIVE),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, Default::default()),
-                JavaMethodProto::new("notify", "()V", Self::notify, Default::default()),
-                JavaMethodProto::new("notifyAll", "()V", Self::notify_all, Default::default()),
-                JavaMethodProto::new("wait", "(J)V", Self::wait_long, Default::default()),
-                JavaMethodProto::new("wait", "(JI)V", Self::wait_long_int, Default::default()),
-                JavaMethodProto::new("wait", "()V", Self::wait, Default::default()),
-                JavaMethodProto::new("finalize", "()V", Self::finalize, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "getClass",
+                    "()Ljava/lang/Class;",
+                    Self::get_class,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "clone",
+                    "()Ljava/lang/Object;",
+                    Self::clone,
+                    MethodAccessFlags::PROTECTED | MethodAccessFlags::NATIVE,
+                ),
+                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("notify", "()V", Self::notify, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("notifyAll", "()V", Self::notify_all, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("wait", "(J)V", Self::wait_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("wait", "(JI)V", Self::wait_long_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("wait", "()V", Self::wait, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("finalize", "()V", Self::finalize, MethodAccessFlags::PROTECTED),
             ],
             fields: vec![],
             access_flags: Default::default(),
@@ -117,11 +127,15 @@ impl Object {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Object::toString({this:?})");
 
-        let class = jvm.invoke_virtual(&this, "getClass", "()Ljava/lang/Class;", ()).await?;
-        let class_name = jvm.invoke_virtual(&class, "getName", "()Ljava/lang/String;", ()).await?;
+        let class = jvm
+            .invoke_virtual(&this, "java/lang/Object", "getClass", "()Ljava/lang/Class;", ())
+            .await?;
+        let class_name = jvm
+            .invoke_virtual(&class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
+            .await?;
         let class_name_rust = JavaLangString::to_rust_string(jvm, &class_name).await?;
 
-        let hash_code: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
+        let hash_code: i32 = jvm.invoke_virtual(&this, "java/lang/Object", "hashCode", "()I", ()).await?;
 
         let result = format!("{class_name_rust}@{hash_code:x}");
 
@@ -147,7 +161,7 @@ impl Object {
     async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?}, {millis:?})");
 
-        let _: () = jvm.invoke_virtual(&this, "wait", "(JI)V", (millis, 0)).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/lang/Object", "wait", "(JI)V", (millis, 0)).await?;
 
         Ok(())
     }
@@ -195,7 +209,7 @@ impl Object {
     async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?})");
 
-        let _: () = jvm.invoke_virtual(&this, "wait", "(JI)V", (0i64, 0)).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/lang/Object", "wait", "(JI)V", (0i64, 0)).await?;
 
         Ok(())
     }

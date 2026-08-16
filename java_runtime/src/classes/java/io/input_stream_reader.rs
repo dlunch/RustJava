@@ -132,7 +132,9 @@ impl InputStreamReader {
                 let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
 
                 let temp = jvm.instantiate_array("B", bytes_to_read as _).await?;
-                let read: i32 = jvm.invoke_virtual(&r#in, "read", "([BII)I", (temp.clone(), 0, bytes_to_read)).await?;
+                let read: i32 = jvm
+                    .invoke_virtual(&r#in, "java/io/InputStream", "read", "([BII)I", (temp.clone(), 0, bytes_to_read))
+                    .await?;
                 if read != -1 {
                     let _: () = jvm
                         .invoke_static(
@@ -248,7 +250,7 @@ impl InputStreamReader {
         tracing::debug!("java.io.InputStreamReader::close({this:?})");
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let _: () = jvm.invoke_virtual(&r#in, "close", "()V", ()).await?;
+        let _: () = jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await?;
 
         Ok(())
     }
@@ -262,7 +264,7 @@ impl InputStreamReader {
         }
 
         let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let available: i32 = jvm.invoke_virtual(&r#in, "available", "()I", ()).await?;
+        let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
         Ok(available > 0)
     }
 }

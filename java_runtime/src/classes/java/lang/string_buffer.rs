@@ -517,7 +517,13 @@ impl StringBuffer {
             .invoke_special(&this, "java/lang/AbstractStringBuilder", "<init>", "(I)V", ((chars.len() + 16) as i32,))
             .await?;
         let _: ClassInstanceRef<Self> = jvm
-            .invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
+            .invoke_virtual(
+                &this,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (string,),
+            )
             .await?;
         Ok(())
     }
@@ -531,12 +537,20 @@ impl StringBuffer {
         if sequence.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "seq is null").await);
         }
-        let length: i32 = jvm.invoke_virtual(&sequence, "length", "()I", ()).await?;
+        let length: i32 = jvm
+            .invoke_virtual(&sequence, &sequence.class_definition().name(), "length", "()I", ())
+            .await?;
         let _: () = jvm
             .invoke_special(&this, "java/lang/AbstractStringBuilder", "<init>", "(I)V", (length + 16,))
             .await?;
         let _: ClassInstanceRef<Self> = jvm
-            .invoke_virtual(&this, "append", "(Ljava/lang/CharSequence;)Ljava/lang/StringBuffer;", (sequence,))
+            .invoke_virtual(
+                &this,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/CharSequence;)Ljava/lang/StringBuffer;",
+                (sequence,),
+            )
             .await?;
         Ok(())
     }
@@ -569,10 +583,17 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = if object.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&object, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&object, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_string_buffer(
@@ -635,8 +656,14 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_character(
@@ -655,8 +682,14 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_code_point(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, code_point: i32) -> Result<ClassInstanceRef<Self>> {
@@ -676,8 +709,14 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<ClassInstanceRef<Self>> {
@@ -686,8 +725,14 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Float", "toString", "(F)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<ClassInstanceRef<Self>> {
@@ -696,8 +741,14 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Double", "toString", "(D)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (string,))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (string,),
+        )
+        .await
     }
 
     async fn append_char_array_all(
@@ -774,10 +825,17 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = if object.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&object, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&object, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_boolean(
@@ -790,8 +848,14 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::insert({this:?}, {offset}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?;
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_character(
@@ -817,16 +881,28 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::insert({this:?}, {offset}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, offset: i32, value: i64) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::insert({this:?}, {offset}, {value})");
 
         let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_float(
@@ -841,8 +917,14 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Float", "toString", "(F)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_double(
@@ -857,8 +939,14 @@ impl StringBuffer {
         let string: ClassInstanceRef<String> = jvm
             .invoke_static("java/lang/Double", "toString", "(D)Ljava/lang/String;", (value,))
             .await?;
-        jvm.invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, string))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/lang/StringBuffer",
+            "insert",
+            "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+            (offset, string),
+        )
+        .await
     }
 
     async fn insert_char_array(
@@ -918,18 +1006,33 @@ impl StringBuffer {
         if sequence.is_null() {
             let sequence = JavaLangString::from_rust_string(jvm, "null").await?;
             let _: ClassInstanceRef<Self> = jvm
-                .invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, sequence))
+                .invoke_virtual(
+                    &this,
+                    "java/lang/StringBuffer",
+                    "insert",
+                    "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+                    (offset, sequence),
+                )
                 .await?;
         } else if jvm.is_instance(&**sequence, "java/lang/String") {
             let sequence: ClassInstanceRef<String> = ClassInstanceRef::new(sequence.instance);
             let _: ClassInstanceRef<Self> = jvm
-                .invoke_virtual(&this, "insert", "(ILjava/lang/String;)Ljava/lang/StringBuffer;", (offset, sequence))
+                .invoke_virtual(
+                    &this,
+                    "java/lang/StringBuffer",
+                    "insert",
+                    "(ILjava/lang/String;)Ljava/lang/StringBuffer;",
+                    (offset, sequence),
+                )
                 .await?;
         } else {
-            let length: i32 = jvm.invoke_virtual(&sequence, "length", "()I", ()).await?;
+            let length: i32 = jvm
+                .invoke_virtual(&sequence, &sequence.class_definition().name(), "length", "()I", ())
+                .await?;
             let _: ClassInstanceRef<Self> = jvm
                 .invoke_virtual(
                     &this,
+                    "java/lang/StringBuffer",
                     "insert",
                     "(ILjava/lang/CharSequence;II)Ljava/lang/StringBuffer;",
                     (offset, sequence, 0, length),
@@ -1044,7 +1147,8 @@ impl StringBuffer {
         tracing::debug!("java.lang.StringBuffer::substring({this:?}, {start})");
 
         let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (start, count)).await
+        jvm.invoke_virtual(&this, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (start, count))
+            .await
     }
 
     async fn substring_range(
@@ -1079,7 +1183,8 @@ impl StringBuffer {
     ) -> Result<ClassInstanceRef<CharSequence>> {
         tracing::debug!("java.lang.StringBuffer::subSequence({this:?}, {start}, {end})");
 
-        jvm.invoke_virtual(&this, "substring", "(II)Ljava/lang/String;", (start, end)).await
+        jvm.invoke_virtual(&this, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (start, end))
+            .await
     }
 
     async fn reverse(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {

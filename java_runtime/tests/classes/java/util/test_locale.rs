@@ -18,23 +18,37 @@ async fn test_locale_constants_and_accessors() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let english: ClassInstanceRef<Locale> = jvm.get_static_field("java/util/Locale", "ENGLISH", "Ljava/util/Locale;").await?;
-    let language = jvm.invoke_virtual(&english, "getLanguage", "()Ljava/lang/String;", ()).await?;
+    let language = jvm
+        .invoke_virtual(&english, "java/util/Locale", "getLanguage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &language).await?, "en");
-    let country = jvm.invoke_virtual(&english, "getCountry", "()Ljava/lang/String;", ()).await?;
+    let country = jvm
+        .invoke_virtual(&english, "java/util/Locale", "getCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &country).await?, "");
-    let variant = jvm.invoke_virtual(&english, "getVariant", "()Ljava/lang/String;", ()).await?;
+    let variant = jvm
+        .invoke_virtual(&english, "java/util/Locale", "getVariant", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &variant).await?, "");
 
-    let english_string = jvm.invoke_virtual(&english, "toString", "()Ljava/lang/String;", ()).await?;
+    let english_string = jvm
+        .invoke_virtual(&english, "java/util/Locale", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &english_string).await?, "en");
 
     let us: ClassInstanceRef<Locale> = jvm.get_static_field("java/util/Locale", "US", "Ljava/util/Locale;").await?;
-    let language = jvm.invoke_virtual(&us, "getLanguage", "()Ljava/lang/String;", ()).await?;
+    let language = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getLanguage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &language).await?, "en");
-    let country = jvm.invoke_virtual(&us, "getCountry", "()Ljava/lang/String;", ()).await?;
+    let country = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &country).await?, "US");
 
-    let us_string = jvm.invoke_virtual(&us, "toString", "()Ljava/lang/String;", ()).await?;
+    let us_string = jvm
+        .invoke_virtual(&us, "java/util/Locale", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &us_string).await?, "en_US");
 
     Ok(())
@@ -56,21 +70,31 @@ async fn test_locale_constructors_to_string_equals_and_hash_code() -> Result<()>
         .await?
         .into();
 
-    let language = jvm.invoke_virtual(&locale, "getLanguage", "()Ljava/lang/String;", ()).await?;
+    let language = jvm
+        .invoke_virtual(&locale, "java/util/Locale", "getLanguage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &language).await?, "en");
-    let country = jvm.invoke_virtual(&locale, "getCountry", "()Ljava/lang/String;", ()).await?;
+    let country = jvm
+        .invoke_virtual(&locale, "java/util/Locale", "getCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &country).await?, "US");
-    let variant = jvm.invoke_virtual(&locale, "getVariant", "()Ljava/lang/String;", ()).await?;
+    let variant = jvm
+        .invoke_virtual(&locale, "java/util/Locale", "getVariant", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &variant).await?, "POSIX");
 
-    let text = jvm.invoke_virtual(&locale, "toString", "()Ljava/lang/String;", ()).await?;
+    let text = jvm
+        .invoke_virtual(&locale, "java/util/Locale", "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "en_US_POSIX");
 
     let same: ClassInstanceRef<Locale> = jvm
         .new_class("java/util/Locale", "(Ljava/lang/String;Ljava/lang/String;)V", (en, us))
         .await?
         .into();
-    let equals: bool = jvm.invoke_virtual(&locale, "equals", "(Ljava/lang/Object;)Z", (same.clone(),)).await?;
+    let equals: bool = jvm
+        .invoke_virtual(&locale, "java/util/Locale", "equals", "(Ljava/lang/Object;)Z", (same.clone(),))
+        .await?;
     assert!(!equals);
 
     let same_with_variant: ClassInstanceRef<Locale> = jvm
@@ -86,12 +110,18 @@ async fn test_locale_constructors_to_string_equals_and_hash_code() -> Result<()>
         .await?
         .into();
     let equals: bool = jvm
-        .invoke_virtual(&locale, "equals", "(Ljava/lang/Object;)Z", (same_with_variant.clone(),))
+        .invoke_virtual(
+            &locale,
+            "java/util/Locale",
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (same_with_variant.clone(),),
+        )
         .await?;
     assert!(equals);
 
-    let hash: i32 = jvm.invoke_virtual(&locale, "hashCode", "()I", ()).await?;
-    let same_hash: i32 = jvm.invoke_virtual(&same_with_variant, "hashCode", "()I", ()).await?;
+    let hash: i32 = jvm.invoke_virtual(&locale, "java/util/Locale", "hashCode", "()I", ()).await?;
+    let same_hash: i32 = jvm.invoke_virtual(&same_with_variant, "java/util/Locale", "hashCode", "()I", ()).await?;
     assert_eq!(hash, same_hash);
 
     Ok(())
@@ -102,9 +132,13 @@ async fn test_locale_default_round_trip_and_null_rejection() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let default: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
-    let language = jvm.invoke_virtual(&default, "getLanguage", "()Ljava/lang/String;", ()).await?;
+    let language = jvm
+        .invoke_virtual(&default, "java/util/Locale", "getLanguage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &language).await?, "en");
-    let country = jvm.invoke_virtual(&default, "getCountry", "()Ljava/lang/String;", ()).await?;
+    let country = jvm
+        .invoke_virtual(&default, "java/util/Locale", "getCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &country).await?, "US");
 
     let custom: ClassInstanceRef<Locale> = jvm
@@ -123,7 +157,9 @@ async fn test_locale_default_round_trip_and_null_rejection() -> Result<()> {
         .await?;
 
     let updated: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
-    let country = jvm.invoke_virtual(&updated, "getCountry", "()Ljava/lang/String;", ()).await?;
+    let country = jvm
+        .invoke_virtual(&updated, "java/util/Locale", "getCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &country).await?, "GB");
 
     let err = jvm
@@ -148,6 +184,7 @@ async fn test_locale_compatibility_edges() -> Result<()> {
     let display: Result<ClassInstanceRef<String>> = jvm
         .invoke_virtual(
             &english,
+            "java/util/Locale",
             "getDisplayLanguage",
             "(Ljava/util/Locale;)Ljava/lang/String;",
             (ClassInstanceRef::<Locale>::new(None),),
@@ -166,7 +203,8 @@ async fn test_locale_compatibility_edges() -> Result<()> {
         )
         .await?
         .into();
-    let iso3_language = jvm.invoke_virtual::<_, ClassInstanceRef<String>>(&unsupported, "getISO3Language", "()Ljava/lang/String;", ());
+    let iso3_language =
+        jvm.invoke_virtual::<_, ClassInstanceRef<String>>(&unsupported, "java/util/Locale", "getISO3Language", "()Ljava/lang/String;", ());
     assert!(matches!(iso3_language.await, Err(JavaError::JavaException(_))));
 
     Ok(())
@@ -192,9 +230,15 @@ async fn test_locale_available_locales_and_iso_lists() -> Result<()> {
         .load_array::<ClassInstanceRef<Locale>>(&locales, 0, jvm.array_length(&locales).await?)
         .await?
     {
-        let equals_france: bool = jvm.invoke_virtual(&locale, "equals", "(Ljava/lang/Object;)Z", (france.clone(),)).await?;
-        let equals_germany: bool = jvm.invoke_virtual(&locale, "equals", "(Ljava/lang/Object;)Z", (germany.clone(),)).await?;
-        let equals_prc: bool = jvm.invoke_virtual(&locale, "equals", "(Ljava/lang/Object;)Z", (prc.clone(),)).await?;
+        let equals_france: bool = jvm
+            .invoke_virtual(&locale, "java/util/Locale", "equals", "(Ljava/lang/Object;)Z", (france.clone(),))
+            .await?;
+        let equals_germany: bool = jvm
+            .invoke_virtual(&locale, "java/util/Locale", "equals", "(Ljava/lang/Object;)Z", (germany.clone(),))
+            .await?;
+        let equals_prc: bool = jvm
+            .invoke_virtual(&locale, "java/util/Locale", "equals", "(Ljava/lang/Object;)Z", (prc.clone(),))
+            .await?;
         has_france |= equals_france;
         has_germany |= equals_germany;
         has_prc |= equals_prc;
@@ -224,26 +268,40 @@ async fn test_locale_display_iso3_and_clone_helpers() -> Result<()> {
 
     let us: ClassInstanceRef<Locale> = jvm.get_static_field("java/util/Locale", "US", "Ljava/util/Locale;").await?;
 
-    let display_language = jvm.invoke_virtual(&us, "getDisplayLanguage", "()Ljava/lang/String;", ()).await?;
+    let display_language = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getDisplayLanguage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &display_language).await?, "English");
 
-    let display_country = jvm.invoke_virtual(&us, "getDisplayCountry", "()Ljava/lang/String;", ()).await?;
+    let display_country = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getDisplayCountry", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &display_country).await?, "United States");
 
-    let display_variant = jvm.invoke_virtual(&us, "getDisplayVariant", "()Ljava/lang/String;", ()).await?;
+    let display_variant = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getDisplayVariant", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &display_variant).await?, "");
 
-    let display_name = jvm.invoke_virtual(&us, "getDisplayName", "()Ljava/lang/String;", ()).await?;
+    let display_name = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getDisplayName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &display_name).await?, "English (United States)");
 
-    let iso3_language = jvm.invoke_virtual(&us, "getISO3Language", "()Ljava/lang/String;", ()).await?;
+    let iso3_language = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getISO3Language", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &iso3_language).await?, "eng");
 
-    let iso3_country = jvm.invoke_virtual(&us, "getISO3Country", "()Ljava/lang/String;", ()).await?;
+    let iso3_country = jvm
+        .invoke_virtual(&us, "java/util/Locale", "getISO3Country", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &iso3_country).await?, "USA");
 
-    let cloned: ClassInstanceRef<Locale> = jvm.invoke_virtual(&us, "clone", "()Ljava/lang/Object;", ()).await?;
-    let equals: bool = jvm.invoke_virtual(&us, "equals", "(Ljava/lang/Object;)Z", (cloned,)).await?;
+    let cloned: ClassInstanceRef<Locale> = jvm.invoke_virtual(&us, "java/util/Locale", "clone", "()Ljava/lang/Object;", ()).await?;
+    let equals: bool = jvm
+        .invoke_virtual(&us, "java/util/Locale", "equals", "(Ljava/lang/Object;)Z", (cloned,))
+        .await?;
     assert!(equals);
 
     Ok(())

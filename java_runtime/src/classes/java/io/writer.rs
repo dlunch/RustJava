@@ -93,23 +93,25 @@ impl Writer {
 
         let mut chars = jvm.instantiate_array("C", 1).await?;
         jvm.store_array(&mut chars, 0, [value as JavaChar]).await?;
-        jvm.invoke_virtual(&this, "write", "([CII)V", (chars, 0, 1)).await
+        jvm.invoke_virtual(&this, "java/io/Writer", "write", "([CII)V", (chars, 0, 1)).await
     }
 
     async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, chars: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         tracing::debug!("java.io.Writer::write({this:?}, {chars:?})");
 
         let length = jvm.array_length(&chars).await? as i32;
-        jvm.invoke_virtual(&this, "write", "([CII)V", (chars, 0, length)).await
+        jvm.invoke_virtual(&this, "java/io/Writer", "write", "([CII)V", (chars, 0, length)).await
     }
 
     async fn write_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.Writer::write_string({this:?}, {string:?})");
 
-        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "toCharArray", "()[C", ()).await?;
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "java/lang/String", "toCharArray", "()[C", ()).await?;
         let length = jvm.array_length(&chars).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "write", "([CII)V", (chars, 0, length as i32)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/Writer", "write", "([CII)V", (chars, 0, length as i32))
+            .await?;
 
         Ok(())
     }
@@ -124,8 +126,8 @@ impl Writer {
     ) -> Result<()> {
         tracing::debug!("java.io.Writer::write({this:?}, {string:?}, {off}, {len})");
 
-        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "toCharArray", "()[C", ()).await?;
-        jvm.invoke_virtual(&this, "write", "([CII)V", (chars, off, len)).await
+        let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&string, "java/lang/String", "toCharArray", "()[C", ()).await?;
+        jvm.invoke_virtual(&this, "java/io/Writer", "write", "([CII)V", (chars, off, len)).await
     }
 
     async fn append_char_sequence(
@@ -137,9 +139,12 @@ impl Writer {
         let string: ClassInstanceRef<String> = if sequence.is_null() {
             JavaLangString::from_rust_string(jvm, "null").await?.into()
         } else {
-            jvm.invoke_virtual(&sequence, "toString", "()Ljava/lang/String;", ()).await?
+            jvm.invoke_virtual(&sequence, &sequence.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+                .await?
         };
-        let _: () = jvm.invoke_virtual(&this, "write", "(Ljava/lang/String;)V", (string,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/Writer", "write", "(Ljava/lang/String;)V", (string,))
+            .await?;
         Ok(this)
     }
 
@@ -157,15 +162,31 @@ impl Writer {
             sequence
         };
         let subsequence: ClassInstanceRef<CharSequence> = jvm
-            .invoke_virtual(&sequence, "subSequence", "(II)Ljava/lang/CharSequence;", (start, end))
+            .invoke_virtual(
+                &sequence,
+                &sequence.class_definition().name(),
+                "subSequence",
+                "(II)Ljava/lang/CharSequence;",
+                (start, end),
+            )
             .await?;
-        let string: ClassInstanceRef<String> = jvm.invoke_virtual(&subsequence, "toString", "()Ljava/lang/String;", ()).await?;
-        let _: () = jvm.invoke_virtual(&this, "write", "(Ljava/lang/String;)V", (string,)).await?;
+        let string: ClassInstanceRef<String> = jvm
+            .invoke_virtual(
+                &subsequence,
+                &subsequence.class_definition().name(),
+                "toString",
+                "()Ljava/lang/String;",
+                (),
+            )
+            .await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/Writer", "write", "(Ljava/lang/String;)V", (string,))
+            .await?;
         Ok(this)
     }
 
     async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>> {
-        let _: () = jvm.invoke_virtual(&this, "write", "(I)V", (character as i32,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/io/Writer", "write", "(I)V", (character as i32,)).await?;
         Ok(this)
     }
 }

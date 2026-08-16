@@ -57,7 +57,7 @@ impl AbstractCollection {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::isEmpty({this:?})");
 
-        let size: i32 = jvm.invoke_virtual(&this, "size", "()I", ()).await?;
+        let size: i32 = jvm.invoke_virtual(&this, "java/util/AbstractCollection", "size", "()I", ()).await?;
 
         Ok(size == 0)
     }
@@ -65,14 +65,20 @@ impl AbstractCollection {
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::contains({this:?}, {element:?})");
 
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         loop {
-            let has_next: bool = jvm.invoke_virtual(&iterator, "hasNext", "()Z", ()).await?;
+            let has_next: bool = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+                .await?;
             if !has_next {
                 return Ok(false);
             }
 
-            let current: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             if Self::object_equals(jvm, &element, &current).await? {
                 return Ok(true);
             }
@@ -82,15 +88,21 @@ impl AbstractCollection {
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.AbstractCollection::toArray({this:?})");
 
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         let mut elements = vec![];
         loop {
-            let has_next: bool = jvm.invoke_virtual(&iterator, "hasNext", "()Z", ()).await?;
+            let has_next: bool = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+                .await?;
             if !has_next {
                 break;
             }
 
-            let current: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             elements.push(current);
         }
 
@@ -114,7 +126,9 @@ impl AbstractCollection {
             return Err(jvm.exception("java/lang/NullPointerException", "array").await);
         }
 
-        let snapshot: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&this, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let snapshot: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let size = jvm.array_length(&snapshot).await?;
         let elements: alloc::vec::Vec<ClassInstanceRef<Object>> = if size == 0 {
             alloc::vec::Vec::new()
@@ -165,10 +179,14 @@ impl AbstractCollection {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&collection, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&collection, &collection.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let size = jvm.array_length(&elements).await?;
         for element in jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, size).await? {
-            let contains: bool = jvm.invoke_virtual(&this, "contains", "(Ljava/lang/Object;)Z", (element,)).await?;
+            let contains: bool = jvm
+                .invoke_virtual(&this, "java/util/AbstractCollection", "contains", "(Ljava/lang/Object;)Z", (element,))
+                .await?;
             if !contains {
                 return Ok(false);
             }
@@ -184,11 +202,15 @@ impl AbstractCollection {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&collection, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&collection, &collection.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let size = jvm.array_length(&elements).await?;
         let mut modified = false;
         for element in jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, size).await? {
-            modified |= jvm.invoke_virtual::<_, bool>(&this, "add", "(Ljava/lang/Object;)Z", (element,)).await?;
+            modified |= jvm
+                .invoke_virtual::<_, bool>(&this, "java/util/AbstractCollection", "add", "(Ljava/lang/Object;)Z", (element,))
+                .await?;
         }
 
         Ok(modified)
@@ -201,7 +223,9 @@ impl AbstractCollection {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&this, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let size = jvm.array_length(&elements).await?;
         let same_collection = this.identity() == collection.identity();
         let mut modified = false;
@@ -209,12 +233,24 @@ impl AbstractCollection {
             let remove = if same_collection {
                 true
             } else {
-                jvm.invoke_virtual(&collection, "contains", "(Ljava/lang/Object;)Z", (element.clone(),))
-                    .await?
+                jvm.invoke_virtual(
+                    &collection,
+                    &collection.class_definition().name(),
+                    "contains",
+                    "(Ljava/lang/Object;)Z",
+                    (element.clone(),),
+                )
+                .await?
             };
             if remove {
                 while jvm
-                    .invoke_virtual::<_, bool>(&this, "remove", "(Ljava/lang/Object;)Z", (element.clone(),))
+                    .invoke_virtual::<_, bool>(
+                        &this,
+                        "java/util/AbstractCollection",
+                        "remove",
+                        "(Ljava/lang/Object;)Z",
+                        (element.clone(),),
+                    )
                     .await?
                 {
                     modified = true;
@@ -235,16 +271,30 @@ impl AbstractCollection {
             return Ok(false);
         }
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&this, "toArray", "()[Ljava/lang/Object;", ()).await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "toArray", "()[Ljava/lang/Object;", ())
+            .await?;
         let size = jvm.array_length(&elements).await?;
         let mut modified = false;
         for element in jvm.load_array::<ClassInstanceRef<Object>>(&elements, 0, size).await? {
             let retain: bool = jvm
-                .invoke_virtual(&collection, "contains", "(Ljava/lang/Object;)Z", (element.clone(),))
+                .invoke_virtual(
+                    &collection,
+                    &collection.class_definition().name(),
+                    "contains",
+                    "(Ljava/lang/Object;)Z",
+                    (element.clone(),),
+                )
                 .await?;
             if !retain {
                 while jvm
-                    .invoke_virtual::<_, bool>(&this, "remove", "(Ljava/lang/Object;)Z", (element.clone(),))
+                    .invoke_virtual::<_, bool>(
+                        &this,
+                        "java/util/AbstractCollection",
+                        "remove",
+                        "(Ljava/lang/Object;)Z",
+                        (element.clone(),),
+                    )
                     .await?
                 {
                     modified = true;
@@ -265,36 +315,74 @@ impl AbstractCollection {
         let buffer: ClassInstanceRef<Object> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let open = JavaLangString::from_rust_string(jvm, "[").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (open,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (open,),
+            )
             .await?;
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "iterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/AbstractCollection", "iterator", "()Ljava/util/Iterator;", ())
+            .await?;
         let mut first = true;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
             if first {
                 first = false;
             } else {
                 let separator = JavaLangString::from_rust_string(jvm, ", ").await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (separator,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                        (separator,),
+                    )
                     .await?;
             }
-            let element: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+            let element: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             if !element.is_null() && element.identity() == this.identity() {
                 let recursive = JavaLangString::from_rust_string(jvm, "(this Collection)").await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (recursive,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                        (recursive,),
+                    )
                     .await?;
             } else {
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&buffer, "append", "(Ljava/lang/Object;)Ljava/lang/StringBuffer;", (element,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(Ljava/lang/Object;)Ljava/lang/StringBuffer;",
+                        (element,),
+                    )
                     .await?;
             }
         }
         let close = JavaLangString::from_rust_string(jvm, "]").await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (close,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (close,),
+            )
             .await?;
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {
@@ -306,6 +394,7 @@ impl AbstractCollection {
             return Ok(false);
         }
 
-        jvm.invoke_virtual(left, "equals", "(Ljava/lang/Object;)Z", (right.clone(),)).await
+        jvm.invoke_virtual(left, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (right.clone(),))
+            .await
     }
 }

@@ -7,12 +7,36 @@ use test_utils::test_jvm;
 async fn test_short_api() -> Result<()> {
     let jvm = test_jvm().await?;
     let value = jvm.new_class("java/lang/Short", "(S)V", (-129i16,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i8>(&value, "byteValue", "()B", ()).await?, 127);
-    assert_eq!(jvm.invoke_virtual::<_, i16>(&value, "shortValue", "()S", ()).await?, -129);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "intValue", "()I", ()).await?, -129);
-    assert_eq!(jvm.invoke_virtual::<_, i64>(&value, "longValue", "()J", ()).await?, -129);
-    assert_eq!(jvm.invoke_virtual::<_, f32>(&value, "floatValue", "()F", ()).await?, -129.0);
-    assert_eq!(jvm.invoke_virtual::<_, f64>(&value, "doubleValue", "()D", ()).await?, -129.0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i8>(&value, &value.class_definition().name(), "byteValue", "()B", ())
+            .await?,
+        127
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i16>(&value, &value.class_definition().name(), "shortValue", "()S", ())
+            .await?,
+        -129
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "intValue", "()I", ())
+            .await?,
+        -129
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i64>(&value, &value.class_definition().name(), "longValue", "()J", ())
+            .await?,
+        -129
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, f32>(&value, &value.class_definition().name(), "floatValue", "()F", ())
+            .await?,
+        -129.0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, f64>(&value, &value.class_definition().name(), "doubleValue", "()D", ())
+            .await?,
+        -129.0
+    );
 
     for (input, radix, expected) in [("7f", 16, 127i16), ("-100000", 2, -32i16)] {
         let string = JavaLangString::from_rust_string(&jvm, input).await?;
@@ -29,7 +53,11 @@ async fn test_short_api() -> Result<()> {
     let decoded = jvm
         .invoke_static("java/lang/Short", "decode", "(Ljava/lang/String;)Ljava/lang/Short;", (name,))
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i16>(&decoded, "shortValue", "()S", ()).await?, 63);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i16>(&decoded, &decoded.class_definition().name(), "shortValue", "()S", ())
+            .await?,
+        63
+    );
 
     let null_result: Result<i16> = jvm.invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;)S", (None,)).await;
     let Err(JavaError::JavaException(exception)) = null_result else {
@@ -37,7 +65,9 @@ async fn test_short_api() -> Result<()> {
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NumberFormatException"));
 
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Short;)I", (None,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Short;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Short typed compare null must throw NPE");
     };
@@ -70,22 +100,36 @@ async fn test_short_api() -> Result<()> {
 
     let equal = jvm.new_class("java/lang/Short", "(S)V", (-129i16,)).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&value, "equals", "(Ljava/lang/Object;)Z", (equal.clone(),))
-            .await?
+        jvm.invoke_virtual::<_, bool>(
+            &value,
+            &value.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (equal.clone(),)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&value, "hashCode", "()I", ()).await?, -129);
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&value, "compareTo", "(Ljava/lang/Object;)I", (equal,))
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        -129
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (equal,))
             .await?,
         0
     );
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (object,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (object,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Short raw compare must reject another type");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/ClassCastException"));
-    let result: Result<i32> = jvm.invoke_virtual(&value, "compareTo", "(Ljava/lang/Object;)I", (None,)).await;
+    let result: Result<i32> = jvm
+        .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Short raw compare null must throw NPE");
     };
@@ -96,12 +140,21 @@ async fn test_short_api() -> Result<()> {
         let decoded = jvm
             .invoke_static("java/lang/Short", "decode", "(Ljava/lang/String;)Ljava/lang/Short;", (text,))
             .await?;
-        assert_eq!(jvm.invoke_virtual::<_, i16>(&decoded, "shortValue", "()S", ()).await?, expected);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i16>(&decoded, &decoded.class_definition().name(), "shortValue", "()S", ())
+                .await?,
+            expected
+        );
     }
 
     let typ = jvm.get_static_field("java/lang/Short", "TYPE", "Ljava/lang/Class;").await?;
-    let type_name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let type_name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &type_name).await?, "short");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
     Ok(())
 }

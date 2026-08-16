@@ -24,25 +24,53 @@ async fn test_field_position_accessors_and_equality() -> Result<()> {
     let jvm = test_jvm().await?;
     let position: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (1,)).await?.into();
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getField", "()I", ()).await?, 1);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getBeginIndex", "()I", ()).await?, 0);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getEndIndex", "()I", ()).await?, 0);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getField", "()I", ())
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getBeginIndex", "()I", ())
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getEndIndex", "()I", ())
+            .await?,
+        0
+    );
 
-    let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (3,)).await?;
-    let _: () = jvm.invoke_virtual(&position, "setEndIndex", "(I)V", (7,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getBeginIndex", "()I", ()).await?, 3);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getEndIndex", "()I", ()).await?, 7);
+    let _: () = jvm
+        .invoke_virtual(&position, "java/text/FieldPosition", "setBeginIndex", "(I)V", (3,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&position, "java/text/FieldPosition", "setEndIndex", "(I)V", (7,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getBeginIndex", "()I", ())
+            .await?,
+        3
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "getEndIndex", "()I", ())
+            .await?,
+        7
+    );
 
     let same: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (1,)).await?.into();
-    let _: () = jvm.invoke_virtual(&same, "setBeginIndex", "(I)V", (3,)).await?;
-    let _: () = jvm.invoke_virtual(&same, "setEndIndex", "(I)V", (7,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&same, "java/text/FieldPosition", "setBeginIndex", "(I)V", (3,))
+        .await?;
+    let _: () = jvm.invoke_virtual(&same, "java/text/FieldPosition", "setEndIndex", "(I)V", (7,)).await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&position, "equals", "(Ljava/lang/Object;)Z", (same.clone(),))
+        jvm.invoke_virtual::<_, bool>(&position, "java/text/FieldPosition", "equals", "(Ljava/lang/Object;)Z", (same.clone(),))
             .await?
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&position, "hashCode", "()I", ()).await?,
-        jvm.invoke_virtual::<_, i32>(&same, "hashCode", "()I", ()).await?
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/FieldPosition", "hashCode", "()I", ())
+            .await?,
+        jvm.invoke_virtual::<_, i32>(&same, "java/text/FieldPosition", "hashCode", "()I", ())
+            .await?
     );
 
     Ok(())
@@ -53,18 +81,38 @@ async fn test_parse_position_accessors_and_equality() -> Result<()> {
     let jvm = test_jvm().await?;
     let position: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (2,)).await?.into();
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 2);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getErrorIndex", "()I", ()).await?, -1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getIndex", "()I", ())
+            .await?,
+        2
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+            .await?,
+        -1
+    );
 
-    let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (5,)).await?;
-    let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (4,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getIndex", "()I", ()).await?, 5);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&position, "getErrorIndex", "()I", ()).await?, 4);
+    let _: () = jvm.invoke_virtual(&position, "java/text/ParsePosition", "setIndex", "(I)V", (5,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (4,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getIndex", "()I", ())
+            .await?,
+        5
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&position, "java/text/ParsePosition", "getErrorIndex", "()I", ())
+            .await?,
+        4
+    );
 
     let same: ClassInstanceRef<ParsePosition> = jvm.new_class("java/text/ParsePosition", "(I)V", (5,)).await?.into();
-    let _: () = jvm.invoke_virtual(&same, "setErrorIndex", "(I)V", (4,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&same, "java/text/ParsePosition", "setErrorIndex", "(I)V", (4,))
+        .await?;
     assert!(
-        jvm.invoke_virtual::<_, bool>(&position, "equals", "(Ljava/lang/Object;)Z", (same,))
+        jvm.invoke_virtual::<_, bool>(&position, "java/text/ParsePosition", "equals", "(Ljava/lang/Object;)Z", (same,))
             .await?
     );
 
@@ -80,8 +128,14 @@ async fn test_parse_exception_error_offset_and_message() -> Result<()> {
         .await?
         .into();
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&exception, "getErrorOffset", "()I", ()).await?, 6);
-    let actual: ClassInstanceRef<String> = jvm.invoke_virtual(&exception, "getMessage", "()Ljava/lang/String;", ()).await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&exception, "java/text/ParseException", "getErrorOffset", "()I", ())
+            .await?,
+        6
+    );
+    let actual: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&exception, "java/text/ParseException", "getMessage", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual).await?, "bad date");
 
     Ok(())
@@ -96,13 +150,19 @@ async fn test_format_polymorphic_format_and_parse_object() -> Result<()> {
     let format: ClassInstanceRef<Format> = ClassInstanceRef::new(number.instance);
     let value: ClassInstanceRef<Long> = jvm.new_class("java/lang/Long", "(J)V", (1234i64,)).await?.into();
     let text: ClassInstanceRef<String> = jvm
-        .invoke_virtual(&format, "format", "(Ljava/lang/Object;)Ljava/lang/String;", (value,))
+        .invoke_virtual(&format, "java/text/Format", "format", "(Ljava/lang/Object;)Ljava/lang/String;", (value,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1,234");
 
     let source = JavaLangString::from_rust_string(&jvm, "1,234").await?;
     let parsed: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&format, "parseObject", "(Ljava/lang/String;)Ljava/lang/Object;", (source,))
+        .invoke_virtual(
+            &format,
+            "java/text/Format",
+            "parseObject",
+            "(Ljava/lang/String;)Ljava/lang/Object;",
+            (source,),
+        )
         .await?;
     assert!(jvm.is_instance(&**parsed, "java/lang/Long"));
 

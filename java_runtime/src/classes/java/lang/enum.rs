@@ -131,7 +131,8 @@ impl Enum {
     }
 
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
-        jvm.invoke_virtual(&this, "compareTo", "(Ljava/lang/Enum;)I", (other,)).await
+        jvm.invoke_virtual(&this, "java/lang/Enum", "compareTo", "(Ljava/lang/Enum;)I", (other,))
+            .await
     }
 
     async fn get_declaring_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Class>> {

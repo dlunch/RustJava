@@ -246,7 +246,8 @@ impl DecimalFormat {
             return Err(jvm.exception("java/lang/NullPointerException", "pattern").await);
         }
         let _: () = jvm.invoke_special(&this, "java/text/NumberFormat", "<init>", "()V", ()).await?;
-        jvm.invoke_virtual(&this, "applyPattern", "(Ljava/lang/String;)V", (pattern,)).await
+        jvm.invoke_virtual(&this, "java/text/DecimalFormat", "applyPattern", "(Ljava/lang/String;)V", (pattern,))
+            .await
     }
 
     async fn apply_pattern(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
@@ -338,25 +339,47 @@ impl DecimalFormat {
         }
         formatted.push_str(&suffix);
 
-        let base: i32 = jvm.invoke_virtual(&buffer, "length", "()I", ()).await?;
-        let field: i32 = jvm.invoke_virtual(&position, "getField", "()I", ()).await?;
+        let base: i32 = jvm.invoke_virtual(&buffer, "java/lang/StringBuffer", "length", "()I", ()).await?;
+        let field: i32 = jvm.invoke_virtual(&position, "java/text/FieldPosition", "getField", "()I", ()).await?;
         if field == 0 {
             let begin = base + prefix.encode_utf16().count() as i32;
-            let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (begin,)).await?;
             let _: () = jvm
-                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + integer.encode_utf16().count() as i32,))
+                .invoke_virtual(&position, "java/text/FieldPosition", "setBeginIndex", "(I)V", (begin,))
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(
+                    &position,
+                    "java/text/FieldPosition",
+                    "setEndIndex",
+                    "(I)V",
+                    (begin + integer.encode_utf16().count() as i32,),
+                )
                 .await?;
         } else if field == 1 && !fraction.is_empty() {
             let begin = base + prefix.encode_utf16().count() as i32 + integer.encode_utf16().count() as i32 + 1;
-            let _: () = jvm.invoke_virtual(&position, "setBeginIndex", "(I)V", (begin,)).await?;
             let _: () = jvm
-                .invoke_virtual(&position, "setEndIndex", "(I)V", (begin + fraction.encode_utf16().count() as i32,))
+                .invoke_virtual(&position, "java/text/FieldPosition", "setBeginIndex", "(I)V", (begin,))
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(
+                    &position,
+                    "java/text/FieldPosition",
+                    "setEndIndex",
+                    "(I)V",
+                    (begin + fraction.encode_utf16().count() as i32,),
+                )
                 .await?;
         }
 
         let text = JavaLangString::from_rust_string(jvm, &formatted).await?;
-        jvm.invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (text,))
-            .await
+        jvm.invoke_virtual(
+            &buffer,
+            "java/lang/StringBuffer",
+            "append",
+            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+            (text,),
+        )
+        .await
     }
 
     async fn format_double(
@@ -373,7 +396,13 @@ impl DecimalFormat {
         if value.is_nan() {
             let text = JavaLangString::from_rust_string(jvm, "NaN").await?;
             return jvm
-                .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (text,))
+                .invoke_virtual(
+                    &buffer,
+                    "java/lang/StringBuffer",
+                    "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                    (text,),
+                )
                 .await;
         }
 
@@ -435,13 +464,17 @@ impl DecimalFormat {
             utf16_index += character.len_utf16();
         }
         utf16_indices.push(utf16_index);
-        let start: i32 = jvm.invoke_virtual(&position, "getIndex", "()I", ()).await?;
+        let start: i32 = jvm.invoke_virtual(&position, "java/text/ParsePosition", "getIndex", "()I", ()).await?;
         if start < 0 {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         }
         let Some(start_index) = utf16_indices.iter().position(|index| *index == start as usize) else {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         };
 
@@ -462,7 +495,9 @@ impl DecimalFormat {
             index += positive_prefix.len();
             false
         } else {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         };
 
@@ -488,7 +523,13 @@ impl DecimalFormat {
         }
         if digits == 0 {
             let _: () = jvm
-                .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                .invoke_virtual(
+                    &position,
+                    "java/text/ParsePosition",
+                    "setErrorIndex",
+                    "(I)V",
+                    (utf16_indices[index] as i32,),
+                )
                 .await?;
             return Ok(ClassInstanceRef::new(None));
         }
@@ -503,7 +544,13 @@ impl DecimalFormat {
                 false
             } else {
                 let _: () = jvm
-                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                    .invoke_virtual(
+                        &position,
+                        "java/text/ParsePosition",
+                        "setErrorIndex",
+                        "(I)V",
+                        (utf16_indices[index] as i32,),
+                    )
                     .await?;
                 return Ok(ClassInstanceRef::new(None));
             }
@@ -511,7 +558,13 @@ impl DecimalFormat {
             let suffix = if prefix_negative { &negative_suffix } else { &positive_suffix };
             if !characters[index..].starts_with(suffix) {
                 let _: () = jvm
-                    .invoke_virtual(&position, "setErrorIndex", "(I)V", (utf16_indices[index] as i32,))
+                    .invoke_virtual(
+                        &position,
+                        "java/text/ParsePosition",
+                        "setErrorIndex",
+                        "(I)V",
+                        (utf16_indices[index] as i32,),
+                    )
                     .await?;
                 return Ok(ClassInstanceRef::new(None));
             }
@@ -523,15 +576,21 @@ impl DecimalFormat {
         }
 
         let Ok(mut value) = normalized.parse::<f64>() else {
-            let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (start,)).await?;
+            let _: () = jvm
+                .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (start,))
+                .await?;
             return Ok(ClassInstanceRef::new(None));
         };
         let multiplier: i32 = jvm.get_field(&this, "multiplier", "I").await?;
         if multiplier != 0 {
             value /= f64::from(multiplier);
         }
-        let _: () = jvm.invoke_virtual(&position, "setIndex", "(I)V", (utf16_indices[index] as i32,)).await?;
-        let _: () = jvm.invoke_virtual(&position, "setErrorIndex", "(I)V", (-1,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&position, "java/text/ParsePosition", "setIndex", "(I)V", (utf16_indices[index] as i32,))
+            .await?;
+        let _: () = jvm
+            .invoke_virtual(&position, "java/text/ParsePosition", "setErrorIndex", "(I)V", (-1,))
+            .await?;
 
         if multiplier == 1
             && !decimal

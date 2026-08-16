@@ -95,22 +95,28 @@ impl HashtableEntry {
         }
 
         let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
-        let other_key: ClassInstanceRef<Object> = jvm.invoke_virtual(&other, "getKey", "()Ljava/lang/Object;", ()).await?;
+        let other_key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&other, &other.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
+            .await?;
         let keys_equal = if key.is_null() {
             other_key.is_null()
         } else {
-            jvm.invoke_virtual(&key, "equals", "(Ljava/lang/Object;)Z", (other_key,)).await?
+            jvm.invoke_virtual(&key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other_key,))
+                .await?
         };
         if !keys_equal {
             return Ok(false);
         }
 
         let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        let other_value: ClassInstanceRef<Object> = jvm.invoke_virtual(&other, "getValue", "()Ljava/lang/Object;", ()).await?;
+        let other_value: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&other, &other.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
+            .await?;
         if value.is_null() {
             Ok(other_value.is_null())
         } else {
-            jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (other_value,)).await
+            jvm.invoke_virtual(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other_value,))
+                .await
         }
     }
 
@@ -120,12 +126,12 @@ impl HashtableEntry {
         let key_hash = if key.is_null() {
             0
         } else {
-            jvm.invoke_virtual(&key, "hashCode", "()I", ()).await?
+            jvm.invoke_virtual(&key, "java/lang/Object", "hashCode", "()I", ()).await?
         };
         let value_hash = if value.is_null() {
             0
         } else {
-            jvm.invoke_virtual(&value, "hashCode", "()I", ()).await?
+            jvm.invoke_virtual(&value, "java/lang/Object", "hashCode", "()I", ()).await?
         };
 
         Ok(key_hash ^ value_hash)

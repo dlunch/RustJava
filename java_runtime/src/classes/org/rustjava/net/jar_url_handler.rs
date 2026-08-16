@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::MethodAccessFlags;
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -23,7 +24,7 @@ impl JarURLHandler {
                     "openConnection",
                     "(Ljava/net/URL;)Ljava/net/URLConnection;",
                     Self::open_connection,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED,
                 ),
             ],
             fields: vec![],

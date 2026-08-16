@@ -53,16 +53,24 @@ async fn test_thread() -> Result<()> {
     let thread = jvm
         .new_class("java/lang/Thread", "(Ljava/lang/Runnable;)V", (test_class.clone(),))
         .await?;
-    let _: () = jvm.invoke_virtual(&thread, "start", "()V", []).await?;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "start", "()V", []).await?;
 
-    let _: () = jvm.invoke_virtual(&thread, "join", "()V", []).await?;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "join", "()V", []).await?;
 
     let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
     assert!(ran);
 
-    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isAlive", "()Z", ()).await?);
-    let _: () = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (true,)).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isAlive", "()Z", ())
+            .await?
+    );
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setDaemon", "(Z)V", (true,))
+        .await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isDaemon", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }
@@ -84,23 +92,41 @@ async fn test_thread_cldc_metadata_and_state() -> Result<()> {
         .await?;
 
     assert!(jvm.is_instance(&*thread, "java/lang/Runnable"));
-    let name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    let name = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "worker");
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&thread, "getPriority", "()I", ()).await?, 5);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&thread, &thread.class_definition().name(), "getPriority", "()I", ())
+            .await?,
+        5
+    );
     assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "MIN_PRIORITY", "I").await?, 1);
     assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "NORM_PRIORITY", "I").await?, 5);
     assert_eq!(jvm.get_static_field::<i32>("java/lang/Thread", "MAX_PRIORITY", "I").await?, 10);
 
-    let _: () = jvm.invoke_virtual(&thread, "setPriority", "(I)V", (7,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&thread, "getPriority", "()I", ()).await?, 7);
-    let text = jvm.invoke_virtual(&thread, "toString", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setPriority", "(I)V", (7,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&thread, &thread.class_definition().name(), "getPriority", "()I", ())
+            .await?,
+        7
+    );
+    let text = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "Thread[worker,7]");
 
-    let _: () = jvm.invoke_virtual(&thread, "interrupt", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "interrupt", "()V", ())
+        .await?;
     assert!(jvm.get_field::<bool>(&thread, "interrupted", "Z").await?);
     assert!(jvm.invoke_static::<_, i32>("java/lang/Thread", "activeCount", "()I", ()).await? >= 1);
 
-    let result: Result<()> = jvm.invoke_virtual(&thread, "setPriority", "(I)V", (11,)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setPriority", "(I)V", (11,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("invalid priority must throw IllegalArgumentException");
     };
@@ -142,10 +168,13 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
         assert_eq!(flags, expected, "wrong flags for Thread.{name}{descriptor}");
     }
 
-    let original_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    let original_name = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     let result: Result<()> = jvm
         .invoke_virtual(
             &thread,
+            &thread.class_definition().name(),
             "setName",
             "(Ljava/lang/String;)V",
             (ClassInstanceRef::<java_runtime::classes::java::lang::String>::new(None),),
@@ -155,46 +184,83 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
         panic!("setName(null) must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    let unchanged_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    let unchanged_name = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_rust_string(&jvm, &unchanged_name).await?,
         JavaLangString::to_rust_string(&jvm, &original_name).await?
     );
 
     let renamed = JavaLangString::from_rust_string(&jvm, "renamed").await?;
-    let _: () = jvm.invoke_virtual(&thread, "setName", "(Ljava/lang/String;)V", (renamed,)).await?;
-    let actual_name = jvm.invoke_virtual(&thread, "getName", "()Ljava/lang/String;", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setName", "(Ljava/lang/String;)V", (renamed,))
+        .await?;
+    let actual_name = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual_name).await?, "renamed");
 
-    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
-    let _: () = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (true,)).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isDaemon", "()Z", ())
+            .await?
+    );
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setDaemon", "(Z)V", (true,))
+        .await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isDaemon", "()Z", ())
+            .await?
+    );
 
-    assert!(!jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
-    let _: () = jvm.invoke_virtual(&thread, "interrupt", "()V", ()).await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
-    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isInterrupted", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isInterrupted", "()Z", ())
+            .await?
+    );
+    let _: () = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "interrupt", "()V", ())
+        .await?;
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isInterrupted", "()Z", ())
+            .await?
+    );
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isInterrupted", "()Z", ())
+            .await?
+    );
 
     let current = jvm.invoke_static("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", ()).await?;
-    let _: () = jvm.invoke_virtual(&current, "interrupt", "()V", ()).await?;
+    let _: () = jvm
+        .invoke_virtual(&current, &current.class_definition().name(), "interrupt", "()V", ())
+        .await?;
     assert!(jvm.invoke_static::<_, bool>("java/lang/Thread", "interrupted", "()Z", ()).await?);
     assert!(!jvm.invoke_static::<_, bool>("java/lang/Thread", "interrupted", "()Z", ()).await?);
-    assert!(!jvm.invoke_virtual::<_, bool>(&current, "isInterrupted", "()Z", ()).await?);
+    assert!(
+        !jvm.invoke_virtual::<_, bool>(&current, &current.class_definition().name(), "isInterrupted", "()Z", ())
+            .await?
+    );
     assert!(!jvm.get_field::<bool>(&current, "interrupted", "Z").await?);
 
-    let result: Result<()> = jvm.invoke_virtual(&thread, "join", "(J)V", (-1i64,)).await;
+    let result: Result<()> = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "join", "(J)V", (-1i64,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("join(-1) must throw IllegalArgumentException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalArgumentException"));
 
-    let _: () = jvm.invoke_virtual(&thread, "start", "()V", ()).await?;
-    let result: Result<()> = jvm.invoke_virtual(&thread, "setDaemon", "(Z)V", (false,)).await;
+    let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "start", "()V", ()).await?;
+    let result: Result<()> = jvm
+        .invoke_virtual(&thread, &thread.class_definition().name(), "setDaemon", "(Z)V", (false,))
+        .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("setDaemon after start must throw IllegalThreadStateException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalThreadStateException"));
-    assert!(jvm.invoke_virtual::<_, bool>(&thread, "isDaemon", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&thread, &thread.class_definition().name(), "isDaemon", "()Z", ())
+            .await?
+    );
 
     Ok(())
 }

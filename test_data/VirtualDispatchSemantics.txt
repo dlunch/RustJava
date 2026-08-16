@@ -1,0 +1,5 @@
+base
+same-package
+public-transitive
+protected-transitive
+inherited-interface

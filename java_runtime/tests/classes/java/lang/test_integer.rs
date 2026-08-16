@@ -15,7 +15,10 @@ async fn test_parse_int() -> Result<()> {
     );
 
     let boxed: ClassInstanceRef<Integer> = jvm.invoke_static("java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", (42,)).await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&boxed, "intValue", "()I", ()).await?, 42);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&boxed, "java/lang/Integer", "intValue", "()I", ()).await?,
+        42
+    );
 
     Ok(())
 }
@@ -73,7 +76,10 @@ async fn test_integer_strict_api() -> Result<()> {
     let decoded: ClassInstanceRef<Integer> = jvm
         .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (decoded_name,))
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&decoded, "intValue", "()I", ()).await?, i32::MIN);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&decoded, "java/lang/Integer", "intValue", "()I", ()).await?,
+        i32::MIN
+    );
 
     for (method, expected) in [
         ("toBinaryString", "11111111111111111111111111111111"),
@@ -87,35 +93,63 @@ async fn test_integer_strict_api() -> Result<()> {
     let left = jvm.new_class("java/lang/Integer", "(I)V", (1,)).await?;
     let right = jvm.new_class("java/lang/Integer", "(I)V", (2,)).await?;
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&left, "compareTo", "(Ljava/lang/Integer;)I", (right.clone(),))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &left,
+            &left.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Integer;)I",
+            (right.clone(),)
+        )
+        .await?,
         -1
     );
     assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&left, "compareTo", "(Ljava/lang/Object;)I", (right.clone(),))
-            .await?,
+        jvm.invoke_virtual::<_, i32>(
+            &left,
+            &left.class_definition().name(),
+            "compareTo",
+            "(Ljava/lang/Object;)I",
+            (right.clone(),)
+        )
+        .await?,
         -1
     );
     assert!(
-        !jvm.invoke_virtual::<_, bool>(&left, "equals", "(Ljava/lang/Object;)Z", (right.clone(),))
-            .await?
+        !jvm.invoke_virtual::<_, bool>(
+            &left,
+            &left.class_definition().name(),
+            "equals",
+            "(Ljava/lang/Object;)Z",
+            (right.clone(),)
+        )
+        .await?
     );
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&left, "hashCode", "()I", ()).await?, 1);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&left, &left.class_definition().name(), "hashCode", "()I", ())
+            .await?,
+        1
+    );
 
-    let typed_null_result: Result<i32> = jvm.invoke_virtual(&left, "compareTo", "(Ljava/lang/Integer;)I", (None,)).await;
+    let typed_null_result: Result<i32> = jvm
+        .invoke_virtual(&left, &left.class_definition().name(), "compareTo", "(Ljava/lang/Integer;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = typed_null_result else {
         panic!("Integer typed compare null must throw NPE");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
-    let null_result: Result<i32> = jvm.invoke_virtual(&left, "compareTo", "(Ljava/lang/Object;)I", (None,)).await;
+    let null_result: Result<i32> = jvm
+        .invoke_virtual(&left, &left.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (None,))
+        .await;
     let Err(JavaError::JavaException(exception)) = null_result else {
         panic!("Integer raw compare null must throw NPE");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
 
     let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
-    let wrong_result: Result<i32> = jvm.invoke_virtual(&left, "compareTo", "(Ljava/lang/Object;)I", (object,)).await;
+    let wrong_result: Result<i32> = jvm
+        .invoke_virtual(&left, &left.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (object,))
+        .await;
     let Err(JavaError::JavaException(exception)) = wrong_result else {
         panic!("Integer raw compare wrong type must throw CCE");
     };
@@ -125,12 +159,20 @@ async fn test_integer_strict_api() -> Result<()> {
     let max = jvm.get_static_field::<i32>("java/lang/Integer", "MAX_VALUE", "I").await?;
     assert_eq!((min, max), (i32::MIN, i32::MAX));
     let typ = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
-    let name: ClassInstanceRef<String> = jvm.invoke_virtual(&typ, "getName", "()Ljava/lang/String;", ()).await?;
+    let name: ClassInstanceRef<String> = jvm
+        .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "int");
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
     let _: () = jvm.invoke_static("java/lang/System", "gc", "()V", ()).await?;
     let typ = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
-    assert!(jvm.invoke_virtual::<_, bool>(&typ, "isPrimitive", "()Z", ()).await?);
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
+            .await?
+    );
     Ok(())
 }
 
@@ -177,7 +219,10 @@ async fn test_integer_rejects_invalid_forms_and_uses_property_defaults() -> Resu
         let decoded: ClassInstanceRef<Integer> = jvm
             .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (text,))
             .await?;
-        assert_eq!(jvm.invoke_virtual::<_, i32>(&decoded, "intValue", "()I", ()).await?, expected);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&decoded, "java/lang/Integer", "intValue", "()I", ()).await?,
+            expected
+        );
     }
 
     let key = JavaLangString::from_rust_string(&jvm, "rustjava.test.integer").await?;
@@ -198,7 +243,11 @@ async fn test_integer_rejects_invalid_forms_and_uses_property_defaults() -> Resu
             (key.clone(),),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&property, "intValue", "()I", ()).await?, 42);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&property, "java/lang/Integer", "intValue", "()I", ())
+            .await?,
+        42
+    );
 
     let invalid = JavaLangString::from_rust_string(&jvm, "not-an-integer").await?;
     let _: ClassInstanceRef<Object> = jvm
@@ -217,7 +266,11 @@ async fn test_integer_rejects_invalid_forms_and_uses_property_defaults() -> Resu
             (key.clone(), 17),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&property, "intValue", "()I", ()).await?, 17);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&property, "java/lang/Integer", "intValue", "()I", ())
+            .await?,
+        17
+    );
 
     let default = jvm.new_class("java/lang/Integer", "(I)V", (23,)).await?;
     let property: ClassInstanceRef<Integer> = jvm
@@ -228,7 +281,11 @@ async fn test_integer_rejects_invalid_forms_and_uses_property_defaults() -> Resu
             (key, default),
         )
         .await?;
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&property, "intValue", "()I", ()).await?, 23);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&property, "java/lang/Integer", "intValue", "()I", ())
+            .await?,
+        23
+    );
 
     Ok(())
 }

@@ -140,17 +140,47 @@ async fn string_builder_mutation_queries_and_appendable_bridge_use_utf16() -> Re
     let text = JavaLangString::from_utf16(&jvm, vec!['A' as JavaChar, 0xd83d, 0xde00]).await?;
     let text: ClassInstanceRef<java_runtime::classes::java::lang::String> = text.into();
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&builder, "append", "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;", (text,))
+        .invoke_virtual(
+            &builder,
+            &builder.class_definition().name(),
+            "append",
+            "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+            (text,),
+        )
         .await?;
-    let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&builder, "append", "(I)Ljava/lang/StringBuilder;", (42,)).await?;
     let _: ClassInstanceRef<Object> = jvm
-        .invoke_virtual(&builder, "insert", "(IC)Ljava/lang/StringBuilder;", (1, '-' as JavaChar))
+        .invoke_virtual(
+            &builder,
+            &builder.class_definition().name(),
+            "append",
+            "(I)Ljava/lang/StringBuilder;",
+            (42,),
+        )
+        .await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(
+            &builder,
+            &builder.class_definition().name(),
+            "insert",
+            "(IC)Ljava/lang/StringBuilder;",
+            (1, '-' as JavaChar),
+        )
         .await?;
 
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&builder, "length", "()I", ()).await?, 6);
-    assert_eq!(jvm.invoke_virtual::<_, i32>(&builder, "codePointAt", "(I)I", (2,)).await?, 0x1f600);
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&builder, &builder.class_definition().name(), "length", "()I", ())
+            .await?,
+        6
+    );
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&builder, &builder.class_definition().name(), "codePointAt", "(I)I", (2,))
+            .await?,
+        0x1f600
+    );
 
-    let result = jvm.invoke_virtual(&builder, "toString", "()Ljava/lang/String;", ()).await?;
+    let result = jvm
+        .invoke_virtual(&builder, &builder.class_definition().name(), "toString", "()Ljava/lang/String;", ())
+        .await?;
     assert_eq!(
         JavaLangString::to_utf16(&jvm, &result).await?,
         vec![0x41, 0x2d, 0xd83d, 0xde00, 0x34, 0x32]

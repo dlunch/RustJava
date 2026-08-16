@@ -104,41 +104,81 @@ impl PatternSyntaxException {
         let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
 
         let _: ClassInstanceRef<StringBuffer> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (description,))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (description,),
+            )
             .await?;
         if index >= 0 {
             let near_index = JavaLangString::from_rust_string(jvm, " near index ").await?;
             let _: ClassInstanceRef<StringBuffer> = jvm
-                .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (near_index,))
+                .invoke_virtual(
+                    &buffer,
+                    "java/lang/StringBuffer",
+                    "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                    (near_index,),
+                )
                 .await?;
-            let _: ClassInstanceRef<StringBuffer> = jvm.invoke_virtual(&buffer, "append", "(I)Ljava/lang/StringBuffer;", (index,)).await?;
+            let _: ClassInstanceRef<StringBuffer> = jvm
+                .invoke_virtual(&buffer, "java/lang/StringBuffer", "append", "(I)Ljava/lang/StringBuffer;", (index,))
+                .await?;
         }
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &buffer,
+                "java/lang/StringBuffer",
                 "append",
                 "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
                 (line_separator.clone(),),
             )
             .await?;
         let _: ClassInstanceRef<StringBuffer> = jvm
-            .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (pattern.clone(),))
+            .invoke_virtual(
+                &buffer,
+                "java/lang/StringBuffer",
+                "append",
+                "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                (pattern.clone(),),
+            )
             .await?;
 
         if index >= 0 {
             let _: ClassInstanceRef<StringBuffer> = jvm
-                .invoke_virtual(&buffer, "append", "(Ljava/lang/String;)Ljava/lang/StringBuffer;", (line_separator,))
+                .invoke_virtual(
+                    &buffer,
+                    "java/lang/StringBuffer",
+                    "append",
+                    "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
+                    (line_separator,),
+                )
                 .await?;
             for _ in 0..index {
                 let _: ClassInstanceRef<StringBuffer> = jvm
-                    .invoke_virtual(&buffer, "append", "(C)Ljava/lang/StringBuffer;", (' ' as JavaChar,))
+                    .invoke_virtual(
+                        &buffer,
+                        "java/lang/StringBuffer",
+                        "append",
+                        "(C)Ljava/lang/StringBuffer;",
+                        (' ' as JavaChar,),
+                    )
                     .await?;
             }
             let _: ClassInstanceRef<StringBuffer> = jvm
-                .invoke_virtual(&buffer, "append", "(C)Ljava/lang/StringBuffer;", ('^' as JavaChar,))
+                .invoke_virtual(
+                    &buffer,
+                    "java/lang/StringBuffer",
+                    "append",
+                    "(C)Ljava/lang/StringBuffer;",
+                    ('^' as JavaChar,),
+                )
                 .await?;
         }
 
-        jvm.invoke_virtual(&buffer, "toString", "()Ljava/lang/String;", ()).await
+        jvm.invoke_virtual(&buffer, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await
     }
 }

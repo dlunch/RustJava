@@ -41,11 +41,12 @@ impl CollectionsUnmodifiableSet {
             return Ok(true);
         }
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&set, "equals", "(Ljava/lang/Object;)Z", (other,)).await
+        jvm.invoke_virtual(&set, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other,))
+            .await
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
-        jvm.invoke_virtual(&set, "hashCode", "()I", ()).await
+        jvm.invoke_virtual(&set, "java/lang/Object", "hashCode", "()I", ()).await
     }
 }

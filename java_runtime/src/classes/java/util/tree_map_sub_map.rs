@@ -112,10 +112,17 @@ impl TreeMapSubMap {
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "entryIterator", "()Ljava/util/Iterator;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/TreeMap$SubMap", "entryIterator", "()Ljava/util/Iterator;", ())
+            .await?;
         let mut size = 0;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             size += 1;
         }
         Ok(size)
@@ -130,13 +137,21 @@ impl TreeMapSubMap {
     }
 
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "valueIterator", "()Ljava/util/Iterator;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let current: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/TreeMap$SubMap", "valueIterator", "()Ljava/util/Iterator;", ())
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let current: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
             let equal = if value.is_null() {
                 current.is_null()
             } else {
-                jvm.invoke_virtual(&value, "equals", "(Ljava/lang/Object;)Z", (current,)).await?
+                jvm.invoke_virtual(&value, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (current,))
+                    .await?
             };
             if equal {
                 return Ok(true);
@@ -168,8 +183,14 @@ impl TreeMapSubMap {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "key outside range").await);
         }
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
-        jvm.invoke_virtual(&map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
-            .await
+        jvm.invoke_virtual(
+            &map,
+            "java/util/TreeMap",
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
+        .await
     }
 
     async fn remove(
@@ -182,21 +203,32 @@ impl TreeMapSubMap {
             return Ok(None.into());
         }
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
-        jvm.invoke_virtual(&map, "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,)).await
+        jvm.invoke_virtual(&map, "java/util/TreeMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .await
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let iterator: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "entryIterator", "()Ljava/util/Iterator;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&iterator, "hasNext", "()Z", ()).await? {
-            let _: ClassInstanceRef<Object> = jvm.invoke_virtual(&iterator, "next", "()Ljava/lang/Object;", ()).await?;
-            let _: () = jvm.invoke_virtual(&iterator, "remove", "()V", ()).await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/TreeMap$SubMap", "entryIterator", "()Ljava/util/Iterator;", ())
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
+            .await?
+        {
+            let _: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
+                .await?;
+            let _: () = jvm
+                .invoke_virtual(&iterator, &iterator.class_definition().name(), "remove", "()V", ())
+                .await?;
         }
         Ok(())
     }
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
-        jvm.invoke_virtual(&map, "comparator", "()Ljava/util/Comparator;", ()).await
+        jvm.invoke_virtual(&map, "java/util/TreeMap", "comparator", "()Ljava/util/Comparator;", ())
+            .await
     }
 
     async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {

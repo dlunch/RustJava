@@ -89,7 +89,7 @@ impl Jvm {
         ];
         for class_name in bootstrap_classes.iter() {
             let class_definition = jvm.inner.bootstrap_class_loader.load_class(&jvm, class_name).await?.unwrap();
-            let class = Class::new(class_definition, None);
+            let class = Class::new(class_definition, None, None);
 
             jvm.register_class_internal(class, None).await?;
         }
@@ -342,33 +342,62 @@ impl Jvm {
         }
     }
 
-    pub async fn invoke_virtual<T, U>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str, args: T) -> Result<U>
+    pub async fn invoke_virtual<T, U>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str, args: T) -> Result<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
     {
         let args = args.into_arg();
-        tracing::trace!("Invoke virtual {}.{name}:{descriptor}({args:?})", instance.class_definition().name());
+        tracing::trace!("Invoke virtual {class_name}.{name}:{descriptor}({args:?})");
 
-        let class = instance.class_definition();
-        let method = self.find_virtual_method(&*class, name, descriptor, false)?;
-        if let Some(x) = method {
-            let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-                .chain(args.into_vec())
-                .collect::<Vec<_>>();
+        let owner = self.resolve_class(class_name).await?;
+        let Some((resolved_class, resolved_method)) = self.resolve_method(&owner, name, descriptor) else {
+            tracing::error!("No such method: {class_name}.{name}:{descriptor}");
+            return Err(self
+                .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
+                .await);
+        };
 
-            let class = self.resolve_class(&class.name()).await?; // TODO we're resolving class twice
-            Ok(self
-                .execute_method(&class, Some(instance.clone()), &x, args.into_boxed_slice())
-                .await?
-                .into())
-        } else {
-            tracing::error!("No such method: {}.{name}:{descriptor}", class.name());
-
-            Err(self
-                .exception("java/lang/NoSuchMethodError", &format!("{}.{}:{}", class.name(), name, descriptor))
-                .await)
+        if resolved_method.access_flags().contains(MethodAccessFlags::STATIC) {
+            return Err(self
+                .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                .await);
         }
+
+        let mut class = self.get_class(&instance.class_definition().name());
+        let mut selected = None;
+        while let Some(candidate_class) = class {
+            if let Some(candidate_method) = candidate_class.definition.method(name, descriptor, false)
+                && self.method_overrides(&candidate_class, &candidate_method, &resolved_class, &resolved_method)
+            {
+                selected = Some((candidate_class, candidate_method));
+                break;
+            }
+
+            class = candidate_class
+                .definition
+                .super_class_name()
+                .and_then(|super_class| self.get_class(&super_class));
+        }
+
+        let Some((declaring_class, method)) = selected else {
+            return Err(self
+                .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
+                .await);
+        };
+        if method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+            return Err(self
+                .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
+                .await);
+        }
+
+        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+            .chain(args.into_vec())
+            .collect::<Vec<_>>();
+        Ok(self
+            .execute_method(&declaring_class, Some(instance.clone()), &method, args.into_boxed_slice())
+            .await?
+            .into())
     }
 
     // non-virtual
@@ -831,7 +860,7 @@ impl Jvm {
 
         let java_class = Some(JavaLangClass::from_rust_class(self, class.clone(), class_loader.clone()).await?);
 
-        let class = Class::new(class, java_class.clone());
+        let class = Class::new(class, java_class.clone(), class_loader.clone());
 
         if let Some(x) = class_loader {
             self.register_class_internal(class, Some(&JavaClassLoaderWrapper::new(x))).await?;
@@ -1176,19 +1205,35 @@ impl Jvm {
         self.resolve_field(&super_class, name, descriptor)
     }
 
-    // JVMS 5.4.3.3 method resolution: search the class, then its superclass (interfaces have no static methods
-    // in a 1.2 target). Matching is by name and descriptor only; the caller checks static-ness afterwards.
+    // JVMS 5.4.3.3 method resolution searches the class hierarchy before inherited interface methods.
     fn resolve_method(&self, class: &Class, name: &str, descriptor: &str) -> Option<(Class, Box<dyn Method>)> {
-        if let Some(method) = class
-            .definition
-            .method(name, descriptor, true)
-            .or_else(|| class.definition.method(name, descriptor, false))
-        {
-            return Some((class.clone(), method));
+        let mut class = Some(class.clone());
+        let mut interfaces = Vec::new();
+        while let Some(candidate) = class {
+            if let Some(method) = candidate
+                .definition
+                .method(name, descriptor, true)
+                .or_else(|| candidate.definition.method(name, descriptor, false))
+            {
+                return Some((candidate, method));
+            }
+
+            interfaces.extend(candidate.definition.interface_names());
+            class = candidate
+                .definition
+                .super_class_name()
+                .and_then(|super_class| self.get_class(&super_class));
         }
 
-        let super_class = self.get_class(&class.definition.super_class_name()?)?;
-        self.resolve_method(&super_class, name, descriptor)
+        while let Some(interface_name) = interfaces.pop() {
+            let interface = self.get_class(&interface_name)?;
+            if let Some(method) = interface.definition.method(name, descriptor, false) {
+                return Some((interface, method));
+            }
+            interfaces.extend(interface.definition.interface_names());
+        }
+
+        None
     }
 
     pub(crate) fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {
@@ -1204,19 +1249,59 @@ impl Jvm {
         }
     }
 
-    fn find_virtual_method(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str, is_static: bool) -> Result<Option<Box<dyn Method>>> {
-        let method = class.method(name, descriptor, false);
-
-        if let Some(x) = method {
-            if x.access_flags().contains(MethodAccessFlags::STATIC) == is_static {
-                return Ok(Some(x));
-            }
-        } else if let Some(x) = class.super_class_name() {
-            let super_class = self.inner.classes.read().get(&x).unwrap().definition.clone();
-            return self.find_virtual_method(&*super_class, name, descriptor, is_static);
+    fn method_overrides(
+        &self,
+        candidate_class: &Class,
+        candidate_method: &Box<dyn Method>,
+        resolved_class: &Class,
+        resolved_method: &Box<dyn Method>,
+    ) -> bool {
+        if candidate_class.definition.name() == resolved_class.definition.name() {
+            return true;
+        }
+        if !self.is_inherited_from(&*candidate_class.definition, &resolved_class.definition.name())
+            || candidate_method
+                .access_flags()
+                .intersects(MethodAccessFlags::PRIVATE | MethodAccessFlags::STATIC)
+        {
+            return false;
         }
 
-        Ok(None)
+        let resolved_access = resolved_method.access_flags();
+        if resolved_access.intersects(MethodAccessFlags::PUBLIC | MethodAccessFlags::PROTECTED) {
+            return true;
+        }
+        if resolved_access.contains(MethodAccessFlags::PRIVATE) {
+            return false;
+        }
+        if candidate_class.is_same_runtime_package(resolved_class) {
+            return true;
+        }
+
+        // JVMS 5.4.5 also permits an override inherited through an intermediate method that overrides the package-private declaration.
+        let mut super_class = candidate_class
+            .definition
+            .super_class_name()
+            .and_then(|class_name| self.get_class(&class_name));
+        while let Some(intermediate_class) = super_class {
+            if intermediate_class.definition.name() == resolved_class.definition.name() {
+                break;
+            }
+            if let Some(intermediate_method) = intermediate_class
+                .definition
+                .method(&resolved_method.name(), &resolved_method.descriptor(), false)
+                && self.method_overrides(candidate_class, candidate_method, &intermediate_class, &intermediate_method)
+                && self.method_overrides(&intermediate_class, &intermediate_method, resolved_class, resolved_method)
+            {
+                return true;
+            }
+            super_class = intermediate_class
+                .definition
+                .super_class_name()
+                .and_then(|class_name| self.get_class(&class_name));
+        }
+
+        false
     }
 
     async fn execute_method(

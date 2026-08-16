@@ -69,12 +69,16 @@ impl Formatter {
             return Err(jvm.exception("java/lang/NullPointerException", "record").await);
         }
 
-        let message: ClassInstanceRef<String> = jvm.invoke_virtual(&record, "getMessage", "()Ljava/lang/String;", ()).await?;
+        let message: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getMessage", "()Ljava/lang/String;", ())
+            .await?;
         if message.is_null() {
             return Ok(message);
         }
 
-        let parameters: ClassInstanceRef<Array<Object>> = jvm.invoke_virtual(&record, "getParameters", "()[Ljava/lang/Object;", ()).await?;
+        let parameters: ClassInstanceRef<Array<Object>> = jvm
+            .invoke_virtual(&record, "java/util/logging/LogRecord", "getParameters", "()[Ljava/lang/Object;", ())
+            .await?;
         if parameters.is_null() {
             return Ok(message);
         }
@@ -90,7 +94,9 @@ impl Formatter {
             replacements.push(if parameter.is_null() {
                 RustString::from("null")
             } else {
-                let value: ClassInstanceRef<String> = jvm.invoke_virtual(&parameter, "toString", "()Ljava/lang/String;", ()).await?;
+                let value: ClassInstanceRef<String> = jvm
+                    .invoke_virtual(&parameter, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+                    .await?;
                 if value.is_null() {
                     RustString::from("null")
                 } else {

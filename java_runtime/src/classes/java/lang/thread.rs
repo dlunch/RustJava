@@ -268,7 +268,7 @@ impl Thread {
 
                 self.jvm.attach_thread(self.this.instance.clone()).await?;
 
-                let result: Result<()> = self.jvm.invoke_virtual(&self.this, "run", "()V", []).await;
+                let result: Result<()> = self.jvm.invoke_virtual(&self.this, "java/lang/Thread", "run", "()V", []).await;
 
                 if let Err(jvm::JavaError::JavaException(exception)) = &result {
                     let trace = async {
@@ -279,9 +279,18 @@ impl Thread {
                             .await?;
                         let _: () = self
                             .jvm
-                            .invoke_virtual(exception, "printStackTrace", "(Ljava/io/PrintWriter;)V", (print_writer,))
+                            .invoke_virtual(
+                                exception,
+                                &exception.class_definition().name(),
+                                "printStackTrace",
+                                "(Ljava/io/PrintWriter;)V",
+                                (print_writer,),
+                            )
                             .await?;
-                        let trace = self.jvm.invoke_virtual(&string_writer, "toString", "()Ljava/lang/String;", []).await?;
+                        let trace = self
+                            .jvm
+                            .invoke_virtual(&string_writer, "java/io/StringWriter", "toString", "()Ljava/lang/String;", [])
+                            .await?;
                         JavaLangString::to_rust_string(&self.jvm, &trace).await
                     }
                     .await;
@@ -317,7 +326,7 @@ impl Thread {
         jvm.put_field(&mut this, "started", "Z", true).await?;
         jvm.put_field(&mut this, "alive", "Z", true).await?;
 
-        let id: i32 = jvm.invoke_virtual(&this, "hashCode", "()I", ()).await?;
+        let id: i32 = jvm.invoke_virtual(&this, "java/lang/Object", "hashCode", "()I", ()).await?;
 
         let this = match jvm.new_global_ref(&this) {
             Some(this) => this,
@@ -340,7 +349,7 @@ impl Thread {
 
         let target: ClassInstanceRef<Runnable> = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
         if !target.is_null() {
-            let _: () = jvm.invoke_virtual(&target, "run", "()V", ()).await?;
+            let _: () = jvm.invoke_virtual(&target, &target.class_definition().name(), "run", "()V", ()).await?;
         }
 
         Ok(())
@@ -349,7 +358,7 @@ impl Thread {
     async fn join(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::join({this:?})");
 
-        let _: () = jvm.invoke_virtual(&this, "join", "(J)V", (0i64,)).await?;
+        let _: () = jvm.invoke_virtual(&this, "java/lang/Thread", "join", "(J)V", (0i64,)).await?;
 
         Ok(())
     }
@@ -369,13 +378,15 @@ impl Thread {
             }
 
             if millis == 0 {
-                let _: () = jvm.invoke_virtual(&this, "wait", "(J)V", (0i64,)).await?;
+                let _: () = jvm.invoke_virtual(&this, "java/lang/Object", "wait", "(J)V", (0i64,)).await?;
             } else {
                 let elapsed = context.now().saturating_sub(start);
                 if elapsed >= millis as u64 {
                     return Ok(());
                 }
-                let _: () = jvm.invoke_virtual(&this, "wait", "(J)V", (millis - elapsed as i64,)).await?;
+                let _: () = jvm
+                    .invoke_virtual(&this, "java/lang/Object", "wait", "(J)V", (millis - elapsed as i64,))
+                    .await?;
             }
         }
     }
@@ -434,7 +445,9 @@ impl Thread {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Thread::toString({this:?})");
 
-        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&this, "getName", "()Ljava/lang/String;", ()).await?;
+        let name: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&this, "java/lang/Thread", "getName", "()Ljava/lang/String;", ())
+            .await?;
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
         let priority: i32 = jvm.get_field(&this, "priority", "I").await?;
         Ok(JavaLangString::from_rust_string(jvm, &format!("Thread[{name},{priority}]")).await?.into())

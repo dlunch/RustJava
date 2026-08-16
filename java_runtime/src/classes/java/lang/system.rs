@@ -191,7 +191,13 @@ impl System {
 
         let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm
-            .invoke_virtual(&props, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .invoke_virtual(
+                &props,
+                "java/util/Properties",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
             .await?;
 
         Ok(value)
@@ -212,6 +218,7 @@ impl System {
         let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         jvm.invoke_virtual(
             &props,
+            "java/util/Properties",
             "getProperty",
             "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
             (key, default_value),
@@ -265,6 +272,7 @@ impl System {
         let value = jvm
             .invoke_virtual(
                 &props,
+                "java/util/Properties",
                 "setProperty",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
                 (key, value),

@@ -92,7 +92,13 @@ impl Properties {
         tracing::debug!("java.util.Properties::getProperty({this:?}, {key:?})");
 
         let result: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(&this, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+            .invoke_virtual(
+                &this,
+                "java/util/Properties",
+                "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;",
+                (key.clone(),),
+            )
             .await?;
         if !result.is_null() && jvm.is_instance(&**result, "java/lang/String") {
             return Ok(ClassInstanceRef::new(result.instance));
@@ -102,8 +108,14 @@ impl Properties {
         if defaults.is_null() {
             Ok(None.into())
         } else {
-            jvm.invoke_virtual(&defaults, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
-                .await
+            jvm.invoke_virtual(
+                &defaults,
+                "java/util/Properties",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
+            .await
         }
     }
 
@@ -117,7 +129,13 @@ impl Properties {
         tracing::debug!("java.util.Properties::getProperty({this:?}, {key:?}, {default_value:?})");
 
         let value: ClassInstanceRef<String> = jvm
-            .invoke_virtual(&this, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", (key,))
+            .invoke_virtual(
+                &this,
+                "java/util/Properties",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (key,),
+            )
             .await?;
         if value.is_null() { Ok(default_value) } else { Ok(value) }
     }
@@ -131,8 +149,14 @@ impl Properties {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Properties::setProperty({this:?}, {key:?}, {value:?})");
 
-        jvm.invoke_virtual(&this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
-            .await
+        jvm.invoke_virtual(
+            &this,
+            "java/util/Properties",
+            "put",
+            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+            (key, value),
+        )
+        .await
     }
 
     async fn load(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, input: ClassInstanceRef<InputStream>) -> Result<()> {
@@ -146,7 +170,7 @@ impl Properties {
         let mut skip_lf = false;
         let mut skip_leading_whitespace = false;
         loop {
-            let value: i32 = jvm.invoke_virtual(&input, "read", "()I", ()).await?;
+            let value: i32 = jvm.invoke_virtual(&input, "java/io/InputStream", "read", "()I", ()).await?;
             if value < 0 {
                 if !logical_line.is_empty() {
                     let trailing_backslashes = logical_line.iter().rev().take_while(|character| **character == b'\\' as JavaChar).count();
@@ -253,7 +277,13 @@ impl Properties {
         let key = JavaLangString::from_utf16(jvm, key_chars).await?;
         let value = JavaLangString::from_utf16(jvm, value_chars).await?;
         let _: ClassInstanceRef<Object> = jvm
-            .invoke_virtual(this, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+            .invoke_virtual(
+                this,
+                "java/util/Properties",
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
             .await?;
         Ok(())
     }
@@ -296,16 +326,31 @@ impl Properties {
             text.push('\n');
         }
         let date = jvm.new_class("java/util/Date", "()V", ()).await?;
-        let date: ClassInstanceRef<String> = jvm.invoke_virtual(&date, "toString", "()Ljava/lang/String;", ()).await?;
+        let date: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&date, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
+            .await?;
         text.push('#');
         text.push_str(&JavaLangString::to_rust_string(jvm, &date).await?);
         text.push('\n');
 
-        let names: ClassInstanceRef<Object> = jvm.invoke_virtual(&this, "keys", "()Ljava/util/Enumeration;", ()).await?;
-        while jvm.invoke_virtual::<_, bool>(&names, "hasMoreElements", "()Z", ()).await? {
-            let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&names, "nextElement", "()Ljava/lang/Object;", ()).await?;
+        let names: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&this, "java/util/Properties", "keys", "()Ljava/util/Enumeration;", ())
+            .await?;
+        while jvm
+            .invoke_virtual::<_, bool>(&names, &names.class_definition().name(), "hasMoreElements", "()Z", ())
+            .await?
+        {
+            let key: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&names, &names.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
+                .await?;
             let value: ClassInstanceRef<Object> = jvm
-                .invoke_virtual(&this, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+                .invoke_virtual(
+                    &this,
+                    "java/util/Properties",
+                    "get",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    (key.clone(),),
+                )
                 .await?;
             if !jvm.is_instance(&**key, "java/lang/String") || value.is_null() || !jvm.is_instance(&**value, "java/lang/String") {
                 return Err(jvm
@@ -324,15 +369,18 @@ impl Properties {
         let bytes = text.into_bytes();
         let mut byte_array = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.store_array(&mut byte_array, 0, bytes.into_iter().map(|byte| byte as i8)).await?;
-        let _: () = jvm.invoke_virtual(&output, "write", "([B)V", (byte_array,)).await?;
-        jvm.invoke_virtual(&output, "flush", "()V", ()).await
+        let _: () = jvm
+            .invoke_virtual(&output, "java/io/OutputStream", "write", "([B)V", (byte_array,))
+            .await?;
+        jvm.invoke_virtual(&output, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
     async fn property_names(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Properties::propertyNames({this:?})");
 
         let table = Self::enumerate(jvm, &this).await?;
-        jvm.invoke_virtual(&table, "keys", "()Ljava/util/Enumeration;", ()).await
+        jvm.invoke_virtual(&table, "java/util/Hashtable", "keys", "()Ljava/util/Enumeration;", ())
+            .await
     }
 
     async fn enumerate(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Hashtable>> {
@@ -345,17 +393,36 @@ impl Properties {
         }
 
         for layer in layers.into_iter().rev() {
-            let names: ClassInstanceRef<Object> = jvm.invoke_virtual(&layer, "keys", "()Ljava/util/Enumeration;", ()).await?;
-            while jvm.invoke_virtual::<_, bool>(&names, "hasMoreElements", "()Z", ()).await? {
-                let key: ClassInstanceRef<Object> = jvm.invoke_virtual(&names, "nextElement", "()Ljava/lang/Object;", ()).await?;
+            let names: ClassInstanceRef<Object> = jvm
+                .invoke_virtual(&layer, "java/util/Properties", "keys", "()Ljava/util/Enumeration;", ())
+                .await?;
+            while jvm
+                .invoke_virtual::<_, bool>(&names, &names.class_definition().name(), "hasMoreElements", "()Z", ())
+                .await?
+            {
+                let key: ClassInstanceRef<Object> = jvm
+                    .invoke_virtual(&names, &names.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
+                    .await?;
                 if key.is_null() || !jvm.is_instance(&**key, "java/lang/String") {
                     return Err(jvm.exception("java/lang/ClassCastException", "Properties key must be String").await);
                 }
                 let value: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&layer, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key.clone(),))
+                    .invoke_virtual(
+                        &layer,
+                        "java/util/Properties",
+                        "get",
+                        "(Ljava/lang/Object;)Ljava/lang/Object;",
+                        (key.clone(),),
+                    )
                     .await?;
                 let _: ClassInstanceRef<Object> = jvm
-                    .invoke_virtual(&table, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", (key, value))
+                    .invoke_virtual(
+                        &table,
+                        "java/util/Hashtable",
+                        "put",
+                        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                        (key, value),
+                    )
                     .await?;
             }
         }

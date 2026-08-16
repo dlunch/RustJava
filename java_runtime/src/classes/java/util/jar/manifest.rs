@@ -1,6 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -18,17 +19,17 @@ impl Manifest {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
-                JavaMethodProto::new("read", "(Ljava/io/InputStream;)V", Self::read, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "(Ljava/io/InputStream;)V", Self::read, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "getMainAttributes",
                     "()Ljava/util/jar/Attributes;",
                     Self::get_main_attributes,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
             ],
             fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", Default::default())],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -37,7 +38,9 @@ impl Manifest {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let _: () = jvm.invoke_virtual(&this, "read", "(Ljava/io/InputStream;)V", (is,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/util/jar/Manifest", "read", "(Ljava/io/InputStream;)V", (is,))
+            .await?;
 
         Ok(())
     }
@@ -53,7 +56,9 @@ impl Manifest {
         let buffered_reader = jvm.new_class("java/io/BufferedReader", "(Ljava/io/Reader;)V", (reader,)).await?;
 
         loop {
-            let line: ClassInstanceRef<String> = jvm.invoke_virtual(&buffered_reader, "readLine", "()Ljava/lang/String;", ()).await?;
+            let line: ClassInstanceRef<String> = jvm
+                .invoke_virtual(&buffered_reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
+                .await?;
             if line.is_null() {
                 break;
             }
@@ -72,6 +77,7 @@ impl Manifest {
             let _: ClassInstanceRef<String> = jvm
                 .invoke_virtual(
                     &main_attributes,
+                    "java/util/jar/Attributes",
                     "putValue",
                     "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
                     (key, value),

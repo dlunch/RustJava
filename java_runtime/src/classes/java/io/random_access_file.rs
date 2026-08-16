@@ -3,6 +3,7 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -23,21 +24,31 @@ impl RandomAccessFile {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/io/DataInput", "java/io/DataOutput"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;Ljava/lang/String;)V", Self::init_with_file, Default::default()),
-                JavaMethodProto::new("read", "([B)I", Self::read, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, Default::default()),
-                JavaMethodProto::new("write", "([B)V", Self::write, Default::default()),
-                JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, Default::default()),
-                JavaMethodProto::new("length", "()J", Self::length, Default::default()),
-                JavaMethodProto::new("getFilePointer", "()J", Self::get_file_pointer, Default::default()),
-                JavaMethodProto::new("getFD", "()Ljava/io/FileDescriptor;", Self::get_fd, Default::default()),
-                JavaMethodProto::new("seek", "(J)V", Self::seek, Default::default()),
-                JavaMethodProto::new("setLength", "(J)V", Self::set_length, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/io/File;Ljava/lang/String;)V",
+                    Self::init_with_file,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("read", "([B)I", Self::read, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([B)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("length", "()J", Self::length, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getFilePointer", "()J", Self::get_file_pointer, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "getFD",
+                    "()Ljava/io/FileDescriptor;",
+                    Self::get_fd,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("seek", "(J)V", Self::seek, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setLength", "(J)V", Self::set_length, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 
@@ -86,7 +97,7 @@ impl RandomAccessFile {
     ) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::<init>({this:?}, {file:?}, {mode:?})");
 
-        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
+        let name: ClassInstanceRef<String> = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
 
         let _: () = jvm
             .invoke_special(
@@ -105,7 +116,9 @@ impl RandomAccessFile {
         tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?})");
 
         let length = jvm.array_length(&buf).await?;
-        let read = jvm.invoke_virtual(&this, "read", "([BII)I", (buf, 0, length as i32)).await?;
+        let read = jvm
+            .invoke_virtual(&this, "java/io/RandomAccessFile", "read", "([BII)I", (buf, 0, length as i32))
+            .await?;
 
         Ok(read)
     }
@@ -137,7 +150,9 @@ impl RandomAccessFile {
         tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?})");
 
         let length = jvm.array_length(&buf).await?;
-        let _: () = jvm.invoke_virtual(&this, "write", "([BII)V", (buf, 0, length as i32)).await?;
+        let _: () = jvm
+            .invoke_virtual(&this, "java/io/RandomAccessFile", "write", "([BII)V", (buf, 0, length as i32))
+            .await?;
 
         Ok(())
     }

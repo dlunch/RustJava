@@ -56,7 +56,7 @@ impl FileOutputStream {
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file:?}, {append})");
 
-        let path = jvm.invoke_virtual(&file, "getPath", "()Ljava/lang/String;", ()).await?;
+        let path = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
         let fd = context
