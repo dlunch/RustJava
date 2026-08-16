@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -16,15 +16,25 @@ impl Runtime {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
                 JavaMethodProto::new("getRuntime", "()Ljava/lang/Runtime;", Self::get_runtime, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("totalMemory", "()J", Self::total_memory, Default::default()),
-                JavaMethodProto::new("freeMemory", "()J", Self::free_memory, Default::default()),
-                JavaMethodProto::new("gc", "()V", Self::gc, Default::default()),
+                JavaMethodProto::new(
+                    "totalMemory",
+                    "()J",
+                    Self::total_memory,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+                ),
+                JavaMethodProto::new(
+                    "freeMemory",
+                    "()J",
+                    Self::free_memory,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+                ),
+                JavaMethodProto::new("gc", "()V", Self::gc, MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE),
                 JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
         }
     }
 

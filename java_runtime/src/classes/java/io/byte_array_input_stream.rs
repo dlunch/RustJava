@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext};
@@ -15,24 +16,34 @@ impl ByteArrayInputStream {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([B)V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_offset_length, Default::default()),
-                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read, Default::default()),
-                JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, Default::default()),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, Default::default()),
-                JavaMethodProto::new("reset", "()V", Self::reset, Default::default()),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, Default::default()),
+                JavaMethodProto::new("<init>", "([B)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_offset_length, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "available",
+                    "()I",
+                    Self::available,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("read", "([BII)I", Self::read, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new(
+                    "read",
+                    "()I",
+                    Self::read_byte,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
+                ),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("buf", "[B", Default::default()),
-                JavaFieldProto::new("pos", "I", Default::default()),
-                JavaFieldProto::new("count", "I", Default::default()),
-                JavaFieldProto::new("mark", "I", Default::default()),
+                JavaFieldProto::new("buf", "[B", FieldAccessFlags::PROTECTED),
+                JavaFieldProto::new("pos", "I", FieldAccessFlags::PROTECTED),
+                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
+                JavaFieldProto::new("mark", "I", FieldAccessFlags::PROTECTED),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

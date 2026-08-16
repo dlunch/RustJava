@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -20,26 +20,26 @@ impl HashSet {
             parent_class: Some("java/util/AbstractSet"),
             interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/util/Collection;)V",
                     Self::init_from_collection,
                     MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, Default::default()),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, Default::default()),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, Default::default()),
+                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("map", "Ljava/util/HashMap;", Default::default()),
-                JavaFieldProto::new("present", "Ljava/lang/Object;", Default::default()),
+                JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::TRANSIENT),
+                JavaFieldProto::new("present", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

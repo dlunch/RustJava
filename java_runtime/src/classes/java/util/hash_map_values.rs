@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -18,16 +18,26 @@ impl HashMapValues {
             parent_class: Some("java/util/AbstractCollection"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/HashMap;)V", Self::init, Default::default()),
-                JavaMethodProto::new("size", "()I", Self::size, Default::default()),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, Default::default()),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/HashMap;)V", Self::init, MethodAccessFlags::empty()),
+                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "contains",
+                    "(Ljava/lang/Object;)Z",
+                    Self::contains,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
                 JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, Default::default()),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, Default::default()),
+                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new(
+                    "iterator",
+                    "()Ljava/util/Iterator;",
+                    Self::iterator,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/HashMap;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::FINAL,
         }
     }
 

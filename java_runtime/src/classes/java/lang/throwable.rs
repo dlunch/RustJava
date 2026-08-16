@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -72,9 +72,9 @@ impl Throwable {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("detailMessage", "Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("cause", "Ljava/lang/Throwable;", Default::default()),
-                JavaFieldProto::new("stackTrace", "[Ljava/lang/String;", Default::default()),
+                JavaFieldProto::new("detailMessage", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("cause", "Ljava/lang/Throwable;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("stackTrace", "[Ljava/lang/String;", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

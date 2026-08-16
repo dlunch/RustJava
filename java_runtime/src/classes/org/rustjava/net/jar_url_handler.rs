@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -19,7 +19,7 @@ impl JarURLHandler {
             parent_class: Some("java/net/URLStreamHandler"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new(
                     "openConnection",
                     "(Ljava/net/URL;)Ljava/net/URLConnection;",
@@ -28,7 +28,7 @@ impl JarURLHandler {
                 ),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

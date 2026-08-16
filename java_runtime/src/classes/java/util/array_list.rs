@@ -1,7 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -51,8 +51,8 @@ impl ArrayList {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("elementData", "[Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("size", "I", Default::default()),
+                JavaFieldProto::new("elementData", "[Ljava/lang/Object;", FieldAccessFlags::TRANSIENT),
+                JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

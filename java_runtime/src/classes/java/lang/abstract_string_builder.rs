@@ -1,7 +1,7 @@
 use alloc::{format, string::ToString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -19,8 +19,8 @@ impl AbstractStringBuilder {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Appendable", "java/lang/CharSequence"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::empty()),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::empty()),
                 JavaMethodProto::new("length", "()I", Self::length, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("capacity", "()I", Self::capacity, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("ensureCapacity", "(I)V", Self::ensure_capacity, MethodAccessFlags::PUBLIC),
@@ -240,8 +240,8 @@ impl AbstractStringBuilder {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("value", "[C", Default::default()),
-                JavaFieldProto::new("count", "I", Default::default()),
+                JavaFieldProto::new("value", "[C", FieldAccessFlags::empty()),
+                JavaFieldProto::new("count", "I", FieldAccessFlags::empty()),
             ],
             access_flags: ClassAccessFlags::ABSTRACT,
         }

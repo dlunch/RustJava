@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -28,7 +28,7 @@ impl Manifest {
                     MethodAccessFlags::PUBLIC,
                 ),
             ],
-            fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", Default::default())],
+            fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", FieldAccessFlags::PRIVATE)],
             access_flags: ClassAccessFlags::PUBLIC,
         }
     }

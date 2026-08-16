@@ -17,15 +17,15 @@ impl ArraysSortValue {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Comparable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(IIZ)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(IIZ)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("key", "I", Default::default()),
-                JavaFieldProto::new("id", "I", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
+                JavaFieldProto::new("key", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("id", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -62,7 +62,7 @@ impl ArraysComparator {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Comparator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(ZZ)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(ZZ)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "compare",
                     "(Ljava/lang/Object;Ljava/lang/Object;)I",
@@ -71,10 +71,10 @@ impl ArraysComparator {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("reverse", "Z", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
+                JavaFieldProto::new("reverse", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -118,11 +118,11 @@ impl ArraysEqualsProbe {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Z)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Z)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("result", "Z", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("result", "Z", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

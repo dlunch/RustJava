@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{RuntimeClassProto, RuntimeContext};
 use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
@@ -16,11 +16,11 @@ impl TestClass {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Runnable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("ran", "Z", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("ran", "Z", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

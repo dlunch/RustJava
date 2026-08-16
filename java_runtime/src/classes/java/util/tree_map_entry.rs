@@ -20,7 +20,7 @@ impl TreeMapEntry {
                     "<init>",
                     "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/TreeMap$Entry;)V",
                     Self::init,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
                 JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),

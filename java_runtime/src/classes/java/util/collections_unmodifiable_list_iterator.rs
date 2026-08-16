@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableListIterator {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/ListIterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/ListIterator;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/ListIterator;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hasPrevious", "()Z", Self::has_previous, MethodAccessFlags::PUBLIC),
@@ -32,7 +32,7 @@ impl CollectionsUnmodifiableListIterator {
                 "Ljava/util/ListIterator;",
                 FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
             )],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

@@ -16,7 +16,7 @@ impl CollectionsSingletonSet {
             parent_class: Some("java/util/AbstractSet"),
             interfaces: vec!["java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),

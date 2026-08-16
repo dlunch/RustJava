@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -63,10 +63,10 @@ impl Calendar {
                 JavaMethodProto::new_abstract("computeFields", "()V", MethodAccessFlags::PROTECTED | MethodAccessFlags::ABSTRACT),
             ],
             fields: vec![
-                JavaFieldProto::new("time", "J", Default::default()),
-                JavaFieldProto::new("fields", "[I", Default::default()),
-                JavaFieldProto::new("timeZone", "Ljava/util/TimeZone;", Default::default()),
-                JavaFieldProto::new("lenient", "Z", Default::default()),
+                JavaFieldProto::new("time", "J", FieldAccessFlags::PROTECTED),
+                JavaFieldProto::new("fields", "[I", FieldAccessFlags::PROTECTED),
+                JavaFieldProto::new("timeZone", "Ljava/util/TimeZone;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("lenient", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }

@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -22,7 +22,7 @@ impl TreeMapSubMap {
                     "<init>",
                     "(Ljava/util/TreeMap;ZLjava/lang/Object;ZLjava/lang/Object;)V",
                     Self::init,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
@@ -65,9 +65,19 @@ impl TreeMapSubMap {
                 JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, Default::default()),
-                JavaMethodProto::new("valueIterator", "()Ljava/util/Iterator;", Self::value_iterator, Default::default()),
-                JavaMethodProto::new("entryIterator", "()Ljava/util/Iterator;", Self::entry_iterator, Default::default()),
+                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
+                JavaMethodProto::new(
+                    "valueIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::value_iterator,
+                    MethodAccessFlags::empty(),
+                ),
+                JavaMethodProto::new(
+                    "entryIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::entry_iterator,
+                    MethodAccessFlags::empty(),
+                ),
             ],
             fields: vec![
                 JavaFieldProto::new("m", "Ljava/util/TreeMap;", FieldAccessFlags::PRIVATE),
@@ -76,7 +86,7 @@ impl TreeMapSubMap {
                 JavaFieldProto::new("toEnd", "Z", FieldAccessFlags::PRIVATE),
                 JavaFieldProto::new("toKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

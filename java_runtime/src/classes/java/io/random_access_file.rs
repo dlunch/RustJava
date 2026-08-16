@@ -3,7 +3,7 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -47,7 +47,11 @@ impl RandomAccessFile {
                 JavaMethodProto::new("setLength", "(J)V", Self::set_length, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
+            fields: vec![JavaFieldProto::new(
+                "fd",
+                "Ljava/io/FileDescriptor;",
+                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
+            )],
             access_flags: ClassAccessFlags::PUBLIC,
         }
     }

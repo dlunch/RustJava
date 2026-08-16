@@ -35,9 +35,9 @@ impl TreeTestComparator {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("reverse", "Z", Default::default()),
-                JavaFieldProto::new("allowNull", "Z", Default::default()),
-                JavaFieldProto::new("absolute", "Z", Default::default()),
+                JavaFieldProto::new("reverse", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("allowNull", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("absolute", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -109,8 +109,8 @@ impl TreeDirectionalKey {
                 JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("value", "I", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
+                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -150,8 +150,8 @@ impl TreeEqualsValue {
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("group", "I", Default::default()),
-                JavaFieldProto::new("answer", "Z", Default::default()),
+                JavaFieldProto::new("group", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("answer", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -205,10 +205,10 @@ impl TreeChangingEntry {
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("firstKey", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("secondKey", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("keyCalls", "I", Default::default()),
+                JavaFieldProto::new("firstKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("secondKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("keyCalls", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -289,10 +289,10 @@ impl TreeValueProbeEntry {
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("valueCalls", "I", Default::default()),
-                JavaFieldProto::new("throwValue", "Z", Default::default()),
+                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("valueCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("throwValue", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

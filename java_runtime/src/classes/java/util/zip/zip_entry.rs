@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
@@ -15,17 +16,22 @@ impl ZipEntry {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, Default::default()),
-                JavaMethodProto::new("<init>", "(Ljava/util/zip/ZipEntry;)V", Self::init_with_zip_entry, Default::default()),
-                JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, Default::default()),
-                JavaMethodProto::new("setSize", "(J)V", Self::set_size, Default::default()),
-                JavaMethodProto::new("getSize", "()J", Self::get_size, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/zip/ZipEntry;)V",
+                    Self::init_with_zip_entry,
+                    MethodAccessFlags::PUBLIC,
+                ),
+                JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("setSize", "(J)V", Self::set_size, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getSize", "()J", Self::get_size, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("name", "Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("size", "J", Default::default()),
+                JavaFieldProto::new("name", "Ljava/lang/String;", FieldAccessFlags::empty()),
+                JavaFieldProto::new("size", "J", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

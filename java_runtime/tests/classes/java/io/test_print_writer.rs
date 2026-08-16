@@ -24,27 +24,27 @@ impl ProbeWriter {
             parent_class: Some("java/io/Writer"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(III)V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
-                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("<init>", "(III)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("content", "Ljava/lang/StringBuffer;", Default::default()),
-                JavaFieldProto::new("writeMode", "I", Default::default()),
-                JavaFieldProto::new("flushMode", "I", Default::default()),
-                JavaFieldProto::new("closeMode", "I", Default::default()),
-                JavaFieldProto::new("writeCount", "I", Default::default()),
-                JavaFieldProto::new("flushCount", "I", Default::default()),
-                JavaFieldProto::new("closeCount", "I", Default::default()),
-                JavaFieldProto::new("blockFirstWrite", "Z", Default::default()),
-                JavaFieldProto::new("firstWriteEntered", "Z", Default::default()),
-                JavaFieldProto::new("releaseFirstWrite", "Z", Default::default()),
-                JavaFieldProto::new("blockFirstClose", "Z", Default::default()),
-                JavaFieldProto::new("firstCloseEntered", "Z", Default::default()),
-                JavaFieldProto::new("releaseFirstClose", "Z", Default::default()),
+                JavaFieldProto::new("content", "Ljava/lang/StringBuffer;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("writeMode", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("flushMode", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("closeMode", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("writeCount", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("flushCount", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("closeCount", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("blockFirstWrite", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("firstWriteEntered", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("releaseFirstWrite", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("blockFirstClose", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("firstCloseEntered", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("releaseFirstClose", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -160,12 +160,12 @@ impl OverridePrintWriter {
             parent_class: Some("java/io/PrintWriter"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/Writer;)V", Self::init, Default::default()),
-                JavaMethodProto::new("print", "(I)V", Self::print_int, Default::default()),
-                JavaMethodProto::new("println", "()V", Self::println, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/Writer;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("print", "(I)V", Self::print_int, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("println", "()V", Self::println, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -196,16 +196,16 @@ impl PrintWriterRunner {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Runnable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/PrintWriter;I)V", Self::init, Default::default()),
-                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/PrintWriter;I)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("writer", "Ljava/io/PrintWriter;", Default::default()),
-                JavaFieldProto::new("value", "I", Default::default()),
-                JavaFieldProto::new("started", "Z", Default::default()),
-                JavaFieldProto::new("done", "Z", Default::default()),
+                JavaFieldProto::new("writer", "Ljava/io/PrintWriter;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("started", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("done", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -241,15 +241,15 @@ impl PrintWriterCloseRunner {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Runnable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/PrintWriter;)V", Self::init, Default::default()),
-                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/PrintWriter;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("writer", "Ljava/io/PrintWriter;", Default::default()),
-                JavaFieldProto::new("started", "Z", Default::default()),
-                JavaFieldProto::new("done", "Z", Default::default()),
+                JavaFieldProto::new("writer", "Ljava/io/PrintWriter;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("started", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("done", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

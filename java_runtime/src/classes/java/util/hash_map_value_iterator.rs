@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -14,9 +15,14 @@ impl HashMapValueIterator {
             name: "java/util/HashMap$ValueIterator",
             parent_class: Some("java/util/HashMap$HashIterator"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, Default::default())],
+            methods: vec![JavaMethodProto::new(
+                "<init>",
+                "([Ljava/lang/Object;)V",
+                Self::init,
+                MethodAccessFlags::empty(),
+            )],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::FINAL,
         }
     }
 

@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -20,21 +20,26 @@ impl HashtableEntry {
                     "<init>",
                     "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/Hashtable$Entry;)V",
                     Self::init,
-                    Default::default(),
+                    MethodAccessFlags::PROTECTED,
                 ),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, Default::default()),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, Default::default()),
-                JavaMethodProto::new("setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::set_value, Default::default()),
+                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "setValue",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::set_value,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("hash", "I", Default::default()),
-                JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("next", "Ljava/util/Hashtable$Entry;", Default::default()),
+                JavaFieldProto::new("hash", "I", FieldAccessFlags::FINAL),
+                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::empty()),
+                JavaFieldProto::new("next", "Ljava/util/Hashtable$Entry;", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

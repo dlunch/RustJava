@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -18,14 +19,14 @@ impl LinkedListEntry {
                 "<init>",
                 "(Ljava/lang/Object;Ljava/util/LinkedList$Entry;Ljava/util/LinkedList$Entry;)V",
                 Self::init,
-                Default::default(),
+                MethodAccessFlags::empty(),
             )],
             fields: vec![
-                JavaFieldProto::new("element", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("next", "Ljava/util/LinkedList$Entry;", Default::default()),
-                JavaFieldProto::new("previous", "Ljava/util/LinkedList$Entry;", Default::default()),
+                JavaFieldProto::new("element", "Ljava/lang/Object;", FieldAccessFlags::empty()),
+                JavaFieldProto::new("next", "Ljava/util/LinkedList$Entry;", FieldAccessFlags::empty()),
+                JavaFieldProto::new("previous", "Ljava/util/LinkedList$Entry;", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

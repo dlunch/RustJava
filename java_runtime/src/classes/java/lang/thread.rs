@@ -110,7 +110,7 @@ impl Thread {
                     MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
                 ),
                 // rustjava internal
-                JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, Default::default()),
+                JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, MethodAccessFlags::PRIVATE),
             ],
             fields: vec![
                 JavaFieldProto::new(

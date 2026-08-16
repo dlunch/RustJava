@@ -64,9 +64,19 @@ impl TreeMap {
                 JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, Default::default()),
-                JavaMethodProto::new("valueIterator", "()Ljava/util/Iterator;", Self::value_iterator, Default::default()),
-                JavaMethodProto::new("entryIterator", "()Ljava/util/Iterator;", Self::entry_iterator, Default::default()),
+                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
+                JavaMethodProto::new(
+                    "valueIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::value_iterator,
+                    MethodAccessFlags::empty(),
+                ),
+                JavaMethodProto::new(
+                    "entryIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::entry_iterator,
+                    MethodAccessFlags::empty(),
+                ),
             ],
             fields: vec![
                 JavaFieldProto::new(

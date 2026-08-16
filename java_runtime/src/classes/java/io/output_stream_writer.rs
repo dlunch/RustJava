@@ -1,7 +1,7 @@
 use alloc::{string::String as RustString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -34,10 +34,10 @@ impl OutputStreamWriter {
                 JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("out", "Ljava/io/OutputStream;", Default::default()),
-                JavaFieldProto::new("encoding", "Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("pendingHighSurrogate", "C", Default::default()),
-                JavaFieldProto::new("hasPendingHighSurrogate", "Z", Default::default()),
+                JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("encoding", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("pendingHighSurrogate", "C", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("hasPendingHighSurrogate", "Z", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

@@ -28,10 +28,10 @@ impl TimerTask {
             ],
             fields: vec![
                 JavaFieldProto::new("lock", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("state", "I", Default::default()),
-                JavaFieldProto::new("nextExecutionTime", "J", Default::default()),
-                JavaFieldProto::new("period", "J", Default::default()),
-                JavaFieldProto::new("lastScheduledExecutionTime", "J", Default::default()),
+                JavaFieldProto::new("state", "I", FieldAccessFlags::empty()),
+                JavaFieldProto::new("nextExecutionTime", "J", FieldAccessFlags::empty()),
+                JavaFieldProto::new("period", "J", FieldAccessFlags::empty()),
+                JavaFieldProto::new("lastScheduledExecutionTime", "J", FieldAccessFlags::empty()),
             ],
             access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }

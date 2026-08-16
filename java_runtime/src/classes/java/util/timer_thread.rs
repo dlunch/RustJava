@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result};
 
 use crate::{
@@ -25,14 +25,14 @@ impl TimerThread {
             parent_class: Some("java/lang/Thread"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Timer$TaskQueue;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Timer$TaskQueue;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
                 JavaFieldProto::new("queue", "Ljava/util/Timer$TaskQueue;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("newTasksMayBeScheduled", "Z", Default::default()),
+                JavaFieldProto::new("newTasksMayBeScheduled", "Z", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

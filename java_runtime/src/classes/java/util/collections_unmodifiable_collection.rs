@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableCollection {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Collection", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
@@ -38,7 +38,7 @@ impl CollectionsUnmodifiableCollection {
                 JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("c", "Ljava/util/Collection;", FieldAccessFlags::FINAL)],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

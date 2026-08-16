@@ -21,11 +21,11 @@ impl CollectionsSortValue {
                 JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("key", "I", Default::default()),
-                JavaFieldProto::new("id", "I", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
+                JavaFieldProto::new("key", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("id", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -73,11 +73,11 @@ impl CollectionsComparator {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("reverse", "Z", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
-                JavaFieldProto::new("allowNull", "Z", Default::default()),
+                JavaFieldProto::new("reverse", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("allowNull", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -162,11 +162,11 @@ impl CollectionsProbeList {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("elements", "[Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("listIteratorCalls", "I", Default::default()),
-                JavaFieldProto::new("setCalls", "I", Default::default()),
+                JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("listIteratorCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("setCalls", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -247,8 +247,8 @@ impl CollectionsInvalidRandom {
                 JavaMethodProto::new("<init>", "(I)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("nextInt", "(I)I", Self::next_int, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("result", "I", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("result", "I", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -277,10 +277,10 @@ impl CollectionsExceptionalSet {
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("element", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("mode", "I", Default::default()),
+                JavaFieldProto::new("element", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("mode", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -335,8 +335,8 @@ impl CollectionsAsymmetricEquals {
                 JavaMethodProto::new("<init>", "(Z)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("result", "Z", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("result", "Z", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -363,11 +363,11 @@ impl CollectionsEqualsProbe {
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("result", "Z", Default::default()),
-                JavaFieldProto::new("fail", "Z", Default::default()),
-                JavaFieldProto::new("equalsCalls", "I", Default::default()),
+                JavaFieldProto::new("result", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("fail", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("equalsCalls", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -413,15 +413,15 @@ impl CollectionsEntryProbe {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("throwKey", "Z", Default::default()),
-                JavaFieldProto::new("throwValue", "Z", Default::default()),
-                JavaFieldProto::new("keyCalls", "I", Default::default()),
-                JavaFieldProto::new("valueCalls", "I", Default::default()),
-                JavaFieldProto::new("setValueCalls", "I", Default::default()),
+                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("throwKey", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("throwValue", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("keyCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("valueCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("setValueCalls", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

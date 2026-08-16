@@ -1,7 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -47,29 +47,39 @@ impl HashMap {
                 JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("initializeMap", "()V", Self::initialize_map, Default::default()),
+                JavaMethodProto::new("initializeMap", "()V", Self::initialize_map, MethodAccessFlags::empty()),
                 JavaMethodProto::new(
                     "storeNewEntry",
                     "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                     Self::store_new_entry,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
                 JavaMethodProto::new(
                     "insertNewEntry",
                     "(ILjava/lang/Object;Ljava/lang/Object;I)V",
                     Self::insert_new_entry,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, Default::default()),
-                JavaMethodProto::new("valueIterator", "()Ljava/util/Iterator;", Self::value_iterator, Default::default()),
-                JavaMethodProto::new("entryIterator", "()Ljava/util/Iterator;", Self::entry_iterator, Default::default()),
+                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
+                JavaMethodProto::new(
+                    "valueIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::value_iterator,
+                    MethodAccessFlags::empty(),
+                ),
+                JavaMethodProto::new(
+                    "entryIterator",
+                    "()Ljava/util/Iterator;",
+                    Self::entry_iterator,
+                    MethodAccessFlags::empty(),
+                ),
             ],
             fields: vec![
-                JavaFieldProto::new("table", "[Ljava/util/HashMap$Entry;", Default::default()),
-                JavaFieldProto::new("size", "I", Default::default()),
-                JavaFieldProto::new("threshold", "I", Default::default()),
-                JavaFieldProto::new("loadFactor", "F", Default::default()),
-                JavaFieldProto::new("modCount", "I", Default::default()),
+                JavaFieldProto::new("table", "[Ljava/util/HashMap$Entry;", FieldAccessFlags::TRANSIENT),
+                JavaFieldProto::new("size", "I", FieldAccessFlags::TRANSIENT),
+                JavaFieldProto::new("threshold", "I", FieldAccessFlags::empty()),
+                JavaFieldProto::new("loadFactor", "F", FieldAccessFlags::FINAL),
+                JavaFieldProto::new("modCount", "I", FieldAccessFlags::TRANSIENT),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

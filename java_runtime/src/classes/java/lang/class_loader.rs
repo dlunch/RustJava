@@ -1,7 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -74,9 +74,9 @@ impl ClassLoader {
             ],
             fields: vec![
                 JavaFieldProto::new("systemClassLoader", "Ljava/lang/ClassLoader;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", Default::default()),
+                JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }
     }
 

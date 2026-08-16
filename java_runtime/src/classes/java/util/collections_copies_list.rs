@@ -16,7 +16,7 @@ impl CollectionsCopiesList {
             parent_class: Some("java/util/AbstractList"),
             interfaces: vec!["java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(ILjava/lang/Object;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(ILjava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),

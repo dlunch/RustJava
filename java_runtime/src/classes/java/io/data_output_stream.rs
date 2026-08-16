@@ -3,6 +3,7 @@ use alloc::{vec, vec::Vec};
 use bytemuck::cast_vec;
 
 use java_class_proto::JavaMethodProto;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
@@ -20,24 +21,74 @@ impl DataOutputStream {
             parent_class: Some("java/io/FilterOutputStream"),
             interfaces: vec!["java/io/DataOutput"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
-                JavaMethodProto::new("writeByte", "(I)V", Self::write_byte, Default::default()),
-                JavaMethodProto::new("writeBoolean", "(Z)V", Self::write_boolean, Default::default()),
-                JavaMethodProto::new("writeInt", "(I)V", Self::write_int, Default::default()),
-                JavaMethodProto::new("writeShort", "(I)V", Self::write_short, Default::default()),
-                JavaMethodProto::new("writeChar", "(I)V", Self::write_char, Default::default()),
-                JavaMethodProto::new("writeLong", "(J)V", Self::write_long, Default::default()),
-                JavaMethodProto::new("writeFloat", "(F)V", Self::write_float, Default::default()),
-                JavaMethodProto::new("writeDouble", "(D)V", Self::write_double, Default::default()),
-                JavaMethodProto::new("writeBytes", "(Ljava/lang/String;)V", Self::write_bytes, Default::default()),
-                JavaMethodProto::new("writeChars", "(Ljava/lang/String;)V", Self::write_chars, Default::default()),
-                JavaMethodProto::new("writeUTF", "(Ljava/lang/String;)V", Self::write_utf, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
-                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
+                JavaMethodProto::new(
+                    "writeByte",
+                    "(I)V",
+                    Self::write_byte,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeBoolean",
+                    "(Z)V",
+                    Self::write_boolean,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("writeInt", "(I)V", Self::write_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new(
+                    "writeShort",
+                    "(I)V",
+                    Self::write_short,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeChar",
+                    "(I)V",
+                    Self::write_char,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeLong",
+                    "(J)V",
+                    Self::write_long,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeFloat",
+                    "(F)V",
+                    Self::write_float,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeDouble",
+                    "(D)V",
+                    Self::write_double,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeBytes",
+                    "(Ljava/lang/String;)V",
+                    Self::write_bytes,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeChars",
+                    "(Ljava/lang/String;)V",
+                    Self::write_chars,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "writeUTF",
+                    "(Ljava/lang/String;)V",
+                    Self::write_utf,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

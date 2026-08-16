@@ -1,7 +1,7 @@
 use alloc::{format, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{
     Array, ClassInstanceRef, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
@@ -45,8 +45,8 @@ impl URLClassLoader {
                     MethodAccessFlags::PUBLIC,
                 ),
             ],
-            fields: vec![JavaFieldProto::new("urls", "[Ljava/net/URL;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("urls", "[Ljava/net/URL;", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

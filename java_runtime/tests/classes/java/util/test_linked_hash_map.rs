@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object, get_runtime_class_proto};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
@@ -26,8 +26,8 @@ impl LimitedLinkedHashMap {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("limit", "I", Default::default()),
-                JavaFieldProto::new("callbacks", "I", Default::default()),
+                JavaFieldProto::new("limit", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("callbacks", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

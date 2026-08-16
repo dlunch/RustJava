@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, AsClassInstance, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableMapEntrySet {
             parent_class: Some("java/util/Collections$UnmodifiableSet"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Set;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Set;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
@@ -30,7 +30,7 @@ impl CollectionsUnmodifiableMapEntrySet {
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

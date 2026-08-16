@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object, get_runtime_class_proto};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
@@ -21,7 +21,7 @@ impl SnapshotCollection {
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("elements", "[Ljava/lang/Object;", Default::default())],
+            fields: vec![JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE)],
             access_flags: ClassAccessFlags::PUBLIC,
         }
     }
@@ -57,8 +57,8 @@ impl SnapshotIterator {
                 JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("elements", "[Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("index", "I", Default::default()),
+                JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("index", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -169,8 +169,8 @@ impl ConfigurableEqualsValue {
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("result", "Z", Default::default()),
-                JavaFieldProto::new("equalsCalls", "I", Default::default()),
+                JavaFieldProto::new("result", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("equalsCalls", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -214,12 +214,12 @@ impl StatefulMapEntry {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("firstKey", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("laterKey", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("mode", "I", Default::default()),
-                JavaFieldProto::new("keyCalls", "I", Default::default()),
-                JavaFieldProto::new("valueCalls", "I", Default::default()),
+                JavaFieldProto::new("firstKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("laterKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("mode", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("keyCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("valueCalls", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }
@@ -291,8 +291,8 @@ impl ThrowingMap {
                 JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("size", "I", Default::default()),
-                JavaFieldProto::new("mode", "I", Default::default()),
+                JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("mode", "I", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

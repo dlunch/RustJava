@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::JavaMethodProto;
-use java_constants::ClassAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 
 use crate::RuntimeClassProto;
 
@@ -15,20 +15,32 @@ impl DataOutput {
             parent_class: None,
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new_abstract("write", "(I)V", Default::default()),
-                JavaMethodProto::new_abstract("write", "([B)V", Default::default()),
-                JavaMethodProto::new_abstract("write", "([BII)V", Default::default()),
-                JavaMethodProto::new_abstract("writeByte", "(I)V", Default::default()),
-                JavaMethodProto::new_abstract("writeBoolean", "(Z)V", Default::default()),
-                JavaMethodProto::new_abstract("writeInt", "(I)V", Default::default()),
-                JavaMethodProto::new_abstract("writeShort", "(I)V", Default::default()),
-                JavaMethodProto::new_abstract("writeChar", "(I)V", Default::default()),
-                JavaMethodProto::new_abstract("writeLong", "(J)V", Default::default()),
-                JavaMethodProto::new_abstract("writeFloat", "(F)V", Default::default()),
-                JavaMethodProto::new_abstract("writeDouble", "(D)V", Default::default()),
-                JavaMethodProto::new_abstract("writeBytes", "(Ljava/lang/String;)V", Default::default()),
-                JavaMethodProto::new_abstract("writeChars", "(Ljava/lang/String;)V", Default::default()),
-                JavaMethodProto::new_abstract("writeUTF", "(Ljava/lang/String;)V", Default::default()),
+                JavaMethodProto::new_abstract("write", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("write", "([B)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("write", "([BII)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeByte", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeBoolean", "(Z)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeInt", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeShort", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeChar", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeLong", "(J)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeFloat", "(F)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract("writeDouble", "(D)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
+                JavaMethodProto::new_abstract(
+                    "writeBytes",
+                    "(Ljava/lang/String;)V",
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
+                ),
+                JavaMethodProto::new_abstract(
+                    "writeChars",
+                    "(Ljava/lang/String;)V",
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
+                ),
+                JavaMethodProto::new_abstract(
+                    "writeUTF",
+                    "(Ljava/lang/String;)V",
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
+                ),
             ],
             fields: vec![],
             access_flags: ClassAccessFlags::INTERFACE,

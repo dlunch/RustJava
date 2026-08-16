@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -21,16 +22,16 @@ impl LinkedHashMapEntry {
                     "<init>",
                     "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
                     Self::init,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
-                JavaMethodProto::new("onAccess", "(Ljava/util/HashMap;)V", Self::on_access, Default::default()),
-                JavaMethodProto::new("onRemoval", "(Ljava/util/HashMap;)V", Self::on_removal, Default::default()),
+                JavaMethodProto::new("onAccess", "(Ljava/util/HashMap;)V", Self::on_access, MethodAccessFlags::empty()),
+                JavaMethodProto::new("onRemoval", "(Ljava/util/HashMap;)V", Self::on_removal, MethodAccessFlags::empty()),
             ],
             fields: vec![
-                JavaFieldProto::new("before", "Ljava/util/LinkedHashMap$Entry;", Default::default()),
-                JavaFieldProto::new("after", "Ljava/util/LinkedHashMap$Entry;", Default::default()),
+                JavaFieldProto::new("before", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::empty()),
+                JavaFieldProto::new("after", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

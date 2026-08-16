@@ -8,7 +8,7 @@ use std::io::{Cursor, Read};
 use zip::ZipArchive;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -45,7 +45,7 @@ impl ZipFile {
                 ),
                 JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("zipData", "[B", Default::default())],
+            fields: vec![JavaFieldProto::new("zipData", "[B", FieldAccessFlags::PRIVATE)],
             access_flags: ClassAccessFlags::PUBLIC,
         }
     }

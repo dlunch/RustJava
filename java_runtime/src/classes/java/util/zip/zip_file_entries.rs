@@ -1,6 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -21,16 +22,21 @@ impl ZipFileEntries {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Enumeration"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/zip/ZipFile;[Ljava/lang/String;)V", Self::init, Default::default()),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, Default::default()),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, Default::default()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/zip/ZipFile;[Ljava/lang/String;)V",
+                    Self::init,
+                    MethodAccessFlags::empty(),
+                ),
+                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("zipFile", "Ljava/util/zip/ZipFile;", Default::default()),
-                JavaFieldProto::new("names", "[Ljava/lang/String;", Default::default()),
-                JavaFieldProto::new("i", "I", Default::default()),
+                JavaFieldProto::new("zipFile", "Ljava/util/zip/ZipFile;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("names", "[Ljava/lang/String;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("i", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

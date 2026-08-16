@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -20,7 +20,7 @@ impl AbstractListSubList {
                     "<init>",
                     "(Ljava/util/List;Ljava/util/AbstractList$SubList;II)V",
                     Self::init,
-                    Default::default(),
+                    MethodAccessFlags::empty(),
                 ),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
@@ -50,12 +50,16 @@ impl AbstractListSubList {
                 JavaMethodProto::new("subList", "(II)Ljava/util/List;", Self::sub_list, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("root", "Ljava/util/List;", Default::default()),
-                JavaFieldProto::new("parent", "Ljava/util/AbstractList$SubList;", Default::default()),
-                JavaFieldProto::new("offset", "I", Default::default()),
-                JavaFieldProto::new("size", "I", Default::default()),
+                JavaFieldProto::new("root", "Ljava/util/List;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new(
+                    "parent",
+                    "Ljava/util/AbstractList$SubList;",
+                    FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
+                ),
+                JavaFieldProto::new("offset", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
+                JavaFieldProto::new("size", "I", FieldAccessFlags::PROTECTED),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

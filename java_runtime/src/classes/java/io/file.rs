@@ -46,7 +46,7 @@ impl File {
                     "Ljava/lang/String;",
                     FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
                 ),
-                JavaFieldProto::new("path", "Ljava/lang/String;", Default::default()),
+                JavaFieldProto::new("path", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

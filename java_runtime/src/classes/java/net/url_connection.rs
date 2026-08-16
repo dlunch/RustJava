@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -27,8 +27,8 @@ impl URLConnection {
                     MethodAccessFlags::PUBLIC,
                 ),
             ],
-            fields: vec![JavaFieldProto::new("url", "Ljava/net/URL;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("url", "Ljava/net/URL;", FieldAccessFlags::PROTECTED)],
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
         }
     }
 

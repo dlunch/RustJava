@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableMap {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Map", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
@@ -53,7 +53,7 @@ impl CollectionsUnmodifiableMap {
                     FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT,
                 ),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

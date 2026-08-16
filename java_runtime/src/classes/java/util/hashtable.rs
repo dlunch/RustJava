@@ -1,7 +1,7 @@
 use alloc::{string::String as RustString, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -108,10 +108,14 @@ impl Hashtable {
                 ),
             ],
             fields: vec![
-                JavaFieldProto::new("table", "[Ljava/util/Hashtable$Entry;", Default::default()),
-                JavaFieldProto::new("count", "I", Default::default()),
-                JavaFieldProto::new("threshold", "I", Default::default()),
-                JavaFieldProto::new("loadFactor", "F", Default::default()),
+                JavaFieldProto::new(
+                    "table",
+                    "[Ljava/util/Hashtable$Entry;",
+                    FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT,
+                ),
+                JavaFieldProto::new("count", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT),
+                JavaFieldProto::new("threshold", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("loadFactor", "F", FieldAccessFlags::PRIVATE),
             ],
             access_flags: ClassAccessFlags::PUBLIC,
         }

@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableSortedSet {
             parent_class: Some("java/util/Collections$UnmodifiableSet"),
             interfaces: vec!["java/util/SortedSet", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedSet;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/SortedSet;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("first", "()Ljava/lang/Object;", Self::first, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("last", "()Ljava/lang/Object;", Self::last, MethodAccessFlags::PUBLIC),
@@ -44,7 +44,7 @@ impl CollectionsUnmodifiableSortedSet {
                 "Ljava/util/SortedSet;",
                 FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
             )],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

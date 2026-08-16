@@ -7,6 +7,7 @@ use core::{
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, sync::Arc, vec};
 
 use java_class_proto::JavaFieldProto;
+use java_constants::{ClassAccessFlags, FieldAccessFlags};
 use java_runtime::{Runtime, RuntimeClassProto, SpawnCallback, classes::java::lang::Object};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result};
 use jvm_rust::ClassDefinitionImpl;
@@ -23,10 +24,10 @@ impl CloneableObject {
             interfaces: vec!["java/lang/Cloneable"],
             methods: vec![],
             fields: vec![
-                JavaFieldProto::new("value", "I", Default::default()),
-                JavaFieldProto::new("reference", "Ljava/lang/Object;", Default::default()),
+                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("reference", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 }

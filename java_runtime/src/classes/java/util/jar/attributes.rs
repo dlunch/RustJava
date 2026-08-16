@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
@@ -15,17 +16,22 @@ impl Attributes {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Cloneable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "putValue",
                     "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
                     Self::put_value,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("getValue", "(Ljava/lang/String;)Ljava/lang/String;", Self::get_value, Default::default()),
+                JavaMethodProto::new(
+                    "getValue",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    Self::get_value,
+                    MethodAccessFlags::PUBLIC,
+                ),
             ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/Map;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("map", "Ljava/util/Map;", FieldAccessFlags::PROTECTED)],
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

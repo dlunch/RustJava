@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableSortedMap {
             parent_class: Some("java/util/Collections$UnmodifiableMap"),
             interfaces: vec!["java/util/SortedMap", "java/io/Serializable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("firstKey", "()Ljava/lang/Object;", Self::first_key, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("lastKey", "()Ljava/lang/Object;", Self::last_key, MethodAccessFlags::PUBLIC),
@@ -44,7 +44,7 @@ impl CollectionsUnmodifiableSortedMap {
                 "Ljava/util/SortedMap;",
                 FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
             )],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

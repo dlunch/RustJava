@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::FieldAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::TimerTask};
@@ -15,12 +15,12 @@ impl TimerTaskQueue {
             name: "java/util/Timer$TaskQueue",
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, Default::default())],
+            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::empty())],
             fields: vec![
                 JavaFieldProto::new("queue", "[Ljava/util/TimerTask;", FieldAccessFlags::PRIVATE),
                 JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{ClassAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 
 use crate::{
@@ -25,7 +25,11 @@ impl StringWriter {
                 JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("buf", "Ljava/lang/StringBuffer;", Default::default())],
+            fields: vec![JavaFieldProto::new(
+                "buf",
+                "Ljava/lang/StringBuffer;",
+                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
+            )],
             access_flags: ClassAccessFlags::PUBLIC,
         }
     }

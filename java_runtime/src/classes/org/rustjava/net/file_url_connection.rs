@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -22,7 +22,7 @@ impl FileURLConnection {
             parent_class: Some("java/net/URLConnection"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/net/URL;Ljava/io/File;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new(
                     "getInputStream",
                     "()Ljava/io/InputStream;",
@@ -30,8 +30,8 @@ impl FileURLConnection {
                     MethodAccessFlags::PUBLIC,
                 ),
             ],
-            fields: vec![JavaFieldProto::new("file", "Ljava/io/File;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("file", "Ljava/io/File;", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

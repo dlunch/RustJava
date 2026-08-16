@@ -3,7 +3,7 @@ use alloc::vec;
 use bytemuck::cast_slice;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -21,23 +21,23 @@ impl FileOutputStream {
             parent_class: Some("java/io/OutputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/io/File;Z)V", Self::init_with_append, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/io/FileDescriptor;)V",
                     Self::init_with_file_descriptor,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, Default::default()),
-                JavaMethodProto::new("write", "(I)V", Self::write, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default()),
+                JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
                 JavaFieldProto::new("append", "Z", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

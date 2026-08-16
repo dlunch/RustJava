@@ -2,6 +2,7 @@ use alloc::{boxed::Box, collections::BTreeMap, vec};
 use core::time::Duration;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
@@ -22,20 +23,20 @@ impl LockCheckingWriter {
             parent_class: Some("java/io/Writer"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(IZ)V", Self::init, Default::default()),
-                JavaMethodProto::new("write", "([CII)V", Self::write, Default::default()),
-                JavaMethodProto::new("flush", "()V", Self::flush, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("<init>", "(IZ)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("failWrites", "I", Default::default()),
-                JavaFieldProto::new("failClose", "Z", Default::default()),
-                JavaFieldProto::new("writeCalls", "I", Default::default()),
-                JavaFieldProto::new("flushCalls", "I", Default::default()),
-                JavaFieldProto::new("closeCalls", "I", Default::default()),
-                JavaFieldProto::new("written", "I", Default::default()),
+                JavaFieldProto::new("failWrites", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("failClose", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("writeCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("flushCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("closeCalls", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("written", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -95,16 +96,16 @@ impl StreamOperationRunner {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Runnable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Object;I)V", Self::init, Default::default()),
-                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Object;I)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("target", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("operation", "I", Default::default()),
-                JavaFieldProto::new("started", "Z", Default::default()),
-                JavaFieldProto::new("done", "Z", Default::default()),
+                JavaFieldProto::new("target", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("operation", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("started", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("done", "Z", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

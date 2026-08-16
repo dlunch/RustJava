@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object, classes::java::util::HashMapEntry};
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_rust::ClassDefinitionImpl;
@@ -16,12 +17,12 @@ impl AsymmetricStoredKey {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -49,12 +50,12 @@ impl AsymmetricQueryKey {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -86,12 +87,12 @@ impl CollisionKey {
             parent_class: Some("java/lang/Object"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(I)V", Self::init, Default::default()),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, Default::default()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, Default::default()),
+                JavaMethodProto::new("<init>", "(I)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("id", "I", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new("id", "I", FieldAccessFlags::PRIVATE)],
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -127,16 +128,21 @@ impl CustomMapEntry {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Map$Entry"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V", Self::init, Default::default()),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, Default::default()),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, Default::default()),
-                JavaMethodProto::new("setValue", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::set_value, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "setValue",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;",
+                    Self::set_value,
+                    MethodAccessFlags::PUBLIC,
+                ),
             ],
             fields: vec![
-                JavaFieldProto::new("key", "Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", Default::default()),
+                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

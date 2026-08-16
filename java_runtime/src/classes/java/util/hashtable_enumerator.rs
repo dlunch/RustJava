@@ -1,6 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -15,18 +16,18 @@ impl HashtableEnumerator {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Enumeration", "java/util/Iterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, Default::default()),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, Default::default()),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, Default::default()),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, Default::default()),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, Default::default()),
-                JavaMethodProto::new("remove", "()V", Self::remove, Default::default()),
+                JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
+                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("elements", "[Ljava/lang/Object;", Default::default()),
-                JavaFieldProto::new("index", "I", Default::default()),
+                JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("index", "I", FieldAccessFlags::empty()),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

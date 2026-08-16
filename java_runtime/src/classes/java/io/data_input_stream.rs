@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -22,30 +22,70 @@ impl DataInputStream {
             parent_class: Some("java/io/FilterInputStream"),
             interfaces: vec!["java/io/DataInput"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, Default::default()),
-                JavaMethodProto::new("readBoolean", "()Z", Self::read_boolean, Default::default()),
-                JavaMethodProto::new("readByte", "()B", Self::read_byte, Default::default()),
-                JavaMethodProto::new("readChar", "()C", Self::read_char, Default::default()),
-                JavaMethodProto::new("readDouble", "()D", Self::read_double, Default::default()),
-                JavaMethodProto::new("readFloat", "()F", Self::read_float, Default::default()),
-                JavaMethodProto::new("readFully", "([B)V", Self::read_fully, Default::default()),
-                JavaMethodProto::new("readFully", "([BII)V", Self::read_fully_offset_length, Default::default()),
-                JavaMethodProto::new("readInt", "()I", Self::read_int, Default::default()),
-                JavaMethodProto::new("readLong", "()J", Self::read_long, Default::default()),
-                JavaMethodProto::new("readShort", "()S", Self::read_short, Default::default()),
-                JavaMethodProto::new("readUnsignedByte", "()I", Self::read_unsigned_byte, Default::default()),
-                JavaMethodProto::new("readUnsignedShort", "()I", Self::read_unsigned_short, Default::default()),
-                JavaMethodProto::new("readUTF", "()Ljava/lang/String;", Self::read_utf, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new(
+                    "readBoolean",
+                    "()Z",
+                    Self::read_boolean,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("readByte", "()B", Self::read_byte, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("readChar", "()C", Self::read_char, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new(
+                    "readDouble",
+                    "()D",
+                    Self::read_double,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("readFloat", "()F", Self::read_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new(
+                    "readFully",
+                    "([B)V",
+                    Self::read_fully,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "readFully",
+                    "([BII)V",
+                    Self::read_fully_offset_length,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new("readInt", "()I", Self::read_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("readLong", "()J", Self::read_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new("readShort", "()S", Self::read_short, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
+                JavaMethodProto::new(
+                    "readUnsignedByte",
+                    "()I",
+                    Self::read_unsigned_byte,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "readUnsignedShort",
+                    "()I",
+                    Self::read_unsigned_short,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
+                JavaMethodProto::new(
+                    "readUTF",
+                    "()Ljava/lang/String;",
+                    Self::read_utf,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
                 JavaMethodProto::new(
                     "readUTF",
                     "(Ljava/io/DataInput;)Ljava/lang/String;",
                     Self::read_utf_from_input,
                     MethodAccessFlags::STATIC,
                 ),
-                JavaMethodProto::new("skipBytes", "(I)I", Self::skip_bytes, Default::default()),
+                JavaMethodProto::new(
+                    "skipBytes",
+                    "(I)I",
+                    Self::skip_bytes,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
+                ),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

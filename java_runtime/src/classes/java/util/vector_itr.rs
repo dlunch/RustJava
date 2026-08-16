@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,17 +16,17 @@ impl VectorItr {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Iterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Vector;I)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Vector;I)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("list", "Ljava/util/Vector;", Default::default()),
-                JavaFieldProto::new("cursor", "I", Default::default()),
-                JavaFieldProto::new("lastReturned", "I", Default::default()),
+                JavaFieldProto::new("list", "Ljava/util/Vector;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("cursor", "I", FieldAccessFlags::empty()),
+                JavaFieldProto::new("lastReturned", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -36,7 +36,7 @@ impl VectorItr {
             parent_class: Some("java/util/Vector$Itr"),
             interfaces: vec!["java/util/ListIterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Vector;I)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/Vector;I)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("hasPrevious", "()Z", Self::has_previous, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("previous", "()Ljava/lang/Object;", Self::previous, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("nextIndex", "()I", Self::next_index, MethodAccessFlags::PUBLIC),
@@ -45,7 +45,7 @@ impl VectorItr {
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)V", Self::add, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::FINAL,
         }
     }
 

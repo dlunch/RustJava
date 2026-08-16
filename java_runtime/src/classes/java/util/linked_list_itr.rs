@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl LinkedListItr {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/ListIterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/LinkedList;I)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/LinkedList;I)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hasPrevious", "()Z", Self::has_previous, MethodAccessFlags::PUBLIC),
@@ -28,11 +28,11 @@ impl LinkedListItr {
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)V", Self::add, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("list", "Ljava/util/LinkedList;", Default::default()),
-                JavaFieldProto::new("cursor", "I", Default::default()),
-                JavaFieldProto::new("lastReturned", "I", Default::default()),
+                JavaFieldProto::new("list", "Ljava/util/LinkedList;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("cursor", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("lastReturned", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

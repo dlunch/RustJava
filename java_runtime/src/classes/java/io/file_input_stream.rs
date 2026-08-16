@@ -3,6 +3,7 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 
 use crate::{
@@ -20,20 +21,24 @@ impl FileInputStream {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new(
                     "<init>",
                     "(Ljava/io/FileDescriptor;)V",
                     Self::init_with_file_descriptor,
-                    Default::default(),
+                    MethodAccessFlags::PUBLIC,
                 ),
-                JavaMethodProto::new("read", "()I", Self::read_byte, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read_array, Default::default()),
-                JavaMethodProto::new("available", "()I", Self::available, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("read", "()I", Self::read_byte, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([BII)I", Self::read_array, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("available", "()I", Self::available, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
-            fields: vec![JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", Default::default())],
-            access_flags: Default::default(),
+            fields: vec![JavaFieldProto::new(
+                "fd",
+                "Ljava/io/FileDescriptor;",
+                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
+            )],
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

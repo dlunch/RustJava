@@ -3,7 +3,7 @@ use alloc::{string::String as RustString, vec, vec::Vec};
 use jvm::{JavaValue, runtime::JavaLangString};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 
 use crate::{
@@ -107,7 +107,7 @@ impl System {
                 ),
                 JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
         }
     }
 

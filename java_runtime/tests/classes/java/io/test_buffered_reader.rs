@@ -2,6 +2,7 @@ use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 use core::time::Duration;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
@@ -23,21 +24,21 @@ impl ChunkedReader {
             parent_class: Some("java/io/Reader"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([CI)V", Self::init, Default::default()),
-                JavaMethodProto::new("read", "([CII)I", Self::read, Default::default()),
-                JavaMethodProto::new("ready", "()Z", Self::ready, Default::default()),
-                JavaMethodProto::new("close", "()V", Self::close, Default::default()),
+                JavaMethodProto::new("<init>", "([CI)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([CII)I", Self::read, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("data", "[C", Default::default()),
-                JavaFieldProto::new("position", "I", Default::default()),
-                JavaFieldProto::new("chunkSize", "I", Default::default()),
-                JavaFieldProto::new("visibleLength", "I", Default::default()),
-                JavaFieldProto::new("zeroReads", "I", Default::default()),
-                JavaFieldProto::new("closed", "Z", Default::default()),
-                JavaFieldProto::new("closeCount", "I", Default::default()),
+                JavaFieldProto::new("data", "[C", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("position", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("chunkSize", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("visibleLength", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("zeroReads", "I", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("closed", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("closeCount", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
@@ -131,16 +132,16 @@ impl ReadRunner {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/lang/Runnable"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/BufferedReader;)V", Self::init, Default::default()),
-                JavaMethodProto::new("run", "()V", Self::run, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/io/BufferedReader;)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("reader", "Ljava/io/BufferedReader;", Default::default()),
-                JavaFieldProto::new("started", "Z", Default::default()),
-                JavaFieldProto::new("done", "Z", Default::default()),
-                JavaFieldProto::new("value", "I", Default::default()),
+                JavaFieldProto::new("reader", "Ljava/io/BufferedReader;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("started", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("done", "Z", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

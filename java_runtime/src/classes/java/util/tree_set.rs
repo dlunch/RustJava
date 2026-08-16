@@ -21,7 +21,7 @@ impl TreeSet {
                 JavaMethodProto::new("<init>", "(Ljava/util/Comparator;)V", Self::init_comparator, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init_collection, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/util/SortedSet;)V", Self::init_sorted_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init_sorted_map, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init_sorted_map, MethodAccessFlags::PRIVATE),
                 JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),

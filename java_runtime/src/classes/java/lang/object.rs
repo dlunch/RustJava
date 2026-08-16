@@ -7,7 +7,7 @@ use alloc::{boxed::Box, format, vec};
 
 use dyn_clone::clone_box;
 use java_class_proto::JavaMethodProto;
-use java_constants::MethodAccessFlags;
+use java_constants::{ClassAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, MonitorWaitTimeout, Result, runtime::JavaLangString};
 
 use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::String};
@@ -73,7 +73,7 @@ impl Object {
                 JavaMethodProto::new("finalize", "()V", Self::finalize, MethodAccessFlags::PROTECTED),
             ],
             fields: vec![],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::PUBLIC,
         }
     }
 

@@ -1,7 +1,7 @@
 use alloc::vec;
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
-use java_constants::{FieldAccessFlags, MethodAccessFlags};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use jvm::{ClassInstanceRef, Jvm, Result};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
@@ -16,7 +16,7 @@ impl CollectionsUnmodifiableList {
             parent_class: Some("java/util/Collections$UnmodifiableCollection"),
             interfaces: vec!["java/util/List"],
             methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/List;)V", Self::init, Default::default()),
+                JavaMethodProto::new("<init>", "(Ljava/util/List;)V", Self::init, MethodAccessFlags::empty()),
                 JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
@@ -41,7 +41,7 @@ impl CollectionsUnmodifiableList {
                 JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new("list", "Ljava/util/List;", FieldAccessFlags::FINAL)],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 

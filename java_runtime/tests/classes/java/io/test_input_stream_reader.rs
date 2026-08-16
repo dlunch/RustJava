@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec, vec::Vec};
 
 use java_class_proto::{JavaFieldProto, JavaMethodProto};
+use java_constants::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use java_runtime::classes::java::lang::Object;
 use java_runtime::{RuntimeClassProto, RuntimeContext};
 use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::JavaLangString};
@@ -17,15 +18,15 @@ impl OneByteInputStream {
             parent_class: Some("java/io/InputStream"),
             interfaces: vec![],
             methods: vec![
-                JavaMethodProto::new("<init>", "([B)V", Self::init, Default::default()),
-                JavaMethodProto::new("read", "()I", Self::read, Default::default()),
-                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, Default::default()),
+                JavaMethodProto::new("<init>", "([B)V", Self::init, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "()I", Self::read, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![
-                JavaFieldProto::new("data", "[B", Default::default()),
-                JavaFieldProto::new("position", "I", Default::default()),
+                JavaFieldProto::new("data", "[B", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("position", "I", FieldAccessFlags::PRIVATE),
             ],
-            access_flags: Default::default(),
+            access_flags: ClassAccessFlags::empty(),
         }
     }
 
