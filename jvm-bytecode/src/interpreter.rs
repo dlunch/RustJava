@@ -1,6 +1,6 @@
 #![allow(clippy::double_must_use)] // temporary until https://github.com/rust-lang/rust-clippy/issues/17529 fix lands
 
-use alloc::{boxed::Box, collections::btree_map, format, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 
 use classfile::{AttributeInfoCode, ConstantPoolReference, Opcode};
 use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result};
@@ -25,10 +25,10 @@ impl Interpreter {
             local_index += slots;
         }
 
-        let mut iter = code_attribute.code.range(0..);
+        let mut next_index = 0;
         let mut pc = 0;
         loop {
-            let result = Self::execute(jvm, code_attribute, &mut iter, &mut pc, &mut stack_frame, return_type).await;
+            let result = Self::execute(jvm, code_attribute, &mut next_index, &mut pc, &mut stack_frame, return_type).await;
             match result {
                 Ok(value) => return Ok(value),
                 Err(JavaError::JavaException(e)) => {
@@ -37,7 +37,7 @@ impl Interpreter {
                         stack_frame.operand_stack.clear();
                         stack_frame.operand_stack.push(JavaValue::Object(Some(e)));
 
-                        iter = code_attribute.code.range(x..);
+                        next_index = code_attribute.pc_to_index[x as usize] as usize;
                     } else {
                         return Err(JavaError::JavaException(e));
                     }
@@ -46,16 +46,18 @@ impl Interpreter {
         }
     }
 
-    async fn execute<'a>(
+    async fn execute(
         jvm: &Jvm,
-        code_attribute: &'a AttributeInfoCode,
-        iter: &mut btree_map::Range<'a, u32, Opcode>,
+        code_attribute: &AttributeInfoCode,
+        next_index: &mut usize,
         pc: &mut u32,
         stack_frame: &mut StackFrame,
         return_type: &JavaType,
     ) -> Result<JavaValue> {
         // Keep dispatch in one future; only restart it when a Java exception is caught.
-        'execute: while let Some((&current_offset, opcode)) = iter.next() {
+        'execute: while let Some((current_offset, opcode)) = code_attribute.code.get(*next_index) {
+            let current_offset = *current_offset;
+            *next_index += 1;
             *pc = current_offset;
             tracing::trace!("Opcode {opcode:?}");
             match opcode {
@@ -453,12 +455,8 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
                 }
-                Opcode::Goto(x) => {
-                    *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
-                    continue 'execute;
-                }
-                Opcode::GotoW(x) => {
-                    *iter = code_attribute.code.range((current_offset as i32 + *x) as u32..);
+                Opcode::Goto(x) | Opcode::GotoW(x) => {
+                    *next_index = *x as usize;
                     continue 'execute;
                 }
                 Opcode::I2b => {
@@ -513,7 +511,7 @@ impl Interpreter {
                     let value1: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
                     if value1 == value2 {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
@@ -522,79 +520,79 @@ impl Interpreter {
                     let value1: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
                     if value1 != value2 {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmpeq(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x == y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmpge(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x >= y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmpgt(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x > y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmple(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x <= y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmplt(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x < y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::IfIcmpne(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x != y) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Ifeq(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x == 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Ifge(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x >= 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Ifgt(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x > 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Ifle(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x <= 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Iflt(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x < 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
                 Opcode::Ifne(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x != 0) {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
@@ -602,7 +600,7 @@ impl Interpreter {
                     let value: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
                     if value.is_some() {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
@@ -610,7 +608,7 @@ impl Interpreter {
                     let value: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
 
                     if value.is_none() {
-                        *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
+                        *next_index = *x as usize;
                         continue 'execute;
                     }
                 }
@@ -753,16 +751,11 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Int(value1 ^ value2));
                 }
-                Opcode::Jsr(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Int(current_offset as i32 + 3));
+                Opcode::Jsr(x) | Opcode::JsrW(x) => {
+                    // jsr and ret exchange instruction indices, not byte PCs.
+                    stack_frame.operand_stack.push(JavaValue::Int(*next_index as i32));
 
-                    *iter = code_attribute.code.range((current_offset as i32 + *x as i32) as u32..);
-                    continue 'execute;
-                }
-                Opcode::JsrW(x) => {
-                    stack_frame.operand_stack.push(JavaValue::Int(current_offset as i32 + 5));
-
-                    *iter = code_attribute.code.range((current_offset as i32 + *x) as u32..);
+                    *next_index = *x as usize;
                     continue 'execute;
                 }
                 Opcode::L2d => {
@@ -870,14 +863,14 @@ impl Interpreter {
                 Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
                     let key = stack_frame.operand_stack.pop().unwrap().into();
 
-                    for (k, offset) in pairs {
+                    for (k, target) in pairs {
                         if *k == key {
-                            *iter = code_attribute.code.range((current_offset as i32 + *offset) as u32..);
+                            *next_index = *target as usize;
                             continue 'execute;
                         }
                     }
 
-                    *iter = code_attribute.code.range((current_offset as i32 + *default) as u32..);
+                    *next_index = *default as usize;
                     continue 'execute;
                 }
                 Opcode::Monitorenter => {
@@ -966,7 +959,7 @@ impl Interpreter {
                     let value = stack_frame.local_variables[*x as usize].clone();
                     let value: i32 = value.into();
 
-                    *iter = code_attribute.code.range(value as u32..);
+                    *next_index = value as usize;
                     continue 'execute;
                 }
                 Opcode::Return => return Ok(JavaValue::Void),

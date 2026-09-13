@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use jvm_types::ClassAccessFlags;
 
-use classfile::{AttributeInfo, ClassFileError, ClassInfo, ConstantPoolReference, Opcode};
+use classfile::{AttributeInfo, AttributeInfoCode, ClassFileError, ClassInfo, ConstantPoolReference, Opcode};
 
 #[test]
 fn test_hello() {
@@ -27,11 +27,12 @@ fn test_hello() {
     assert!(matches!(class.methods[0].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[0].attributes[0] {
         assert_eq!(x.code.len(), 3);
-        assert!(matches!(x.code.get(&0).unwrap(), Opcode::Aload(0)));
-        assert!(matches!(x.code.get(&1).unwrap(),
-            Opcode::Invokespecial(
-                ConstantPoolReference::Method(x)) if x.class == "java/lang/Object".to_string().into() && x.name == "<init>".to_string().into() && x.descriptor == "()V".to_string().into()));
-        assert!(matches!(x.code.get(&4).unwrap(), Opcode::Return));
+        assert_eq!(x.pc_to_index, vec![0, 1, u32::MAX, u32::MAX, 2]);
+        assert!(matches!(&x.code[0], (0, Opcode::Aload(0))));
+        assert!(matches!(&x.code[1],
+            (1, Opcode::Invokespecial(
+                ConstantPoolReference::Method(x))) if x.class == "java/lang/Object".to_string().into() && x.name == "<init>".to_string().into() && x.descriptor == "()V".to_string().into()));
+        assert!(matches!(&x.code[2], (4, Opcode::Return)));
     } else {
         panic!("Expected code attribute");
     }
@@ -41,13 +42,14 @@ fn test_hello() {
     assert!(matches!(class.methods[1].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
         assert_eq!(x.code.len(), 4);
-        assert!(matches!(x.code.get(&0).unwrap(),
-            Opcode::Getstatic(ConstantPoolReference::Field(x)) if x.class == "java/lang/System".to_string().into() && x.name == "out".to_string().into() && x.descriptor == "Ljava/io/PrintStream;".to_string().into()));
-        assert!(matches!(x.code.get(&3).unwrap(),
-            Opcode::Ldc(x) if matches!(x, ConstantPoolReference::String(y) if *y == "Hello, world!".to_string().into())));
-        assert!(matches!(x.code.get(&5).unwrap(),
-            Opcode::Invokevirtual(ConstantPoolReference::Method(x)) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into()));
-        assert!(matches!(x.code.get(&8).unwrap(), Opcode::Return));
+        assert_eq!(x.pc_to_index, vec![0, u32::MAX, u32::MAX, 1, u32::MAX, 2, u32::MAX, u32::MAX, 3]);
+        assert!(matches!(&x.code[0],
+            (0, Opcode::Getstatic(ConstantPoolReference::Field(x))) if x.class == "java/lang/System".to_string().into() && x.name == "out".to_string().into() && x.descriptor == "Ljava/io/PrintStream;".to_string().into()));
+        assert!(matches!(&x.code[1],
+            (3, Opcode::Ldc(x)) if matches!(x, ConstantPoolReference::String(y) if *y == "Hello, world!".to_string().into())));
+        assert!(matches!(&x.code[2],
+            (5, Opcode::Invokevirtual(ConstantPoolReference::Method(x))) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into()));
+        assert!(matches!(&x.code[3], (8, Opcode::Return)));
     } else {
         panic!("Expected code attribute");
     }
@@ -105,14 +107,68 @@ fn test_switch() {
     assert_eq!(class.methods[2].name, "run".to_string().into());
     assert!(matches!(class.methods[2].attributes[0], AttributeInfo::Code { .. }));
     if let AttributeInfo::Code(code_attribute) = &class.methods[2].attributes[0] {
+        let table_targets = [(1, 36), (2, 47), (3, 58), (4, 66)].map(|(key, pc)| (key, code_attribute.pc_to_index[pc] as i32));
         assert!(matches!(
-            code_attribute.code.get(&6).unwrap(),
-            Opcode::Tableswitch(default, pairs) if *default == 68 && *pairs == vec![(1, 30), (2, 41), (3, 52), (4, 60)]
+            &code_attribute.code[code_attribute.pc_to_index[6] as usize],
+            (6, Opcode::Tableswitch(default, pairs)) if *default == code_attribute.pc_to_index[74] as i32 && *pairs == table_targets
         ));
 
+        let lookup_targets = [(1, 116), (10, 127), (100, 138), (1000, 149)].map(|(key, pc)| (key, code_attribute.pc_to_index[pc] as i32));
         assert!(matches!(
-            code_attribute.code.get(&75).unwrap(),
-            Opcode::Lookupswitch(default, pairs) if *default == 82 && *pairs == vec![(1, 41), (10, 52), (100, 63), (1000, 74)]));
+            &code_attribute.code[code_attribute.pc_to_index[75] as usize],
+            (75, Opcode::Lookupswitch(default, pairs)) if *default == code_attribute.pc_to_index[157] as i32 && *pairs == lookup_targets));
+    }
+}
+
+#[test]
+fn test_branch_targets_are_resolved_to_instruction_indices() {
+    // bipush 0; ifeq 8; goto 0; return
+    let data = [0, 1, 0, 0, 0, 0, 0, 9, 0x10, 0, 0x99, 0, 6, 0xa7, 0xff, 0xfb, 0xb1, 0, 0, 0, 0];
+    let (_, code) = AttributeInfoCode::parse(&data, &BTreeMap::new()).unwrap();
+
+    assert!(matches!(code.code[1], (2, Opcode::Ifeq(3))));
+    assert!(matches!(code.code[2], (5, Opcode::Goto(0))));
+
+    // goto_w 7; bipush 1; jsr 5; jsr_w 5; return
+    let data = [
+        0, 1, 0, 1, 0, 0, 0, 16, 0xc8, 0, 0, 0, 7, 0x10, 1, 0xa8, 0xff, 0xfe, 0xc9, 0xff, 0xff, 0xff, 0xfb, 0xb1, 0, 0, 0, 0,
+    ];
+    let (_, code) = AttributeInfoCode::parse(&data, &BTreeMap::new()).unwrap();
+
+    assert!(matches!(code.code[0], (0, Opcode::GotoW(2))));
+    assert!(matches!(code.code[2], (7, Opcode::Jsr(1))));
+    assert!(matches!(code.code[3], (10, Opcode::JsrW(1))));
+}
+
+#[test]
+fn test_short_branch_can_target_an_instruction_index_above_i16_max() {
+    let mut bytecode = vec![0; 32768];
+    bytecode.extend_from_slice(&[0xa7, 0, 3, 0xb1]);
+    let mut data = vec![0, 0, 0, 0];
+    data.extend_from_slice(&(bytecode.len() as u32).to_be_bytes());
+    data.extend_from_slice(&bytecode);
+    data.extend_from_slice(&[0, 0, 0, 0]);
+    let (_, code) = AttributeInfoCode::parse(&data, &BTreeMap::new()).unwrap();
+
+    assert!(matches!(code.code[32768], (32768, Opcode::Goto(32769))));
+    assert!(matches!(code.code[32769], (32771, Opcode::Return)));
+}
+
+#[test]
+fn test_branch_targets_must_be_instruction_boundaries() {
+    for bytecode in [
+        &[0xa7, 0, 1][..],
+        &[0xa7, 0, 3],
+        &[0xa7, 0xff, 0xff],
+        &[0xc8, 0x7f, 0xff, 0xff, 0xff],
+        &[0xc8, 0x80, 0, 0, 0],
+    ] {
+        let mut data = vec![0, 0, 0, 0];
+        data.extend_from_slice(&(bytecode.len() as u32).to_be_bytes());
+        data.extend_from_slice(bytecode);
+        data.extend_from_slice(&[0, 0, 0, 0]);
+
+        assert!(AttributeInfoCode::parse(&data, &BTreeMap::new()).is_err());
     }
 }
 
@@ -135,11 +191,13 @@ fn test_invokeinterface() {
     assert_eq!(class.methods[1].name, "main".to_string().into());
     if let AttributeInfo::Code(x) = &class.methods[1].attributes[0] {
         assert_eq!(x.code.len(), 7);
-        assert!(matches!(x.code.get(&9).unwrap(),
-            Opcode::Invokeinterface(ConstantPoolReference::InterfaceMethodref(m), 1, 0) if m.class == "Interface$IInterface".to_string().into() && m.name == "test".to_string().into()));
-        assert!(!x.code.contains_key(&12));
-        assert!(!x.code.contains_key(&13));
-        assert!(matches!(x.code.get(&14).unwrap(), Opcode::Return));
+        assert_eq!(x.pc_to_index.len(), 15);
+        assert_eq!(x.pc_to_index[9], 5);
+        assert_eq!(x.pc_to_index[12], u32::MAX);
+        assert_eq!(x.pc_to_index[13], u32::MAX);
+        assert!(matches!(&x.code[5],
+            (9, Opcode::Invokeinterface(ConstantPoolReference::InterfaceMethodref(m), 1, 0)) if m.class == "Interface$IInterface".to_string().into() && m.name == "test".to_string().into()));
+        assert!(matches!(&x.code[6], (14, Opcode::Return)));
     } else {
         panic!("Expected code attribute");
     }

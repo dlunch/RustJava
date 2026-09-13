@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, vec, vec::Vec};
 
 use nom::{
     IResult, Parser,
@@ -41,7 +41,9 @@ impl CodeAttributeExceptionTable {
 pub struct AttributeInfoCode {
     pub max_stack: u16,
     pub max_locals: u16,
-    pub code: BTreeMap<u32, Opcode>, // TODO we can store it Vec<u8> and create code iterator..
+    /// Original byte PCs paired with opcodes whose branch operands are instruction indices.
+    pub code: Vec<(u32, Opcode)>,
+    pub pc_to_index: Vec<u32>,
     pub exception_table: Vec<CodeAttributeExceptionTable>,
     pub attributes: Vec<AttributeInfo>,
 }
@@ -52,36 +54,79 @@ impl AttributeInfoCode {
             (
                 be_u16,
                 be_u16,
-                map_res(flat_map(be_u32, take), |x: &[u8]| Self::parse_code(x, constant_pool)),
+                map_res(flat_map(be_u32, take), |code: &[u8]| {
+                    let mut result = Vec::new();
+                    // Operand and padding bytes do not have instruction indices.
+                    let mut pc_to_index = vec![u32::MAX; code.len()];
+
+                    let mut data = code;
+                    while !data.is_empty() {
+                        let offset = unsafe { data.as_ptr().offset_from(code.as_ptr()) } as usize;
+                        let (remaining, opcode) = Opcode::parse(data, offset, constant_pool).map_err(|_| ())?;
+                        if remaining.len() >= data.len() {
+                            return Err(());
+                        }
+                        pc_to_index[offset] = result.len() as u32;
+                        result.push((offset as u32, opcode));
+                        data = remaining;
+                    }
+
+                    // Resolve forward and backward branches after all instruction boundaries are known.
+                    for (pc, opcode) in &mut result {
+                        let resolve_target = |target: &mut i32| {
+                            let target_pc = usize::try_from(i64::from(*pc) + i64::from(*target)).map_err(|_| ())?;
+                            let index = pc_to_index.get(target_pc).copied().filter(|&index| index != u32::MAX).ok_or(())?;
+                            *target = i32::try_from(index).map_err(|_| ())?;
+                            Ok::<_, ()>(())
+                        };
+
+                        match opcode {
+                            Opcode::Goto(target)
+                            | Opcode::GotoW(target)
+                            | Opcode::IfAcmpeq(target)
+                            | Opcode::IfAcmpne(target)
+                            | Opcode::IfIcmpeq(target)
+                            | Opcode::IfIcmpne(target)
+                            | Opcode::IfIcmplt(target)
+                            | Opcode::IfIcmpge(target)
+                            | Opcode::IfIcmpgt(target)
+                            | Opcode::IfIcmple(target)
+                            | Opcode::Ifeq(target)
+                            | Opcode::Ifne(target)
+                            | Opcode::Iflt(target)
+                            | Opcode::Ifge(target)
+                            | Opcode::Ifgt(target)
+                            | Opcode::Ifle(target)
+                            | Opcode::Ifnonnull(target)
+                            | Opcode::Ifnull(target)
+                            | Opcode::Jsr(target)
+                            | Opcode::JsrW(target) => resolve_target(target)?,
+                            Opcode::Tableswitch(default, pairs) | Opcode::Lookupswitch(default, pairs) => {
+                                resolve_target(default)?;
+                                for (_, target) in pairs {
+                                    resolve_target(target)?;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    result.shrink_to_fit();
+                    Ok((result, pc_to_index))
+                }),
                 length_count(be_u16, |x| CodeAttributeExceptionTable::parse(x, constant_pool)),
                 length_count(be_u16, |x| AttributeInfo::parse(x, constant_pool)),
             ),
-            |(max_stack, max_locals, code, exception_table, attributes)| Self {
+            |(max_stack, max_locals, (code, pc_to_index), exception_table, attributes)| Self {
                 max_stack,
                 max_locals,
                 code,
+                pc_to_index,
                 exception_table,
                 attributes,
             },
         )
         .parse(data)
-    }
-
-    fn parse_code(code: &[u8], constant_pool: &BTreeMap<u16, ConstantPoolItem>) -> Result<BTreeMap<u32, Opcode>, ()> {
-        let mut result = BTreeMap::new();
-
-        let mut data = code;
-        while !data.is_empty() {
-            let offset = unsafe { data.as_ptr().offset_from(code.as_ptr()) } as usize;
-            let (remaining, opcode) = Opcode::parse(data, offset, constant_pool).map_err(|_| ())?;
-            if remaining.len() >= data.len() {
-                return Err(());
-            }
-            result.insert(offset as _, opcode);
-            data = remaining;
-        }
-
-        Ok(result)
     }
 }
 
