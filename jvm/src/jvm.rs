@@ -1290,7 +1290,7 @@ impl Jvm {
             }
             if let Some(intermediate_method) = intermediate_class
                 .definition
-                .method(&resolved_method.name(), &resolved_method.descriptor(), false)
+                .method(resolved_method.name(), resolved_method.descriptor(), false)
                 && self.method_overrides(candidate_class, candidate_method, &intermediate_class, &intermediate_method)
                 && self.method_overrides(&intermediate_class, &intermediate_method, resolved_class, resolved_method)
             {
