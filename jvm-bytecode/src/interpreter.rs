@@ -55,7 +55,7 @@ impl Interpreter {
         return_type: &JavaType,
     ) -> Result<JavaValue> {
         // Keep dispatch in one future; only restart it when a Java exception is caught.
-        'execute: while let Some((current_offset, opcode)) = code_attribute.code.get(*next_index) {
+        while let Some((current_offset, opcode)) = code_attribute.code.get(*next_index) {
             let current_offset = *current_offset;
             *next_index += 1;
             *pc = current_offset;
@@ -457,7 +457,6 @@ impl Interpreter {
                 }
                 Opcode::Goto(x) | Opcode::GotoW(x) => {
                     *next_index = *x as usize;
-                    continue 'execute;
                 }
                 Opcode::I2b => {
                     let value: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -512,7 +511,6 @@ impl Interpreter {
 
                     if value1 == value2 {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfAcmpne(x) => {
@@ -521,79 +519,66 @@ impl Interpreter {
 
                     if value1 != value2 {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmpeq(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x == y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmpge(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x >= y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmpgt(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x > y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmple(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x <= y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmplt(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x < y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::IfIcmpne(x) => {
                     if Self::integer_condition(stack_frame, |x, y| x != y) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifeq(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x == 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifge(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x >= 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifgt(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x > 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifle(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x <= 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Iflt(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x < 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifne(x) => {
                     if Self::integer_condition_single(stack_frame, |x| x != 0) {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifnonnull(x) => {
@@ -601,7 +586,6 @@ impl Interpreter {
 
                     if value.is_some() {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Ifnull(x) => {
@@ -609,7 +593,6 @@ impl Interpreter {
 
                     if value.is_none() {
                         *next_index = *x as usize;
-                        continue 'execute;
                     }
                 }
                 Opcode::Iinc(x, y) => {
@@ -756,7 +739,6 @@ impl Interpreter {
                     stack_frame.operand_stack.push(JavaValue::Int(*next_index as i32));
 
                     *next_index = *x as usize;
-                    continue 'execute;
                 }
                 Opcode::L2d => {
                     let value: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -863,15 +845,7 @@ impl Interpreter {
                 Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
                     let key = stack_frame.operand_stack.pop().unwrap().into();
 
-                    for (k, target) in pairs {
-                        if *k == key {
-                            *next_index = *target as usize;
-                            continue 'execute;
-                        }
-                    }
-
-                    *next_index = *default as usize;
-                    continue 'execute;
+                    *next_index = pairs.iter().find(|(k, _)| *k == key).map_or(*default, |(_, target)| *target) as usize;
                 }
                 Opcode::Monitorenter => {
                     let object: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -960,7 +934,6 @@ impl Interpreter {
                     let value: i32 = value.into();
 
                     *next_index = value as usize;
-                    continue 'execute;
                 }
                 Opcode::Return => return Ok(JavaValue::Void),
                 Opcode::Sipush(x) => stack_frame.operand_stack.push(JavaValue::Int(*x as i32)),
