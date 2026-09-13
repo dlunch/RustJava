@@ -22,7 +22,7 @@ clone_trait_object!(ArrayClassDefinition);
 #[async_trait::async_trait]
 impl<T: ArrayClassDefinition> ClassDefinition for T {
     fn name(&self) -> Cow<'_, str> {
-        Cow::Owned(format!("[{}", self.element_type_name()))
+        format!("[{}", self.element_type_name()).into()
     }
 
     fn super_class_name(&self) -> Option<String> {

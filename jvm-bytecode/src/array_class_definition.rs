@@ -32,7 +32,7 @@ impl ArrayClassDefinitionImpl {
 #[async_trait::async_trait]
 impl ArrayClassDefinition for ArrayClassDefinitionImpl {
     fn element_type_name(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.element_type_name)
+        (&self.inner.element_type_name).into()
     }
 
     async fn instantiate_array(&self, _: &Jvm, length: usize) -> Result<Box<dyn ClassInstance>> {

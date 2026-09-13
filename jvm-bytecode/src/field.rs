@@ -49,11 +49,11 @@ impl FieldImpl {
 
 impl Field for FieldImpl {
     fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.name)
+        (&self.inner.name).into()
     }
 
     fn descriptor(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.descriptor)
+        (&self.inner.descriptor).into()
     }
 
     fn access_flags(&self) -> FieldAccessFlags {

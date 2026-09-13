@@ -125,11 +125,11 @@ impl MethodImpl {
 #[async_trait::async_trait]
 impl Method for MethodImpl {
     fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.name)
+        (&self.inner.name).into()
     }
 
     fn descriptor(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.descriptor)
+        (&self.inner.descriptor).into()
     }
 
     fn access_flags(&self) -> MethodAccessFlags {

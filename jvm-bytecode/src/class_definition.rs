@@ -145,7 +145,7 @@ impl ClassDefinitionImpl {
 #[async_trait::async_trait]
 impl ClassDefinition for ClassDefinitionImpl {
     fn name(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.inner.name)
+        (&self.inner.name).into()
     }
 
     fn super_class_name(&self) -> Option<String> {
