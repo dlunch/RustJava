@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     string::{String, ToString},
     sync::Arc,
 };
@@ -47,12 +48,12 @@ impl FieldImpl {
 }
 
 impl Field for FieldImpl {
-    fn name(&self) -> String {
-        self.inner.name.clone()
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.inner.name)
     }
 
-    fn descriptor(&self) -> String {
-        self.inner.descriptor.clone()
+    fn descriptor(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.inner.descriptor)
     }
 
     fn access_flags(&self) -> FieldAccessFlags {

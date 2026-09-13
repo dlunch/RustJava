@@ -869,8 +869,7 @@ impl Formatter {
     }
 
     async fn illegal_conversion(jvm: &Jvm, specifier: &FormatSpecifier, argument: &ClassInstanceRef<Object>) -> Result<JavaError> {
-        let class_name = argument.class_definition().name();
-        let argument_class = jvm.resolve_class(&class_name).await?.java_class();
+        let argument_class = jvm.resolve_class(&argument.class_definition().name()).await?.java_class();
         Ok(JavaError::JavaException(
             jvm.new_class(
                 "java/util/IllegalFormatConversionException",
@@ -1106,8 +1105,7 @@ impl Formatter {
             .await;
         }
 
-        let class_name = argument.class_definition().name();
-        let bits = match class_name.as_str() {
+        let bits = match argument.class_definition().name().as_ref() {
             "java/lang/Byte" => 8,
             "java/lang/Short" => 16,
             "java/lang/Integer" => 32,

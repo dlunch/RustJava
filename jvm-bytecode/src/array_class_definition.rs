@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     boxed::Box,
     string::{String, ToString},
     sync::Arc,
@@ -30,8 +31,8 @@ impl ArrayClassDefinitionImpl {
 
 #[async_trait::async_trait]
 impl ArrayClassDefinition for ArrayClassDefinitionImpl {
-    fn element_type_name(&self) -> String {
-        self.inner.element_type_name.clone()
+    fn element_type_name(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.inner.element_type_name)
     }
 
     async fn instantiate_array(&self, _: &Jvm, length: usize) -> Result<Box<dyn ClassInstance>> {

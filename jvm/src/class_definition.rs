@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 use core::fmt::Debug;
 
 use dyn_clone::{DynClone, clone_trait_object};
@@ -9,7 +9,7 @@ use crate::{ArrayClassDefinition, ClassInstance, Field, JavaValue, Jvm, Method, 
 
 #[async_trait::async_trait]
 pub trait ClassDefinition: Sync + Send + AsAny + Debug + DynClone {
-    fn name(&self) -> String;
+    fn name(&self) -> Cow<'_, str>;
     fn super_class_name(&self) -> Option<String>;
     fn interface_names(&self) -> Vec<String>;
     fn access_flags(&self) -> ClassAccessFlags;

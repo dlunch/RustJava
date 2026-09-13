@@ -659,8 +659,9 @@ impl Interpreter {
                     }
 
                     let instance = instance.unwrap();
-                    let class_name = instance.class_definition().name();
-                    let result = jvm.invoke_virtual(&instance, &class_name, &x.name, &x.descriptor, params).await?;
+                    let result = jvm
+                        .invoke_virtual(&instance, &instance.class_definition().name(), &x.name, &x.descriptor, params)
+                        .await?;
                     Self::push_invoke_result(stack_frame, result);
                 }
                 Opcode::Invokespecial(x) => {

@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     boxed::Box,
     string::{String, ToString},
     sync::Arc,
@@ -123,12 +124,12 @@ impl MethodImpl {
 
 #[async_trait::async_trait]
 impl Method for MethodImpl {
-    fn name(&self) -> &str {
-        &self.inner.name
+    fn name(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.inner.name)
     }
 
-    fn descriptor(&self) -> &str {
-        &self.inner.descriptor
+    fn descriptor(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.inner.descriptor)
     }
 
     fn access_flags(&self) -> MethodAccessFlags {

@@ -68,7 +68,8 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
     }
     entry.insert();
 
-    let name = object.class_definition().name();
+    let class_definition = object.class_definition();
+    let name = class_definition.name();
     if name.starts_with('[') {
         if name.starts_with("[L") || name.starts_with("[[") {
             // is object array
@@ -83,7 +84,7 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
         }
         // do nothing for primitive arrays
     } else {
-        let fields = find_all_fields(jvm, &*object.class_definition());
+        let fields = find_all_fields(jvm, &*class_definition);
         for field in fields {
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 continue;
