@@ -114,12 +114,12 @@ impl Enum {
         }
         let this_class = this.class_definition();
         let this_declaring_class = match this_class.super_class_name() {
-            Some(parent) if parent != "java/lang/Enum" => parent,
+            Some(parent) if parent != "java/lang/Enum" => parent.into(),
             _ => this_class.name(),
         };
         let other_class = other.class_definition();
         let other_declaring_class = match other_class.super_class_name() {
-            Some(parent) if parent != "java/lang/Enum" => parent,
+            Some(parent) if parent != "java/lang/Enum" => parent.into(),
             _ => other_class.name(),
         };
         if this_declaring_class != other_declaring_class {
@@ -138,7 +138,7 @@ impl Enum {
     async fn get_declaring_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Class>> {
         let class = this.class_definition();
         let declaring_class = match class.super_class_name() {
-            Some(parent) if parent != "java/lang/Enum" => parent,
+            Some(parent) if parent != "java/lang/Enum" => parent.into(),
             _ => class.name(),
         };
         Ok(jvm.resolve_class(&declaring_class).await?.java_class().into())

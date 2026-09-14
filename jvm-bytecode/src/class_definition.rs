@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
@@ -143,8 +144,8 @@ impl ClassDefinitionImpl {
 
 #[async_trait::async_trait]
 impl ClassDefinition for ClassDefinitionImpl {
-    fn name(&self) -> String {
-        self.inner.name.clone()
+    fn name(&self) -> Cow<'_, str> {
+        (&self.inner.name).into()
     }
 
     fn super_class_name(&self) -> Option<String> {
@@ -166,7 +167,7 @@ impl ClassDefinition for ClassDefinitionImpl {
     async fn prepare(&self, jvm: &Jvm) -> Result<()> {
         for (field, constant) in &self.inner.constant_values {
             let value = match constant {
-                ConstantPoolReference::Integer(x) => match field.descriptor().as_str() {
+                ConstantPoolReference::Integer(x) => match field.descriptor().as_ref() {
                     "Z" => JavaValue::Boolean(*x != 0),
                     "B" => JavaValue::Byte(*x as i8),
                     "C" => JavaValue::Char(*x as u16),

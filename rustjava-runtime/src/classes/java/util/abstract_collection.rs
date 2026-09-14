@@ -137,7 +137,8 @@ impl AbstractCollection {
         };
         let destination_length = jvm.array_length(&destination).await?;
         let mut result = if destination_length < size {
-            let class_name = destination.class_definition().name();
+            let class_definition = destination.class_definition();
+            let class_name = class_definition.name();
             let component_descriptor = class_name.strip_prefix('[').unwrap();
             ClassInstanceRef::from(jvm.instantiate_array(component_descriptor, size).await?)
         } else {

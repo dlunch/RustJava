@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     boxed::Box,
     string::{String, ToString},
     sync::Arc,
@@ -40,6 +41,7 @@ impl Debug for MethodBody {
 struct MethodInner {
     name: String,
     descriptor: String,
+    return_type: JavaType,
     body: Option<MethodBody>,
     access_flags: MethodAccessFlags,
 }
@@ -55,6 +57,7 @@ impl MethodImpl {
             inner: Arc::new(MethodInner {
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
+                return_type: JavaType::parse(descriptor).as_method().1.clone(),
                 body: Some(body),
                 access_flags,
             }),
@@ -101,6 +104,7 @@ impl MethodImpl {
             inner: Arc::new(MethodInner {
                 name: method_info.name.to_string(),
                 descriptor: method_info.descriptor.to_string(),
+                return_type: JavaType::parse(&method_info.descriptor).as_method().1.clone(),
                 body: Self::extract_body(method_info.attributes).map(MethodBody::ByteCode),
                 access_flags: method_info.access_flags,
             }),
@@ -120,12 +124,12 @@ impl MethodImpl {
 
 #[async_trait::async_trait]
 impl Method for MethodImpl {
-    fn name(&self) -> String {
-        self.inner.name.clone()
+    fn name(&self) -> Cow<'_, str> {
+        (&self.inner.name).into()
     }
 
-    fn descriptor(&self) -> String {
-        self.inner.descriptor.clone()
+    fn descriptor(&self) -> Cow<'_, str> {
+        (&self.inner.descriptor).into()
     }
 
     fn access_flags(&self) -> MethodAccessFlags {
@@ -141,10 +145,7 @@ impl Method for MethodImpl {
         };
 
         Ok(match body {
-            MethodBody::ByteCode(x) => {
-                let r#type = JavaType::parse(&self.inner.descriptor);
-                Interpreter::run(jvm, x, args, r#type.as_method().1).await?
-            }
+            MethodBody::ByteCode(x) => Interpreter::run(jvm, x, args, &self.inner.return_type).await?,
             MethodBody::Rust(x) => x.call(jvm, args).await?,
         })
     }

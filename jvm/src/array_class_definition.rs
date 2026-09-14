@@ -1,4 +1,5 @@
 use alloc::{
+    borrow::Cow,
     boxed::Box,
     format,
     string::{String, ToString},
@@ -12,7 +13,7 @@ use crate::{Jvm, Result, class_definition::ClassDefinition, class_instance::Clas
 
 #[async_trait::async_trait]
 pub trait ArrayClassDefinition: ClassDefinition {
-    fn element_type_name(&self) -> String;
+    fn element_type_name(&self) -> Cow<'_, str>;
     async fn instantiate_array(&self, jvm: &Jvm, length: usize) -> Result<Box<dyn ClassInstance>>;
 }
 
@@ -20,8 +21,8 @@ clone_trait_object!(ArrayClassDefinition);
 
 #[async_trait::async_trait]
 impl<T: ArrayClassDefinition> ClassDefinition for T {
-    fn name(&self) -> String {
-        format!("[{}", self.element_type_name())
+    fn name(&self) -> Cow<'_, str> {
+        format!("[{}", self.element_type_name()).into()
     }
 
     fn super_class_name(&self) -> Option<String> {

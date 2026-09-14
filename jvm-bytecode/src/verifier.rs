@@ -9,7 +9,7 @@ pub(crate) fn verify(class: &ClassInfo) -> Result<(), ClassDefinitionError> {
             let AttributeInfo::Code(code) = attribute else {
                 continue;
             };
-            for opcode in code.code.values() {
+            for (_, opcode) in &code.code {
                 match opcode {
                     Opcode::Multianewarray(ConstantPoolReference::Class(name), dimensions) => {
                         let Some(mut r#type) = JavaType::try_parse(name) else {
@@ -49,7 +49,7 @@ mod tests {
                 let AttributeInfo::Code(code) = attribute else {
                     continue;
                 };
-                for opcode in code.code.values_mut() {
+                for (_, opcode) in &mut code.code {
                     if let Opcode::Multianewarray(_, dimensions) = opcode {
                         *dimensions = u8::MAX;
                         changed = true;

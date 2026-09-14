@@ -984,8 +984,7 @@ impl Jvm {
         tracing::trace!("Garbage count: {garbage_count}");
 
         for object in garbage {
-            let name = object.class_definition().name();
-            tracing::trace!("Destroying {object:?}({name})");
+            tracing::trace!("Destroying {object:?}({})", object.class_definition().name());
 
             self.destroy(object).unwrap();
         }
@@ -1009,7 +1008,7 @@ impl Jvm {
             }
         }
 
-        self.inner.classes.write().entry(class.definition.name().to_owned()).or_insert(class);
+        self.inner.classes.write().entry(class.definition.name().into_owned()).or_insert(class);
 
         Ok(())
     }

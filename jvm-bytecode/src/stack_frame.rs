@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 use jvm::JavaValue;
 
@@ -9,10 +9,10 @@ pub struct StackFrame {
 }
 
 impl StackFrame {
-    pub fn new() -> Self {
+    pub fn new(max_locals: usize, max_stack: usize) -> Self {
         Self {
-            local_variables: Vec::new(),
-            operand_stack: Vec::new(),
+            local_variables: vec![JavaValue::Void; max_locals],
+            operand_stack: Vec::with_capacity(max_stack),
         }
     }
 }

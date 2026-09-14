@@ -88,7 +88,8 @@ impl CollectionsUnmodifiableMapEntrySet {
         if destination.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "array").await);
         }
-        let class_name = destination.class_definition().name();
+        let class_definition = destination.class_definition();
+        let class_name = class_definition.name();
         let component_descriptor = class_name.strip_prefix('[').unwrap();
         let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
         let entries: ClassInstanceRef<Array<Object>> = jvm

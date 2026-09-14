@@ -47,7 +47,7 @@ impl JavaLangClass {
 
         let class_name = rust_class.name();
         let mut name_bytes = jvm.instantiate_array("B", class_name.len()).await?;
-        let bytes: Vec<i8> = cast_vec(class_name.into_bytes());
+        let bytes: Vec<i8> = cast_vec(class_name.into_owned().into_bytes());
         jvm.store_array(&mut name_bytes, 0, bytes).await?;
         jvm.put_field(&mut java_class, "nameBytes", "[B", name_bytes).await?;
 

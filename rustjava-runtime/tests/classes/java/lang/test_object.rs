@@ -136,8 +136,7 @@ async fn test_clone_not_cloneable() -> Result<()> {
         panic!("Expected JavaException, got {:?}", result);
     };
 
-    let class_name = java_exception.class_definition().name();
-    assert_eq!(class_name, "java/lang/CloneNotSupportedException");
+    assert_eq!(java_exception.class_definition().name(), "java/lang/CloneNotSupportedException");
 
     Ok(())
 }
