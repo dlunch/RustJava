@@ -265,11 +265,23 @@ impl Jvm {
     where
         T: From<JavaValue>,
     {
-        tracing::trace!("Get field {}.{name}:{descriptor}", instance.class_definition().name());
+        self.get_field_from_class(instance, &instance.class_definition().name(), name, descriptor)
+            .await
+    }
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
+    pub async fn get_field_from_class<T>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str) -> Result<T>
+    where
+        T: From<JavaValue>,
+    {
+        tracing::trace!("Get field {class_name}.{name}:{descriptor}");
 
-        if let Some(field) = field {
+        let class = self.resolve_class(class_name).await?;
+        if let Some((_, field)) = self.resolve_field(&class, name, descriptor) {
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                return Err(self
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                    .await);
+            }
             let value = instance.get_field(&*field)?;
             if let JavaValue::Object(Some(instance)) = &value {
                 let thread_id = (self.inner.get_current_thread_id)();
@@ -285,10 +297,7 @@ impl Jvm {
             Ok(value.into())
         } else {
             Err(self
-                .exception(
-                    "java/lang/NoSuchFieldError",
-                    &format!("{}.{}:{}", instance.class_definition().name(), name, descriptor),
-                )
+                .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }
@@ -297,18 +306,34 @@ impl Jvm {
     where
         T: Into<JavaValue> + Debug,
     {
-        tracing::trace!("Put field {}.{name}:{descriptor} = {value:?}", instance.class_definition().name());
+        self.put_field_from_class(instance, &instance.class_definition().name(), name, descriptor, value)
+            .await
+    }
 
-        let field = self.find_field(&*instance.class_definition(), name, descriptor)?;
+    pub async fn put_field_from_class<T>(
+        &self,
+        instance: &mut Box<dyn ClassInstance>,
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        value: T,
+    ) -> Result<()>
+    where
+        T: Into<JavaValue> + Debug,
+    {
+        tracing::trace!("Put field {class_name}.{name}:{descriptor} = {value:?}");
 
-        if let Some(field) = field {
+        let class = self.resolve_class(class_name).await?;
+        if let Some((_, field)) = self.resolve_field(&class, name, descriptor) {
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                return Err(self
+                    .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                    .await);
+            }
             instance.put_field(&*field, value.into())
         } else {
             Err(self
-                .exception(
-                    "java/lang/NoSuchFieldError",
-                    &format!("{}.{}:{}", instance.class_definition().name(), name, descriptor),
-                )
+                .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
                 .await)
         }
     }

@@ -11,6 +11,7 @@ use jvm_types::FieldAccessFlags;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct FieldInner {
+    declaring_class: String,
     name: String,
     descriptor: String,
     access_flags: FieldAccessFlags,
@@ -22,9 +23,10 @@ pub struct FieldImpl {
 }
 
 impl FieldImpl {
-    pub fn new(name: &str, descriptor: &str, access_flags: FieldAccessFlags) -> Self {
+    pub fn new(declaring_class: &str, name: &str, descriptor: &str, access_flags: FieldAccessFlags) -> Self {
         Self {
             inner: Arc::new(FieldInner {
+                declaring_class: declaring_class.to_string(),
                 name: name.to_string(),
                 descriptor: descriptor.to_string(),
                 access_flags,
@@ -32,18 +34,12 @@ impl FieldImpl {
         }
     }
 
-    pub fn from_field_proto(proto: JavaFieldProto) -> Self {
-        Self::new(&proto.name, &proto.descriptor, proto.access_flags)
+    pub fn from_field_proto(declaring_class: &str, proto: JavaFieldProto) -> Self {
+        Self::new(declaring_class, &proto.name, &proto.descriptor, proto.access_flags)
     }
 
-    pub fn from_field_info(field_info: FieldInfo) -> Self {
-        Self {
-            inner: Arc::new(FieldInner {
-                name: field_info.name.to_string(),
-                descriptor: field_info.descriptor.to_string(),
-                access_flags: field_info.access_flags,
-            }),
-        }
+    pub fn from_field_info(declaring_class: &str, field_info: FieldInfo) -> Self {
+        Self::new(declaring_class, &field_info.name, &field_info.descriptor, field_info.access_flags)
     }
 }
 
