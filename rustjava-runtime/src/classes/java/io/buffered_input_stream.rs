@@ -83,23 +83,23 @@ impl BufferedInputStream {
             .invoke_special(&this, "java/io/FilterInputStream", "<init>", "(Ljava/io/InputStream;)V", (r#in,))
             .await?;
         let buffer = jvm.instantiate_array("B", size as usize).await?;
-        jvm.put_field(&mut this, "buf", "[B", buffer).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await?;
-        jvm.put_field(&mut this, "pos", "I", 0).await?;
-        jvm.put_field(&mut this, "markpos", "I", -1).await?;
-        jvm.put_field(&mut this, "marklimit", "I", 0).await
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "buf", "[B", buffer).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "count", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "markpos", "I", -1).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "marklimit", "I", 0).await
     }
 
     async fn fill(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<i32> {
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(this, "in", "Ljava/io/InputStream;").await?;
-        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
 
-        let mut position: i32 = jvm.get_field(this, "pos", "I").await?;
-        let mut mark_position: i32 = jvm.get_field(this, "markpos", "I").await?;
-        let mark_limit: i32 = jvm.get_field(this, "marklimit", "I").await?;
+        let mut position: i32 = jvm.get_field(this, "java/io/BufferedInputStream", "pos", "I").await?;
+        let mut mark_position: i32 = jvm.get_field(this, "java/io/BufferedInputStream", "markpos", "I").await?;
+        let mark_limit: i32 = jvm.get_field(this, "java/io/BufferedInputStream", "marklimit", "I").await?;
         let mut buffer_length = jvm.array_length(&buffer).await? as i32;
 
         if mark_position < 0 {
@@ -133,13 +133,13 @@ impl BufferedInputStream {
                     .await?;
                 buffer = new_buffer;
                 buffer_length = new_length;
-                jvm.put_field(this, "buf", "[B", buffer.clone()).await?;
+                jvm.put_field(this, "java/io/BufferedInputStream", "buf", "[B", buffer.clone()).await?;
             }
         }
 
-        jvm.put_field(this, "pos", "I", position).await?;
-        jvm.put_field(this, "markpos", "I", mark_position).await?;
-        jvm.put_field(this, "count", "I", position).await?;
+        jvm.put_field(this, "java/io/BufferedInputStream", "pos", "I", position).await?;
+        jvm.put_field(this, "java/io/BufferedInputStream", "markpos", "I", mark_position).await?;
+        jvm.put_field(this, "java/io/BufferedInputStream", "count", "I", position).await?;
 
         let read: i32 = jvm
             .invoke_virtual(
@@ -151,7 +151,7 @@ impl BufferedInputStream {
             )
             .await?;
         if read > 0 {
-            jvm.put_field(this, "count", "I", position + read).await?;
+            jvm.put_field(this, "java/io/BufferedInputStream", "count", "I", position + read).await?;
         }
         Ok(read)
     }
@@ -159,28 +159,28 @@ impl BufferedInputStream {
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.BufferedInputStream::read({this:?})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
 
-        let mut position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let mut position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+        let mut count: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
         if position >= count {
             if Self::fill(jvm, &mut this).await? == -1 {
                 return Ok(-1);
             }
-            position = jvm.get_field(&this, "pos", "I").await?;
-            count = jvm.get_field(&this, "count", "I").await?;
+            position = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+            count = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
             if position >= count {
                 return Ok(-1);
             }
         }
 
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         let value = jvm.load_array::<i8>(&buffer, position as usize, 1).await?[0];
-        jvm.put_field(&mut this, "pos", "I", position + 1).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", position + 1).await?;
         Ok(value as u8 as i32)
     }
 
@@ -194,8 +194,8 @@ impl BufferedInputStream {
     ) -> Result<i32> {
         tracing::debug!("java.io.BufferedInputStream::read({this:?}, {target:?}, {offset}, {length})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -212,21 +212,21 @@ impl BufferedInputStream {
 
         let mut total = 0;
         while total < length {
-            let mut position: i32 = jvm.get_field(&this, "pos", "I").await?;
-            let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
+            let mut position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+            let mut count: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
             if position >= count {
                 if Self::fill(jvm, &mut this).await? == -1 {
                     break;
                 }
-                position = jvm.get_field(&this, "pos", "I").await?;
-                count = jvm.get_field(&this, "count", "I").await?;
+                position = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+                count = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
                 if position >= count {
                     break;
                 }
             }
 
             let copied = (count - position).min(length - total);
-            let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+            let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
             let _: () = jvm
                 .invoke_static(
                     "java/lang/System",
@@ -235,7 +235,8 @@ impl BufferedInputStream {
                     (buffer, position, target.clone(), offset + total, copied),
                 )
                 .await?;
-            jvm.put_field(&mut this, "pos", "I", position + copied).await?;
+            jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", position + copied)
+                .await?;
             total += copied;
 
             if total < length {
@@ -252,8 +253,8 @@ impl BufferedInputStream {
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         tracing::debug!("java.io.BufferedInputStream::skip({this:?}, {amount})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -261,35 +262,36 @@ impl BufferedInputStream {
             return Ok(0);
         }
 
-        let mut position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let mut position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+        let mut count: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
         if position >= count {
-            let mark_position: i32 = jvm.get_field(&this, "markpos", "I").await?;
+            let mark_position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "markpos", "I").await?;
             if mark_position < 0 {
                 return jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (amount,)).await;
             }
             if Self::fill(jvm, &mut this).await? == -1 {
                 return Ok(0);
             }
-            position = jvm.get_field(&this, "pos", "I").await?;
-            count = jvm.get_field(&this, "count", "I").await?;
+            position = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+            count = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
         }
 
         let skipped = amount.min((count - position) as i64);
-        jvm.put_field(&mut this, "pos", "I", position + skipped as i32).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", position + skipped as i32)
+            .await?;
         Ok(skipped)
     }
 
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.BufferedInputStream::available({this:?})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "count", "I").await?;
         let underlying: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
         Ok((count - position).saturating_add(underlying))
     }
@@ -297,24 +299,25 @@ impl BufferedInputStream {
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, read_limit: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::mark({this:?}, {read_limit})");
 
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        jvm.put_field(&mut this, "marklimit", "I", read_limit).await?;
-        jvm.put_field(&mut this, "markpos", "I", position).await
+        let position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "pos", "I").await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "marklimit", "I", read_limit)
+            .await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "markpos", "I", position).await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::reset({this:?})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedInputStream", "buf", "[B").await?;
         if r#in.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let mark_position: i32 = jvm.get_field(&this, "markpos", "I").await?;
+        let mark_position: i32 = jvm.get_field(&this, "java/io/BufferedInputStream", "markpos", "I").await?;
         if mark_position < 0 {
             return Err(jvm.exception("java/io/IOException", "Resetting to invalid mark").await);
         }
-        jvm.put_field(&mut this, "pos", "I", mark_position).await
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", mark_position).await
     }
 
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -325,14 +328,15 @@ impl BufferedInputStream {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::close({this:?})");
 
-        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;").await?;
         if r#in.is_null() {
             return Ok(());
         }
         let null_input: ClassInstanceRef<InputStream> = None.into();
         let null_buffer: ClassInstanceRef<Array<i8>> = None.into();
-        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", null_input).await?;
-        jvm.put_field(&mut this, "buf", "[B", null_buffer).await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "in", "Ljava/io/InputStream;", null_input)
+            .await?;
+        jvm.put_field(&mut this, "java/io/BufferedInputStream", "buf", "[B", null_buffer).await?;
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await
     }
 }

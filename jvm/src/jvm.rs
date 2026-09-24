@@ -261,15 +261,7 @@ impl Jvm {
         }
     }
 
-    pub async fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, name: &str, descriptor: &str) -> Result<T>
-    where
-        T: From<JavaValue>,
-    {
-        self.get_field_from_class(instance, &instance.class_definition().name(), name, descriptor)
-            .await
-    }
-
-    pub async fn get_field_from_class<T>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str) -> Result<T>
+    pub async fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str) -> Result<T>
     where
         T: From<JavaValue>,
     {
@@ -302,22 +294,7 @@ impl Jvm {
         }
     }
 
-    pub async fn put_field<T>(&self, instance: &mut Box<dyn ClassInstance>, name: &str, descriptor: &str, value: T) -> Result<()>
-    where
-        T: Into<JavaValue> + Debug,
-    {
-        self.put_field_from_class(instance, &instance.class_definition().name(), name, descriptor, value)
-            .await
-    }
-
-    pub async fn put_field_from_class<T>(
-        &self,
-        instance: &mut Box<dyn ClassInstance>,
-        class_name: &str,
-        name: &str,
-        descriptor: &str,
-        value: T,
-    ) -> Result<()>
+    pub async fn put_field<T>(&self, instance: &mut Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str, value: T) -> Result<()>
     where
         T: Into<JavaValue> + Debug,
     {
@@ -1124,7 +1101,7 @@ impl Jvm {
             .get_mut(&thread_id)
             .unwrap()
             .set_java_thread(java_thread.clone());
-        let interrupted: bool = self.get_field(&java_thread, "interrupted", "Z").await?;
+        let interrupted: bool = self.get_field(&java_thread, "java/lang/Thread", "interrupted", "Z").await?;
         self.inner.threads.write().get_mut(&thread_id).unwrap().interrupted |= interrupted;
 
         Ok(())

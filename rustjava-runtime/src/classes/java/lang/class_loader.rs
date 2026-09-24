@@ -85,7 +85,8 @@ impl ClassLoader {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "parent", "Ljava/lang/ClassLoader;", parent).await?;
+        jvm.put_field(&mut this, "java/lang/ClassLoader", "parent", "Ljava/lang/ClassLoader;", parent)
+            .await?;
 
         Ok(())
     }
@@ -217,7 +218,8 @@ impl ClassLoader {
                         (element_class_name,),
                     )
                     .await?;
-                jvm.get_field(&element_class, "classLoader", "Ljava/lang/ClassLoader;").await?
+                jvm.get_field(&element_class, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;")
+                    .await?
             } else {
                 None
             };
@@ -228,7 +230,7 @@ impl ClassLoader {
             return Ok(java_class.into());
         }
 
-        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
+        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "java/lang/ClassLoader", "parent", "Ljava/lang/ClassLoader;").await?;
         let class: ClassInstanceRef<Class> = if !parent.is_null() {
             jvm.invoke_virtual(
                 &parent,
@@ -296,7 +298,7 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResource({this:?})");
 
-        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "parent", "Ljava/lang/ClassLoader;").await?;
+        let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "java/lang/ClassLoader", "parent", "Ljava/lang/ClassLoader;").await?;
 
         let result: ClassInstanceRef<URL> = if !parent.is_null() {
             jvm.invoke_virtual(

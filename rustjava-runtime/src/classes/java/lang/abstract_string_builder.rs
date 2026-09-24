@@ -257,29 +257,30 @@ impl AbstractStringBuilder {
             return Err(jvm.exception("java/lang/NegativeArraySizeException", &capacity.to_string()).await);
         }
         let value = jvm.instantiate_array("C", capacity as usize).await?;
-        jvm.put_field(&mut this, "value", "[C", value).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await
+        jvm.put_field(&mut this, "java/lang/AbstractStringBuilder", "value", "[C", value).await?;
+        jvm.put_field(&mut this, "java/lang/AbstractStringBuilder", "count", "I", 0).await
     }
 
     async fn characters(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<Vec<JavaChar>> {
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "value", "[C").await?;
+        let count: i32 = jvm.get_field(this, "java/lang/AbstractStringBuilder", "count", "I").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/AbstractStringBuilder", "value", "[C").await?;
         jvm.load_array(&value, 0, count as usize).await
     }
 
     async fn replace_characters(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, characters: Vec<JavaChar>) -> Result<()> {
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/AbstractStringBuilder", "value", "[C").await?;
         let old_capacity = jvm.array_length(&value).await?;
         if characters.len() > old_capacity {
             let new_capacity = characters.len().max(old_capacity.saturating_mul(2).saturating_add(2));
             let mut new_value = jvm.instantiate_array("C", new_capacity).await?;
             jvm.store_array(&mut new_value, 0, characters.clone()).await?;
-            jvm.put_field(this, "value", "[C", new_value).await?;
+            jvm.put_field(this, "java/lang/AbstractStringBuilder", "value", "[C", new_value).await?;
         } else if !characters.is_empty() {
             let mut value = value;
             jvm.store_array(&mut value, 0, characters.clone()).await?;
         }
-        jvm.put_field(this, "count", "I", characters.len() as i32).await
+        jvm.put_field(this, "java/lang/AbstractStringBuilder", "count", "I", characters.len() as i32)
+            .await
     }
 
     async fn insert_characters(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, offset: i32, inserted: Vec<JavaChar>) -> Result<()> {
@@ -317,11 +318,11 @@ impl AbstractStringBuilder {
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "count", "I").await
+        jvm.get_field(&this, "java/lang/AbstractStringBuilder", "count", "I").await
     }
 
     async fn capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/AbstractStringBuilder", "value", "[C").await?;
         Ok(jvm.array_length(&value).await? as i32)
     }
 
@@ -329,7 +330,7 @@ impl AbstractStringBuilder {
         if minimum_capacity <= 0 {
             return Ok(());
         }
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/AbstractStringBuilder", "value", "[C").await?;
         let old_capacity = jvm.array_length(&value).await? as i32;
         if minimum_capacity <= old_capacity {
             return Ok(());
@@ -338,14 +339,15 @@ impl AbstractStringBuilder {
         let characters = Self::characters(jvm, &this).await?;
         let mut new_value = jvm.instantiate_array("C", new_capacity as usize).await?;
         jvm.store_array(&mut new_value, 0, characters).await?;
-        jvm.put_field(&mut this, "value", "[C", new_value).await
+        jvm.put_field(&mut this, "java/lang/AbstractStringBuilder", "value", "[C", new_value)
+            .await
     }
 
     async fn trim_to_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let characters = Self::characters(jvm, &this).await?;
         let mut value = jvm.instantiate_array("C", characters.len()).await?;
         jvm.store_array(&mut value, 0, characters).await?;
-        jvm.put_field(&mut this, "value", "[C", value).await
+        jvm.put_field(&mut this, "java/lang/AbstractStringBuilder", "value", "[C", value).await
     }
 
     async fn set_length(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, new_length: i32) -> Result<()> {
@@ -768,7 +770,7 @@ impl AbstractStringBuilder {
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, start: i32) -> Result<ClassInstanceRef<String>> {
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/AbstractStringBuilder", "count", "I").await?;
         jvm.invoke_virtual(
             &this,
             "java/lang/AbstractStringBuilder",
@@ -1048,7 +1050,7 @@ impl AbstractStringBuilder {
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<i32> {
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/AbstractStringBuilder", "count", "I").await?;
         jvm.invoke_virtual(
             &this,
             "java/lang/AbstractStringBuilder",

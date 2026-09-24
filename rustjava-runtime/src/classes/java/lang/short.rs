@@ -115,7 +115,7 @@ impl Short {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i16) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "S", value).await
+        jvm.put_field(&mut this, "java/lang/Short", "value", "S", value).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -124,7 +124,7 @@ impl Short {
             .await?;
         let mut this = this;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "S", value).await
+        jvm.put_field(&mut this, "java/lang/Short", "value", "S", value).await
     }
 
     async fn parse_short(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i16> {
@@ -177,22 +177,22 @@ impl Short {
     }
 
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        Ok((jvm.get_field::<i16>(&this, "value", "S").await?) as i8)
+        Ok((jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await?) as i8)
     }
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        jvm.get_field(&this, "value", "S").await
+        jvm.get_field(&this, "java/lang/Short", "value", "S").await
     }
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        Ok(jvm.get_field::<i16>(&this, "value", "S").await? as i32)
+        Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i32)
     }
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        Ok(jvm.get_field::<i16>(&this, "value", "S").await? as i64)
+        Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i64)
     }
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        Ok(jvm.get_field::<i16>(&this, "value", "S").await? as f32)
+        Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as f32)
     }
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        Ok(jvm.get_field::<i16>(&this, "value", "S").await? as f64)
+        Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as f64)
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
@@ -203,7 +203,7 @@ impl Short {
         Ok(JavaLangString::from_rust_string(jvm, &format!("{value}")).await?.into())
     }
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        Ok(jvm.get_field::<i16>(&this, "value", "S").await? as i32)
+        Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i32)
     }
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Short") {

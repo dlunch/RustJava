@@ -30,11 +30,12 @@ impl TreeMapEntrySet {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/SortedMap;", map).await
+        jvm.put_field(&mut this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;", map)
+            .await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
@@ -42,7 +43,7 @@ impl TreeMapEntrySet {
         if candidate.is_null() || !jvm.is_instance(candidate.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;").await?;
         let value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
@@ -82,7 +83,7 @@ impl TreeMapEntrySet {
         if candidate.is_null() || !jvm.is_instance(candidate.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;").await?;
         let value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
@@ -132,12 +133,12 @@ impl TreeMapEntrySet {
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "map", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$EntrySet", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "entryIterator", "()Ljava/util/Iterator;", ())
             .await
     }

@@ -31,9 +31,9 @@ impl ArraysSortValue {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, key: i32, id: i32, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "I", key).await?;
-        jvm.put_field(&mut this, "id", "I", id).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await
+        jvm.put_field(&mut this, "ArraysSortValue", "key", "I", key).await?;
+        jvm.put_field(&mut this, "ArraysSortValue", "id", "I", id).await?;
+        jvm.put_field(&mut this, "ArraysSortValue", "fail", "Z", fail).await
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
@@ -43,13 +43,15 @@ impl ArraysSortValue {
         if !jvm.is_instance(other.as_ref(), "ArraysSortValue") {
             return Err(jvm.exception("java/lang/ClassCastException", "other").await);
         }
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? || jvm.get_field::<bool>(&other, "fail", "Z").await? {
+        if jvm.get_field::<bool>(&this, "ArraysSortValue", "fail", "Z").await?
+            || jvm.get_field::<bool>(&other, "ArraysSortValue", "fail", "Z").await?
+        {
             return Err(jvm.exception("java/lang/IllegalStateException", "comparison failure").await);
         }
         Ok(jvm
-            .get_field::<i32>(&this, "key", "I")
+            .get_field::<i32>(&this, "ArraysSortValue", "key", "I")
             .await?
-            .cmp(&jvm.get_field::<i32>(&other, "key", "I").await?) as i32)
+            .cmp(&jvm.get_field::<i32>(&other, "ArraysSortValue", "key", "I").await?) as i32)
     }
 }
 
@@ -80,8 +82,8 @@ impl ArraysComparator {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, reverse: bool, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "reverse", "Z", reverse).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await
+        jvm.put_field(&mut this, "ArraysComparator", "reverse", "Z", reverse).await?;
+        jvm.put_field(&mut this, "ArraysComparator", "fail", "Z", fail).await
     }
 
     async fn compare(
@@ -91,17 +93,17 @@ impl ArraysComparator {
         left: ClassInstanceRef<Object>,
         right: ClassInstanceRef<Object>,
     ) -> Result<i32> {
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? {
+        if jvm.get_field::<bool>(&this, "ArraysComparator", "fail", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "comparison failure").await);
         }
         if left.is_null() || right.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
         }
         let comparison = jvm
-            .get_field::<i32>(&left, "key", "I")
+            .get_field::<i32>(&left, "ArraysSortValue", "key", "I")
             .await?
-            .cmp(&jvm.get_field::<i32>(&right, "key", "I").await?) as i32;
-        Ok(if jvm.get_field::<bool>(&this, "reverse", "Z").await? {
+            .cmp(&jvm.get_field::<i32>(&right, "ArraysSortValue", "key", "I").await?) as i32;
+        Ok(if jvm.get_field::<bool>(&this, "ArraysComparator", "reverse", "Z").await? {
             -comparison
         } else {
             comparison
@@ -128,11 +130,11 @@ impl ArraysEqualsProbe {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, result: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "result", "Z", result).await
+        jvm.put_field(&mut this, "ArraysEqualsProbe", "result", "Z", result).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
-        jvm.get_field(&this, "result", "Z").await
+        jvm.get_field(&this, "ArraysEqualsProbe", "result", "Z").await
     }
 }
 
@@ -378,7 +380,7 @@ async fn test_arr_02_object_sort_is_stable_and_supports_all_modes() -> Result<()
     let sorted = jvm.load_array::<ClassInstanceRef<Object>>(&array, 0, 4).await?;
     let mut ids = vec![];
     for value in sorted {
-        ids.push(jvm.get_field::<i32>(&value, "id", "I").await?);
+        ids.push(jvm.get_field::<i32>(&value, "ArraysSortValue", "id", "I").await?);
     }
     assert_eq!(ids, [1, 3, 0, 2]);
 
@@ -399,8 +401,8 @@ async fn test_arr_02_object_sort_is_stable_and_supports_all_modes() -> Result<()
     .await?;
     let sorted = jvm.load_array::<ClassInstanceRef<Object>>(&range, 0, 4).await?;
     assert_eq!(sorted[0].identity(), outside_left.identity());
-    assert_eq!(jvm.get_field::<i32>(&sorted[1], "key", "I").await?, 3);
-    assert_eq!(jvm.get_field::<i32>(&sorted[2], "key", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&sorted[1], "ArraysSortValue", "key", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&sorted[2], "ArraysSortValue", "key", "I").await?, 1);
     assert_eq!(sorted[3].identity(), outside_right.identity());
 
     let null_comparator: ClassInstanceRef<Object> = None.into();
@@ -413,10 +415,10 @@ async fn test_arr_02_object_sort_is_stable_and_supports_all_modes() -> Result<()
     .await?;
     let sorted = jvm.load_array::<ClassInstanceRef<Object>>(&range, 0, 4).await?;
     let keys = [
-        jvm.get_field::<i32>(&sorted[0], "key", "I").await?,
-        jvm.get_field::<i32>(&sorted[1], "key", "I").await?,
-        jvm.get_field::<i32>(&sorted[2], "key", "I").await?,
-        jvm.get_field::<i32>(&sorted[3], "key", "I").await?,
+        jvm.get_field::<i32>(&sorted[0], "ArraysSortValue", "key", "I").await?,
+        jvm.get_field::<i32>(&sorted[1], "ArraysSortValue", "key", "I").await?,
+        jvm.get_field::<i32>(&sorted[2], "ArraysSortValue", "key", "I").await?,
+        jvm.get_field::<i32>(&sorted[3], "ArraysSortValue", "key", "I").await?,
     ];
     assert_eq!(keys, [-99, 1, 3, 99]);
 

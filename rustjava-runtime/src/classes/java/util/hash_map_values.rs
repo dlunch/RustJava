@@ -45,7 +45,8 @@ impl HashMapValues {
         tracing::debug!("java.util.HashMap$Values::<init>({this:?}, {map:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/AbstractCollection", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/HashMap;", map).await?;
+        jvm.put_field(&mut this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;", map)
+            .await?;
 
         Ok(())
     }
@@ -53,7 +54,7 @@ impl HashMapValues {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.HashMap$Values::size({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "size", "()I", ()).await
     }
@@ -61,7 +62,7 @@ impl HashMapValues {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$Values::isEmpty({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "isEmpty", "()Z", ()).await
     }
@@ -69,7 +70,7 @@ impl HashMapValues {
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$Values::contains({this:?}, {value:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
@@ -78,7 +79,7 @@ impl HashMapValues {
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$Values::remove({this:?}, {value:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&map, "java/util/HashMap", "entryIterator", "()Ljava/util/Iterator;", ())
             .await?;
@@ -117,7 +118,7 @@ impl HashMapValues {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap$Values::clear({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "clear", "()V", ()).await
     }
@@ -125,7 +126,7 @@ impl HashMapValues {
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$Values::iterator({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$Values", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "valueIterator", "()Ljava/util/Iterator;", ())
             .await

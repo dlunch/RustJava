@@ -27,15 +27,18 @@ impl IllegalFormatPrecisionException {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, precision: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/IllegalFormatException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "precision", "I", precision).await
+        jvm.put_field(&mut this, "java/util/IllegalFormatPrecisionException", "precision", "I", precision)
+            .await
     }
 
     async fn get_precision(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "precision", "I").await
+        jvm.get_field(&this, "java/util/IllegalFormatPrecisionException", "precision", "I").await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let precision: i32 = jvm.get_field(&this, "precision", "I").await?;
+        let precision: i32 = jvm
+            .get_field(&this, "java/util/IllegalFormatPrecisionException", "precision", "I")
+            .await?;
         Ok(JavaLangString::from_rust_string(jvm, &precision.to_string()).await?.into())
     }
 }

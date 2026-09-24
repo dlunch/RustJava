@@ -548,17 +548,28 @@ async fn test_system_class_loader_uses_rustjar_parent() -> Result<()> {
     let system_class_loader: ClassInstanceRef<ClassLoader> = jvm
         .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())
         .await?;
-    let rustjar_class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&system_class_loader, "parent", "Ljava/lang/ClassLoader;").await?;
+    let rustjar_class_loader: ClassInstanceRef<ClassLoader> = jvm
+        .get_field(&system_class_loader, "java/lang/ClassLoader", "parent", "Ljava/lang/ClassLoader;")
+        .await?;
 
     assert!(jvm.is_instance(&**rustjar_class_loader, "org/rustjava/lang/RustJarClassLoader"));
 
-    let class_paths: ClassInstanceRef<Array<String>> = jvm.get_field(&rustjar_class_loader, "classPaths", "[Ljava/lang/String;").await?;
+    let class_paths: ClassInstanceRef<Array<String>> = jvm
+        .get_field(
+            &rustjar_class_loader,
+            "org/rustjava/lang/RustJarClassLoader",
+            "classPaths",
+            "[Ljava/lang/String;",
+        )
+        .await?;
     assert_eq!(jvm.array_length(&class_paths).await?, 2);
     let class_paths: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_paths, 0, 2).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &class_paths[0]).await?, "external.rustjar");
     assert_eq!(JavaLangString::to_rust_string(&jvm, &class_paths[1]).await?, "classes");
 
-    let urls: ClassInstanceRef<Array<URL>> = jvm.get_field(&system_class_loader, "urls", "[Ljava/net/URL;").await?;
+    let urls: ClassInstanceRef<Array<URL>> = jvm
+        .get_field(&system_class_loader, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;")
+        .await?;
     assert_eq!(jvm.array_length(&urls).await?, 2);
     let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, 2).await?;
     let rustjar_file: ClassInstanceRef<String> = jvm

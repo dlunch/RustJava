@@ -38,11 +38,11 @@ impl ConfigurableFilter {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, allowed: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "allowed", "Z", allowed).await
+        jvm.put_field(&mut this, "ConfigurableLoggingFilter", "allowed", "Z", allowed).await
     }
 
     async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<LogRecord>) -> Result<bool> {
-        jvm.get_field(&this, "allowed", "Z").await
+        jvm.get_field(&this, "ConfigurableLoggingFilter", "allowed", "Z").await
     }
 }
 
@@ -167,7 +167,8 @@ async fn simple_formatter_includes_throwable_stack_trace() -> Result<()> {
         [JavaLangString::from_rust_string(&jvm, "example.Test.run(Test.java:7)").await?],
     )
     .await?;
-    jvm.put_field(&mut thrown, "stackTrace", "[Ljava/lang/String;", stack_trace).await?;
+    jvm.put_field(&mut thrown, "java/lang/Throwable", "stackTrace", "[Ljava/lang/String;", stack_trace)
+        .await?;
     let _: () = jvm
         .invoke_virtual(&record, "java/util/logging/LogRecord", "setThrown", "(Ljava/lang/Throwable;)V", (thrown,))
         .await?;

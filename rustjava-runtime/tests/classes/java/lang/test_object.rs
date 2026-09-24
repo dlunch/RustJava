@@ -156,21 +156,22 @@ async fn test_clone_creates_shallow_object_and_array_copies() -> Result<()> {
 
     let mut original = jvm.instantiate_class("CloneableObject").await?;
     let reference = jvm.new_class("java/lang/Object", "()V", ()).await?;
-    jvm.put_field(&mut original, "value", "I", 7i32).await?;
-    jvm.put_field(&mut original, "reference", "Ljava/lang/Object;", reference.clone()).await?;
+    jvm.put_field(&mut original, "CloneableObject", "value", "I", 7i32).await?;
+    jvm.put_field(&mut original, "CloneableObject", "reference", "Ljava/lang/Object;", reference.clone())
+        .await?;
 
     let mut cloned: ClassInstanceRef<CloneableObject> = jvm
         .invoke_virtual(&original, &original.class_definition().name(), "clone", "()Ljava/lang/Object;", ())
         .await?;
     assert_ne!(original.identity(), cloned.identity());
-    assert_eq!(jvm.get_field::<i32>(&cloned, "value", "I").await?, 7);
+    assert_eq!(jvm.get_field::<i32>(&cloned, "CloneableObject", "value", "I").await?, 7);
     let cloned_reference = jvm
-        .get_field::<ClassInstanceRef<Object>>(&cloned, "reference", "Ljava/lang/Object;")
+        .get_field::<ClassInstanceRef<Object>>(&cloned, "CloneableObject", "reference", "Ljava/lang/Object;")
         .await?;
     assert_eq!(reference.identity(), cloned_reference.identity());
 
-    jvm.put_field(&mut cloned, "value", "I", 9i32).await?;
-    assert_eq!(jvm.get_field::<i32>(&original, "value", "I").await?, 7);
+    jvm.put_field(&mut cloned, "CloneableObject", "value", "I", 9i32).await?;
+    assert_eq!(jvm.get_field::<i32>(&original, "CloneableObject", "value", "I").await?, 7);
 
     let mut array = jvm.instantiate_array("I", 2).await?;
     jvm.store_array(&mut array, 0, [1i32, 2i32]).await?;

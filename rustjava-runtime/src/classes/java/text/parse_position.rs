@@ -38,24 +38,24 @@ impl ParsePosition {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "index", "I", index).await?;
-        jvm.put_field(&mut this, "errorIndex", "I", -1).await
+        jvm.put_field(&mut this, "java/text/ParsePosition", "index", "I", index).await?;
+        jvm.put_field(&mut this, "java/text/ParsePosition", "errorIndex", "I", -1).await
     }
 
     async fn get_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "index", "I").await
+        jvm.get_field(&this, "java/text/ParsePosition", "index", "I").await
     }
 
     async fn set_index(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
-        jvm.put_field(&mut this, "index", "I", index).await
+        jvm.put_field(&mut this, "java/text/ParsePosition", "index", "I", index).await
     }
 
     async fn get_error_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "errorIndex", "I").await
+        jvm.get_field(&this, "java/text/ParsePosition", "errorIndex", "I").await
     }
 
     async fn set_error_index(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
-        jvm.put_field(&mut this, "errorIndex", "I", index).await
+        jvm.put_field(&mut this, "java/text/ParsePosition", "errorIndex", "I", index).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
@@ -64,22 +64,22 @@ impl ParsePosition {
         }
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
-        let other_index: i32 = jvm.get_field(&other, "index", "I").await?;
-        let error_index: i32 = jvm.get_field(&this, "errorIndex", "I").await?;
-        let other_error_index: i32 = jvm.get_field(&other, "errorIndex", "I").await?;
+        let index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "index", "I").await?;
+        let other_index: i32 = jvm.get_field(&other, "java/text/ParsePosition", "index", "I").await?;
+        let error_index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "errorIndex", "I").await?;
+        let other_error_index: i32 = jvm.get_field(&other, "java/text/ParsePosition", "errorIndex", "I").await?;
         Ok(index == other_index && error_index == other_error_index)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
-        let error_index: i32 = jvm.get_field(&this, "errorIndex", "I").await?;
+        let index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "index", "I").await?;
+        let error_index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "errorIndex", "I").await?;
         Ok(index ^ error_index.rotate_left(16))
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
-        let error_index: i32 = jvm.get_field(&this, "errorIndex", "I").await?;
+        let index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "index", "I").await?;
+        let error_index: i32 = jvm.get_field(&this, "java/text/ParsePosition", "errorIndex", "I").await?;
         Ok(
             JavaLangString::from_rust_string(jvm, &format!("java.text.ParsePosition[index={index},errorIndex={error_index}]"))
                 .await?

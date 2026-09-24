@@ -62,33 +62,44 @@ impl CollectionsUnmodifiableMap {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
         }
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "m", "Ljava/util/Map;", map).await
+        jvm.put_field(&mut this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;", map)
+            .await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "isEmpty", "()Z", ()).await
     }
 
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (key,))
             .await
     }
 
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(
             &map,
             &map.class_definition().name(),
@@ -100,11 +111,15 @@ impl CollectionsUnmodifiableMap {
     }
 
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let cached: ClassInstanceRef<Object> = jvm.get_field(&this, "keySet", "Ljava/util/Set;").await?;
+        let cached: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "keySet", "Ljava/util/Set;")
+            .await?;
         if !cached.is_null() {
             return Ok(cached);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         let keys: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
             .await?;
@@ -112,16 +127,27 @@ impl CollectionsUnmodifiableMap {
             .new_class("java/util/Collections$UnmodifiableSet", "(Ljava/util/Set;)V", (keys,))
             .await?
             .into();
-        jvm.put_field(&mut this, "keySet", "Ljava/util/Set;", wrapped.clone()).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableMap",
+            "keySet",
+            "Ljava/util/Set;",
+            wrapped.clone(),
+        )
+        .await?;
         Ok(wrapped)
     }
 
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let cached: ClassInstanceRef<Object> = jvm.get_field(&this, "values", "Ljava/util/Collection;").await?;
+        let cached: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "values", "Ljava/util/Collection;")
+            .await?;
         if !cached.is_null() {
             return Ok(cached);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         let values: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&map, &map.class_definition().name(), "values", "()Ljava/util/Collection;", ())
             .await?;
@@ -129,16 +155,27 @@ impl CollectionsUnmodifiableMap {
             .new_class("java/util/Collections$UnmodifiableCollection", "(Ljava/util/Collection;)V", (values,))
             .await?
             .into();
-        jvm.put_field(&mut this, "values", "Ljava/util/Collection;", wrapped.clone()).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableMap",
+            "values",
+            "Ljava/util/Collection;",
+            wrapped.clone(),
+        )
+        .await?;
         Ok(wrapped)
     }
 
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let cached: ClassInstanceRef<Object> = jvm.get_field(&this, "entrySet", "Ljava/util/Set;").await?;
+        let cached: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "entrySet", "Ljava/util/Set;")
+            .await?;
         if !cached.is_null() {
             return Ok(cached);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         let entries: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&map, &map.class_definition().name(), "entrySet", "()Ljava/util/Set;", ())
             .await?;
@@ -150,7 +187,14 @@ impl CollectionsUnmodifiableMap {
             )
             .await?
             .into();
-        jvm.put_field(&mut this, "entrySet", "Ljava/util/Set;", wrapped.clone()).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableMap",
+            "entrySet",
+            "Ljava/util/Set;",
+            wrapped.clone(),
+        )
+        .await?;
         Ok(wrapped)
     }
 
@@ -158,18 +202,24 @@ impl CollectionsUnmodifiableMap {
         if !other.is_null() && this.identity() == other.identity() {
             return Ok(true);
         }
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other,))
             .await
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/Map;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
+            .await?;
         jvm.invoke_virtual(&map, "java/lang/Object", "toString", "()Ljava/lang/String;", ()).await
     }
 

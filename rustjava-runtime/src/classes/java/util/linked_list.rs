@@ -72,12 +72,26 @@ impl LinkedList {
             .await?
             .into();
         let header_next = header.clone();
-        jvm.put_field(&mut header, "next", "Ljava/util/LinkedList$Entry;", header_next).await?;
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedList$Entry",
+            "next",
+            "Ljava/util/LinkedList$Entry;",
+            header_next,
+        )
+        .await?;
         let header_previous = header.clone();
-        jvm.put_field(&mut header, "previous", "Ljava/util/LinkedList$Entry;", header_previous)
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedList$Entry",
+            "previous",
+            "Ljava/util/LinkedList$Entry;",
+            header_previous,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;", header)
             .await?;
-        jvm.put_field(&mut this, "header", "Ljava/util/LinkedList$Entry;", header).await?;
-        jvm.put_field(&mut this, "size", "I", 0).await
+        jvm.put_field(&mut this, "java/util/LinkedList", "size", "I", 0).await
     }
 
     async fn init_collection(
@@ -97,59 +111,81 @@ impl LinkedList {
     }
 
     async fn add_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
-        let first = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let first = jvm
+            .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+            .await?;
         Self::add_before(jvm, &this, element, first).await
     }
 
     async fn add_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
-        let header = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
+        let header = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
         Self::add_before(jvm, &this, element, header).await
     }
 
     async fn get_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        if jvm.get_field::<i32>(&this, "size", "I").await? == 0 {
+        if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
         }
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
-        let first: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-        jvm.get_field(&first, "element", "Ljava/lang/Object;").await
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let first: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        jvm.get_field(&first, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
     async fn get_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        if jvm.get_field::<i32>(&this, "size", "I").await? == 0 {
+        if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
         }
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
-        let last: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-        jvm.get_field(&last, "element", "Ljava/lang/Object;").await
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let last: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        jvm.get_field(&last, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
     async fn remove_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        if jvm.get_field::<i32>(&this, "size", "I").await? == 0 {
+        if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
         }
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
-        let first = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let first = jvm
+            .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+            .await?;
         Self::remove_entry(jvm, &this, first).await
     }
 
     async fn remove_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        if jvm.get_field::<i32>(&this, "size", "I").await? == 0 {
+        if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
         }
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
-        let last = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let last = jvm
+            .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+            .await?;
         Self::remove_entry(jvm, &this, last).await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "size", "I").await
+        jvm.get_field(&this, "java/util/LinkedList", "size", "I").await
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let entry = Self::entry_at(jvm, &this, index).await?;
-        jvm.get_field(&entry, "element", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
     async fn set(
@@ -160,20 +196,24 @@ impl LinkedList {
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
         let mut entry = Self::entry_at(jvm, &this, index).await?;
-        let old = jvm.get_field(&entry, "element", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut entry, "element", "Ljava/lang/Object;", element).await?;
+        let old = jvm
+            .get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;")
+            .await?;
+        jvm.put_field(&mut entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;", element)
+            .await?;
         Ok(old)
     }
 
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, element: ClassInstanceRef<Object>) -> Result<()> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         if index < 0 || index > size {
             return Err(jvm
                 .exception("java/lang/IndexOutOfBoundsException", &format!("Index: {index}, Size: {size}"))
                 .await);
         }
         let successor = if index == size {
-            jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?
+            jvm.get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+                .await?
         } else {
             Self::entry_at(jvm, &this, index).await?
         };
@@ -181,7 +221,9 @@ impl LinkedList {
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let header = jvm.get_field(&this, "header", "Ljava/util/LinkedList$Entry;").await?;
+        let header = jvm
+            .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
         Self::add_before(jvm, &this, element, header).await?;
         Ok(true)
     }
@@ -192,10 +234,12 @@ impl LinkedList {
     }
 
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in 0..size {
             let entry = Self::entry_at(jvm, &this, index).await?;
-            let current: ClassInstanceRef<Object> = jvm.get_field(&entry, "element", "Ljava/lang/Object;").await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;")
+                .await?;
             let equal = if element.is_null() {
                 current.is_null()
             } else {
@@ -211,10 +255,12 @@ impl LinkedList {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in 0..size {
             let entry = Self::entry_at(jvm, &this, index).await?;
-            let current: ClassInstanceRef<Object> = jvm.get_field(&entry, "element", "Ljava/lang/Object;").await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;")
+                .await?;
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
@@ -228,10 +274,12 @@ impl LinkedList {
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in (0..size).rev() {
             let entry = Self::entry_at(jvm, &this, index).await?;
-            let current: ClassInstanceRef<Object> = jvm.get_field(&entry, "element", "Ljava/lang/Object;").await?;
+            let current: ClassInstanceRef<Object> = jvm
+                .get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;")
+                .await?;
             if (element.is_null() && current.is_null())
                 || (!element.is_null()
                     && jvm
@@ -245,7 +293,7 @@ impl LinkedList {
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        while jvm.get_field::<i32>(&this, "size", "I").await? > 0 {
+        while jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? > 0 {
             let _: ClassInstanceRef<Object> = jvm
                 .invoke_virtual(&this, "java/util/LinkedList", "removeFirst", "()Ljava/lang/Object;", ())
                 .await?;
@@ -275,23 +323,33 @@ impl LinkedList {
     }
 
     async fn entry_at(jvm: &Jvm, this: &ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<LinkedListEntry>> {
-        let size: i32 = jvm.get_field(this, "size", "I").await?;
+        let size: i32 = jvm.get_field(this, "java/util/LinkedList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(jvm
                 .exception("java/lang/IndexOutOfBoundsException", &format!("Index: {index}, Size: {size}"))
                 .await);
         }
-        let header: ClassInstanceRef<LinkedListEntry> = jvm.get_field(this, "header", "Ljava/util/LinkedList$Entry;").await?;
+        let header: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+            .await?;
         if index < size / 2 {
-            let mut entry: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
+            let mut entry: ClassInstanceRef<LinkedListEntry> = jvm
+                .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+                .await?;
             for _ in 0..index {
-                entry = jvm.get_field(&entry, "next", "Ljava/util/LinkedList$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+                    .await?;
             }
             Ok(entry)
         } else {
-            let mut entry: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+            let mut entry: ClassInstanceRef<LinkedListEntry> = jvm
+                .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+                .await?;
             for _ in (index + 1)..size {
-                entry = jvm.get_field(&entry, "previous", "Ljava/util/LinkedList$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+                    .await?;
             }
             Ok(entry)
         }
@@ -303,7 +361,9 @@ impl LinkedList {
         element: ClassInstanceRef<Object>,
         mut successor: ClassInstanceRef<LinkedListEntry>,
     ) -> Result<()> {
-        let mut predecessor: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&successor, "previous", "Ljava/util/LinkedList$Entry;").await?;
+        let mut predecessor: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&successor, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+            .await?;
         let entry: ClassInstanceRef<LinkedListEntry> = jvm
             .new_class(
                 "java/util/LinkedList$Entry",
@@ -312,13 +372,25 @@ impl LinkedList {
             )
             .await?
             .into();
-        jvm.put_field(&mut predecessor, "next", "Ljava/util/LinkedList$Entry;", entry.clone())
-            .await?;
-        jvm.put_field(&mut successor, "previous", "Ljava/util/LinkedList$Entry;", entry.clone())
-            .await?;
-        let size: i32 = jvm.get_field(this, "size", "I").await?;
+        jvm.put_field(
+            &mut predecessor,
+            "java/util/LinkedList$Entry",
+            "next",
+            "Ljava/util/LinkedList$Entry;",
+            entry.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut successor,
+            "java/util/LinkedList$Entry",
+            "previous",
+            "Ljava/util/LinkedList$Entry;",
+            entry.clone(),
+        )
+        .await?;
+        let size: i32 = jvm.get_field(this, "java/util/LinkedList", "size", "I").await?;
         let mut list = this.clone();
-        jvm.put_field(&mut list, "size", "I", size + 1).await?;
+        jvm.put_field(&mut list, "java/util/LinkedList", "size", "I", size + 1).await?;
         Ok(())
     }
 
@@ -327,20 +399,54 @@ impl LinkedList {
         this: &ClassInstanceRef<Self>,
         mut entry: ClassInstanceRef<LinkedListEntry>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let mut previous: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&entry, "previous", "Ljava/util/LinkedList$Entry;").await?;
-        let mut next: ClassInstanceRef<LinkedListEntry> = jvm.get_field(&entry, "next", "Ljava/util/LinkedList$Entry;").await?;
-        jvm.put_field(&mut previous, "next", "Ljava/util/LinkedList$Entry;", next.clone()).await?;
-        jvm.put_field(&mut next, "previous", "Ljava/util/LinkedList$Entry;", previous).await?;
-        let element = jvm.get_field(&entry, "element", "Ljava/lang/Object;").await?;
+        let mut previous: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&entry, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        let mut next: ClassInstanceRef<LinkedListEntry> = jvm
+            .get_field(&entry, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut previous,
+            "java/util/LinkedList$Entry",
+            "next",
+            "Ljava/util/LinkedList$Entry;",
+            next.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut next,
+            "java/util/LinkedList$Entry",
+            "previous",
+            "Ljava/util/LinkedList$Entry;",
+            previous,
+        )
+        .await?;
+        let element = jvm
+            .get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;")
+            .await?;
         let null_object: ClassInstanceRef<Object> = None.into();
         let null_entry: ClassInstanceRef<LinkedListEntry> = None.into();
-        jvm.put_field(&mut entry, "element", "Ljava/lang/Object;", null_object).await?;
-        jvm.put_field(&mut entry, "next", "Ljava/util/LinkedList$Entry;", null_entry.clone())
+        jvm.put_field(&mut entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;", null_object)
             .await?;
-        jvm.put_field(&mut entry, "previous", "Ljava/util/LinkedList$Entry;", null_entry).await?;
-        let size: i32 = jvm.get_field(this, "size", "I").await?;
+        jvm.put_field(
+            &mut entry,
+            "java/util/LinkedList$Entry",
+            "next",
+            "Ljava/util/LinkedList$Entry;",
+            null_entry.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut entry,
+            "java/util/LinkedList$Entry",
+            "previous",
+            "Ljava/util/LinkedList$Entry;",
+            null_entry,
+        )
+        .await?;
+        let size: i32 = jvm.get_field(this, "java/util/LinkedList", "size", "I").await?;
         let mut list = this.clone();
-        jvm.put_field(&mut list, "size", "I", size - 1).await?;
+        jvm.put_field(&mut list, "java/util/LinkedList", "size", "I", size - 1).await?;
         Ok(element)
     }
 }

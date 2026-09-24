@@ -58,23 +58,36 @@ impl CollectionsUnmodifiableSortedMap {
                 (map.clone(),),
             )
             .await?;
-        jvm.put_field(&mut this, "sm", "Ljava/util/SortedMap;", map).await
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableSortedMap",
+            "sm",
+            "Ljava/util/SortedMap;",
+            map,
+        )
+        .await
     }
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
             .await
     }
 
     async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "firstKey", "()Ljava/lang/Object;", ())
             .await
     }
 
     async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "lastKey", "()Ljava/lang/Object;", ())
             .await
     }
@@ -86,7 +99,9 @@ impl CollectionsUnmodifiableSortedMap {
         from: ClassInstanceRef<Object>,
         to: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
@@ -108,7 +123,9 @@ impl CollectionsUnmodifiableSortedMap {
         this: ClassInstanceRef<Self>,
         to: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
@@ -130,7 +147,9 @@ impl CollectionsUnmodifiableSortedMap {
         this: ClassInstanceRef<Self>,
         from: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "sm", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
+            .await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,

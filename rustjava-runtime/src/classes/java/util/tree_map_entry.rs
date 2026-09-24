@@ -54,18 +54,21 @@ impl TreeMapEntry {
         parent: ClassInstanceRef<Self>,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "parent", "Ljava/util/TreeMap$Entry;", parent).await?;
-        jvm.put_field(&mut this, "color", "Z", true).await
+        jvm.put_field(&mut this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;", key)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;", value)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;", parent)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$Entry", "color", "Z", true).await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -74,8 +77,9 @@ impl TreeMapEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let old_value = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let old_value = jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;", value)
+            .await?;
         Ok(old_value)
     }
 
@@ -84,7 +88,7 @@ impl TreeMapEntry {
             return Ok(false);
         }
 
-        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
         let other_key: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&other, &other.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
             .await?;
@@ -97,7 +101,7 @@ impl TreeMapEntry {
         if !keys_equal {
             return Ok(false);
         }
-        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
         let other_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&other, &other.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
@@ -110,8 +114,8 @@ impl TreeMapEntry {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
-        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
         let key_hash = if key.is_null() {
             0
         } else {

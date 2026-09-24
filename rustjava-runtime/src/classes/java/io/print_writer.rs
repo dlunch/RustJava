@@ -181,9 +181,9 @@ impl PrintWriter {
         let _: () = jvm
             .invoke_special(&this, "java/io/Writer", "<init>", "(Ljava/lang/Object;)V", (out.clone(),))
             .await?;
-        jvm.put_field(&mut this, "out", "Ljava/io/Writer;", out).await?;
-        jvm.put_field(&mut this, "autoFlush", "Z", auto_flush).await?;
-        jvm.put_field(&mut this, "trouble", "Z", false).await
+        jvm.put_field(&mut this, "java/io/PrintWriter", "out", "Ljava/io/Writer;", out).await?;
+        jvm.put_field(&mut this, "java/io/PrintWriter", "autoFlush", "Z", auto_flush).await?;
+        jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", false).await
     }
 
     async fn init_output_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
@@ -305,12 +305,12 @@ impl PrintWriter {
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {value})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                 return Ok(());
             }
 
@@ -323,7 +323,7 @@ impl PrintWriter {
     async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, chars: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {chars:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             if chars.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "chars is null").await);
@@ -345,7 +345,7 @@ impl PrintWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {chars:?}, {offset}, {length})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             if chars.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "chars is null").await);
@@ -355,10 +355,10 @@ impl PrintWriter {
                 return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "invalid offset or length").await);
             }
 
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                 return Ok(());
             }
 
@@ -373,7 +373,7 @@ impl PrintWriter {
     async fn write_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {string:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             if string.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "string is null").await);
@@ -395,7 +395,7 @@ impl PrintWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {string:?}, {offset}, {length})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             if string.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "string is null").await);
@@ -405,10 +405,10 @@ impl PrintWriter {
                 return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "invalid offset or length").await);
             }
 
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                 return Ok(());
             }
 
@@ -492,12 +492,12 @@ impl PrintWriter {
     async fn println(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::println({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                 return Ok(());
             }
 
@@ -517,13 +517,13 @@ impl PrintWriter {
                 Ok(()) => {}
                 Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                     let mut this = this.clone();
-                    jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                    jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                     return Ok(());
                 }
                 Err(error) => return Err(error),
             }
 
-            if jvm.get_field::<bool>(&this, "autoFlush", "Z").await? {
+            if jvm.get_field::<bool>(&this, "java/io/PrintWriter", "autoFlush", "Z").await? {
                 let result = jvm.invoke_virtual(&out, "java/io/Writer", "flush", "()V", ()).await;
                 Self::suppress_io_exception(jvm, &this, result).await
             } else {
@@ -534,7 +534,7 @@ impl PrintWriter {
     }
 
     async fn println_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(Z)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -543,7 +543,7 @@ impl PrintWriter {
     }
 
     async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(C)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -552,7 +552,7 @@ impl PrintWriter {
     }
 
     async fn println_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(I)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -561,7 +561,7 @@ impl PrintWriter {
     }
 
     async fn println_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(J)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -570,7 +570,7 @@ impl PrintWriter {
     }
 
     async fn println_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(F)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -579,7 +579,7 @@ impl PrintWriter {
     }
 
     async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "(D)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -588,7 +588,7 @@ impl PrintWriter {
     }
 
     async fn println_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "print", "([C)V", (value,)).await?;
             jvm.invoke_virtual(&this, "java/io/PrintWriter", "println", "()V", ()).await
@@ -597,7 +597,7 @@ impl PrintWriter {
     }
 
     async fn println_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm
                 .invoke_virtual(&this, "java/io/PrintWriter", "print", "(Ljava/lang/String;)V", (value,))
@@ -608,7 +608,7 @@ impl PrintWriter {
     }
 
     async fn println_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let _: () = jvm
                 .invoke_virtual(&this, "java/io/PrintWriter", "print", "(Ljava/lang/Object;)V", (value,))
@@ -621,12 +621,12 @@ impl PrintWriter {
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::flush({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await?;
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await?;
                 return Ok(());
             }
 
@@ -639,9 +639,9 @@ impl PrintWriter {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::close({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if out.is_null() {
                 return Ok(());
             }
@@ -650,11 +650,11 @@ impl PrintWriter {
                 Ok(()) => {
                     let mut this = this.clone();
                     let closed: ClassInstanceRef<Writer> = None.into();
-                    jvm.put_field(&mut this, "out", "Ljava/io/Writer;", closed).await
+                    jvm.put_field(&mut this, "java/io/PrintWriter", "out", "Ljava/io/Writer;", closed).await
                 }
                 Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                     let mut this = this.clone();
-                    jvm.put_field(&mut this, "trouble", "Z", true).await
+                    jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await
                 }
                 Err(error) => Err(error),
             }
@@ -665,22 +665,22 @@ impl PrintWriter {
     async fn check_error(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.PrintWriter::checkError({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
-            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+            let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
             if !out.is_null() {
                 let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "flush", "()V", ()).await?;
                 if jvm.is_instance(&**out, "java/io/PrintWriter") {
                     return jvm.invoke_virtual(&out, "java/io/PrintWriter", "checkError", "()Z", ()).await;
                 }
             }
-            jvm.get_field(&this, "trouble", "Z").await
+            jvm.get_field(&this, "java/io/PrintWriter", "trouble", "Z").await
         })
         .await
     }
 
     async fn set_error(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "trouble", "Z", true).await
+        jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await
     }
 
     async fn printf(
@@ -744,7 +744,7 @@ impl PrintWriter {
         format: ClassInstanceRef<String>,
         arguments: ClassInstanceRef<Array<Object>>,
     ) -> Result<ClassInstanceRef<Self>> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
             let appendable: ClassInstanceRef<Appendable> = this.instance.clone().into();
             let formatter: ClassInstanceRef<Formatter> = jvm
@@ -760,7 +760,7 @@ impl PrintWriter {
                     (format, arguments),
                 )
                 .await?;
-            if jvm.get_field::<bool>(&this, "autoFlush", "Z").await? {
+            if jvm.get_field::<bool>(&this, "java/io/PrintWriter", "autoFlush", "Z").await? {
                 let _: () = jvm.invoke_virtual(&this, "java/io/PrintWriter", "flush", "()V", ()).await?;
             }
             Ok(this.clone())
@@ -818,7 +818,7 @@ impl PrintWriter {
             Ok(()) => Ok(()),
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                 let mut this = this.clone();
-                jvm.put_field(&mut this, "trouble", "Z", true).await
+                jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await
             }
             Err(error) => Err(error),
         }

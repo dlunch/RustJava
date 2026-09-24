@@ -48,6 +48,6 @@ impl LinkedHashMapKeyIterator {
             )
             .await?;
 
-        jvm.get_field(&entry, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/LinkedHashMap$Entry", "key", "Ljava/lang/Object;").await
     }
 }

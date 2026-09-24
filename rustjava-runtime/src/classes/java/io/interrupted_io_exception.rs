@@ -27,7 +27,8 @@ impl InterruptedIOException {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InterruptedIOException::<init>({this:?})");
         let _: () = jvm.invoke_special(&this, "java/io/IOException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "bytesTransferred", "I", 0).await
+        jvm.put_field(&mut this, "java/io/InterruptedIOException", "bytesTransferred", "I", 0)
+            .await
     }
 
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
@@ -35,6 +36,7 @@ impl InterruptedIOException {
         let _: () = jvm
             .invoke_special(&this, "java/io/IOException", "<init>", "(Ljava/lang/String;)V", (message,))
             .await?;
-        jvm.put_field(&mut this, "bytesTransferred", "I", 0).await
+        jvm.put_field(&mut this, "java/io/InterruptedIOException", "bytesTransferred", "I", 0)
+            .await
     }
 }

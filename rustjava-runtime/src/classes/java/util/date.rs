@@ -53,7 +53,7 @@ impl Date {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "value", "J", time).await?;
+        jvm.put_field(&mut this, "java/util/Date", "value", "J", time).await?;
 
         Ok(())
     }
@@ -61,7 +61,7 @@ impl Date {
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.Date::getTime({this:?})");
 
-        let time = jvm.get_field(&this, "value", "J").await?;
+        let time = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
 
         Ok(time)
     }
@@ -69,7 +69,7 @@ impl Date {
     async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Date::setTime({this:?}, {time:?})");
 
-        jvm.put_field(&mut this, "value", "J", time).await?;
+        jvm.put_field(&mut this, "java/util/Date", "value", "J", time).await?;
 
         Ok(())
     }
@@ -82,8 +82,8 @@ impl Date {
         }
 
         let when: ClassInstanceRef<Self> = ClassInstanceRef::new(when.instance);
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
-        let when_time: i64 = jvm.get_field(&when, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
+        let when_time: i64 = jvm.get_field(&when, "java/util/Date", "value", "J").await?;
         Ok(time < when_time)
     }
 
@@ -95,8 +95,8 @@ impl Date {
         }
 
         let when: ClassInstanceRef<Self> = ClassInstanceRef::new(when.instance);
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
-        let when_time: i64 = jvm.get_field(&when, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
+        let when_time: i64 = jvm.get_field(&when, "java/util/Date", "value", "J").await?;
         Ok(time > when_time)
     }
 
@@ -111,8 +111,8 @@ impl Date {
         }
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
-        let other_time: i64 = jvm.get_field(&other, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "java/util/Date", "value", "J").await?;
         Ok(if time < other_time {
             -1
         } else if time == other_time {
@@ -130,22 +130,22 @@ impl Date {
         }
 
         let other: ClassInstanceRef<Date> = ClassInstanceRef::new(other.instance);
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
-        let other_time: i64 = jvm.get_field(&other, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "java/util/Date", "value", "J").await?;
         Ok(time == other_time)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Date::hashCode({this:?})");
 
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
         Ok((time ^ ((time as u64 >> 32) as i64)) as i32)
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Date::toString({this:?})");
 
-        let time: i64 = jvm.get_field(&this, "value", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
         let text = if let Some(date_time) = DateTime::<Utc>::from_timestamp_millis(time) {
             let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

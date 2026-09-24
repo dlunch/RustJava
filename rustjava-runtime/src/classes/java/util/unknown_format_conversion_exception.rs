@@ -30,15 +30,25 @@ impl UnknownFormatConversionException {
             return Err(jvm.exception("java/lang/NullPointerException", "conversion is null").await);
         }
         let _: () = jvm.invoke_special(&this, "java/util/IllegalFormatException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "conversion", "Ljava/lang/String;", conversion).await
+        jvm.put_field(
+            &mut this,
+            "java/util/UnknownFormatConversionException",
+            "conversion",
+            "Ljava/lang/String;",
+            conversion,
+        )
+        .await
     }
 
     async fn get_conversion(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "conversion", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/UnknownFormatConversionException", "conversion", "Ljava/lang/String;")
+            .await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let conversion: ClassInstanceRef<String> = jvm.get_field(&this, "conversion", "Ljava/lang/String;").await?;
+        let conversion: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/UnknownFormatConversionException", "conversion", "Ljava/lang/String;")
+            .await?;
         JavaLangString::from_rust_string(
             jvm,
             &alloc::format!("Conversion = '{}'", JavaLangString::to_rust_string(jvm, &conversion).await?),

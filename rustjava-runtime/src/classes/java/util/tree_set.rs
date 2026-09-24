@@ -71,7 +71,7 @@ impl TreeSet {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
         let map: ClassInstanceRef<Object> = jvm.new_class("java/util/TreeMap", "()V", ()).await?.into();
         let mut this = this;
-        jvm.put_field(&mut this, "m", "Ljava/util/SortedMap;", map).await
+        jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
     async fn init_comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, comparator: ClassInstanceRef<Object>) -> Result<()> {
@@ -81,7 +81,7 @@ impl TreeSet {
             .await?
             .into();
         let mut this = this;
-        jvm.put_field(&mut this, "m", "Ljava/util/SortedMap;", map).await
+        jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
     async fn init_collection(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<()> {
@@ -116,22 +116,22 @@ impl TreeSet {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
         }
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "m", "Ljava/util/SortedMap;", map).await
+        jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (element,))
             .await
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let present: ClassInstanceRef<Object> = jvm.get_static_field("java/util/TreeSet", "PRESENT", "Ljava/lang/Object;").await?;
         let old: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
@@ -146,7 +146,7 @@ impl TreeSet {
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         if !jvm
             .invoke_virtual::<_, bool>(
                 &map,
@@ -172,12 +172,12 @@ impl TreeSet {
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let keys: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&map, &map.class_definition().name(), "keySet", "()Ljava/util/Set;", ())
             .await?;
@@ -186,19 +186,19 @@ impl TreeSet {
     }
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
             .await
     }
 
     async fn first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "firstKey", "()Ljava/lang/Object;", ())
             .await
     }
 
     async fn last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "lastKey", "()Ljava/lang/Object;", ())
             .await
     }
@@ -210,7 +210,7 @@ impl TreeSet {
         from: ClassInstanceRef<Object>,
         to: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
@@ -229,7 +229,7 @@ impl TreeSet {
         this: ClassInstanceRef<Self>,
         to: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
@@ -248,7 +248,7 @@ impl TreeSet {
         this: ClassInstanceRef<Self>,
         from: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "m", "Ljava/util/SortedMap;").await?;
+        let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let range: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,

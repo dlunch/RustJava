@@ -46,14 +46,15 @@ impl SnapshotFailingCharSequence {
 
     async fn init(jvm: &jvm::Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "lengthCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "snapshotCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "failSnapshot", "Z", true).await
+        jvm.put_field(&mut this, "SnapshotFailingCharSequence", "lengthCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "SnapshotFailingCharSequence", "snapshotCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "SnapshotFailingCharSequence", "failSnapshot", "Z", true).await
     }
 
     async fn length(jvm: &jvm::Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        let calls: i32 = jvm.get_field(&this, "lengthCalls", "I").await?;
-        jvm.put_field(&mut this, "lengthCalls", "I", calls + 1).await?;
+        let calls: i32 = jvm.get_field(&this, "SnapshotFailingCharSequence", "lengthCalls", "I").await?;
+        jvm.put_field(&mut this, "SnapshotFailingCharSequence", "lengthCalls", "I", calls + 1)
+            .await?;
         Ok(1)
     }
 
@@ -72,9 +73,10 @@ impl SnapshotFailingCharSequence {
     }
 
     async fn to_string(jvm: &jvm::Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let calls: i32 = jvm.get_field(&this, "snapshotCalls", "I").await?;
-        jvm.put_field(&mut this, "snapshotCalls", "I", calls + 1).await?;
-        if jvm.get_field::<bool>(&this, "failSnapshot", "Z").await? {
+        let calls: i32 = jvm.get_field(&this, "SnapshotFailingCharSequence", "snapshotCalls", "I").await?;
+        jvm.put_field(&mut this, "SnapshotFailingCharSequence", "snapshotCalls", "I", calls + 1)
+            .await?;
+        if jvm.get_field::<bool>(&this, "SnapshotFailingCharSequence", "failSnapshot", "Z").await? {
             Err(jvm.exception("java/lang/IllegalStateException", "snapshot requested").await)
         } else {
             Ok(JavaLangString::from_rust_string(jvm, "a").await?.into())
@@ -711,16 +713,30 @@ async fn invalid_find_start_is_checked_before_creating_an_input_snapshot() -> Re
         panic!("negative find start must throw");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
-    assert_eq!(jvm.get_field::<i32>(&sequence, "lengthCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&sequence, "snapshotCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "lengthCalls", "I").await?,
+        0
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "snapshotCalls", "I")
+            .await?,
+        0
+    );
 
     let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (2,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("find start beyond the input length must throw");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
-    assert_eq!(jvm.get_field::<i32>(&sequence, "lengthCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&sequence, "snapshotCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "lengthCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "snapshotCalls", "I")
+            .await?,
+        0
+    );
 
     Ok(())
 }
@@ -736,7 +752,8 @@ async fn valid_find_start_resets_state_before_creating_an_input_snapshot() -> Re
     jvm.register_class(class, None).await?;
 
     let mut sequence: ClassInstanceRef<SnapshotFailingCharSequence> = jvm.new_class("SnapshotFailingCharSequence", "()V", ()).await?.into();
-    jvm.put_field(&mut sequence, "failSnapshot", "Z", false).await?;
+    jvm.put_field(&mut sequence, "SnapshotFailingCharSequence", "failSnapshot", "Z", false)
+        .await?;
     let input: ClassInstanceRef<CharSequence> = ClassInstanceRef::new(sequence.clone().instance);
     let source = JavaLangString::from_rust_string(&jvm, "a").await?;
     let pattern: ClassInstanceRef<Pattern> = jvm
@@ -766,22 +783,30 @@ async fn valid_find_start_resets_state_before_creating_an_input_snapshot() -> Re
         0
     );
 
-    jvm.put_field(&mut sequence, "failSnapshot", "Z", true).await?;
+    jvm.put_field(&mut sequence, "SnapshotFailingCharSequence", "failSnapshot", "Z", true)
+        .await?;
     let result: Result<bool> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "find", "(I)Z", (0,)).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("snapshot failure must be observable");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&sequence, "lengthCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&sequence, "snapshotCalls", "I").await?, 2);
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "lengthCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&sequence, "SnapshotFailingCharSequence", "snapshotCalls", "I")
+            .await?,
+        2
+    );
 
     let result: Result<i32> = jvm.invoke_virtual(&matcher, "java/util/regex/Matcher", "start", "()I", ()).await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("valid find(start) must invalidate the previous match before searching");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&matcher, "searchPosition", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&matcher, "appendPosition", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&matcher, "java/util/regex/Matcher", "searchPosition", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&matcher, "java/util/regex/Matcher", "appendPosition", "I").await?, 0);
 
     Ok(())
 }

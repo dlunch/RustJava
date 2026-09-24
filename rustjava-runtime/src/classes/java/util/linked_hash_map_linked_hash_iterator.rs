@@ -40,65 +40,148 @@ impl LinkedHashMapLinkedHashIterator {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<LinkedHashMap>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mod_count: i32 = jvm.get_field(&map, "modCount", "I").await?;
-        let last_returned: ClassInstanceRef<LinkedHashMapEntry> = None.into();
-        jvm.put_field(&mut this, "map", "Ljava/util/LinkedHashMap;", map).await?;
-        jvm.put_field(&mut this, "nextEntry", "Ljava/util/LinkedHashMap$Entry;", next).await?;
-        jvm.put_field(&mut this, "lastReturned", "Ljava/util/LinkedHashMap$Entry;", last_returned)
+        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&map, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut this, "expectedModCount", "I", mod_count).await
+        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&header, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let mod_count: i32 = jvm.get_field(&map, "java/util/LinkedHashMap", "modCount", "I").await?;
+        let last_returned: ClassInstanceRef<LinkedHashMapEntry> = None.into();
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "map",
+            "Ljava/util/LinkedHashMap;",
+            map,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "nextEntry",
+            "Ljava/util/LinkedHashMap$Entry;",
+            next,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "lastReturned",
+            "Ljava/util/LinkedHashMap$Entry;",
+            last_returned,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "expectedModCount",
+            "I",
+            mod_count,
+        )
+        .await
     }
 
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let map: ClassInstanceRef<LinkedHashMap> = jvm.get_field(&this, "map", "Ljava/util/LinkedHashMap;").await?;
-        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "nextEntry", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let map: ClassInstanceRef<LinkedHashMap> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "map", "Ljava/util/LinkedHashMap;")
+            .await?;
+        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&map, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(
+                &this,
+                "java/util/LinkedHashMap$LinkedHashIterator",
+                "nextEntry",
+                "Ljava/util/LinkedHashMap$Entry;",
+            )
+            .await?;
 
         Ok(next.identity() != header.identity())
     }
 
     async fn next_entry(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<LinkedHashMapEntry>> {
-        let map: ClassInstanceRef<LinkedHashMap> = jvm.get_field(&this, "map", "Ljava/util/LinkedHashMap;").await?;
-        let expected_mod_count: i32 = jvm.get_field(&this, "expectedModCount", "I").await?;
-        let mod_count: i32 = jvm.get_field(&map, "modCount", "I").await?;
+        let map: ClassInstanceRef<LinkedHashMap> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "map", "Ljava/util/LinkedHashMap;")
+            .await?;
+        let expected_mod_count: i32 = jvm
+            .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "expectedModCount", "I")
+            .await?;
+        let mod_count: i32 = jvm.get_field(&map, "java/util/LinkedHashMap", "modCount", "I").await?;
         if expected_mod_count != mod_count {
             return Err(jvm
                 .exception("java/util/ConcurrentModificationException", "LinkedHashMap modified during iteration")
                 .await);
         }
 
-        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "nextEntry", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&map, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let next: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(
+                &this,
+                "java/util/LinkedHashMap$LinkedHashIterator",
+                "nextEntry",
+                "Ljava/util/LinkedHashMap$Entry;",
+            )
+            .await?;
         if next.identity() == header.identity() {
             return Err(jvm
                 .exception("java/util/NoSuchElementException", "LinkedHashMap iterator exhausted")
                 .await);
         }
-        let after: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&next, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
-        jvm.put_field(&mut this, "lastReturned", "Ljava/util/LinkedHashMap$Entry;", next.clone())
+        let after: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&next, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut this, "nextEntry", "Ljava/util/LinkedHashMap$Entry;", after).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "lastReturned",
+            "Ljava/util/LinkedHashMap$Entry;",
+            next.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "nextEntry",
+            "Ljava/util/LinkedHashMap$Entry;",
+            after,
+        )
+        .await?;
 
         Ok(next)
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let last_returned: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "lastReturned", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let last_returned: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(
+                &this,
+                "java/util/LinkedHashMap$LinkedHashIterator",
+                "lastReturned",
+                "Ljava/util/LinkedHashMap$Entry;",
+            )
+            .await?;
         if last_returned.is_null() {
             return Err(jvm.exception("java/lang/IllegalStateException", "Iterator.remove").await);
         }
-        let map: ClassInstanceRef<LinkedHashMap> = jvm.get_field(&this, "map", "Ljava/util/LinkedHashMap;").await?;
-        let expected_mod_count: i32 = jvm.get_field(&this, "expectedModCount", "I").await?;
-        let mod_count: i32 = jvm.get_field(&map, "modCount", "I").await?;
+        let map: ClassInstanceRef<LinkedHashMap> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "map", "Ljava/util/LinkedHashMap;")
+            .await?;
+        let expected_mod_count: i32 = jvm
+            .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "expectedModCount", "I")
+            .await?;
+        let mod_count: i32 = jvm.get_field(&map, "java/util/LinkedHashMap", "modCount", "I").await?;
         if expected_mod_count != mod_count {
             return Err(jvm
                 .exception("java/util/ConcurrentModificationException", "LinkedHashMap modified during iteration")
                 .await);
         }
 
-        let key: ClassInstanceRef<Object> = jvm.get_field(&last_returned, "key", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm
+            .get_field(&last_returned, "java/util/LinkedHashMap$Entry", "key", "Ljava/lang/Object;")
+            .await?;
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &map,
@@ -109,9 +192,22 @@ impl LinkedHashMapLinkedHashIterator {
             )
             .await?;
         let last_returned: ClassInstanceRef<LinkedHashMapEntry> = None.into();
-        jvm.put_field(&mut this, "lastReturned", "Ljava/util/LinkedHashMap$Entry;", last_returned)
-            .await?;
-        let mod_count: i32 = jvm.get_field(&map, "modCount", "I").await?;
-        jvm.put_field(&mut this, "expectedModCount", "I", mod_count).await
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "lastReturned",
+            "Ljava/util/LinkedHashMap$Entry;",
+            last_returned,
+        )
+        .await?;
+        let mod_count: i32 = jvm.get_field(&map, "java/util/LinkedHashMap", "modCount", "I").await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$LinkedHashIterator",
+            "expectedModCount",
+            "I",
+            mod_count,
+        )
+        .await
     }
 }

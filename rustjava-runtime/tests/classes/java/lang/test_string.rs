@@ -1138,20 +1138,20 @@ async fn test_substring_shares_parent_value() -> Result<()> {
         .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (2, 5))
         .await?;
 
-    let parent_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&parent, "value", "[C").await?;
-    let child_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&child, "value", "[C").await?;
+    let parent_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&parent, "java/lang/String", "value", "[C").await?;
+    let child_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&child, "java/lang/String", "value", "[C").await?;
     assert_eq!(parent_value.identity(), child_value.identity());
-    assert_eq!(jvm.get_field::<i32>(&child, "offset", "I").await?, 2);
-    assert_eq!(jvm.get_field::<i32>(&child, "count", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&child, "java/lang/String", "offset", "I").await?, 2);
+    assert_eq!(jvm.get_field::<i32>(&child, "java/lang/String", "count", "I").await?, 3);
     assert_eq!(JavaLangString::to_rust_string(&jvm, &child).await?, "llo");
 
     let tail: ClassInstanceRef<JavaString> = jvm
         .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(I)Ljava/lang/String;", (5,))
         .await?;
-    let tail_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&tail, "value", "[C").await?;
+    let tail_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&tail, "java/lang/String", "value", "[C").await?;
     assert_eq!(parent_value.identity(), tail_value.identity());
-    assert_eq!(jvm.get_field::<i32>(&tail, "offset", "I").await?, 5);
-    assert_eq!(jvm.get_field::<i32>(&tail, "count", "I").await?, 5);
+    assert_eq!(jvm.get_field::<i32>(&tail, "java/lang/String", "offset", "I").await?, 5);
+    assert_eq!(jvm.get_field::<i32>(&tail, "java/lang/String", "count", "I").await?, 5);
     assert_eq!(JavaLangString::to_rust_string(&jvm, &tail).await?, "World");
 
     Ok(())
@@ -1188,11 +1188,11 @@ async fn test_nested_substring_shares_root_value() -> Result<()> {
         .invoke_virtual(&outer, "java/lang/String", "substring", "(II)Ljava/lang/String;", (1, 3))
         .await?;
 
-    let root_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&root, "value", "[C").await?;
-    let inner_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&inner, "value", "[C").await?;
+    let root_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&root, "java/lang/String", "value", "[C").await?;
+    let inner_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&inner, "java/lang/String", "value", "[C").await?;
     assert_eq!(root_value.identity(), inner_value.identity());
-    assert_eq!(jvm.get_field::<i32>(&inner, "offset", "I").await?, 3);
-    assert_eq!(jvm.get_field::<i32>(&inner, "count", "I").await?, 2);
+    assert_eq!(jvm.get_field::<i32>(&inner, "java/lang/String", "offset", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&inner, "java/lang/String", "count", "I").await?, 2);
     assert_eq!(
         jvm.invoke_virtual::<_, JavaChar>(&inner, "java/lang/String", "charAt", "(I)C", (0,))
             .await?,
@@ -1217,7 +1217,7 @@ async fn test_init_partial_char_array_is_defensive_copy() -> Result<()> {
     let string = jvm.new_class("java/lang/String", "([CII)V", (chars.clone(), 1, 3)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "ell");
 
-    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
+    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "java/lang/String", "value", "[C").await?;
     assert_ne!(value.identity(), chars.identity());
 
     jvm.store_array(&mut chars, 0, "zzzzz".encode_utf16().collect::<Vec<_>>()).await?;
@@ -1235,7 +1235,7 @@ async fn test_to_char_array_returns_copy() -> Result<()> {
         .invoke_virtual(&string, &string.class_definition().name(), "toCharArray", "()[C", ())
         .await?;
 
-    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
+    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "java/lang/String", "value", "[C").await?;
     assert_ne!(chars.identity(), value.identity());
     assert_eq!(jvm.array_length(&chars).await?, 3);
 
@@ -1475,11 +1475,11 @@ async fn test_trim_on_substring_shares_buffer() -> Result<()> {
     let trimmed: ClassInstanceRef<JavaString> = jvm.invoke_virtual(&sub, "java/lang/String", "trim", "()Ljava/lang/String;", ()).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &trimmed).await?, "hi");
 
-    let parent_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&parent, "value", "[C").await?;
-    let trimmed_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&trimmed, "value", "[C").await?;
+    let parent_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&parent, "java/lang/String", "value", "[C").await?;
+    let trimmed_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&trimmed, "java/lang/String", "value", "[C").await?;
     assert_eq!(parent_value.identity(), trimmed_value.identity());
-    assert_eq!(jvm.get_field::<i32>(&trimmed, "offset", "I").await?, 4);
-    assert_eq!(jvm.get_field::<i32>(&trimmed, "count", "I").await?, 2);
+    assert_eq!(jvm.get_field::<i32>(&trimmed, "java/lang/String", "offset", "I").await?, 4);
+    assert_eq!(jvm.get_field::<i32>(&trimmed, "java/lang/String", "count", "I").await?, 2);
 
     let no_trim: ClassInstanceRef<JavaString> = jvm
         .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (4, 6))
@@ -1594,10 +1594,10 @@ async fn test_from_rust_string_representation() -> Result<()> {
 
     let string = JavaLangString::from_rust_string(&jvm, "test").await?;
 
-    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
+    let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "java/lang/String", "value", "[C").await?;
     assert_eq!(jvm.array_length(&value).await?, 4);
-    assert_eq!(jvm.get_field::<i32>(&string, "offset", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&string, "count", "I").await?, 4);
+    assert_eq!(jvm.get_field::<i32>(&string, "java/lang/String", "offset", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&string, "java/lang/String", "count", "I").await?, 4);
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "test");
 
     Ok(())
@@ -1610,11 +1610,11 @@ async fn test_init_with_string_shares_full_range_value() -> Result<()> {
     let original = JavaLangString::from_rust_string(&jvm, "Hello").await?;
     let copy = jvm.new_class("java/lang/String", "(Ljava/lang/String;)V", (original.clone(),)).await?;
 
-    let original_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&original, "value", "[C").await?;
-    let copy_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&copy, "value", "[C").await?;
+    let original_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&original, "java/lang/String", "value", "[C").await?;
+    let copy_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&copy, "java/lang/String", "value", "[C").await?;
     assert_eq!(original_value.identity(), copy_value.identity());
-    assert_eq!(jvm.get_field::<i32>(&copy, "offset", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&copy, "count", "I").await?, 5);
+    assert_eq!(jvm.get_field::<i32>(&copy, "java/lang/String", "offset", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&copy, "java/lang/String", "count", "I").await?, 5);
     assert!(
         jvm.invoke_virtual::<_, bool>(&copy, &copy.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (original,))
             .await?
@@ -1633,12 +1633,12 @@ async fn test_init_with_string_detaches_substring_with_exact_size_copy() -> Resu
         .await?;
     let detached = jvm.new_class("java/lang/String", "(Ljava/lang/String;)V", (sub.clone(),)).await?;
 
-    let sub_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&sub, "value", "[C").await?;
-    let detached_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&detached, "value", "[C").await?;
+    let sub_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&sub, "java/lang/String", "value", "[C").await?;
+    let detached_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&detached, "java/lang/String", "value", "[C").await?;
     assert_ne!(sub_value.identity(), detached_value.identity());
     assert_eq!(jvm.array_length(&detached_value).await?, 3);
-    assert_eq!(jvm.get_field::<i32>(&detached, "offset", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&detached, "count", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&detached, "java/lang/String", "offset", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&detached, "java/lang/String", "count", "I").await?, 3);
     assert!(
         jvm.invoke_virtual::<_, bool>(&detached, &detached.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (sub,))
             .await?
@@ -2405,7 +2405,7 @@ async fn test_corrupted_length_fields_raise_java_exceptions() -> Result<()> {
 
     for field in ["offset", "count"] {
         let mut string = JavaLangString::from_rust_string(&jvm, "Hello").await?;
-        jvm.put_field(&mut string, field, "I", -1i32).await?;
+        jvm.put_field(&mut string, "java/lang/String", field, "I", -1i32).await?;
 
         let result: Result<i32> = jvm
             .invoke_virtual(&string, &string.class_definition().name(), "hashCode", "()I", ())
@@ -2425,7 +2425,7 @@ async fn test_corrupted_length_fields_raise_java_exceptions() -> Result<()> {
     }
 
     let mut string = JavaLangString::from_rust_string(&jvm, "Hello").await?;
-    jvm.put_field(&mut string, "count", "I", i32::MAX).await?;
+    jvm.put_field(&mut string, "java/lang/String", "count", "I", i32::MAX).await?;
     let result: Result<i32> = jvm
         .invoke_virtual(&string, &string.class_definition().name(), "hashCode", "()I", ())
         .await;

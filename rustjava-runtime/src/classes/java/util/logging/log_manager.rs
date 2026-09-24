@@ -86,7 +86,14 @@ impl LogManager {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let loggers: ClassInstanceRef<Hashtable> = jvm.new_class("java/util/Hashtable", "()V", ()).await?.into();
-        jvm.put_field(&mut this, "loggers", "Ljava/util/Hashtable;", loggers.clone()).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/LogManager",
+            "loggers",
+            "Ljava/util/Hashtable;",
+            loggers.clone(),
+        )
+        .await?;
 
         let root_name = JavaLangString::from_rust_string(jvm, "").await?;
         let resource_bundle_name: ClassInstanceRef<String> = None.into();
@@ -101,8 +108,10 @@ impl LogManager {
         let info: ClassInstanceRef<Level> = jvm
             .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
             .await?;
-        jvm.put_field(&mut root, "level", "Ljava/util/logging/Level;", info).await?;
-        jvm.put_field(&mut root, "useParentHandlers", "Z", false).await?;
+        jvm.put_field(&mut root, "java/util/logging/Logger", "level", "Ljava/util/logging/Level;", info)
+            .await?;
+        jvm.put_field(&mut root, "java/util/logging/Logger", "useParentHandlers", "Z", false)
+            .await?;
         let console: ClassInstanceRef<ConsoleHandler> = jvm.new_class("java/util/logging/ConsoleHandler", "()V", ()).await?.into();
         let _: () = jvm
             .invoke_virtual(
@@ -122,7 +131,14 @@ impl LogManager {
                 (root_name, root.clone()),
             )
             .await?;
-        jvm.put_field(&mut this, "root", "Ljava/util/logging/Logger;", root.clone()).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/LogManager",
+            "root",
+            "Ljava/util/logging/Logger;",
+            root.clone(),
+        )
+        .await?;
 
         let global_name: ClassInstanceRef<String> = jvm
             .get_static_field("java/util/logging/Logger", "GLOBAL_LOGGER_NAME", "Ljava/lang/String;")
@@ -130,7 +146,8 @@ impl LogManager {
         let mut global: ClassInstanceRef<Logger> = jvm
             .get_static_field("java/util/logging/Logger", "global", "Ljava/util/logging/Logger;")
             .await?;
-        jvm.put_field(&mut global, "parent", "Ljava/util/logging/Logger;", root).await?;
+        jvm.put_field(&mut global, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;", root)
+            .await?;
         let _: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &loggers,
@@ -178,7 +195,9 @@ impl LogManager {
         name: ClassInstanceRef<String>,
         logger: ClassInstanceRef<Logger>,
     ) -> Result<bool> {
-        let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
+        let loggers: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/logging/LogManager", "loggers", "Ljava/util/Hashtable;")
+            .await?;
         let existing: ClassInstanceRef<Object> = jvm
             .invoke_virtual(
                 &loggers,
@@ -214,14 +233,18 @@ impl LogManager {
         if name.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "name").await);
         }
-        let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
+        let loggers: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/logging/LogManager", "loggers", "Ljava/util/Hashtable;")
+            .await?;
         jvm.invoke_virtual(&loggers, "java/util/Hashtable", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (name,))
             .await
     }
 
     async fn get_logger_names(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.logging.LogManager::getLoggerNames({this:?})");
-        let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
+        let loggers: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/logging/LogManager", "loggers", "Ljava/util/Hashtable;")
+            .await?;
         jvm.invoke_virtual(&loggers, "java/util/Hashtable", "keys", "()Ljava/util/Enumeration;", ())
             .await
     }
@@ -237,7 +260,9 @@ impl LogManager {
                 (),
             )
             .await?;
-        let root: ClassInstanceRef<Logger> = jvm.get_field(&this, "root", "Ljava/util/logging/Logger;").await?;
+        let root: ClassInstanceRef<Logger> = jvm
+            .get_field(&this, "java/util/logging/LogManager", "root", "Ljava/util/logging/Logger;")
+            .await?;
         let length = jvm.array_length(&loggers).await?;
         let loggers: Vec<ClassInstanceRef<Logger>> = jvm.load_array(&loggers, 0, length).await?;
         for logger in loggers {
@@ -260,7 +285,9 @@ impl LogManager {
     }
 
     async fn snapshot_loggers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Logger>>> {
-        let loggers: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "loggers", "Ljava/util/Hashtable;").await?;
+        let loggers: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/logging/LogManager", "loggers", "Ljava/util/Hashtable;")
+            .await?;
         let values: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&loggers, "java/util/Hashtable", "elements", "()Ljava/util/Enumeration;", ())
             .await?;
@@ -302,7 +329,9 @@ impl LogManager {
             );
         }
 
-        let root: ClassInstanceRef<Logger> = jvm.get_field(manager, "root", "Ljava/util/logging/Logger;").await?;
+        let root: ClassInstanceRef<Logger> = jvm
+            .get_field(manager, "java/util/logging/LogManager", "root", "Ljava/util/logging/Logger;")
+            .await?;
         for key in keys {
             let name: RustString = JavaLangString::to_rust_string(jvm, &key).await?;
             if name.is_empty() {
@@ -330,7 +359,8 @@ impl LogManager {
                     break;
                 }
             }
-            jvm.put_field(&mut logger, "parent", "Ljava/util/logging/Logger;", parent).await?;
+            jvm.put_field(&mut logger, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;", parent)
+                .await?;
         }
         Ok(())
     }

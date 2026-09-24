@@ -308,7 +308,7 @@ async fn file_01_file_reader_constructor_contracts() -> Result<()> {
 
     let input = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
     let descriptor: ClassInstanceRef<rustjava_runtime::classes::java::io::FileDescriptor> =
-        jvm.get_field(&input, "fd", "Ljava/io/FileDescriptor;").await?;
+        jvm.get_field(&input, "java/io/FileInputStream", "fd", "Ljava/io/FileDescriptor;").await?;
     let reader = jvm.new_class("java/io/FileReader", "(Ljava/io/FileDescriptor;)V", (descriptor,)).await?;
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "()I", ())
@@ -395,8 +395,9 @@ async fn file_02_file_03_file_writer_constructor_and_append_contracts() -> Resul
     assert_eq!(&*runtime.files.lock().unwrap()["output.txt"].lock().unwrap(), b"reset");
 
     let output = jvm.new_class("java/io/FileOutputStream", "(Ljava/io/File;)V", (file,)).await?;
-    let descriptor: ClassInstanceRef<rustjava_runtime::classes::java::io::FileDescriptor> =
-        jvm.get_field(&output, "fd", "Ljava/io/FileDescriptor;").await?;
+    let descriptor: ClassInstanceRef<rustjava_runtime::classes::java::io::FileDescriptor> = jvm
+        .get_field(&output, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;")
+        .await?;
     let writer = jvm.new_class("java/io/FileWriter", "(Ljava/io/FileDescriptor;)V", (descriptor,)).await?;
     let value = JavaLangString::from_rust_string(&jvm, "F").await?;
     let _: () = jvm

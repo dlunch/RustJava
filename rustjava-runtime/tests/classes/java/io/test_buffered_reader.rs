@@ -50,15 +50,15 @@ impl ChunkedReader {
         chunk_size: i32,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "data", "[C", data).await?;
-        jvm.put_field(&mut this, "position", "I", 0).await?;
-        jvm.put_field(&mut this, "chunkSize", "I", chunk_size).await?;
-        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "data", "[C").await?;
+        jvm.put_field(&mut this, "ChunkedReader", "data", "[C", data).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "position", "I", 0).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "chunkSize", "I", chunk_size).await?;
+        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "ChunkedReader", "data", "[C").await?;
         let data_length = jvm.array_length(&data).await? as i32;
-        jvm.put_field(&mut this, "visibleLength", "I", data_length).await?;
-        jvm.put_field(&mut this, "zeroReads", "I", 0).await?;
-        jvm.put_field(&mut this, "closed", "Z", false).await?;
-        jvm.put_field(&mut this, "closeCount", "I", 0).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "visibleLength", "I", data_length).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "zeroReads", "I", 0).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "closed", "Z", false).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "closeCount", "I", 0).await?;
         Ok(())
     }
 
@@ -70,7 +70,7 @@ impl ChunkedReader {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        if jvm.get_field::<bool>(&this, "closed", "Z").await? {
+        if jvm.get_field::<bool>(&this, "ChunkedReader", "closed", "Z").await? {
             return Err(jvm.exception("java/io/IOException", "reader is closed").await);
         }
 
@@ -82,43 +82,43 @@ impl ChunkedReader {
             return Ok(0);
         }
 
-        let zero_reads: i32 = jvm.get_field(&this, "zeroReads", "I").await?;
+        let zero_reads: i32 = jvm.get_field(&this, "ChunkedReader", "zeroReads", "I").await?;
         if zero_reads > 0 {
-            jvm.put_field(&mut this, "zeroReads", "I", zero_reads - 1).await?;
+            jvm.put_field(&mut this, "ChunkedReader", "zeroReads", "I", zero_reads - 1).await?;
             return Ok(0);
         }
 
-        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "data", "[C").await?;
-        let position: i32 = jvm.get_field(&this, "position", "I").await?;
-        let visible_length: i32 = jvm.get_field(&this, "visibleLength", "I").await?;
+        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "ChunkedReader", "data", "[C").await?;
+        let position: i32 = jvm.get_field(&this, "ChunkedReader", "position", "I").await?;
+        let visible_length: i32 = jvm.get_field(&this, "ChunkedReader", "visibleLength", "I").await?;
         let available = visible_length.min(jvm.array_length(&data).await? as i32) - position;
         if available == 0 {
             return Ok(-1);
         }
 
-        let chunk_size: i32 = jvm.get_field(&this, "chunkSize", "I").await?;
+        let chunk_size: i32 = jvm.get_field(&this, "ChunkedReader", "chunkSize", "I").await?;
         let count = length.min(available).min(chunk_size);
         let values: Vec<JavaChar> = jvm.load_array(&data, position as usize, count as usize).await?;
         jvm.store_array(&mut target, offset as usize, values).await?;
-        jvm.put_field(&mut this, "position", "I", position + count).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "position", "I", position + count).await?;
         Ok(count)
     }
 
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        if jvm.get_field::<bool>(&this, "closed", "Z").await? {
+        if jvm.get_field::<bool>(&this, "ChunkedReader", "closed", "Z").await? {
             return Err(jvm.exception("java/io/IOException", "reader is closed").await);
         }
 
-        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "data", "[C").await?;
-        let position: i32 = jvm.get_field(&this, "position", "I").await?;
-        let visible_length: i32 = jvm.get_field(&this, "visibleLength", "I").await?;
+        let data: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "ChunkedReader", "data", "[C").await?;
+        let position: i32 = jvm.get_field(&this, "ChunkedReader", "position", "I").await?;
+        let visible_length: i32 = jvm.get_field(&this, "ChunkedReader", "visibleLength", "I").await?;
         Ok(position < visible_length.min(jvm.array_length(&data).await? as i32))
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let close_count: i32 = jvm.get_field(&this, "closeCount", "I").await?;
-        jvm.put_field(&mut this, "closeCount", "I", close_count + 1).await?;
-        jvm.put_field(&mut this, "closed", "Z", true).await?;
+        let close_count: i32 = jvm.get_field(&this, "ChunkedReader", "closeCount", "I").await?;
+        jvm.put_field(&mut this, "ChunkedReader", "closeCount", "I", close_count + 1).await?;
+        jvm.put_field(&mut this, "ChunkedReader", "closed", "Z", true).await?;
         Ok(())
     }
 }
@@ -147,19 +147,22 @@ impl ReadRunner {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, reader: ClassInstanceRef<BufferedReader>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "reader", "Ljava/io/BufferedReader;", reader).await?;
-        jvm.put_field(&mut this, "started", "Z", false).await?;
-        jvm.put_field(&mut this, "done", "Z", false).await?;
-        jvm.put_field(&mut this, "value", "I", -1).await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "reader", "Ljava/io/BufferedReader;", reader)
+            .await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "started", "Z", false).await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "done", "Z", false).await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "value", "I", -1).await?;
         Ok(())
     }
 
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "started", "Z", true).await?;
-        let reader: ClassInstanceRef<BufferedReader> = jvm.get_field(&this, "reader", "Ljava/io/BufferedReader;").await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "started", "Z", true).await?;
+        let reader: ClassInstanceRef<BufferedReader> = jvm
+            .get_field(&this, "BufferedReaderReadRunner", "reader", "Ljava/io/BufferedReader;")
+            .await?;
         let value: i32 = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "read", "()I", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await?;
-        jvm.put_field(&mut this, "done", "Z", true).await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "value", "I", value).await?;
+        jvm.put_field(&mut this, "BufferedReaderReadRunner", "done", "Z", true).await?;
         Ok(())
     }
 }
@@ -473,7 +476,7 @@ async fn test_buffered_reader_mark_restores_pending_crlf_state() -> Result<()> {
 #[tokio::test]
 async fn test_buffered_reader_ready_preserves_pending_lf_until_input_is_available() -> Result<()> {
     let (jvm, mut source, reader) = buffered_reader("\r\nX", 3, 2).await?;
-    jvm.put_field(&mut source, "visibleLength", "I", 1).await?;
+    jvm.put_field(&mut source, "ChunkedReader", "visibleLength", "I", 1).await?;
 
     let line: ClassInstanceRef<String> = jvm
         .invoke_virtual(&reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
@@ -484,7 +487,7 @@ async fn test_buffered_reader_ready_preserves_pending_lf_until_input_is_availabl
             .await?
     );
 
-    jvm.put_field(&mut source, "visibleLength", "I", 3).await?;
+    jvm.put_field(&mut source, "ChunkedReader", "visibleLength", "I", 3).await?;
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
         'X' as i32
@@ -496,7 +499,7 @@ async fn test_buffered_reader_ready_preserves_pending_lf_until_input_is_availabl
 #[tokio::test]
 async fn test_buffered_reader_fill_retries_temporary_zero_read() -> Result<()> {
     let (jvm, mut source, reader) = buffered_reader("a", 1, 1).await?;
-    jvm.put_field(&mut source, "zeroReads", "I", 1).await?;
+    jvm.put_field(&mut source, "ChunkedReader", "zeroReads", "I", 1).await?;
 
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&reader, "java/io/BufferedReader", "read", "()I", ()).await?,
@@ -523,21 +526,21 @@ async fn test_buffered_reader_serializes_on_inherited_reader_lock() -> Result<()
 
     let mut started = false;
     for _ in 0..100 {
-        started = jvm.get_field::<bool>(&runner, "started", "Z").await?;
+        started = jvm.get_field::<bool>(&runner, "BufferedReaderReadRunner", "started", "Z").await?;
         if started {
             break;
         }
         tokio::time::sleep(Duration::from_millis(1)).await;
     }
     tokio::time::sleep(Duration::from_millis(10)).await;
-    let completed_while_lock_was_held = jvm.get_field::<bool>(&runner, "done", "Z").await?;
+    let completed_while_lock_was_held = jvm.get_field::<bool>(&runner, "BufferedReaderReadRunner", "done", "Z").await?;
 
     jvm.monitor_exit(&source).await?;
     let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "join", "()V", ()).await?;
 
     assert!(started, "worker thread did not start");
     assert!(!completed_while_lock_was_held, "read did not synchronize on Reader.lock");
-    assert_eq!(jvm.get_field::<i32>(&runner, "value", "I").await?, 'a' as i32);
+    assert_eq!(jvm.get_field::<i32>(&runner, "BufferedReaderReadRunner", "value", "I").await?, 'a' as i32);
 
     Ok(())
 }
@@ -548,7 +551,7 @@ async fn test_buffered_reader_close_is_idempotent_and_closes_all_operations() ->
 
     let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "close", "()V", ()).await?;
     let _: () = jvm.invoke_virtual(&reader, "java/io/BufferedReader", "close", "()V", ()).await?;
-    assert_eq!(jvm.get_field::<i32>(&source, "closeCount", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&source, "ChunkedReader", "closeCount", "I").await?, 1);
     assert!(
         jvm.invoke_virtual::<_, bool>(&reader, "java/io/BufferedReader", "markSupported", "()Z", ())
             .await?

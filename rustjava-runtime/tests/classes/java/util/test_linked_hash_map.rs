@@ -35,15 +35,15 @@ impl LimitedLinkedHashMap {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, limit: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/LinkedHashMap", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "limit", "I", limit).await?;
-        jvm.put_field(&mut this, "callbacks", "I", 0).await
+        jvm.put_field(&mut this, "LimitedLinkedHashMap", "limit", "I", limit).await?;
+        jvm.put_field(&mut this, "LimitedLinkedHashMap", "callbacks", "I", 0).await
     }
 
     async fn remove_eldest_entry(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
-        let callbacks: i32 = jvm.get_field(&this, "callbacks", "I").await?;
-        jvm.put_field(&mut this, "callbacks", "I", callbacks + 1).await?;
+        let callbacks: i32 = jvm.get_field(&this, "LimitedLinkedHashMap", "callbacks", "I").await?;
+        jvm.put_field(&mut this, "LimitedLinkedHashMap", "callbacks", "I", callbacks + 1).await?;
         let size: i32 = jvm.invoke_virtual(&this, "LimitedLinkedHashMap", "size", "()I", ()).await?;
-        let limit: i32 = jvm.get_field(&this, "limit", "I").await?;
+        let limit: i32 = jvm.get_field(&this, "LimitedLinkedHashMap", "limit", "I").await?;
 
         Ok(size > limit)
     }
@@ -537,7 +537,7 @@ async fn linked_hash_map_copy_and_remove_eldest_entry_preserve_policy_and_order(
         view_strings(&jvm, &limited, "keySet", "()Ljava/util/Set;").await?,
         vec![Some("b".into()), Some("c".into())]
     );
-    assert_eq!(jvm.get_field::<i32>(&limited, "callbacks", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&limited, "LimitedLinkedHashMap", "callbacks", "I").await?, 3);
 
     let key = JavaLangString::from_rust_string(&jvm, "c").await?;
     let value = JavaLangString::from_rust_string(&jvm, "C").await?;
@@ -550,7 +550,7 @@ async fn linked_hash_map_copy_and_remove_eldest_entry_preserve_policy_and_order(
             (key, value),
         )
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&limited, "callbacks", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&limited, "LimitedLinkedHashMap", "callbacks", "I").await?, 3);
 
     let copy: ClassInstanceRef<Object> = jvm.new_class("java/util/LinkedHashMap", "(Ljava/util/Map;)V", (limited,)).await?.into();
     assert_eq!(

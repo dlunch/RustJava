@@ -83,7 +83,7 @@ impl Writer {
         }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "lock", "Ljava/lang/Object;", lock).await?;
+        jvm.put_field(&mut this, "java/io/Writer", "lock", "Ljava/lang/Object;", lock).await?;
 
         Ok(())
     }

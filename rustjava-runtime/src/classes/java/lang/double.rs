@@ -138,7 +138,7 @@ impl Double {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "D", value).await
+        jvm.put_field(&mut this, "java/lang/Double", "value", "D", value).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -148,7 +148,7 @@ impl Double {
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
         let value = Self::parse_value(jvm, &value).await?;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "D", value).await
+        jvm.put_field(&mut this, "java/lang/Double", "value", "D", value).await
     }
 
     async fn parse_value(jvm: &Jvm, value: &str) -> Result<f64> {
@@ -257,7 +257,7 @@ impl Double {
     }
 
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        jvm.get_field(&this, "value", "D").await
+        jvm.get_field(&this, "java/lang/Double", "value", "D").await
     }
 
     fn format_value(value: f64) -> RustString {

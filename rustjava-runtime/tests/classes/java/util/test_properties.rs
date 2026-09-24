@@ -89,19 +89,19 @@ impl FailingAfterInputStream {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "data", "[B", data).await?;
-        jvm.put_field(&mut this, "position", "I", 0).await
+        jvm.put_field(&mut this, "FailingAfterInputStream", "data", "[B", data).await?;
+        jvm.put_field(&mut this, "FailingAfterInputStream", "position", "I", 0).await
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B").await?;
-        let position: i32 = jvm.get_field(&this, "position", "I").await?;
+        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "FailingAfterInputStream", "data", "[B").await?;
+        let position: i32 = jvm.get_field(&this, "FailingAfterInputStream", "position", "I").await?;
         if position as usize >= jvm.array_length(&data).await? {
             return Err(jvm.exception("java/io/IOException", "read failed after data").await);
         }
 
         let value: i8 = jvm.load_array(&data, position as usize, 1).await?.into_iter().next().unwrap();
-        jvm.put_field(&mut this, "position", "I", position + 1).await?;
+        jvm.put_field(&mut this, "FailingAfterInputStream", "position", "I", position + 1).await?;
         Ok(value as u8 as i32)
     }
 }
@@ -214,14 +214,18 @@ async fn prop_01_constructors_and_defaults_field() -> Result<()> {
 
     let jvm = test_jvm().await?;
     let empty = jvm.new_class("java/util/Properties", "()V", ()).await?;
-    let defaults: ClassInstanceRef<Properties> = jvm.get_field(&empty, "defaults", "Ljava/util/Properties;").await?;
+    let defaults: ClassInstanceRef<Properties> = jvm
+        .get_field(&empty, "java/util/Properties", "defaults", "Ljava/util/Properties;")
+        .await?;
     assert!(defaults.is_null());
 
     let parent = jvm.new_class("java/util/Properties", "()V", ()).await?;
     let child = jvm
         .new_class("java/util/Properties", "(Ljava/util/Properties;)V", (parent.clone(),))
         .await?;
-    let actual: ClassInstanceRef<Properties> = jvm.get_field(&child, "defaults", "Ljava/util/Properties;").await?;
+    let actual: ClassInstanceRef<Properties> = jvm
+        .get_field(&child, "java/util/Properties", "defaults", "Ljava/util/Properties;")
+        .await?;
     let key = JavaLangString::from_rust_string(&jvm, "shared-instance").await?;
     let value = JavaLangString::from_rust_string(&jvm, "yes").await?;
     let _: ClassInstanceRef<Object> = jvm

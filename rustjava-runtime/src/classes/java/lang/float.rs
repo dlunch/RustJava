@@ -139,12 +139,12 @@ impl Float {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "F", value).await
+        jvm.put_field(&mut this, "java/lang/Float", "value", "F", value).await
     }
 
     async fn init_double(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "F", value as f32).await
+        jvm.put_field(&mut this, "java/lang/Float", "value", "F", value as f32).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -154,7 +154,7 @@ impl Float {
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
         let value = Self::parse_value(jvm, &value).await?;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "F", value).await
+        jvm.put_field(&mut this, "java/lang/Float", "value", "F", value).await
     }
 
     async fn parse_value(jvm: &Jvm, value: &str) -> Result<f32> {
@@ -258,7 +258,7 @@ impl Float {
     }
 
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        jvm.get_field(&this, "value", "F").await
+        jvm.get_field(&this, "java/lang/Float", "value", "F").await
     }
 
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {

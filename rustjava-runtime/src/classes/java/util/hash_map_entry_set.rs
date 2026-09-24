@@ -45,7 +45,8 @@ impl HashMapEntrySet {
         tracing::debug!("java.util.HashMap$EntrySet::<init>({this:?}, {map:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/HashMap;", map).await?;
+        jvm.put_field(&mut this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;", map)
+            .await?;
 
         Ok(())
     }
@@ -53,7 +54,7 @@ impl HashMapEntrySet {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.HashMap$EntrySet::size({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "size", "()I", ()).await
     }
@@ -61,7 +62,7 @@ impl HashMapEntrySet {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$EntrySet::isEmpty({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "isEmpty", "()Z", ()).await
     }
@@ -73,7 +74,7 @@ impl HashMapEntrySet {
             return Ok(false);
         }
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
         let candidate_key: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
             .await?;
@@ -83,7 +84,7 @@ impl HashMapEntrySet {
             return Ok(false);
         }
 
-        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?;
         if !Self::object_equals(jvm, &entry_key, &candidate_key).await? {
             return Ok(false);
         }
@@ -91,7 +92,7 @@ impl HashMapEntrySet {
         let candidate_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
-        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await?;
 
         Self::object_equals(jvm, &entry_value, &candidate_value).await
     }
@@ -103,7 +104,7 @@ impl HashMapEntrySet {
             return Ok(false);
         }
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
         let candidate_key: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
             .await?;
@@ -112,7 +113,7 @@ impl HashMapEntrySet {
             return Ok(false);
         }
 
-        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+        let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?;
         if !Self::object_equals(jvm, &entry_key, &candidate_key).await? {
             return Ok(false);
         }
@@ -120,7 +121,7 @@ impl HashMapEntrySet {
         let candidate_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
-        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await?;
         if !Self::object_equals(jvm, &entry_value, &candidate_value).await? {
             return Ok(false);
         }
@@ -141,7 +142,7 @@ impl HashMapEntrySet {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap$EntrySet::clear({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "clear", "()V", ()).await
     }
@@ -149,7 +150,7 @@ impl HashMapEntrySet {
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$EntrySet::iterator({this:?})");
 
-        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "map", "Ljava/util/HashMap;").await?;
+        let map: ClassInstanceRef<HashMap> = jvm.get_field(&this, "java/util/HashMap$EntrySet", "map", "Ljava/util/HashMap;").await?;
 
         jvm.invoke_virtual(&map, "java/util/HashMap", "entryIterator", "()Ljava/util/Iterator;", ())
             .await

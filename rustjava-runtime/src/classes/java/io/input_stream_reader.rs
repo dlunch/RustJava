@@ -87,18 +87,20 @@ impl InputStreamReader {
 
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
         let charset = JavaLangString::from_rust_string(jvm, charset_name).await?;
-        jvm.put_field(&mut this, "charset", "Ljava/lang/String;", charset).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "charset", "Ljava/lang/String;", charset)
+            .await?;
 
         let read_buf = jvm.instantiate_array("B", BUF_SIZE).await?;
-        jvm.put_field(&mut this, "readBuf", "[B", read_buf).await?;
-        jvm.put_field(&mut this, "readBufSize", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "readBuf", "[B", read_buf).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "readBufSize", "I", 0).await?;
 
         let write_buf = jvm.instantiate_array("C", BUF_SIZE * 3).await?;
-        jvm.put_field(&mut this, "writeBuf", "[C", write_buf).await?;
-        jvm.put_field(&mut this, "writeBufSize", "I", 0).await?;
-        jvm.put_field(&mut this, "endOfInput", "Z", false).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "writeBuf", "[C", write_buf).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "writeBufSize", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "endOfInput", "Z", false).await?;
 
-        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;", r#in)
+            .await?;
 
         Ok(())
     }
@@ -121,16 +123,16 @@ impl InputStreamReader {
             return Ok(0);
         }
 
-        let mut write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+        let mut write_buf_size: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "writeBufSize", "I").await?;
 
         while write_buf_size < length {
-            let read_buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "readBuf", "[B").await?;
-            let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
+            let read_buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/InputStreamReader", "readBuf", "[B").await?;
+            let read_buf_size: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "readBufSize", "I").await?;
 
             if read_buf_size < (BUF_SIZE / 2) as _ {
                 let bytes_to_read = BUF_SIZE as i32 - read_buf_size;
 
-                let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+                let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
 
                 let temp = jvm.instantiate_array("B", bytes_to_read as _).await?;
                 let read: i32 = jvm
@@ -145,20 +147,21 @@ impl InputStreamReader {
                             (temp, 0, read_buf.clone(), read_buf_size, read),
                         )
                         .await?;
-                    jvm.put_field(&mut this, "readBufSize", "I", read_buf_size + read).await?;
+                    jvm.put_field(&mut this, "java/io/InputStreamReader", "readBufSize", "I", read_buf_size + read)
+                        .await?;
                 } else {
-                    jvm.put_field(&mut this, "endOfInput", "Z", true).await?;
+                    jvm.put_field(&mut this, "java/io/InputStreamReader", "endOfInput", "Z", true).await?;
                     if read_buf_size == 0 && write_buf_size == 0 {
                         return Ok(-1);
                     }
                 }
             }
 
-            let read_buf_size: i32 = jvm.get_field(&this, "readBufSize", "I").await?;
+            let read_buf_size: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "readBufSize", "I").await?;
             let mut read_buf_data = vec![0; read_buf_size as _];
             jvm.array_raw_buffer(&read_buf).await?.read(0, &mut read_buf_data)?;
 
-            let charset_ref = jvm.get_field(&this, "charset", "Ljava/lang/String;").await?;
+            let charset_ref = jvm.get_field(&this, "java/io/InputStreamReader", "charset", "Ljava/lang/String;").await?;
             let charset = JavaLangString::to_rust_string(jvm, &charset_ref).await?;
             let mut decoder = if charset == "UTF-8" {
                 UTF_8.new_decoder_without_bom_handling()
@@ -169,7 +172,7 @@ impl InputStreamReader {
             };
 
             let read_buf_data: Vec<u8> = cast_vec(read_buf_data);
-            let end_of_input: bool = jvm.get_field(&this, "endOfInput", "Z").await?;
+            let end_of_input: bool = jvm.get_field(&this, "java/io/InputStreamReader", "endOfInput", "Z").await?;
             let mut decode_length = read_buf_data.len();
             if !end_of_input && charset == "UTF-8" && decode_length > 0 {
                 let mut lead_index = decode_length - 1;
@@ -201,11 +204,12 @@ impl InputStreamReader {
                     (read_buf.clone(), read as i32, read_buf, 0, (read_buf_size - read as i32)),
                 )
                 .await?;
-            jvm.put_field(&mut this, "readBufSize", "I", read_buf_size - read as i32).await?;
+            jvm.put_field(&mut this, "java/io/InputStreamReader", "readBufSize", "I", read_buf_size - read as i32)
+                .await?;
 
             // add to writeBuf
-            let mut write_buf = jvm.get_field(&this, "writeBuf", "[C").await?;
-            let buffered_chars: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+            let mut write_buf = jvm.get_field(&this, "java/io/InputStreamReader", "writeBuf", "[C").await?;
+            let buffered_chars: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "writeBufSize", "I").await?;
             jvm.store_array(
                 &mut write_buf,
                 buffered_chars as _,
@@ -213,14 +217,15 @@ impl InputStreamReader {
             )
             .await?;
             write_buf_size = buffered_chars + wrote as i32;
-            jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size).await?;
+            jvm.put_field(&mut this, "java/io/InputStreamReader", "writeBufSize", "I", write_buf_size)
+                .await?;
             if write_buf_size > 0 {
                 break;
             }
         }
 
-        let write_buf: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "writeBuf", "[C").await?;
-        let write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+        let write_buf: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/InputStreamReader", "writeBuf", "[C").await?;
+        let write_buf_size: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "writeBufSize", "I").await?;
 
         let to_copy = min(length, write_buf_size);
 
@@ -242,7 +247,8 @@ impl InputStreamReader {
                 (write_buf.clone(), to_copy, write_buf, 0, write_buf_size - to_copy),
             )
             .await?;
-        jvm.put_field(&mut this, "writeBufSize", "I", write_buf_size - to_copy).await?;
+        jvm.put_field(&mut this, "java/io/InputStreamReader", "writeBufSize", "I", write_buf_size - to_copy)
+            .await?;
 
         Ok(to_copy)
     }
@@ -250,7 +256,7 @@ impl InputStreamReader {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStreamReader::close({this:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await?;
 
         Ok(())
@@ -259,12 +265,12 @@ impl InputStreamReader {
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.InputStreamReader::ready({this:?})");
 
-        let write_buf_size: i32 = jvm.get_field(&this, "writeBufSize", "I").await?;
+        let write_buf_size: i32 = jvm.get_field(&this, "java/io/InputStreamReader", "writeBufSize", "I").await?;
         if write_buf_size > 0 {
             return Ok(true);
         }
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
         let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
         Ok(available > 0)
     }

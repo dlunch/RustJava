@@ -25,13 +25,13 @@ impl TestClass {
     }
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "ran", "Z", false).await?;
+        jvm.put_field(&mut this, "TestClass", "ran", "Z", false).await?;
 
         Ok(())
     }
 
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "ran", "Z", true).await?;
+        jvm.put_field(&mut this, "TestClass", "ran", "Z", true).await?;
 
         Ok(())
     }
@@ -57,7 +57,7 @@ async fn test_thread() -> Result<()> {
 
     let _: () = jvm.invoke_virtual(&thread, &thread.class_definition().name(), "join", "()V", []).await?;
 
-    let ran: bool = jvm.get_field(&test_class, "ran", "Z").await?;
+    let ran: bool = jvm.get_field(&test_class, "TestClass", "ran", "Z").await?;
     assert!(ran);
 
     assert!(
@@ -121,7 +121,7 @@ async fn test_thread_cldc_metadata_and_state() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "interrupt", "()V", ())
         .await?;
-    assert!(jvm.get_field::<bool>(&thread, "interrupted", "Z").await?);
+    assert!(jvm.get_field::<bool>(&thread, "java/lang/Thread", "interrupted", "Z").await?);
     assert!(jvm.invoke_static::<_, i32>("java/lang/Thread", "activeCount", "()I", ()).await? >= 1);
 
     let result: Result<()> = jvm
@@ -239,7 +239,7 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
         !jvm.invoke_virtual::<_, bool>(&current, &current.class_definition().name(), "isInterrupted", "()Z", ())
             .await?
     );
-    assert!(!jvm.get_field::<bool>(&current, "interrupted", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&current, "java/lang/Thread", "interrupted", "Z").await?);
 
     let result: Result<()> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "join", "(J)V", (-1i64,))

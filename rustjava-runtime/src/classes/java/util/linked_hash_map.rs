@@ -123,7 +123,8 @@ impl LinkedHashMap {
         let _: () = jvm
             .invoke_special(&this, "java/util/HashMap", "<init>", "(IF)V", (capacity, load_factor))
             .await?;
-        jvm.put_field(&mut this, "accessOrder", "Z", access_order).await
+        jvm.put_field(&mut this, "java/util/LinkedHashMap", "accessOrder", "Z", access_order)
+            .await
     }
 
     async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
@@ -175,18 +176,38 @@ impl LinkedHashMap {
             .await?
             .into();
         let header_ref = header.clone();
-        jvm.put_field(&mut header, "before", "Ljava/util/LinkedHashMap$Entry;", header_ref)
-            .await?;
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header_ref,
+        )
+        .await?;
         let header_ref = header.clone();
-        jvm.put_field(&mut header, "after", "Ljava/util/LinkedHashMap$Entry;", header_ref).await?;
-        jvm.put_field(&mut this, "header", "Ljava/util/LinkedHashMap$Entry;", header).await
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header_ref,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;", header)
+            .await
     }
 
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
-        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut entry: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let mut entry: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&header, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
         while entry.identity() != header.identity() {
-            let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+            let entry_value: ClassInstanceRef<Object> = jvm
+                .get_field(&entry, "java/util/LinkedHashMap$Entry", "value", "Ljava/lang/Object;")
+                .await?;
             let equal = if value.is_null() {
                 entry_value.is_null()
             } else if entry_value.is_null() {
@@ -198,7 +219,9 @@ impl LinkedHashMap {
             if equal {
                 return Ok(true);
             }
-            entry = jvm.get_field(&entry, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
+            entry = jvm
+                .get_field(&entry, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+                .await?;
         }
 
         Ok(false)
@@ -214,17 +237,32 @@ impl LinkedHashMap {
             .invoke_virtual(&entry, "java/util/HashMap$Entry", "onAccess", "(Ljava/util/HashMap;)V", (map,))
             .await?;
 
-        jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/HashMap", "clear", "()V", ()).await?;
-        let mut header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let header_ref = header.clone();
-        jvm.put_field(&mut header, "before", "Ljava/util/LinkedHashMap$Entry;", header_ref)
+        let mut header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
         let header_ref = header.clone();
-        jvm.put_field(&mut header, "after", "Ljava/util/LinkedHashMap$Entry;", header_ref).await
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header_ref,
+        )
+        .await?;
+        let header_ref = header.clone();
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header_ref,
+        )
+        .await
     }
 
     async fn store_new_entry(
@@ -236,7 +274,9 @@ impl LinkedHashMap {
         value: ClassInstanceRef<Object>,
         bucket_index: i32,
     ) -> Result<()> {
-        let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&this, "table", "[Ljava/util/HashMap$Entry;").await?;
+        let mut table: ClassInstanceRef<Array<HashMapEntry>> = jvm
+            .get_field(&this, "java/util/LinkedHashMap", "table", "[Ljava/util/HashMap$Entry;")
+            .await?;
         let existing = jvm
             .load_array::<ClassInstanceRef<HashMapEntry>>(&table, bucket_index as usize, 1)
             .await?
@@ -252,18 +292,47 @@ impl LinkedHashMap {
         let bucket_entry: ClassInstanceRef<HashMapEntry> = ClassInstanceRef::new(entry.instance.clone());
         jvm.store_array(&mut table, bucket_index as usize, core::iter::once(bucket_entry)).await?;
 
-        let mut header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut tail: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
-        jvm.put_field(&mut entry, "before", "Ljava/util/LinkedHashMap$Entry;", tail.clone())
+        let mut header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut entry, "after", "Ljava/util/LinkedHashMap$Entry;", header.clone())
+        let mut tail: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&header, "java/util/LinkedHashMap$Entry", "before", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut tail, "after", "Ljava/util/LinkedHashMap$Entry;", entry.clone())
-            .await?;
-        jvm.put_field(&mut header, "before", "Ljava/util/LinkedHashMap$Entry;", entry).await?;
+        jvm.put_field(
+            &mut entry,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            tail.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut entry,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut tail,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            entry.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            entry,
+        )
+        .await?;
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        jvm.put_field(&mut this, "size", "I", size + 1).await
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedHashMap", "size", "I").await?;
+        jvm.put_field(&mut this, "java/util/LinkedHashMap", "size", "I", size + 1).await
     }
 
     async fn insert_new_entry(
@@ -275,9 +344,10 @@ impl LinkedHashMap {
         value: ClassInstanceRef<Object>,
         bucket_index: i32,
     ) -> Result<()> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        let mod_count: i32 = jvm.get_field(&this, "modCount", "I").await?;
-        jvm.put_field(&mut this, "modCount", "I", mod_count.wrapping_add(1)).await?;
+        let size: i32 = jvm.get_field(&this, "java/util/LinkedHashMap", "size", "I").await?;
+        let mod_count: i32 = jvm.get_field(&this, "java/util/LinkedHashMap", "modCount", "I").await?;
+        jvm.put_field(&mut this, "java/util/LinkedHashMap", "modCount", "I", mod_count.wrapping_add(1))
+            .await?;
         let _: () = jvm
             .invoke_virtual(
                 &this,
@@ -288,8 +358,12 @@ impl LinkedHashMap {
             )
             .await?;
 
-        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&this, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let eldest: ClassInstanceRef<LinkedHashMapEntry> = jvm.get_field(&header, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let eldest: ClassInstanceRef<LinkedHashMapEntry> = jvm
+            .get_field(&header, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
         let eldest_entry: ClassInstanceRef<Object> = ClassInstanceRef::new(eldest.instance.clone());
         if jvm
             .invoke_virtual::<_, bool>(
@@ -301,7 +375,9 @@ impl LinkedHashMap {
             )
             .await?
         {
-            let key: ClassInstanceRef<Object> = jvm.get_field(&eldest, "key", "Ljava/lang/Object;").await?;
+            let key: ClassInstanceRef<Object> = jvm
+                .get_field(&eldest, "java/util/LinkedHashMap$Entry", "key", "Ljava/lang/Object;")
+                .await?;
             let _: ClassInstanceRef<Object> = jvm
                 .invoke_virtual(
                     &this,
@@ -312,7 +388,7 @@ impl LinkedHashMap {
                 )
                 .await?;
         } else {
-            let threshold: i32 = jvm.get_field(&this, "threshold", "I").await?;
+            let threshold: i32 = jvm.get_field(&this, "java/util/LinkedHashMap", "threshold", "I").await?;
             if size >= threshold {
                 let mut map: ClassInstanceRef<HashMap> = ClassInstanceRef::new(this.instance.clone());
                 HashMap::rehash(jvm, &mut map).await?;

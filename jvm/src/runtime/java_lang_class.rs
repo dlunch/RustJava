@@ -12,14 +12,14 @@ impl JavaLangClass {
         let mut name_bytes = jvm.instantiate_array("B", name.len()).await?;
         let bytes: Vec<i8> = cast_vec(name.as_bytes().to_vec());
         jvm.store_array(&mut name_bytes, 0, bytes).await?;
-        jvm.put_field(&mut java_class, "nameBytes", "[B", name_bytes).await?;
+        jvm.put_field(&mut java_class, "java/lang/Class", "nameBytes", "[B", name_bytes).await?;
 
         Ok(java_class)
     }
 
     #[allow(clippy::borrowed_box)]
     pub async fn name(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<String> {
-        let name_bytes: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "nameBytes", "[B").await?;
+        let name_bytes: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/lang/Class", "nameBytes", "[B").await?;
         let len = jvm.array_length(&name_bytes).await?;
         let name_bytes_vec: Vec<i8> = jvm.load_array(&name_bytes, 0, len).await?;
         match String::from_utf8(cast_vec(name_bytes_vec)) {
@@ -49,9 +49,9 @@ impl JavaLangClass {
         let mut name_bytes = jvm.instantiate_array("B", class_name.len()).await?;
         let bytes: Vec<i8> = cast_vec(class_name.into_owned().into_bytes());
         jvm.store_array(&mut name_bytes, 0, bytes).await?;
-        jvm.put_field(&mut java_class, "nameBytes", "[B", name_bytes).await?;
+        jvm.put_field(&mut java_class, "java/lang/Class", "nameBytes", "[B", name_bytes).await?;
 
-        jvm.put_field(&mut java_class, "classLoader", "Ljava/lang/ClassLoader;", class_loader)
+        jvm.put_field(&mut java_class, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;", class_loader)
             .await?;
 
         Ok(java_class)
@@ -59,6 +59,6 @@ impl JavaLangClass {
 
     #[allow(clippy::borrowed_box)]
     pub async fn class_loader(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Option<Box<dyn ClassInstance>>> {
-        jvm.get_field(this, "classLoader", "Ljava/lang/ClassLoader;").await
+        jvm.get_field(this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await
     }
 }

@@ -77,8 +77,9 @@ impl FileOutputStream {
 
         let fd = FileDescriptor::from_fd(jvm, fd.unwrap()).await?;
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", fd).await?;
-        jvm.put_field(&mut this, "append", "Z", append).await
+        jvm.put_field(&mut this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;", fd)
+            .await?;
+        jvm.put_field(&mut this, "java/io/FileOutputStream", "append", "Z", append).await
     }
 
     async fn init_with_file_descriptor(
@@ -91,8 +92,9 @@ impl FileOutputStream {
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "fd", "Ljava/io/FileDescriptor;", file_descriptor).await?;
-        jvm.put_field(&mut this, "append", "Z", false).await?;
+        jvm.put_field(&mut this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;", file_descriptor)
+            .await?;
+        jvm.put_field(&mut this, "java/io/FileOutputStream", "append", "Z", false).await?;
 
         Ok(())
     }
@@ -107,7 +109,7 @@ impl FileOutputStream {
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::write({this:?}, {buffer:?}, {offset:?}, {length:?})");
 
-        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let fd = jvm.get_field(&this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
         let mut buf = vec![0; length as _];
@@ -129,7 +131,7 @@ impl FileOutputStream {
     async fn write(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::write({this:?}, {byte:?})");
 
-        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let fd = jvm.get_field(&this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;
 
         if !matches!(file.write(&[byte as u8]).await, Ok(1)) {
@@ -142,7 +144,7 @@ impl FileOutputStream {
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::close({this:?})");
 
-        let fd = jvm.get_field(&this, "fd", "Ljava/io/FileDescriptor;").await?;
+        let fd = jvm.get_field(&this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;").await?;
         FileDescriptor::close(jvm, context, fd).await?;
 
         Ok(())

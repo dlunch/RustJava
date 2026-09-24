@@ -32,7 +32,8 @@ impl FilterOutputStream {
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", out).await?;
+        jvm.put_field(&mut this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;", out)
+            .await?;
 
         Ok(())
     }
@@ -47,7 +48,9 @@ impl FilterOutputStream {
     ) -> Result<()> {
         tracing::debug!(" java.io.FilterOutputStream::write({this:?}, {bytes:?}, {offset:?}, {length:?})");
 
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
         let _: () = jvm
             .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (bytes, offset, length))
             .await?;
@@ -58,7 +61,9 @@ impl FilterOutputStream {
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::write({this:?}, {byte:?})");
 
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
         let _: () = jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "(I)V", (byte,)).await?;
 
         Ok(())
@@ -66,14 +71,18 @@ impl FilterOutputStream {
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::flush({this:?})");
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::close({this:?})");
 
-        let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out: ClassInstanceRef<OutputStream> = jvm
+            .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
         if out.is_null() {
             return Ok(());
         }
@@ -83,14 +92,16 @@ impl FilterOutputStream {
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {}
             Err(error) => {
                 let null_output: ClassInstanceRef<OutputStream> = None.into();
-                jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", null_output).await?;
+                jvm.put_field(&mut this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;", null_output)
+                    .await?;
                 return Err(error);
             }
         }
 
         let close_result: Result<()> = jvm.invoke_virtual(&out, "java/io/OutputStream", "close", "()V", ()).await;
         let null_output: ClassInstanceRef<OutputStream> = None.into();
-        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", null_output).await?;
+        jvm.put_field(&mut this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;", null_output)
+            .await?;
         close_result
     }
 }

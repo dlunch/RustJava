@@ -202,8 +202,9 @@ impl Level {
         }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
-        jvm.put_field(&mut this, "value", "I", value).await
+        jvm.put_field(&mut this, "java/util/logging/Level", "name", "Ljava/lang/String;", name)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/Level", "value", "I", value).await
     }
 
     async fn parse(jvm: &Jvm, _: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
@@ -262,13 +263,13 @@ impl Level {
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Level::getName({this:?})");
 
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/Level", "name", "Ljava/lang/String;").await
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.logging.Level::intValue({this:?})");
 
-        jvm.get_field(&this, "value", "I").await
+        jvm.get_field(&this, "java/util/logging/Level", "value", "I").await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
@@ -279,20 +280,20 @@ impl Level {
         }
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
-        let value: i32 = jvm.get_field(&this, "value", "I").await?;
-        let other_value: i32 = jvm.get_field(&other, "value", "I").await?;
+        let value: i32 = jvm.get_field(&this, "java/util/logging/Level", "value", "I").await?;
+        let other_value: i32 = jvm.get_field(&other, "java/util/logging/Level", "value", "I").await?;
         Ok(value == other_value)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.logging.Level::hashCode({this:?})");
 
-        jvm.get_field(&this, "value", "I").await
+        jvm.get_field(&this, "java/util/logging/Level", "value", "I").await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Level::toString({this:?})");
 
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/Level", "name", "Ljava/lang/String;").await
     }
 }

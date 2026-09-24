@@ -185,10 +185,12 @@ impl Formatter {
         } else {
             appendable
         };
-        jvm.put_field(&mut this, "a", "Ljava/lang/Appendable;", appendable).await?;
-        jvm.put_field(&mut this, "l", "Ljava/util/Locale;", locale).await?;
+        jvm.put_field(&mut this, "java/util/Formatter", "a", "Ljava/lang/Appendable;", appendable)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Formatter", "l", "Ljava/util/Locale;", locale).await?;
         jvm.put_field(
             &mut this,
+            "java/util/Formatter",
             "lastException",
             "Ljava/io/IOException;",
             ClassInstanceRef::<IOException>::new(None),
@@ -401,11 +403,11 @@ impl Formatter {
         let _: ClassInstanceRef<Appendable> = jvm
             .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
             .await?;
-        jvm.get_field(&this, "l", "Ljava/util/Locale;").await
+        jvm.get_field(&this, "java/util/Formatter", "l", "Ljava/util/Locale;").await
     }
 
     async fn out(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Appendable>> {
-        let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "a", "Ljava/lang/Appendable;").await?;
+        let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "java/util/Formatter", "a", "Ljava/lang/Appendable;").await?;
         if appendable.is_null() {
             return Err(JavaError::JavaException(
                 jvm.new_class("java/util/FormatterClosedException", "()V", ()).await?,
@@ -437,6 +439,7 @@ impl Formatter {
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                 jvm.put_field(
                     &mut this,
+                    "java/util/Formatter",
                     "lastException",
                     "Ljava/io/IOException;",
                     ClassInstanceRef::<IOException>::from(exception),
@@ -448,7 +451,7 @@ impl Formatter {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "a", "Ljava/lang/Appendable;").await?;
+        let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "java/util/Formatter", "a", "Ljava/lang/Appendable;").await?;
         if appendable.is_null() {
             return Ok(());
         }
@@ -458,13 +461,20 @@ impl Formatter {
         } else {
             Ok(())
         };
-        jvm.put_field(&mut this, "a", "Ljava/lang/Appendable;", ClassInstanceRef::<Appendable>::new(None))
-            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Formatter",
+            "a",
+            "Ljava/lang/Appendable;",
+            ClassInstanceRef::<Appendable>::new(None),
+        )
+        .await?;
         match result {
             Ok(()) => Ok(()),
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                 jvm.put_field(
                     &mut this,
+                    "java/util/Formatter",
                     "lastException",
                     "Ljava/io/IOException;",
                     ClassInstanceRef::<IOException>::from(exception),
@@ -476,7 +486,8 @@ impl Formatter {
     }
 
     async fn io_exception(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<IOException>> {
-        jvm.get_field(&this, "lastException", "Ljava/io/IOException;").await
+        jvm.get_field(&this, "java/util/Formatter", "lastException", "Ljava/io/IOException;")
+            .await
     }
 
     async fn append_output(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, characters: Vec<JavaChar>) -> Result<()> {
@@ -501,6 +512,7 @@ impl Formatter {
             Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/io/IOException") => {
                 jvm.put_field(
                     this,
+                    "java/util/Formatter",
                     "lastException",
                     "Ljava/io/IOException;",
                     ClassInstanceRef::<IOException>::from(exception),
@@ -518,7 +530,7 @@ impl Formatter {
         format: ClassInstanceRef<String>,
         arguments: ClassInstanceRef<Array<Object>>,
     ) -> Result<ClassInstanceRef<Self>> {
-        let locale: ClassInstanceRef<Locale> = jvm.get_field(&this, "l", "Ljava/util/Locale;").await?;
+        let locale: ClassInstanceRef<Locale> = jvm.get_field(&this, "java/util/Formatter", "l", "Ljava/util/Locale;").await?;
         jvm.invoke_virtual(
             &this,
             "java/util/Formatter",
@@ -925,7 +937,8 @@ impl Formatter {
                     if specifier.flags.contains(&'#') {
                         flags |= 4;
                     }
-                    let formatter_locale: ClassInstanceRef<Locale> = jvm.get_field(formatter, "l", "Ljava/util/Locale;").await?;
+                    let formatter_locale: ClassInstanceRef<Locale> =
+                        jvm.get_field(formatter, "java/util/Formatter", "l", "Ljava/util/Locale;").await?;
                     let callback_formatter = if (formatter_locale.is_null() && locale.is_null())
                         || (!formatter_locale.is_null() && !locale.is_null() && formatter_locale.identity() == locale.identity())
                     {

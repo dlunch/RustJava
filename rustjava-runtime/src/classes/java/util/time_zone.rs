@@ -74,7 +74,7 @@ impl TimeZone {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let id = JavaLangString::from_rust_string(jvm, "GMT").await?;
-        jvm.put_field(&mut this, "ID", "Ljava/lang/String;", id).await
+        jvm.put_field(&mut this, "java/util/TimeZone", "ID", "Ljava/lang/String;", id).await
     }
 
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, id: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
@@ -143,7 +143,7 @@ impl TimeZone {
     }
 
     async fn get_id(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "ID", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/TimeZone", "ID", "Ljava/lang/String;").await
     }
 
     async fn set_id(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, id: ClassInstanceRef<String>) -> Result<()> {
@@ -152,7 +152,7 @@ impl TimeZone {
         if id.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "ID").await);
         }
-        jvm.put_field(&mut this, "ID", "Ljava/lang/String;", id).await
+        jvm.put_field(&mut this, "java/util/TimeZone", "ID", "Ljava/lang/String;", id).await
     }
 
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {

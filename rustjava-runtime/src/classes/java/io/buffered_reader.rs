@@ -88,14 +88,14 @@ impl BufferedReader {
             .await?;
 
         let cb = jvm.instantiate_array("C", size as usize).await?;
-        jvm.put_field(&mut this, "in", "Ljava/io/Reader;", r#in).await?;
-        jvm.put_field(&mut this, "cb", "[C", cb).await?;
-        jvm.put_field(&mut this, "nChars", "I", 0).await?;
-        jvm.put_field(&mut this, "nextChar", "I", 0).await?;
-        jvm.put_field(&mut this, "markedChar", "I", UNMARKED).await?;
-        jvm.put_field(&mut this, "readAheadLimit", "I", 0).await?;
-        jvm.put_field(&mut this, "skipLF", "Z", false).await?;
-        jvm.put_field(&mut this, "markedSkipLF", "Z", false).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "in", "Ljava/io/Reader;", r#in).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "cb", "[C", cb).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "nChars", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "markedChar", "I", UNMARKED).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "readAheadLimit", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "markedSkipLF", "Z", false).await?;
         Ok(())
     }
 
@@ -119,21 +119,21 @@ impl BufferedReader {
     }
 
     async fn fill(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<i32> {
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
 
-        let mut cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "cb", "[C").await?;
+        let mut cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/io/BufferedReader", "cb", "[C").await?;
         let mut destination = 0;
-        let marked_char: i32 = jvm.get_field(this, "markedChar", "I").await?;
+        let marked_char: i32 = jvm.get_field(this, "java/io/BufferedReader", "markedChar", "I").await?;
         if marked_char >= 0 {
-            let next_char: i32 = jvm.get_field(this, "nextChar", "I").await?;
+            let next_char: i32 = jvm.get_field(this, "java/io/BufferedReader", "nextChar", "I").await?;
             let delta = next_char - marked_char;
-            let read_ahead_limit: i32 = jvm.get_field(this, "readAheadLimit", "I").await?;
+            let read_ahead_limit: i32 = jvm.get_field(this, "java/io/BufferedReader", "readAheadLimit", "I").await?;
             if delta >= read_ahead_limit {
-                jvm.put_field(this, "markedChar", "I", INVALIDATED).await?;
-                jvm.put_field(this, "readAheadLimit", "I", 0).await?;
+                jvm.put_field(this, "java/io/BufferedReader", "markedChar", "I", INVALIDATED).await?;
+                jvm.put_field(this, "java/io/BufferedReader", "readAheadLimit", "I", 0).await?;
             } else {
                 let capacity = jvm.array_length(&cb).await?;
                 if read_ahead_limit as usize > capacity {
@@ -148,7 +148,7 @@ impl BufferedReader {
                         )
                         .await?;
                     cb = expanded.into();
-                    jvm.put_field(this, "cb", "[C", cb.clone()).await?;
+                    jvm.put_field(this, "java/io/BufferedReader", "cb", "[C", cb.clone()).await?;
                 } else if delta > 0 {
                     let _: () = jvm
                         .invoke_static(
@@ -160,13 +160,13 @@ impl BufferedReader {
                         .await?;
                 }
 
-                jvm.put_field(this, "markedChar", "I", 0).await?;
+                jvm.put_field(this, "java/io/BufferedReader", "markedChar", "I", 0).await?;
                 destination = delta;
             }
         }
 
-        jvm.put_field(this, "nextChar", "I", destination).await?;
-        jvm.put_field(this, "nChars", "I", destination).await?;
+        jvm.put_field(this, "java/io/BufferedReader", "nextChar", "I", destination).await?;
+        jvm.put_field(this, "java/io/BufferedReader", "nChars", "I", destination).await?;
 
         let capacity = jvm.array_length(&cb).await? as i32;
         let mut read;
@@ -185,52 +185,52 @@ impl BufferedReader {
             }
         }
         if read > 0 {
-            jvm.put_field(this, "nChars", "I", destination + read).await?;
-            jvm.put_field(this, "nextChar", "I", destination).await?;
+            jvm.put_field(this, "java/io/BufferedReader", "nChars", "I", destination + read).await?;
+            jvm.put_field(this, "java/io/BufferedReader", "nextChar", "I", destination).await?;
         }
 
         Ok(read)
     }
 
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
     }
 
     async fn read_char_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.BufferedReader::read({this:?})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
 
         loop {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-            let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+            let mut n_chars: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             if next_char >= n_chars {
                 if Self::fill(jvm, &mut this).await? <= 0 {
                     return Ok(-1);
                 }
-                next_char = jvm.get_field(&this, "nextChar", "I").await?;
-                n_chars = jvm.get_field(&this, "nChars", "I").await?;
+                next_char = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+                n_chars = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             }
 
-            if jvm.get_field::<bool>(&this, "skipLF", "Z").await? {
-                jvm.put_field(&mut this, "skipLF", "Z", false).await?;
-                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            if jvm.get_field::<bool>(&this, "java/io/BufferedReader", "skipLF", "Z").await? {
+                jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
+                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
                 if jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0] == '\n' as JavaChar {
                     next_char += 1;
-                    jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char).await?;
                     if next_char >= n_chars {
                         continue;
                     }
                 }
             }
 
-            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
             let value = jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0];
-            jvm.put_field(&mut this, "nextChar", "I", next_char + 1).await?;
+            jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char + 1).await?;
             return Ok(value as i32);
         }
     }
@@ -243,7 +243,7 @@ impl BufferedReader {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_locked(jvm, this, target, offset, length)).await
     }
 
@@ -256,7 +256,7 @@ impl BufferedReader {
     ) -> Result<i32> {
         tracing::debug!("java.io.BufferedReader::read({this:?}, {target:?}, {offset}, {length})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
@@ -274,8 +274,8 @@ impl BufferedReader {
 
         let mut total = 0;
         while total < length {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-            let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+            let mut n_chars: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             if next_char >= n_chars {
                 if total > 0 && !jvm.invoke_virtual::<_, bool>(&r#in, "java/io/Reader", "ready", "()Z", ()).await? {
                     break;
@@ -283,16 +283,16 @@ impl BufferedReader {
                 if Self::fill(jvm, &mut this).await? <= 0 {
                     break;
                 }
-                next_char = jvm.get_field(&this, "nextChar", "I").await?;
-                n_chars = jvm.get_field(&this, "nChars", "I").await?;
+                next_char = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+                n_chars = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             }
 
-            if jvm.get_field::<bool>(&this, "skipLF", "Z").await? {
-                jvm.put_field(&mut this, "skipLF", "Z", false).await?;
-                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            if jvm.get_field::<bool>(&this, "java/io/BufferedReader", "skipLF", "Z").await? {
+                jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
+                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
                 if jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0] == '\n' as JavaChar {
                     next_char += 1;
-                    jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char).await?;
                     if next_char >= n_chars {
                         continue;
                     }
@@ -300,7 +300,7 @@ impl BufferedReader {
             }
 
             let count = min(length - total, n_chars - next_char);
-            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
             let _: () = jvm
                 .invoke_static(
                     "java/lang/System",
@@ -310,32 +310,33 @@ impl BufferedReader {
                 )
                 .await?;
             total += count;
-            jvm.put_field(&mut this, "nextChar", "I", next_char + count).await?;
+            jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char + count)
+                .await?;
         }
 
         if total == 0 { Ok(-1) } else { Ok(total) }
     }
 
     async fn read_line(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_line_locked(jvm, this)).await
     }
 
     async fn read_line_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.BufferedReader::readLine({this:?})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
 
-        let mut omit_lf: bool = jvm.get_field(&this, "skipLF", "Z").await?;
-        jvm.put_field(&mut this, "skipLF", "Z", false).await?;
+        let mut omit_lf: bool = jvm.get_field(&this, "java/io/BufferedReader", "skipLF", "Z").await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
         let mut line = Vec::new();
 
         loop {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-            let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+            let mut n_chars: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             if next_char >= n_chars {
                 if Self::fill(jvm, &mut this).await? <= 0 {
                     if line.is_empty() {
@@ -344,16 +345,16 @@ impl BufferedReader {
 
                     return Ok(JavaLangString::from_utf16(jvm, line).await?.into());
                 }
-                next_char = jvm.get_field(&this, "nextChar", "I").await?;
-                n_chars = jvm.get_field(&this, "nChars", "I").await?;
+                next_char = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+                n_chars = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             }
 
-            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
             if omit_lf {
                 omit_lf = false;
                 if jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0] == '\n' as JavaChar {
                     next_char += 1;
-                    jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char).await?;
                     if next_char >= n_chars {
                         continue;
                     }
@@ -364,28 +365,29 @@ impl BufferedReader {
             if let Some(index) = buffered.iter().position(|value| *value == '\n' as JavaChar || *value == '\r' as JavaChar) {
                 line.extend_from_slice(&buffered[..index]);
                 let terminator = buffered[index];
-                jvm.put_field(&mut this, "nextChar", "I", next_char + index as i32 + 1).await?;
+                jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char + index as i32 + 1)
+                    .await?;
                 if terminator == '\r' as JavaChar {
-                    jvm.put_field(&mut this, "skipLF", "Z", true).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", true).await?;
                 }
 
                 return Ok(JavaLangString::from_utf16(jvm, line).await?.into());
             }
 
             line.extend(buffered);
-            jvm.put_field(&mut this, "nextChar", "I", n_chars).await?;
+            jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", n_chars).await?;
         }
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, count: i64) -> Result<i64> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, count)).await
     }
 
     async fn skip_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, count: i64) -> Result<i64> {
         tracing::debug!("java.io.BufferedReader::skip({this:?}, {count})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
@@ -395,22 +397,22 @@ impl BufferedReader {
 
         let mut remaining = count;
         while remaining > 0 {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-            let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+            let mut n_chars: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             if next_char >= n_chars {
                 if Self::fill(jvm, &mut this).await? <= 0 {
                     break;
                 }
-                next_char = jvm.get_field(&this, "nextChar", "I").await?;
-                n_chars = jvm.get_field(&this, "nChars", "I").await?;
+                next_char = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+                n_chars = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             }
 
-            if jvm.get_field::<bool>(&this, "skipLF", "Z").await? {
-                jvm.put_field(&mut this, "skipLF", "Z", false).await?;
-                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            if jvm.get_field::<bool>(&this, "java/io/BufferedReader", "skipLF", "Z").await? {
+                jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
+                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
                 if jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0] == '\n' as JavaChar {
                     next_char += 1;
-                    jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char).await?;
                     if next_char >= n_chars {
                         continue;
                     }
@@ -419,41 +421,42 @@ impl BufferedReader {
 
             let skipped = min(remaining, (n_chars - next_char) as i64);
             remaining -= skipped;
-            jvm.put_field(&mut this, "nextChar", "I", next_char + skipped as i32).await?;
+            jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char + skipped as i32)
+                .await?;
         }
 
         Ok(count - remaining)
     }
 
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
     }
 
     async fn ready_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.BufferedReader::ready({this:?})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
 
-        let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-        let mut n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
-        if jvm.get_field::<bool>(&this, "skipLF", "Z").await? {
+        let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+        let mut n_chars: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
+        if jvm.get_field::<bool>(&this, "java/io/BufferedReader", "skipLF", "Z").await? {
             if next_char >= n_chars && jvm.invoke_virtual::<_, bool>(&r#in, "java/io/Reader", "ready", "()Z", ()).await? {
                 let _ = Self::fill(jvm, &mut this).await?;
-                next_char = jvm.get_field(&this, "nextChar", "I").await?;
-                n_chars = jvm.get_field(&this, "nChars", "I").await?;
+                next_char = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+                n_chars = jvm.get_field(&this, "java/io/BufferedReader", "nChars", "I").await?;
             }
 
             if next_char < n_chars {
-                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+                let cb: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedReader", "cb", "[C").await?;
                 if jvm.load_array::<JavaChar>(&cb, next_char as usize, 1).await?[0] == '\n' as JavaChar {
                     next_char += 1;
-                    jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+                    jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", next_char).await?;
                 }
-                jvm.put_field(&mut this, "skipLF", "Z", false).await?;
+                jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", false).await?;
             }
         }
 
@@ -469,14 +472,14 @@ impl BufferedReader {
     }
 
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::mark_locked(jvm, this, read_ahead_limit)).await
     }
 
     async fn mark_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedReader::mark({this:?}, {read_ahead_limit})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
@@ -484,28 +487,29 @@ impl BufferedReader {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "read-ahead limit is negative").await);
         }
 
-        let next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
-        let skip_lf: bool = jvm.get_field(&this, "skipLF", "Z").await?;
-        jvm.put_field(&mut this, "readAheadLimit", "I", read_ahead_limit).await?;
-        jvm.put_field(&mut this, "markedChar", "I", next_char).await?;
-        jvm.put_field(&mut this, "markedSkipLF", "Z", skip_lf).await?;
+        let next_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "nextChar", "I").await?;
+        let skip_lf: bool = jvm.get_field(&this, "java/io/BufferedReader", "skipLF", "Z").await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "readAheadLimit", "I", read_ahead_limit)
+            .await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "markedChar", "I", next_char).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "markedSkipLF", "Z", skip_lf).await?;
         Ok(())
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
     }
 
     async fn reset_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedReader::reset({this:?})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Err(jvm.exception("java/io/IOException", "stream is closed").await);
         }
 
-        let marked_char: i32 = jvm.get_field(&this, "markedChar", "I").await?;
+        let marked_char: i32 = jvm.get_field(&this, "java/io/BufferedReader", "markedChar", "I").await?;
         if marked_char < 0 {
             let message = if marked_char == INVALIDATED {
                 "mark invalid"
@@ -515,30 +519,31 @@ impl BufferedReader {
             return Err(jvm.exception("java/io/IOException", message).await);
         }
 
-        let marked_skip_lf: bool = jvm.get_field(&this, "markedSkipLF", "Z").await?;
-        jvm.put_field(&mut this, "nextChar", "I", marked_char).await?;
-        jvm.put_field(&mut this, "skipLF", "Z", marked_skip_lf).await?;
+        let marked_skip_lf: bool = jvm.get_field(&this, "java/io/BufferedReader", "markedSkipLF", "Z").await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "nextChar", "I", marked_char).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "skipLF", "Z", marked_skip_lf).await?;
         Ok(())
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await
     }
 
     async fn close_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedReader::close({this:?})");
 
-        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "in", "Ljava/io/Reader;").await?;
+        let r#in: ClassInstanceRef<Reader> = jvm.get_field(&this, "java/io/BufferedReader", "in", "Ljava/io/Reader;").await?;
         if r#in.is_null() {
             return Ok(());
         }
 
         let result = jvm.invoke_virtual(&r#in, "java/io/Reader", "close", "()V", ()).await;
         let closed: ClassInstanceRef<Reader> = None.into();
-        jvm.put_field(&mut this, "in", "Ljava/io/Reader;", closed).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "in", "Ljava/io/Reader;", closed)
+            .await?;
         let released: ClassInstanceRef<Array<JavaChar>> = None.into();
-        jvm.put_field(&mut this, "cb", "[C", released).await?;
+        jvm.put_field(&mut this, "java/io/BufferedReader", "cb", "[C", released).await?;
         result
     }
 }

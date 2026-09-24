@@ -484,9 +484,15 @@ async fn linked_list_list_iterator_covers_boundaries_and_every_legal_transition(
         0
     );
 
-    let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
-    let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let header: ClassInstanceRef<Object> = jvm
+        .get_field(&list, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let next: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let previous: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
             .await?
@@ -526,11 +532,21 @@ async fn linked_list_sentinel_unlinks_middle_single_and_last_entries() -> Result
         assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, expected);
     }
 
-    let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
-    let first: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let last: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
-    let first_next: ClassInstanceRef<Object> = jvm.get_field(&first, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let last_previous: ClassInstanceRef<Object> = jvm.get_field(&last, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let header: ClassInstanceRef<Object> = jvm
+        .get_field(&list, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let first: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let last: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let first_next: ClassInstanceRef<Object> = jvm
+        .get_field(&first, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let last_previous: ClassInstanceRef<Object> = jvm
+        .get_field(&last, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&last, &last.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (first_next,))
             .await?
@@ -550,9 +566,15 @@ async fn linked_list_sentinel_unlinks_middle_single_and_last_entries() -> Result
         .invoke_virtual(&list, &list.class_definition().name(), "removeFirst", "()Ljava/lang/Object;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "first");
-    let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
-    let only_next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let only_previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let header: ClassInstanceRef<Object> = jvm
+        .get_field(&list, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let only_next: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let only_previous: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(
             &only_next,
@@ -568,8 +590,12 @@ async fn linked_list_sentinel_unlinks_middle_single_and_last_entries() -> Result
         .invoke_virtual(&list, &list.class_definition().name(), "removeLast", "()Ljava/lang/Object;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &removed).await?, "last");
-    let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let next: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let previous: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
             .await?
@@ -608,9 +634,15 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
 
     let jvm = test_jvm().await?;
     let list = jvm.new_class("java/util/LinkedList", "()V", ()).await?;
-    let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
-    let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let header: ClassInstanceRef<Object> = jvm
+        .get_field(&list, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let next: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let previous: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
             .await?
@@ -711,9 +743,15 @@ async fn list_02_to_04_linked_list_uses_sentinel_and_live_list_iterator() -> Res
     assert_eq!(jvm.array_length(&array).await?, 4);
 
     let _: () = jvm.invoke_virtual(&list, &list.class_definition().name(), "clear", "()V", ()).await?;
-    let header: ClassInstanceRef<Object> = jvm.get_field(&list, "header", "Ljava/util/LinkedList$Entry;").await?;
-    let next: ClassInstanceRef<Object> = jvm.get_field(&header, "next", "Ljava/util/LinkedList$Entry;").await?;
-    let previous: ClassInstanceRef<Object> = jvm.get_field(&header, "previous", "Ljava/util/LinkedList$Entry;").await?;
+    let header: ClassInstanceRef<Object> = jvm
+        .get_field(&list, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let next: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;")
+        .await?;
+    let previous: ClassInstanceRef<Object> = jvm
+        .get_field(&header, "java/util/LinkedList$Entry", "previous", "Ljava/util/LinkedList$Entry;")
+        .await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&header, &header.class_definition().name(), "equals", "(Ljava/lang/Object;)Z", (next,))
             .await?

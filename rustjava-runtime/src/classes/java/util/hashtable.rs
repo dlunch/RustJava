@@ -139,11 +139,19 @@ impl Hashtable {
 
         let initial_capacity = initial_capacity.max(1);
         let table = jvm.instantiate_array("Ljava/util/Hashtable$Entry;", initial_capacity as usize).await?;
-        jvm.put_field(&mut this, "table", "[Ljava/util/Hashtable$Entry;", table).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await?;
-        jvm.put_field(&mut this, "threshold", "I", (initial_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32)
+        jvm.put_field(&mut this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;", table)
             .await?;
-        jvm.put_field(&mut this, "loadFactor", "F", DEFAULT_LOAD_FACTOR).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "count", "I", 0).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Hashtable",
+            "threshold",
+            "I",
+            (initial_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "loadFactor", "F", DEFAULT_LOAD_FACTOR)
+            .await?;
 
         Ok(())
     }
@@ -193,13 +201,13 @@ impl Hashtable {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable::size({this:?})");
 
-        jvm.get_field(&this, "count", "I").await
+        jvm.get_field(&this, "java/util/Hashtable", "count", "I").await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::isEmpty({this:?})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/util/Hashtable", "count", "I").await?;
 
         Ok(count == 0)
     }
@@ -208,15 +216,17 @@ impl Hashtable {
         tracing::debug!("java.util.Hashtable::containsKey({this:?}, {key:?})");
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let table = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await? as i32;
         let bucket_index = ((key_hash & 0x7FFFFFFF) % table_len) as usize;
 
         let mut entry: ClassInstanceRef<HashtableEntry> = jvm.load_array(&table, bucket_index, 1).await?.into_iter().next().unwrap();
         while !entry.is_null() {
-            let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+            let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
             if entry_hash == key_hash {
-                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
                 let equals: bool = jvm
                     .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
                     .await?;
@@ -224,7 +234,9 @@ impl Hashtable {
                     return Ok(true);
                 }
             }
-            entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+            entry = jvm
+                .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                .await?;
         }
 
         Ok(false)
@@ -237,17 +249,21 @@ impl Hashtable {
             return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
         }
 
-        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await?;
         for bucket_index in 0..table_len {
             let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
             while !entry.is_null() {
-                let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+                let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
                 if Self::object_equals(jvm, &value, &entry_value).await? {
                     return Ok(true);
                 }
 
-                entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                    .await?;
             }
         }
 
@@ -258,23 +274,27 @@ impl Hashtable {
         tracing::debug!("java.util.Hashtable::get({this:?}, {key:?})");
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let table = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await? as i32;
         let bucket_index = ((key_hash & 0x7FFFFFFF) % table_len) as usize;
 
         let mut entry: ClassInstanceRef<HashtableEntry> = jvm.load_array(&table, bucket_index, 1).await?.into_iter().next().unwrap();
         while !entry.is_null() {
-            let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+            let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
             if entry_hash == key_hash {
-                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
                 let equals: bool = jvm
                     .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
                     .await?;
                 if equals {
-                    return jvm.get_field(&entry, "value", "Ljava/lang/Object;").await;
+                    return jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await;
                 }
             }
-            entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+            entry = jvm
+                .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                .await?;
         }
 
         Ok(None.into())
@@ -289,7 +309,9 @@ impl Hashtable {
         tracing::debug!("java.util.Hashtable::remove({this:?}, {key:?})");
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let mut table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let mut table = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await? as i32;
         let bucket_index = ((key_hash & 0x7FFFFFFF) % table_len) as usize;
 
@@ -297,28 +319,33 @@ impl Hashtable {
         let mut entry: ClassInstanceRef<HashtableEntry> = jvm.load_array(&table, bucket_index, 1).await?.into_iter().next().unwrap();
 
         while !entry.is_null() {
-            let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+            let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
             if entry_hash == key_hash {
-                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
                 let equals: bool = jvm
                     .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
                     .await?;
                 if equals {
-                    let next: ClassInstanceRef<HashtableEntry> = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+                    let next: ClassInstanceRef<HashtableEntry> = jvm
+                        .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                        .await?;
                     if prev.is_null() {
                         jvm.store_array(&mut table, bucket_index, core::iter::once(next)).await?;
                     } else {
-                        jvm.put_field(&mut prev, "next", "Ljava/util/Hashtable$Entry;", next).await?;
+                        jvm.put_field(&mut prev, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;", next)
+                            .await?;
                     }
 
-                    let count: i32 = jvm.get_field(&this, "count", "I").await?;
-                    jvm.put_field(&mut this, "count", "I", count - 1).await?;
+                    let count: i32 = jvm.get_field(&this, "java/util/Hashtable", "count", "I").await?;
+                    jvm.put_field(&mut this, "java/util/Hashtable", "count", "I", count - 1).await?;
 
-                    return jvm.get_field(&entry, "value", "Ljava/lang/Object;").await;
+                    return jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await;
                 }
             }
             prev = entry;
-            entry = jvm.get_field(&prev, "next", "Ljava/util/Hashtable$Entry;").await?;
+            entry = jvm
+                .get_field(&prev, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                .await?;
         }
 
         Ok(None.into())
@@ -338,33 +365,41 @@ impl Hashtable {
         }
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let mut table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let mut table = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await? as i32;
         let bucket_index = ((key_hash & 0x7FFFFFFF) % table_len) as usize;
 
         let mut entry: ClassInstanceRef<HashtableEntry> = jvm.load_array(&table, bucket_index, 1).await?.into_iter().next().unwrap();
         while !entry.is_null() {
-            let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+            let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
             if entry_hash == key_hash {
-                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
                 let equals: bool = jvm
                     .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
                     .await?;
                 if equals {
-                    let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
-                    jvm.put_field(&mut entry, "value", "Ljava/lang/Object;", value).await?;
+                    let old_value: ClassInstanceRef<Object> =
+                        jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
+                    jvm.put_field(&mut entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;", value)
+                        .await?;
                     return Ok(old_value);
                 }
             }
-            entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+            entry = jvm
+                .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                .await?;
         }
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let threshold: i32 = jvm.get_field(&this, "threshold", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/util/Hashtable", "count", "I").await?;
+        let threshold: i32 = jvm.get_field(&this, "java/util/Hashtable", "threshold", "I").await?;
 
         if count >= threshold {
             Self::rehash_table(jvm, &mut this).await?;
-            table = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+            table = jvm
+                .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+                .await?;
             let new_table_len = jvm.array_length(&table).await? as i32;
             let new_bucket_index = ((key_hash & 0x7FFFFFFF) % new_table_len) as usize;
 
@@ -389,7 +424,7 @@ impl Hashtable {
             jvm.store_array(&mut table, bucket_index, core::iter::once(new_entry)).await?;
         }
 
-        jvm.put_field(&mut this, "count", "I", count + 1).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "count", "I", count + 1).await?;
 
         Ok(None.into())
     }
@@ -446,13 +481,15 @@ impl Hashtable {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::clear({this:?})");
 
-        let mut table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let mut table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+            .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await?;
         if table_len > 0 {
             let nulls: Vec<ClassInstanceRef<HashtableEntry>> = (0..table_len).map(|_| None.into()).collect();
             jvm.store_array(&mut table, 0, nulls).await?;
         }
-        jvm.put_field(&mut this, "count", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "count", "I", 0).await?;
 
         Ok(())
     }
@@ -499,15 +536,17 @@ impl Hashtable {
         key: &ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<HashtableEntry>> {
         let key_hash = Self::key_hash(jvm, key).await?;
-        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+            .get_field(this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await? as i32;
         let bucket_index = ((key_hash & 0x7FFFFFFF) % table_len) as usize;
 
         let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
         while !entry.is_null() {
-            let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+            let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
             if entry_hash == key_hash {
-                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+                let entry_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
                 let equals: bool = jvm
                     .invoke_virtual(&entry_key, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (key.clone(),))
                     .await?;
@@ -516,7 +555,9 @@ impl Hashtable {
                 }
             }
 
-            entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+            entry = jvm
+                .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                .await?;
         }
 
         Ok(None.into())
@@ -528,7 +569,9 @@ impl Hashtable {
     }
 
     async fn rehash_table(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
-        let old_table = jvm.get_field(this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let old_table = jvm
+            .get_field(this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let old_capacity = jvm.array_length(&old_table).await?;
         let new_capacity = old_capacity * 2 + 1;
 
@@ -537,21 +580,31 @@ impl Hashtable {
         for i in 0..old_capacity {
             let mut entry: ClassInstanceRef<HashtableEntry> = jvm.load_array(&old_table, i, 1).await?.into_iter().next().unwrap();
             while !entry.is_null() {
-                let next: ClassInstanceRef<HashtableEntry> = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
-                let entry_hash: i32 = jvm.get_field(&entry, "hash", "I").await?;
+                let next: ClassInstanceRef<HashtableEntry> = jvm
+                    .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                    .await?;
+                let entry_hash: i32 = jvm.get_field(&entry, "java/util/Hashtable$Entry", "hash", "I").await?;
                 let new_index = ((entry_hash & 0x7FFFFFFF) % new_capacity as i32) as usize;
 
                 let existing: ClassInstanceRef<HashtableEntry> = jvm.load_array(&new_table, new_index, 1).await?.into_iter().next().unwrap();
-                jvm.put_field(&mut entry, "next", "Ljava/util/Hashtable$Entry;", existing).await?;
+                jvm.put_field(&mut entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;", existing)
+                    .await?;
                 jvm.store_array(&mut new_table, new_index, core::iter::once(entry)).await?;
 
                 entry = next;
             }
         }
 
-        jvm.put_field(this, "table", "[Ljava/util/Hashtable$Entry;", new_table).await?;
-        jvm.put_field(this, "threshold", "I", (new_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32)
+        jvm.put_field(this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;", new_table)
             .await?;
+        jvm.put_field(
+            this,
+            "java/util/Hashtable",
+            "threshold",
+            "I",
+            (new_capacity as f32 * DEFAULT_LOAD_FACTOR) as i32,
+        )
+        .await?;
 
         Ok(())
     }
@@ -566,20 +619,22 @@ impl Hashtable {
             return Ok(false);
         }
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/util/Hashtable", "count", "I").await?;
         let other_size: i32 = jvm.invoke_virtual(&other, &other.class_definition().name(), "size", "()I", ()).await?;
         if count != other_size {
             return Ok(false);
         }
 
         let comparison: Result<bool> = async {
-            let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+            let table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+                .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+                .await?;
             let table_len = jvm.array_length(&table).await?;
             for bucket_index in 0..table_len {
                 let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
                 while !entry.is_null() {
-                    let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-                    let value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+                    let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
+                    let value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
                     let other_value: ClassInstanceRef<Object> = jvm
                         .invoke_virtual(
                             &other,
@@ -604,7 +659,9 @@ impl Hashtable {
                         return Ok(false);
                     }
 
-                    entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+                    entry = jvm
+                        .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                        .await?;
                 }
             }
 
@@ -625,29 +682,33 @@ impl Hashtable {
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable::hashCode({this:?})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let load_factor: f32 = jvm.get_field(&this, "loadFactor", "F").await?;
+        let count: i32 = jvm.get_field(&this, "java/util/Hashtable", "count", "I").await?;
+        let load_factor: f32 = jvm.get_field(&this, "java/util/Hashtable", "loadFactor", "F").await?;
         if count == 0 || load_factor < 0.0 {
             return Ok(0);
         }
 
-        jvm.put_field(&mut this, "loadFactor", "F", -load_factor).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "loadFactor", "F", -load_factor).await?;
         let result: Result<i32> = async {
-            let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(&this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+            let table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+                .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+                .await?;
             let table_len = jvm.array_length(&table).await?;
             let mut hash = 0i32;
             for bucket_index in 0..table_len {
                 let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
                 while !entry.is_null() {
                     hash = hash.wrapping_add(jvm.invoke_virtual::<_, i32>(&entry, "java/lang/Object", "hashCode", "()I", ()).await?);
-                    entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+                    entry = jvm
+                        .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                        .await?;
                 }
             }
 
             Ok(hash)
         }
         .await;
-        jvm.put_field(&mut this, "loadFactor", "F", load_factor).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable", "loadFactor", "F", load_factor).await?;
         result
     }
 
@@ -664,7 +725,7 @@ impl Hashtable {
             }
 
             let entry: ClassInstanceRef<HashtableEntry> = ClassInstanceRef::new(entry.instance);
-            let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+            let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
             if key.instance.as_ref().unwrap().equals(&**this)? {
                 result.push_str("(this Map)");
             } else {
@@ -675,7 +736,7 @@ impl Hashtable {
             }
             result.push('=');
 
-            let value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+            let value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
             if value.instance.as_ref().unwrap().equals(&**this)? {
                 result.push_str("(this Map)");
             } else {
@@ -720,22 +781,26 @@ impl Hashtable {
     }
 
     async fn snapshot_entries(jvm: &Jvm, this: &ClassInstanceRef<Self>, kind: SnapshotKind) -> Result<ClassInstanceRef<Array<Object>>> {
-        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm.get_field(this, "table", "[Ljava/util/Hashtable$Entry;").await?;
+        let table: ClassInstanceRef<Array<HashtableEntry>> = jvm
+            .get_field(this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
+            .await?;
         let table_len = jvm.array_length(&table).await?;
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/util/Hashtable", "count", "I").await?;
         let mut elements: Vec<ClassInstanceRef<Object>> = Vec::with_capacity(count as usize);
 
         for bucket_index in 0..table_len {
             let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
             while !entry.is_null() {
                 let element = match kind {
-                    SnapshotKind::Keys => jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?,
-                    SnapshotKind::Values => jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?,
+                    SnapshotKind::Keys => jvm.get_field(&entry, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?,
+                    SnapshotKind::Values => jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?,
                     SnapshotKind::Entries => ClassInstanceRef::new(entry.clone().instance),
                 };
                 elements.push(element);
 
-                entry = jvm.get_field(&entry, "next", "Ljava/util/Hashtable$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;")
+                    .await?;
             }
         }
 

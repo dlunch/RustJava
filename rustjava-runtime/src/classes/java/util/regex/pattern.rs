@@ -122,8 +122,9 @@ impl Pattern {
         tracing::debug!("java.util.regex.Pattern::<init>({this:?}, {pattern:?}, {flags})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "pattern", "Ljava/lang/String;", pattern).await?;
-        jvm.put_field(&mut this, "flags", "I", flags).await
+        jvm.put_field(&mut this, "java/util/regex/Pattern", "pattern", "Ljava/lang/String;", pattern)
+            .await?;
+        jvm.put_field(&mut this, "java/util/regex/Pattern", "flags", "I", flags).await
     }
 
     async fn compile(jvm: &Jvm, _: &mut RuntimeContext, pattern: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
@@ -160,13 +161,13 @@ impl Pattern {
     async fn pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.Pattern::pattern({this:?})");
 
-        jvm.get_field(&this, "pattern", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/regex/Pattern", "pattern", "Ljava/lang/String;").await
     }
 
     async fn flags(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.Pattern::flags({this:?})");
 
-        jvm.get_field(&this, "flags", "I").await
+        jvm.get_field(&this, "java/util/regex/Pattern", "flags", "I").await
     }
 
     async fn matcher(

@@ -56,10 +56,13 @@ impl HashtableEntry {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "hash", "I", hash).await?;
-        jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "next", "Ljava/util/Hashtable$Entry;", next).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Entry", "hash", "I", hash).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;", key)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;", value)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Entry", "next", "Ljava/util/Hashtable$Entry;", next)
+            .await?;
 
         Ok(())
     }
@@ -67,13 +70,13 @@ impl HashtableEntry {
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Entry::getKey({this:?})");
 
-        jvm.get_field(&this, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Entry::getValue({this:?})");
 
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -88,8 +91,9 @@ impl HashtableEntry {
             return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
         }
 
-        let old_value = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let old_value = jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;", value)
+            .await?;
 
         Ok(old_value)
     }
@@ -99,7 +103,7 @@ impl HashtableEntry {
             return Ok(false);
         }
 
-        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
         let other_key: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&other, &other.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
             .await?;
@@ -113,7 +117,7 @@ impl HashtableEntry {
             return Ok(false);
         }
 
-        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
         let other_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&other, &other.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
@@ -126,8 +130,8 @@ impl HashtableEntry {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "key", "Ljava/lang/Object;").await?;
-        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
+        let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
         let key_hash = if key.is_null() {
             0
         } else {

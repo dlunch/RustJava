@@ -40,8 +40,10 @@ impl TimerThread {
         tracing::debug!("java.util.Timer$TimerThread::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Thread", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "queue", "Ljava/util/Timer$TaskQueue;", queue).await?;
-        jvm.put_field(&mut this, "newTasksMayBeScheduled", "Z", true).await?;
+        jvm.put_field(&mut this, "java/util/Timer$TimerThread", "queue", "Ljava/util/Timer$TaskQueue;", queue)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Timer$TimerThread", "newTasksMayBeScheduled", "Z", true)
+            .await?;
         Ok(())
     }
 
@@ -50,10 +52,13 @@ impl TimerThread {
 
         let result = Self::main_loop(jvm, context, &this).await;
         let mut thread = this;
-        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm.get_field(&thread, "queue", "Ljava/util/Timer$TaskQueue;").await?;
+        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm
+            .get_field(&thread, "java/util/Timer$TimerThread", "queue", "Ljava/util/Timer$TaskQueue;")
+            .await?;
         jvm.monitor_enter(&queue).await?;
         let cleanup_result = async {
-            jvm.put_field(&mut thread, "newTasksMayBeScheduled", "Z", false).await?;
+            jvm.put_field(&mut thread, "java/util/Timer$TimerThread", "newTasksMayBeScheduled", "Z", false)
+                .await?;
             TimerTaskQueue::clear(jvm, &mut queue).await?;
             jvm.object_notify(&queue, usize::MAX).await
         }
@@ -77,15 +82,20 @@ impl TimerThread {
     }
 
     async fn main_loop(jvm: &Jvm, context: &mut RuntimeContext, this: &ClassInstanceRef<Self>) -> Result<()> {
-        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm.get_field(this, "queue", "Ljava/util/Timer$TaskQueue;").await?;
+        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm
+            .get_field(this, "java/util/Timer$TimerThread", "queue", "Ljava/util/Timer$TaskQueue;")
+            .await?;
 
         loop {
             jvm.monitor_enter(&queue).await?;
             let action_result = async {
                 loop {
-                    let size: i32 = jvm.get_field(&queue, "size", "I").await?;
+                    let size: i32 = jvm.get_field(&queue, "java/util/Timer$TaskQueue", "size", "I").await?;
                     if size == 0 {
-                        if !jvm.get_field::<bool>(this, "newTasksMayBeScheduled", "Z").await? {
+                        if !jvm
+                            .get_field::<bool>(this, "java/util/Timer$TimerThread", "newTasksMayBeScheduled", "Z")
+                            .await?
+                        {
                             return Ok(WorkerAction::Stop);
                         }
                         let wait_result: Result<()> = jvm.invoke_virtual(&queue, "java/lang/Object", "wait", "()V", ()).await;
@@ -101,28 +111,32 @@ impl TimerThread {
                         continue;
                     }
 
-                    let heap: ClassInstanceRef<Array<TimerTask>> = jvm.get_field(&queue, "queue", "[Ljava/util/TimerTask;").await?;
+                    let heap: ClassInstanceRef<Array<TimerTask>> = jvm
+                        .get_field(&queue, "java/util/Timer$TaskQueue", "queue", "[Ljava/util/TimerTask;")
+                        .await?;
                     let mut task: ClassInstanceRef<TimerTask> = jvm.load_array(&heap, 1, 1).await?.remove(0);
-                    let lock: ClassInstanceRef<crate::classes::java::lang::Object> = jvm.get_field(&task, "lock", "Ljava/lang/Object;").await?;
+                    let lock: ClassInstanceRef<crate::classes::java::lang::Object> =
+                        jvm.get_field(&task, "java/util/TimerTask", "lock", "Ljava/lang/Object;").await?;
                     jvm.monitor_enter(&lock).await?;
                     let task_result = async {
-                        let state: i32 = jvm.get_field(&task, "state", "I").await?;
+                        let state: i32 = jvm.get_field(&task, "java/util/TimerTask", "state", "I").await?;
                         if state == TimerTask::CANCELLED {
                             TimerTaskQueue::remove_min(jvm, &mut queue).await?;
                             return Ok(WorkerAction::Continue);
                         }
 
                         let now = context.now() as i64;
-                        let execution_time: i64 = jvm.get_field(&task, "nextExecutionTime", "J").await?;
+                        let execution_time: i64 = jvm.get_field(&task, "java/util/TimerTask", "nextExecutionTime", "J").await?;
                         if execution_time > now {
                             return Ok(WorkerAction::Continue);
                         }
 
-                        let period: i64 = jvm.get_field(&task, "period", "J").await?;
-                        jvm.put_field(&mut task, "lastScheduledExecutionTime", "J", execution_time).await?;
+                        let period: i64 = jvm.get_field(&task, "java/util/TimerTask", "period", "J").await?;
+                        jvm.put_field(&mut task, "java/util/TimerTask", "lastScheduledExecutionTime", "J", execution_time)
+                            .await?;
                         if period == 0 {
                             TimerTaskQueue::remove_min(jvm, &mut queue).await?;
-                            jvm.put_field(&mut task, "state", "I", TimerTask::EXECUTED).await?;
+                            jvm.put_field(&mut task, "java/util/TimerTask", "state", "I", TimerTask::EXECUTED).await?;
                         } else {
                             let next_execution_time = if period < 0 {
                                 now.checked_sub(period)
@@ -133,7 +147,7 @@ impl TimerThread {
                                 TimerTaskQueue::reschedule_min(jvm, &mut queue, next_execution_time).await?;
                             } else {
                                 TimerTaskQueue::remove_min(jvm, &mut queue).await?;
-                                jvm.put_field(&mut task, "state", "I", TimerTask::EXECUTED).await?;
+                                jvm.put_field(&mut task, "java/util/TimerTask", "state", "I", TimerTask::EXECUTED).await?;
                             }
                         }
                         Ok(WorkerAction::Run(task.clone()))
@@ -154,13 +168,15 @@ impl TimerThread {
                     if matches!(action, WorkerAction::Run(_)) {
                         return Ok(action);
                     }
-                    let next_size: i32 = jvm.get_field(&queue, "size", "I").await?;
+                    let next_size: i32 = jvm.get_field(&queue, "java/util/Timer$TaskQueue", "size", "I").await?;
                     if next_size == 0 {
                         continue;
                     }
-                    let next_heap: ClassInstanceRef<Array<TimerTask>> = jvm.get_field(&queue, "queue", "[Ljava/util/TimerTask;").await?;
+                    let next_heap: ClassInstanceRef<Array<TimerTask>> = jvm
+                        .get_field(&queue, "java/util/Timer$TaskQueue", "queue", "[Ljava/util/TimerTask;")
+                        .await?;
                     let next_task: ClassInstanceRef<TimerTask> = jvm.load_array(&next_heap, 1, 1).await?.remove(0);
-                    let next_execution_time: i64 = jvm.get_field(&next_task, "nextExecutionTime", "J").await?;
+                    let next_execution_time: i64 = jvm.get_field(&next_task, "java/util/TimerTask", "nextExecutionTime", "J").await?;
                     let now = context.now() as i64;
                     if next_execution_time <= now {
                         continue;

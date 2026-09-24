@@ -219,15 +219,16 @@ impl Thread {
         }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "target", "Ljava/lang/Runnable;", target).await?;
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
-        jvm.put_field(&mut this, "priority", "I", 5i32).await?;
-        jvm.put_field(&mut this, "interrupted", "Z", false).await?;
-        jvm.put_field(&mut this, "started", "Z", false).await?;
-        jvm.put_field(&mut this, "alive", "Z", false).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "target", "Ljava/lang/Runnable;", target)
+            .await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "name", "Ljava/lang/String;", name).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "priority", "I", 5i32).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "interrupted", "Z", false).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "started", "Z", false).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "alive", "Z", false).await?;
         let current_thread = jvm.current_java_thread();
-        let daemon: bool = jvm.get_field(&current_thread, "daemon", "Z").await?;
-        jvm.put_field(&mut this, "daemon", "Z", daemon).await?;
+        let daemon: bool = jvm.get_field(&current_thread, "java/lang/Thread", "daemon", "Z").await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "daemon", "Z", daemon).await?;
 
         Ok(())
     }
@@ -236,12 +237,12 @@ impl Thread {
         tracing::debug!("java.lang.Thread::<init>({this:?}, {internal:?})");
 
         let id = context.current_task_id();
-        jvm.put_field(&mut this, "id", "J", id as i64).await?;
-        jvm.put_field(&mut this, "priority", "I", 5i32).await?;
-        jvm.put_field(&mut this, "interrupted", "Z", false).await?;
-        jvm.put_field(&mut this, "started", "Z", true).await?;
-        jvm.put_field(&mut this, "alive", "Z", internal).await?;
-        jvm.put_field(&mut this, "daemon", "Z", false).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "id", "J", id as i64).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "priority", "I", 5i32).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "interrupted", "Z", false).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "started", "Z", true).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "alive", "Z", internal).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "daemon", "Z", false).await?;
 
         Ok(())
     }
@@ -249,7 +250,7 @@ impl Thread {
     async fn start(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::start({this:?})");
 
-        let started: bool = jvm.get_field(&this, "started", "Z").await?;
+        let started: bool = jvm.get_field(&this, "java/lang/Thread", "started", "Z").await?;
         if started {
             return Err(jvm.exception("java/lang/IllegalThreadStateException", "thread already started").await);
         }
@@ -305,7 +306,7 @@ impl Thread {
                 let cleanup = if let Err(error) = self.jvm.monitor_enter(&self.this).await {
                     Err(error)
                 } else {
-                    let alive_result = self.jvm.put_field(&mut this, "alive", "Z", false).await;
+                    let alive_result = self.jvm.put_field(&mut this, "java/lang/Thread", "alive", "Z", false).await;
                     let notify_result = if alive_result.is_ok() {
                         self.jvm.object_notify(&self.this, usize::MAX).await
                     } else {
@@ -323,8 +324,8 @@ impl Thread {
             }
         }
 
-        jvm.put_field(&mut this, "started", "Z", true).await?;
-        jvm.put_field(&mut this, "alive", "Z", true).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "started", "Z", true).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "alive", "Z", true).await?;
 
         let id: i32 = jvm.invoke_virtual(&this, "java/lang/Object", "hashCode", "()I", ()).await?;
 
@@ -347,7 +348,7 @@ impl Thread {
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::run({this:?})");
 
-        let target: ClassInstanceRef<Runnable> = jvm.get_field(&this, "target", "Ljava/lang/Runnable;").await?;
+        let target: ClassInstanceRef<Runnable> = jvm.get_field(&this, "java/lang/Thread", "target", "Ljava/lang/Runnable;").await?;
         if !target.is_null() {
             let _: () = jvm.invoke_virtual(&target, &target.class_definition().name(), "run", "()V", ()).await?;
         }
@@ -372,7 +373,7 @@ impl Thread {
 
         let start = context.now();
         loop {
-            let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
+            let alive: bool = jvm.get_field(&this, "java/lang/Thread", "alive", "Z").await?;
             if !alive {
                 return Ok(());
             }
@@ -393,14 +394,14 @@ impl Thread {
 
     async fn is_alive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Thread::isAlive({this:?})");
-        let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
+        let alive: bool = jvm.get_field(&this, "java/lang/Thread", "alive", "Z").await?;
         Ok(alive)
     }
 
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Thread::getName({this:?})");
 
-        let name: ClassInstanceRef<String> = jvm.get_field(&this, "name", "Ljava/lang/String;").await?;
+        let name: ClassInstanceRef<String> = jvm.get_field(&this, "java/lang/Thread", "name", "Ljava/lang/String;").await?;
         if name.is_null() {
             return Ok(JavaLangString::from_rust_string(jvm, "main").await?.into());
         }
@@ -415,12 +416,12 @@ impl Thread {
             return Err(jvm.exception("java/lang/NullPointerException", "name").await);
         }
 
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await
+        jvm.put_field(&mut this, "java/lang/Thread", "name", "Ljava/lang/String;", name).await
     }
 
     async fn get_priority(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.Thread::getPriority({this:?})");
-        jvm.get_field(&this, "priority", "I").await
+        jvm.get_field(&this, "java/lang/Thread", "priority", "I").await
     }
 
     async fn interrupt(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
@@ -449,7 +450,7 @@ impl Thread {
             .invoke_virtual(&this, "java/lang/Thread", "getName", "()Ljava/lang/String;", ())
             .await?;
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
-        let priority: i32 = jvm.get_field(&this, "priority", "I").await?;
+        let priority: i32 = jvm.get_field(&this, "java/lang/Thread", "priority", "I").await?;
         Ok(JavaLangString::from_rust_string(jvm, &format!("Thread[{name},{priority}]")).await?.into())
     }
 
@@ -477,7 +478,7 @@ impl Thread {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "priority out of range").await);
         }
 
-        jvm.put_field(&mut this, "priority", "I", new_priority).await?;
+        jvm.put_field(&mut this, "java/lang/Thread", "priority", "I", new_priority).await?;
 
         Ok(())
     }
@@ -485,17 +486,17 @@ impl Thread {
     async fn set_daemon(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Thread>, daemon: bool) -> Result<()> {
         tracing::debug!("java.lang.Thread::setDaemon({this:?}, {daemon:?})");
 
-        let alive: bool = jvm.get_field(&this, "alive", "Z").await?;
+        let alive: bool = jvm.get_field(&this, "java/lang/Thread", "alive", "Z").await?;
         if alive {
             return Err(jvm.exception("java/lang/IllegalThreadStateException", "thread is active").await);
         }
 
-        jvm.put_field(&mut this, "daemon", "Z", daemon).await
+        jvm.put_field(&mut this, "java/lang/Thread", "daemon", "Z", daemon).await
     }
 
     async fn is_daemon(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Thread>) -> Result<bool> {
         tracing::debug!("java.lang.Thread::isDaemon({this:?})");
-        jvm.get_field(&this, "daemon", "Z").await
+        jvm.get_field(&this, "java/lang/Thread", "daemon", "Z").await
     }
 
     async fn current_thread(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {

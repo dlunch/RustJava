@@ -1040,12 +1040,12 @@ async fn test_sb_12_to_string_snapshot_is_exact_size_and_immutable() -> Result<(
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hello");
 
-    let buffer_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&buffer, "value", "[C").await?;
-    let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "value", "[C").await?;
+    let buffer_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&buffer, "java/lang/StringBuffer", "value", "[C").await?;
+    let string_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&string, "java/lang/String", "value", "[C").await?;
     assert_ne!(buffer_value.identity(), string_value.identity());
     assert_eq!(jvm.array_length(&string_value).await?, 5);
-    assert_eq!(jvm.get_field::<i32>(&string, "offset", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&string, "count", "I").await?, 5);
+    assert_eq!(jvm.get_field::<i32>(&string, "java/lang/String", "offset", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&string, "java/lang/String", "count", "I").await?, 5);
 
     let world = JavaLangString::from_rust_string(&jvm, "World").await?;
     let _: ClassInstanceRef<StringBuffer> = jvm

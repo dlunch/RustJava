@@ -86,11 +86,12 @@ impl BufferedWriter {
             line_separator = JavaLangString::from_rust_string(jvm, "\n").await?.into();
         }
 
-        jvm.put_field(&mut this, "out", "Ljava/io/Writer;", out).await?;
-        jvm.put_field(&mut this, "cb", "[C", buffer).await?;
-        jvm.put_field(&mut this, "nChars", "I", size).await?;
-        jvm.put_field(&mut this, "nextChar", "I", 0).await?;
-        jvm.put_field(&mut this, "lineSeparator", "Ljava/lang/String;", line_separator).await
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;", out).await?;
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "cb", "[C", buffer).await?;
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "nChars", "I", size).await?;
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "nextChar", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "lineSeparator", "Ljava/lang/String;", line_separator)
+            .await
     }
 
     async fn with_lock<T, F>(jvm: &Jvm, lock: &ClassInstanceRef<Object>, operation: F) -> Result<T>
@@ -113,43 +114,43 @@ impl BufferedWriter {
     }
 
     async fn flush_buffer(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
-        let out: ClassInstanceRef<Writer> = jvm.get_field(this, "out", "Ljava/io/Writer;").await?;
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "cb", "[C").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/io/BufferedWriter", "cb", "[C").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let next_char: i32 = jvm.get_field(this, "nextChar", "I").await?;
+        let next_char: i32 = jvm.get_field(this, "java/io/BufferedWriter", "nextChar", "I").await?;
         if next_char > 0 {
             let _: () = jvm
                 .invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (buffer, 0, next_char))
                 .await?;
-            jvm.put_field(this, "nextChar", "I", 0).await?;
+            jvm.put_field(this, "java/io/BufferedWriter", "nextChar", "I", 0).await?;
         }
         Ok(())
     }
 
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_char_locked(jvm, this, value)).await
     }
 
     async fn write_char_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::write({this:?}, {value})");
 
-        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
-        let mut buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
+        let mut buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
-        let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
+        let n_chars: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nChars", "I").await?;
+        let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nextChar", "I").await?;
         if next_char >= n_chars {
             Self::flush_buffer(jvm, &mut this).await?;
             next_char = 0;
-            buffer = jvm.get_field(&this, "cb", "[C").await?;
+            buffer = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
         }
         jvm.store_array(&mut buffer, next_char as usize, [value as JavaChar]).await?;
-        jvm.put_field(&mut this, "nextChar", "I", next_char + 1).await
+        jvm.put_field(&mut this, "java/io/BufferedWriter", "nextChar", "I", next_char + 1).await
     }
 
     async fn write_chars(
@@ -160,7 +161,7 @@ impl BufferedWriter {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_chars_locked(jvm, this, chars, offset, length)).await
     }
 
@@ -173,8 +174,8 @@ impl BufferedWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::write({this:?}, {chars:?}, {offset}, {length})");
 
-        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -188,7 +189,7 @@ impl BufferedWriter {
         if length == 0 {
             return Ok(());
         }
-        let n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+        let n_chars: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nChars", "I").await?;
         if length >= n_chars {
             Self::flush_buffer(jvm, &mut this).await?;
             return jvm
@@ -199,9 +200,9 @@ impl BufferedWriter {
         let mut source_position = offset;
         let end = offset + length;
         while source_position < end {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nextChar", "I").await?;
             let copied = (n_chars - next_char).min(end - source_position);
-            let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
             let _: () = jvm
                 .invoke_static(
                     "java/lang/System",
@@ -212,7 +213,7 @@ impl BufferedWriter {
                 .await?;
             source_position += copied;
             next_char += copied;
-            jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+            jvm.put_field(&mut this, "java/io/BufferedWriter", "nextChar", "I", next_char).await?;
             if next_char >= n_chars {
                 Self::flush_buffer(jvm, &mut this).await?;
             }
@@ -228,7 +229,7 @@ impl BufferedWriter {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_string_locked(jvm, this, value, offset, length)).await
     }
 
@@ -241,8 +242,8 @@ impl BufferedWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::write({this:?}, {value:?}, {offset}, {length})");
 
-        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -253,13 +254,13 @@ impl BufferedWriter {
         if offset < 0 || length < 0 || offset > string_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
-        let n_chars: i32 = jvm.get_field(&this, "nChars", "I").await?;
+        let n_chars: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nChars", "I").await?;
         let mut source_position = offset;
         let end = offset + length;
         while source_position < end {
-            let mut next_char: i32 = jvm.get_field(&this, "nextChar", "I").await?;
+            let mut next_char: i32 = jvm.get_field(&this, "java/io/BufferedWriter", "nextChar", "I").await?;
             let copied = (n_chars - next_char).min(end - source_position);
-            let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "cb", "[C").await?;
+            let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/BufferedWriter", "cb", "[C").await?;
             let _: () = jvm
                 .invoke_virtual(
                     &value,
@@ -271,7 +272,7 @@ impl BufferedWriter {
                 .await?;
             source_position += copied;
             next_char += copied;
-            jvm.put_field(&mut this, "nextChar", "I", next_char).await?;
+            jvm.put_field(&mut this, "java/io/BufferedWriter", "nextChar", "I", next_char).await?;
             if next_char >= n_chars {
                 Self::flush_buffer(jvm, &mut this).await?;
             }
@@ -280,20 +281,22 @@ impl BufferedWriter {
     }
 
     async fn new_line(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::new_line_locked(jvm, this)).await
     }
 
     async fn new_line_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::newLine({this:?})");
 
-        let line_separator: ClassInstanceRef<String> = jvm.get_field(&this, "lineSeparator", "Ljava/lang/String;").await?;
+        let line_separator: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/io/BufferedWriter", "lineSeparator", "Ljava/lang/String;")
+            .await?;
         let length: i32 = jvm.invoke_virtual(&line_separator, "java/lang/String", "length", "()I", ()).await?;
         Self::write_string_locked(jvm, this, line_separator, 0, length).await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::flush_locked(jvm, this)).await
     }
 
@@ -301,19 +304,19 @@ impl BufferedWriter {
         tracing::debug!("java.io.BufferedWriter::flush({this:?})");
 
         Self::flush_buffer(jvm, &mut this).await?;
-        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
         jvm.invoke_virtual(&out, "java/io/Writer", "flush", "()V", ()).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await
     }
 
     async fn close_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::close({this:?})");
 
-        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "out", "Ljava/io/Writer;").await?;
+        let out: ClassInstanceRef<Writer> = jvm.get_field(&this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;").await?;
         if out.is_null() {
             return Ok(());
         }
@@ -321,8 +324,10 @@ impl BufferedWriter {
         let close_result: Result<()> = jvm.invoke_virtual(&out, "java/io/Writer", "close", "()V", ()).await;
         let null_writer: ClassInstanceRef<Writer> = None.into();
         let null_buffer: ClassInstanceRef<Array<JavaChar>> = None.into();
-        let clear_out_result = jvm.put_field(&mut this, "out", "Ljava/io/Writer;", null_writer).await;
-        let clear_buffer_result = jvm.put_field(&mut this, "cb", "[C", null_buffer).await;
+        let clear_out_result = jvm
+            .put_field(&mut this, "java/io/BufferedWriter", "out", "Ljava/io/Writer;", null_writer)
+            .await;
+        let clear_buffer_result = jvm.put_field(&mut this, "java/io/BufferedWriter", "cb", "[C", null_buffer).await;
 
         flush_result?;
         close_result?;

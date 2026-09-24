@@ -287,9 +287,11 @@ impl Vector {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
         let element_data = jvm.instantiate_array("Ljava/lang/Object;", capacity as _).await?;
-        jvm.put_field(&mut this, "elementData", "[Ljava/lang/Object;", element_data).await?;
-        jvm.put_field(&mut this, "elementCount", "I", 0).await?;
-        jvm.put_field(&mut this, "capacityIncrement", "I", capacity_increment).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementData", "[Ljava/lang/Object;", element_data)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "capacityIncrement", "I", capacity_increment)
+            .await?;
 
         Ok(())
     }
@@ -317,7 +319,7 @@ impl Vector {
     }
 
     async fn capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&element_data).await? as i32)
     }
 
@@ -333,8 +335,8 @@ impl Vector {
             return Err(jvm.exception("java/lang/NullPointerException", "destination").await);
         }
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as usize).await?;
         jvm.store_array(&mut destination, 0, elements).await
     }
@@ -364,12 +366,13 @@ impl Vector {
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Vector::add({this:?}, {element:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         jvm.store_array(&mut element_data, element_count as _, core::iter::once(element)).await?;
-        jvm.put_field(&mut this, "elementCount", "I", element_count + 1).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count + 1)
+            .await?;
 
         Ok(true)
     }
@@ -377,7 +380,7 @@ impl Vector {
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, element: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.Vector::add({this:?}, {index:?}, {element:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index > element_count {
             return Err(jvm
                 .exception("java/lang/IndexOutOfBoundsException", &format!("Index: {index}, Size: {element_count}"))
@@ -391,12 +394,13 @@ impl Vector {
     async fn add_element(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.Vector::addElement({this:?}, {element:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         jvm.store_array(&mut element_data, element_count as _, core::iter::once(element)).await?;
-        jvm.put_field(&mut this, "elementCount", "I", element_count + 1).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count + 1)
+            .await?;
 
         Ok(())
     }
@@ -410,7 +414,7 @@ impl Vector {
     ) -> Result<()> {
         tracing::debug!("java.util.Vector::insertElementAt({this:?}, {element:?}, {index:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index > element_count {
             return Err(jvm
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} > {element_count}"))
@@ -418,7 +422,7 @@ impl Vector {
         }
         Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         let num_to_move = element_count - index;
         if num_to_move > 0 {
@@ -427,7 +431,8 @@ impl Vector {
         }
 
         jvm.store_array(&mut element_data, index as _, core::iter::once(element)).await?;
-        jvm.put_field(&mut this, "elementCount", "I", element_count + 1).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count + 1)
+            .await?;
 
         Ok(())
     }
@@ -435,14 +440,14 @@ impl Vector {
     async fn element_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::elementAt({this:?}, {index:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index >= element_count {
             return Err(jvm
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} >= {element_count}"))
                 .await);
         }
 
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as _, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -464,14 +469,14 @@ impl Vector {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::set({this:?}, {index:?}, {element:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index >= element_count {
             return Err(jvm
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} >= {element_count}"))
                 .await);
         }
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let old_element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as _, 1).await?.into_iter().next().unwrap();
         jvm.store_array(&mut element_data, index as _, core::iter::once(element)).await?;
 
@@ -481,13 +486,13 @@ impl Vector {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Vector::size({this:?})");
 
-        jvm.get_field(&this, "elementCount", "I").await
+        jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Vector::isEmpty({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
 
         Ok(element_count == 0)
     }
@@ -495,14 +500,14 @@ impl Vector {
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::remove({this:?}, {index:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index >= element_count {
             return Err(jvm
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} >= {element_count}"))
                 .await);
         }
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let removed: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as _, 1).await?.into_iter().next().unwrap();
 
         let num_to_move = element_count - index - 1;
@@ -514,7 +519,8 @@ impl Vector {
         let null_ref: ClassInstanceRef<Object> = None.into();
         jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref))
             .await?;
-        jvm.put_field(&mut this, "elementCount", "I", element_count - 1).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count - 1)
+            .await?;
 
         Ok(removed)
     }
@@ -529,15 +535,15 @@ impl Vector {
     async fn remove_all_elements(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Vector::removeAllElements({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         let nulls: Vec<ClassInstanceRef<Object>> = (0..element_count).map(|_| None.into()).collect();
         if !nulls.is_empty() {
             jvm.store_array(&mut element_data, 0, nulls).await?;
         }
 
-        jvm.put_field(&mut this, "elementCount", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", 0).await?;
 
         Ok(())
     }
@@ -545,14 +551,14 @@ impl Vector {
     async fn remove_element_at(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
         tracing::debug!("java.util.Vector::removeElementAt({this:?}, {index:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if index < 0 || index >= element_count {
             return Err(jvm
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} >= {element_count}"))
                 .await);
         }
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         let num_to_move = element_count - index - 1;
         if num_to_move > 0 {
@@ -563,7 +569,8 @@ impl Vector {
         let null_ref: ClassInstanceRef<Object> = None.into();
         jvm.store_array(&mut element_data, (element_count - 1) as _, core::iter::once(null_ref))
             .await?;
-        jvm.put_field(&mut this, "elementCount", "I", element_count - 1).await?;
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count - 1)
+            .await?;
 
         Ok(())
     }
@@ -588,8 +595,8 @@ impl Vector {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &index.to_string()).await);
         }
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         for i in index..element_count {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, i as _, 1).await?.into_iter().next().unwrap();
@@ -623,7 +630,7 @@ impl Vector {
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.util.Vector::lastIndexOf({this:?}, {element:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
 
         let index: i32 = jvm
             .invoke_virtual(
@@ -647,7 +654,7 @@ impl Vector {
     ) -> Result<i32> {
         tracing::debug!("java.util.Vector::lastIndexOf({this:?}, {element:?}, {index:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
 
         if index >= element_count {
             return Err(jvm
@@ -655,7 +662,7 @@ impl Vector {
                 .await);
         }
 
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         for i in (0..=index).rev() {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, i as _, 1).await?.into_iter().next().unwrap();
@@ -679,13 +686,13 @@ impl Vector {
     async fn first_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::firstElement({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
 
         if element_count == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "Vector is empty").await);
         }
 
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, 0, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -694,12 +701,12 @@ impl Vector {
     async fn last_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Vector::lastElement({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if element_count == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "Vector is empty").await);
         }
 
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         Ok(jvm
             .load_array::<ClassInstanceRef<Object>>(&element_data, (element_count - 1) as usize, 1)
             .await?
@@ -734,15 +741,15 @@ impl Vector {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &new_size.to_string()).await);
         }
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
         if new_size > element_count {
             Self::ensure_capacity(jvm, &mut this, new_size as usize).await?;
         } else if new_size < element_count {
-            let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+            let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
             let nulls: Vec<ClassInstanceRef<Object>> = (new_size..element_count).map(|_| None.into()).collect();
             jvm.store_array(&mut element_data, new_size as usize, nulls).await?;
         }
-        jvm.put_field(&mut this, "elementCount", "I", new_size).await
+        jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", new_size).await
     }
 
     async fn remove_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
@@ -769,8 +776,8 @@ impl Vector {
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.Vector::toArray({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         Self::copy_to_array(jvm, &element_data, element_count).await
     }
@@ -885,15 +892,16 @@ impl Vector {
     async fn trim_to_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Vector::trimToSize({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if (element_count as usize) < current_capacity {
             let elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as _).await?;
             let mut new_element_data = jvm.instantiate_array("Ljava/lang/Object;", element_count as _).await?;
             jvm.store_array(&mut new_element_data, 0, elements).await?;
-            jvm.put_field(&mut this, "elementData", "[Ljava/lang/Object;", new_element_data).await?;
+            jvm.put_field(&mut this, "java/util/Vector", "elementData", "[Ljava/lang/Object;", new_element_data)
+                .await?;
         }
 
         Ok(())
@@ -902,8 +910,8 @@ impl Vector {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Vector::toString({this:?})");
 
-        let element_count: i32 = jvm.get_field(&this, "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
+        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as usize).await?;
         let mut result = RustString::from("[");
         for (index, element) in elements.into_iter().enumerate() {
@@ -928,11 +936,11 @@ impl Vector {
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, min_capacity: usize) -> Result<()> {
-        let element_data = jvm.get_field(this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if min_capacity > current_capacity {
-            let capacity_increment: i32 = jvm.get_field(this, "capacityIncrement", "I").await?;
+            let capacity_increment: i32 = jvm.get_field(this, "java/util/Vector", "capacityIncrement", "I").await?;
             let new_capacity = if capacity_increment > 0 {
                 current_capacity + capacity_increment as usize
             } else {
@@ -940,12 +948,13 @@ impl Vector {
             };
             let new_capacity = new_capacity.max(min_capacity);
 
-            let element_count: i32 = jvm.get_field(this, "elementCount", "I").await?;
+            let element_count: i32 = jvm.get_field(this, "java/util/Vector", "elementCount", "I").await?;
             let old_elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as _).await?;
 
             let mut new_element_data = jvm.instantiate_array("Ljava/lang/Object;", new_capacity).await?;
             jvm.store_array(&mut new_element_data, 0, old_elements).await?;
-            jvm.put_field(this, "elementData", "[Ljava/lang/Object;", new_element_data).await?;
+            jvm.put_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;", new_element_data)
+                .await?;
         }
 
         Ok(())

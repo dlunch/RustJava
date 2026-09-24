@@ -294,8 +294,16 @@ impl DateFormat {
         let number_format: ClassInstanceRef<NumberFormat> = jvm
             .invoke_static("java/text/NumberFormat", "getInstance", "()Ljava/text/NumberFormat;", ())
             .await?;
-        jvm.put_field(&mut this, "calendar", "Ljava/util/Calendar;", calendar).await?;
-        jvm.put_field(&mut this, "numberFormat", "Ljava/text/NumberFormat;", number_format).await
+        jvm.put_field(&mut this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;", calendar)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DateFormat",
+            "numberFormat",
+            "Ljava/text/NumberFormat;",
+            number_format,
+        )
+        .await
     }
 
     async fn format_object(
@@ -519,18 +527,20 @@ impl DateFormat {
     }
 
     async fn get_calendar(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Calendar>> {
-        jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await
+        jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await
     }
 
     async fn set_calendar(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, calendar: ClassInstanceRef<Calendar>) -> Result<()> {
         if calendar.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "calendar").await);
         }
-        jvm.put_field(&mut this, "calendar", "Ljava/util/Calendar;", calendar).await
+        jvm.put_field(&mut this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;", calendar)
+            .await
     }
 
     async fn get_number_format(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<NumberFormat>> {
-        jvm.get_field(&this, "numberFormat", "Ljava/text/NumberFormat;").await
+        jvm.get_field(&this, "java/text/DateFormat", "numberFormat", "Ljava/text/NumberFormat;")
+            .await
     }
 
     async fn set_number_format(
@@ -542,48 +552,71 @@ impl DateFormat {
         if number_format.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "numberFormat").await);
         }
-        jvm.put_field(&mut this, "numberFormat", "Ljava/text/NumberFormat;", number_format).await
+        jvm.put_field(
+            &mut this,
+            "java/text/DateFormat",
+            "numberFormat",
+            "Ljava/text/NumberFormat;",
+            number_format,
+        )
+        .await
     }
 
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TimeZone>> {
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         jvm.invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
             .await
     }
 
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         jvm.invoke_virtual(&calendar, "java/util/Calendar", "setTimeZone", "(Ljava/util/TimeZone;)V", (time_zone,))
             .await
     }
 
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         jvm.invoke_virtual(&calendar, "java/util/Calendar", "isLenient", "()Z", ()).await
     }
 
     async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         jvm.invoke_virtual(&calendar, "java/util/Calendar", "setLenient", "(Z)V", (lenient,))
             .await
     }
 
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
-        let number_format: ClassInstanceRef<NumberFormat> = jvm.get_field(&this, "numberFormat", "Ljava/text/NumberFormat;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
+        let number_format: ClassInstanceRef<NumberFormat> = jvm
+            .get_field(&this, "java/text/DateFormat", "numberFormat", "Ljava/text/NumberFormat;")
+            .await?;
         let mut cloned: ClassInstanceRef<Self> = jvm.shallow_clone(&this)?.into();
         let mut cloned_calendar: ClassInstanceRef<Calendar> = jvm.shallow_clone(&calendar)?.into();
-        let fields: ClassInstanceRef<Array<i32>> = jvm.get_field(&calendar, "fields", "[I").await?;
+        let fields: ClassInstanceRef<Array<i32>> = jvm.get_field(&calendar, "java/util/Calendar", "fields", "[I").await?;
         let cloned_fields: ClassInstanceRef<Array<i32>> = jvm.shallow_clone(&fields)?.into();
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&calendar, "timeZone", "Ljava/util/TimeZone;").await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&calendar, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
         let cloned_time_zone: ClassInstanceRef<TimeZone> = jvm.shallow_clone(&time_zone)?.into();
-        jvm.put_field(&mut cloned_calendar, "fields", "[I", cloned_fields).await?;
-        jvm.put_field(&mut cloned_calendar, "timeZone", "Ljava/util/TimeZone;", cloned_time_zone)
+        jvm.put_field(&mut cloned_calendar, "java/util/Calendar", "fields", "[I", cloned_fields)
             .await?;
+        jvm.put_field(
+            &mut cloned_calendar,
+            "java/util/Calendar",
+            "timeZone",
+            "Ljava/util/TimeZone;",
+            cloned_time_zone,
+        )
+        .await?;
         let cloned_number_format: ClassInstanceRef<NumberFormat> = jvm.shallow_clone(&number_format)?.into();
-        jvm.put_field(&mut cloned, "calendar", "Ljava/util/Calendar;", cloned_calendar).await?;
-        jvm.put_field(&mut cloned, "numberFormat", "Ljava/text/NumberFormat;", cloned_number_format)
+        jvm.put_field(&mut cloned, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;", cloned_calendar)
             .await?;
+        jvm.put_field(
+            &mut cloned,
+            "java/text/DateFormat",
+            "numberFormat",
+            "Ljava/text/NumberFormat;",
+            cloned_number_format,
+        )
+        .await?;
         Ok(ClassInstanceRef::new(cloned.instance))
     }
 }

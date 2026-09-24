@@ -53,8 +53,8 @@ impl SimpleTimeZone {
         }
 
         let _: () = jvm.invoke_special(&this, "java/util/TimeZone", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "rawOffset", "I", raw_offset).await?;
-        jvm.put_field(&mut this, "ID", "Ljava/lang/String;", id).await
+        jvm.put_field(&mut this, "java/util/SimpleTimeZone", "rawOffset", "I", raw_offset).await?;
+        jvm.put_field(&mut this, "java/util/SimpleTimeZone", "ID", "Ljava/lang/String;", id).await
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -85,16 +85,16 @@ impl SimpleTimeZone {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "invalid date fields").await);
         }
 
-        jvm.get_field(&this, "rawOffset", "I").await
+        jvm.get_field(&this, "java/util/SimpleTimeZone", "rawOffset", "I").await
     }
 
     async fn get_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "rawOffset", "I").await
+        jvm.get_field(&this, "java/util/SimpleTimeZone", "rawOffset", "I").await
     }
 
     async fn set_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, offset: i32) -> Result<()> {
         tracing::debug!("java.util.SimpleTimeZone::setRawOffset({this:?}, {offset:?})");
-        jvm.put_field(&mut this, "rawOffset", "I", offset).await
+        jvm.put_field(&mut this, "java/util/SimpleTimeZone", "rawOffset", "I", offset).await
     }
 
     async fn use_daylight_time(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<bool> {

@@ -41,41 +41,60 @@ impl CollectionsUnmodifiableListIterator {
             return Err(jvm.exception("java/lang/NullPointerException", "iterator").await);
         }
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "i", "Ljava/util/ListIterator;", iterator).await
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableList$1",
+            "i",
+            "Ljava/util/ListIterator;",
+            iterator,
+        )
+        .await
     }
 
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "hasNext", "()Z", ())
             .await
     }
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
             .await
     }
 
     async fn has_previous(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "hasPrevious", "()Z", ())
             .await
     }
 
     async fn previous(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "previous", "()Ljava/lang/Object;", ())
             .await
     }
 
     async fn next_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "nextIndex", "()I", ())
             .await
     }
 
     async fn previous_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let iterator: ClassInstanceRef<Object> = jvm.get_field(&this, "i", "Ljava/util/ListIterator;").await?;
+        let iterator: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$UnmodifiableList$1", "i", "Ljava/util/ListIterator;")
+            .await?;
         jvm.invoke_virtual(&iterator, &iterator.class_definition().name(), "previousIndex", "()I", ())
             .await
     }

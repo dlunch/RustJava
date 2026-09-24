@@ -53,7 +53,14 @@ impl ExceptionInInitializerError {
         // unlike Throwable(Throwable), this keeps detailMessage null so toString is just the class name
         let _: () = jvm.invoke_special(&this, "java/lang/LinkageError", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
+        jvm.put_field(
+            &mut this,
+            "java/lang/ExceptionInInitializerError",
+            "cause",
+            "Ljava/lang/Throwable;",
+            cause,
+        )
+        .await?;
 
         Ok(())
     }
@@ -61,6 +68,7 @@ impl ExceptionInInitializerError {
     async fn get_exception(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Throwable>> {
         tracing::debug!("java.lang.ExceptionInInitializerError::getException({this:?})");
 
-        jvm.get_field(&this, "cause", "Ljava/lang/Throwable;").await
+        jvm.get_field(&this, "java/lang/ExceptionInInitializerError", "cause", "Ljava/lang/Throwable;")
+            .await
     }
 }

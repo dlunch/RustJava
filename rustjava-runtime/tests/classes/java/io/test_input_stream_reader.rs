@@ -32,21 +32,21 @@ impl OneByteInputStream {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "data", "[B", data).await?;
-        jvm.put_field(&mut this, "position", "I", 0).await?;
+        jvm.put_field(&mut this, "OneByteInputStream", "data", "[B", data).await?;
+        jvm.put_field(&mut this, "OneByteInputStream", "position", "I", 0).await?;
 
         Ok(())
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
-        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "data", "[B").await?;
-        let position: i32 = jvm.get_field(&this, "position", "I").await?;
+        let data: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "OneByteInputStream", "data", "[B").await?;
+        let position: i32 = jvm.get_field(&this, "OneByteInputStream", "position", "I").await?;
         if position == jvm.array_length(&data).await? as i32 {
             return Ok(-1);
         }
 
         let value = jvm.load_array::<i8>(&data, position as usize, 1).await?[0];
-        jvm.put_field(&mut this, "position", "I", position + 1).await?;
+        jvm.put_field(&mut this, "OneByteInputStream", "position", "I", position + 1).await?;
 
         Ok(value as u8 as i32)
     }

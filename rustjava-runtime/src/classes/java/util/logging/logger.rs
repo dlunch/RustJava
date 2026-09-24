@@ -299,11 +299,20 @@ impl Logger {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let handlers = jvm.new_class("java/util/Vector", "()V", ()).await?;
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
-        jvm.put_field(&mut this, "handlers", "Ljava/util/Vector;", handlers).await?;
-        jvm.put_field(&mut this, "useParentHandlers", "Z", true).await?;
-        jvm.put_field(&mut this, "resourceBundleName", "Ljava/lang/String;", resource_bundle_name)
-            .await
+        jvm.put_field(&mut this, "java/util/logging/Logger", "name", "Ljava/lang/String;", name)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/Logger", "handlers", "Ljava/util/Vector;", handlers)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/Logger", "useParentHandlers", "Z", true)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/Logger",
+            "resourceBundleName",
+            "Ljava/lang/String;",
+            resource_bundle_name,
+        )
+        .await
     }
 
     async fn get_logger(jvm: &Jvm, _: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
@@ -397,10 +406,18 @@ impl Logger {
             return Ok(());
         }
 
-        let current: ClassInstanceRef<String> = jvm.get_field(&this, "resourceBundleName", "Ljava/lang/String;").await?;
+        let current: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/logging/Logger", "resourceBundleName", "Ljava/lang/String;")
+            .await?;
         if current.is_null() {
             return jvm
-                .put_field(&mut this, "resourceBundleName", "Ljava/lang/String;", resource_bundle_name)
+                .put_field(
+                    &mut this,
+                    "java/util/logging/Logger",
+                    "resourceBundleName",
+                    "Ljava/lang/String;",
+                    resource_bundle_name,
+                )
                 .await;
         }
         if JavaLangString::to_rust_string(jvm, &current).await? != JavaLangString::to_rust_string(jvm, &resource_bundle_name).await? {
@@ -453,7 +470,8 @@ impl Logger {
                 (root_name,),
             )
             .await?;
-        jvm.put_field(&mut logger, "parent", "Ljava/util/logging/Logger;", root).await?;
+        jvm.put_field(&mut logger, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;", root)
+            .await?;
         Ok(logger)
     }
 
@@ -465,32 +483,37 @@ impl Logger {
 
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Logger::getName({this:?})");
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "name", "Ljava/lang/String;").await
     }
 
     async fn get_filter(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Filter>> {
         tracing::debug!("java.util.logging.Logger::getFilter({this:?})");
-        jvm.get_field(&this, "filter", "Ljava/util/logging/Filter;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "filter", "Ljava/util/logging/Filter;")
+            .await
     }
 
     async fn set_filter(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, filter: ClassInstanceRef<Filter>) -> Result<()> {
         tracing::debug!("java.util.logging.Logger::setFilter({this:?}, {filter:?})");
-        jvm.put_field(&mut this, "filter", "Ljava/util/logging/Filter;", filter).await
+        jvm.put_field(&mut this, "java/util/logging/Logger", "filter", "Ljava/util/logging/Filter;", filter)
+            .await
     }
 
     async fn get_level(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Level>> {
         tracing::debug!("java.util.logging.Logger::getLevel({this:?})");
-        jvm.get_field(&this, "level", "Ljava/util/logging/Level;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "level", "Ljava/util/logging/Level;")
+            .await
     }
 
     async fn set_level(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, level: ClassInstanceRef<Level>) -> Result<()> {
         tracing::debug!("java.util.logging.Logger::setLevel({this:?}, {level:?})");
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await
+        jvm.put_field(&mut this, "java/util/logging/Logger", "level", "Ljava/util/logging/Level;", level)
+            .await
     }
 
     async fn get_parent(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.logging.Logger::getParent({this:?})");
-        jvm.get_field(&this, "parent", "Ljava/util/logging/Logger;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;")
+            .await
     }
 
     async fn set_parent(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> Result<()> {
@@ -498,17 +521,19 @@ impl Logger {
         if parent.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "parent").await);
         }
-        jvm.put_field(&mut this, "parent", "Ljava/util/logging/Logger;", parent).await
+        jvm.put_field(&mut this, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;", parent)
+            .await
     }
 
     async fn get_use_parent_handlers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.logging.Logger::getUseParentHandlers({this:?})");
-        jvm.get_field(&this, "useParentHandlers", "Z").await
+        jvm.get_field(&this, "java/util/logging/Logger", "useParentHandlers", "Z").await
     }
 
     async fn set_use_parent_handlers(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         tracing::debug!("java.util.logging.Logger::setUseParentHandlers({this:?}, {value})");
-        jvm.put_field(&mut this, "useParentHandlers", "Z", value).await
+        jvm.put_field(&mut this, "java/util/logging/Logger", "useParentHandlers", "Z", value)
+            .await
     }
 
     async fn add_handler(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, handler: ClassInstanceRef<Handler>) -> Result<()> {
@@ -516,7 +541,7 @@ impl Logger {
         if handler.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "handler").await);
         }
-        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
+        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "java/util/logging/Logger", "handlers", "Ljava/util/Vector;").await?;
         jvm.invoke_virtual(&handlers, "java/util/Vector", "addElement", "(Ljava/lang/Object;)V", (handler,))
             .await
     }
@@ -526,7 +551,7 @@ impl Logger {
         if handler.is_null() {
             return Ok(());
         }
-        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
+        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "java/util/logging/Logger", "handlers", "Ljava/util/Vector;").await?;
         let _: bool = jvm
             .invoke_virtual(&handlers, "java/util/Vector", "removeElement", "(Ljava/lang/Object;)Z", (handler,))
             .await?;
@@ -535,7 +560,7 @@ impl Logger {
 
     async fn get_handlers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Handler>>> {
         tracing::debug!("java.util.logging.Logger::getHandlers({this:?})");
-        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
+        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "java/util/logging/Logger", "handlers", "Ljava/util/Vector;").await?;
         let size: i32 = jvm.invoke_virtual(&handlers, "java/util/Vector", "size", "()I", ()).await?;
         let mut result: ClassInstanceRef<Array<Handler>> = jvm.instantiate_array("Ljava/util/logging/Handler;", size as usize).await?.into();
         for index in 0..size {
@@ -556,11 +581,15 @@ impl Logger {
         let requested: i32 = jvm.invoke_virtual(&level, "java/util/logging/Level", "intValue", "()I", ()).await?;
         let mut logger = this;
         let effective = loop {
-            let configured: ClassInstanceRef<Level> = jvm.get_field(&logger, "level", "Ljava/util/logging/Level;").await?;
+            let configured: ClassInstanceRef<Level> = jvm
+                .get_field(&logger, "java/util/logging/Logger", "level", "Ljava/util/logging/Level;")
+                .await?;
             if !configured.is_null() {
                 break jvm.invoke_virtual(&configured, "java/util/logging/Level", "intValue", "()I", ()).await?;
             }
-            let parent: ClassInstanceRef<Self> = jvm.get_field(&logger, "parent", "Ljava/util/logging/Logger;").await?;
+            let parent: ClassInstanceRef<Self> = jvm
+                .get_field(&logger, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;")
+                .await?;
             if parent.is_null() {
                 let info: ClassInstanceRef<Level> = jvm
                     .get_static_field("java/util/logging/Level", "INFO", "Ljava/util/logging/Level;")
@@ -588,7 +617,9 @@ impl Logger {
             return Ok(());
         }
 
-        let filter: ClassInstanceRef<Filter> = jvm.get_field(&this, "filter", "Ljava/util/logging/Filter;").await?;
+        let filter: ClassInstanceRef<Filter> = jvm
+            .get_field(&this, "java/util/logging/Logger", "filter", "Ljava/util/logging/Filter;")
+            .await?;
         if !filter.is_null()
             && !jvm
                 .invoke_virtual::<_, bool>(
@@ -607,8 +638,9 @@ impl Logger {
             .invoke_virtual(&record, "java/util/logging/LogRecord", "getLoggerName", "()Ljava/lang/String;", ())
             .await?;
         if logger_name.is_null() {
-            let name: ClassInstanceRef<String> = jvm.get_field(&this, "name", "Ljava/lang/String;").await?;
-            jvm.put_field(&mut record, "loggerName", "Ljava/lang/String;", name).await?;
+            let name: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/logging/Logger", "name", "Ljava/lang/String;").await?;
+            jvm.put_field(&mut record, "java/util/logging/LogRecord", "loggerName", "Ljava/lang/String;", name)
+                .await?;
         }
 
         let mut logger = this;
@@ -630,11 +662,13 @@ impl Logger {
                     .await?;
             }
 
-            let use_parent: bool = jvm.get_field(&logger, "useParentHandlers", "Z").await?;
+            let use_parent: bool = jvm.get_field(&logger, "java/util/logging/Logger", "useParentHandlers", "Z").await?;
             if !use_parent {
                 break;
             }
-            let parent: ClassInstanceRef<Self> = jvm.get_field(&logger, "parent", "Ljava/util/logging/Logger;").await?;
+            let parent: ClassInstanceRef<Self> = jvm
+                .get_field(&logger, "java/util/logging/Logger", "parent", "Ljava/util/logging/Logger;")
+                .await?;
             if parent.is_null() {
                 break;
             }
@@ -1170,16 +1204,18 @@ impl Logger {
 
     async fn get_resource_bundle_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Logger::getResourceBundleName({this:?})");
-        jvm.get_field(&this, "resourceBundleName", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "resourceBundleName", "Ljava/lang/String;")
+            .await
     }
 
     async fn get_resource_bundle(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.logging.Logger::getResourceBundle({this:?})");
-        jvm.get_field(&this, "resourceBundle", "Ljava/util/ResourceBundle;").await
+        jvm.get_field(&this, "java/util/logging/Logger", "resourceBundle", "Ljava/util/ResourceBundle;")
+            .await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, root: bool) -> Result<ClassInstanceRef<Array<Handler>>> {
-        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "handlers", "Ljava/util/Vector;").await?;
+        let handlers: ClassInstanceRef<Vector> = jvm.get_field(&this, "java/util/logging/Logger", "handlers", "Ljava/util/Vector;").await?;
         let size: i32 = jvm.invoke_virtual(&handlers, "java/util/Vector", "size", "()I", ()).await?;
         let mut removed: ClassInstanceRef<Array<Handler>> = jvm.instantiate_array("Ljava/util/logging/Handler;", size as usize).await?.into();
         for index in 0..size {
@@ -1196,7 +1232,8 @@ impl Logger {
         } else {
             None.into()
         };
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await?;
+        jvm.put_field(&mut this, "java/util/logging/Logger", "level", "Ljava/util/logging/Level;", level)
+            .await?;
         Ok(removed)
     }
 
@@ -1248,21 +1285,48 @@ impl Logger {
             .await?
             .into();
         if !parameters.is_null() {
-            jvm.put_field(&mut record, "parameters", "[Ljava/lang/Object;", parameters).await?;
+            jvm.put_field(
+                &mut record,
+                "java/util/logging/LogRecord",
+                "parameters",
+                "[Ljava/lang/Object;",
+                parameters,
+            )
+            .await?;
         }
         if !thrown.is_null() {
-            jvm.put_field(&mut record, "thrown", "Ljava/lang/Throwable;", thrown).await?;
+            jvm.put_field(&mut record, "java/util/logging/LogRecord", "thrown", "Ljava/lang/Throwable;", thrown)
+                .await?;
         }
         if !source_class.is_null() {
-            jvm.put_field(&mut record, "sourceClassName", "Ljava/lang/String;", source_class).await?;
+            jvm.put_field(
+                &mut record,
+                "java/util/logging/LogRecord",
+                "sourceClassName",
+                "Ljava/lang/String;",
+                source_class,
+            )
+            .await?;
         }
         if !source_method.is_null() {
-            jvm.put_field(&mut record, "sourceMethodName", "Ljava/lang/String;", source_method)
-                .await?;
+            jvm.put_field(
+                &mut record,
+                "java/util/logging/LogRecord",
+                "sourceMethodName",
+                "Ljava/lang/String;",
+                source_method,
+            )
+            .await?;
         }
         if !resource_bundle_name.is_null() {
-            jvm.put_field(&mut record, "resourceBundleName", "Ljava/lang/String;", resource_bundle_name)
-                .await?;
+            jvm.put_field(
+                &mut record,
+                "java/util/logging/LogRecord",
+                "resourceBundleName",
+                "Ljava/lang/String;",
+                resource_bundle_name,
+            )
+            .await?;
         }
         jvm.invoke_virtual(&this, "java/util/logging/Logger", "log", "(Ljava/util/logging/LogRecord;)V", (record,))
             .await

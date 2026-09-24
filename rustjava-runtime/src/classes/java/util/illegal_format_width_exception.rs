@@ -27,15 +27,16 @@ impl IllegalFormatWidthException {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, width: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/IllegalFormatException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "width", "I", width).await
+        jvm.put_field(&mut this, "java/util/IllegalFormatWidthException", "width", "I", width)
+            .await
     }
 
     async fn get_width(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "width", "I").await
+        jvm.get_field(&this, "java/util/IllegalFormatWidthException", "width", "I").await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let width: i32 = jvm.get_field(&this, "width", "I").await?;
+        let width: i32 = jvm.get_field(&this, "java/util/IllegalFormatWidthException", "width", "I").await?;
         Ok(JavaLangString::from_rust_string(jvm, &width.to_string()).await?.into())
     }
 }
