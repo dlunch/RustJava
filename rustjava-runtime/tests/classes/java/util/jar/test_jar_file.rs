@@ -64,7 +64,9 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+    let name = jvm
+        .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/");
 
     let has_more_elements: bool = jvm
@@ -74,7 +76,9 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+    let name = jvm
+        .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/MANIFEST.MF");
 
     let has_more_elements: bool = jvm
@@ -85,7 +89,9 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+    let name = jvm
+        .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "JarTest.class");
 
     let has_more_elements: bool = jvm
@@ -96,7 +102,9 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm.get_field(&next_element, "name", "Ljava/lang/String;").await?;
+    let name = jvm
+        .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
+        .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "test.txt");
 
     let has_more_elements: bool = jvm

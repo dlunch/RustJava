@@ -70,10 +70,10 @@ impl Random {
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, bits: i32) -> Result<i32> {
         tracing::debug!("java.util.Random::next({this:?}, {bits:?})");
 
-        let seed: i64 = jvm.get_field(&this, "seed", "J").await?;
+        let seed: i64 = jvm.get_field(&this, "java/util/Random", "seed", "J").await?;
         let next_seed = seed.wrapping_mul(0x5DEECE66D).wrapping_add(0xB) & 0xFFFFFFFFFFFF;
 
-        jvm.put_field(&mut this, "seed", "J", next_seed).await?;
+        jvm.put_field(&mut this, "java/util/Random", "seed", "J", next_seed).await?;
 
         let value = (next_seed as u64).wrapping_shr(((48 - bits) & 63) as u32) as i32;
 
@@ -163,10 +163,10 @@ impl Random {
     async fn next_gaussian(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.util.Random::nextGaussian({this:?})");
 
-        let have_next_next_gaussian: bool = jvm.get_field(&this, "haveNextNextGaussian", "Z").await?;
+        let have_next_next_gaussian: bool = jvm.get_field(&this, "java/util/Random", "haveNextNextGaussian", "Z").await?;
         if have_next_next_gaussian {
-            let next_next_gaussian: f64 = jvm.get_field(&this, "nextNextGaussian", "D").await?;
-            jvm.put_field(&mut this, "haveNextNextGaussian", "Z", false).await?;
+            let next_next_gaussian: f64 = jvm.get_field(&this, "java/util/Random", "nextNextGaussian", "D").await?;
+            jvm.put_field(&mut this, "java/util/Random", "haveNextNextGaussian", "Z", false).await?;
             return Ok(next_next_gaussian);
         }
 
@@ -179,8 +179,9 @@ impl Random {
             }
         };
         let multiplier = libm::sqrt(-2.0 * libm::log(radius_squared) / radius_squared);
-        jvm.put_field(&mut this, "nextNextGaussian", "D", second * multiplier).await?;
-        jvm.put_field(&mut this, "haveNextNextGaussian", "Z", true).await?;
+        jvm.put_field(&mut this, "java/util/Random", "nextNextGaussian", "D", second * multiplier)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Random", "haveNextNextGaussian", "Z", true).await?;
         Ok(first * multiplier)
     }
 
@@ -189,8 +190,8 @@ impl Random {
 
         let seed = (seed ^ 0x5DEECE66D) & ((1 << 48) - 1);
 
-        jvm.put_field(&mut this, "seed", "J", seed).await?;
-        jvm.put_field(&mut this, "haveNextNextGaussian", "Z", false).await?;
+        jvm.put_field(&mut this, "java/util/Random", "seed", "J", seed).await?;
+        jvm.put_field(&mut this, "java/util/Random", "haveNextNextGaussian", "Z", false).await?;
 
         Ok(())
     }

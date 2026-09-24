@@ -104,21 +104,27 @@ impl StringTokenizer {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let max_position: i32 = jvm.invoke_virtual(&string, "java/lang/String", "length", "()I", ()).await?;
-        jvm.put_field(&mut this, "str", "Ljava/lang/String;", string).await?;
-        jvm.put_field(&mut this, "delimiters", "Ljava/lang/String;", delimiters).await?;
-        jvm.put_field(&mut this, "currentPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "maxPosition", "I", max_position).await?;
-        jvm.put_field(&mut this, "returnDelimiters", "Z", return_delimiters).await
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "str", "Ljava/lang/String;", string)
+            .await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "delimiters", "Ljava/lang/String;", delimiters)
+            .await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "currentPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "maxPosition", "I", max_position)
+            .await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "returnDelimiters", "Z", return_delimiters)
+            .await
     }
 
     async fn has_more_tokens(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.StringTokenizer::hasMoreTokens({this:?})");
 
-        let string: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
-        let delimiters: ClassInstanceRef<String> = jvm.get_field(&this, "delimiters", "Ljava/lang/String;").await?;
-        let position: i32 = jvm.get_field(&this, "currentPosition", "I").await?;
-        let max_position: i32 = jvm.get_field(&this, "maxPosition", "I").await?;
-        let return_delimiters: bool = jvm.get_field(&this, "returnDelimiters", "Z").await?;
+        let string: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/StringTokenizer", "str", "Ljava/lang/String;").await?;
+        let delimiters: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/StringTokenizer", "delimiters", "Ljava/lang/String;")
+            .await?;
+        let position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "currentPosition", "I").await?;
+        let max_position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "maxPosition", "I").await?;
+        let return_delimiters: bool = jvm.get_field(&this, "java/util/StringTokenizer", "returnDelimiters", "Z").await?;
         Ok(
             Self::token_bounds(jvm, &string, &delimiters, position as usize, max_position as usize, return_delimiters)
                 .await?
@@ -129,11 +135,13 @@ impl StringTokenizer {
     async fn next_token(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.StringTokenizer::nextToken({this:?})");
 
-        let string: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
-        let delimiters: ClassInstanceRef<String> = jvm.get_field(&this, "delimiters", "Ljava/lang/String;").await?;
-        let position: i32 = jvm.get_field(&this, "currentPosition", "I").await?;
-        let max_position: i32 = jvm.get_field(&this, "maxPosition", "I").await?;
-        let return_delimiters: bool = jvm.get_field(&this, "returnDelimiters", "Z").await?;
+        let string: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/StringTokenizer", "str", "Ljava/lang/String;").await?;
+        let delimiters: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/StringTokenizer", "delimiters", "Ljava/lang/String;")
+            .await?;
+        let position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "currentPosition", "I").await?;
+        let max_position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "maxPosition", "I").await?;
+        let return_delimiters: bool = jvm.get_field(&this, "java/util/StringTokenizer", "returnDelimiters", "Z").await?;
         let Some((start, end)) = Self::token_bounds(jvm, &string, &delimiters, position as usize, max_position as usize, return_delimiters).await?
         else {
             return Err(jvm.exception("java/util/NoSuchElementException", "StringTokenizer exhausted").await);
@@ -148,7 +156,8 @@ impl StringTokenizer {
                 (start as i32, end as i32),
             )
             .await?;
-        jvm.put_field(&mut this, "currentPosition", "I", end as i32).await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "currentPosition", "I", end as i32)
+            .await?;
         Ok(token)
     }
 
@@ -160,7 +169,8 @@ impl StringTokenizer {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.StringTokenizer::nextToken({this:?}, {delimiters:?})");
 
-        jvm.put_field(&mut this, "delimiters", "Ljava/lang/String;", delimiters).await?;
+        jvm.put_field(&mut this, "java/util/StringTokenizer", "delimiters", "Ljava/lang/String;", delimiters)
+            .await?;
         jvm.invoke_virtual(&this, "java/util/StringTokenizer", "nextToken", "()Ljava/lang/String;", ())
             .await
     }
@@ -168,11 +178,13 @@ impl StringTokenizer {
     async fn count_tokens(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.StringTokenizer::countTokens({this:?})");
 
-        let string: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
-        let delimiters: ClassInstanceRef<String> = jvm.get_field(&this, "delimiters", "Ljava/lang/String;").await?;
-        let mut position: i32 = jvm.get_field(&this, "currentPosition", "I").await?;
-        let max_position: i32 = jvm.get_field(&this, "maxPosition", "I").await?;
-        let return_delimiters: bool = jvm.get_field(&this, "returnDelimiters", "Z").await?;
+        let string: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/StringTokenizer", "str", "Ljava/lang/String;").await?;
+        let delimiters: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/StringTokenizer", "delimiters", "Ljava/lang/String;")
+            .await?;
+        let mut position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "currentPosition", "I").await?;
+        let max_position: i32 = jvm.get_field(&this, "java/util/StringTokenizer", "maxPosition", "I").await?;
+        let return_delimiters: bool = jvm.get_field(&this, "java/util/StringTokenizer", "returnDelimiters", "Z").await?;
         let mut count = 0;
         while let Some((_, end)) = Self::token_bounds(jvm, &string, &delimiters, position as usize, max_position as usize, return_delimiters).await? {
             count += 1;

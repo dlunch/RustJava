@@ -105,12 +105,13 @@ impl Calendar {
 
         // TODO constant
         let fields = jvm.instantiate_array("I", 17).await?;
-        jvm.put_field(&mut this, "fields", "[I", fields).await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "fields", "[I", fields).await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .invoke_static("java/util/TimeZone", "getDefault", "()Ljava/util/TimeZone;", ())
             .await?;
-        jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
-        jvm.put_field(&mut this, "lenient", "Z", true).await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;", time_zone)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "lenient", "Z", true).await?;
 
         Ok(())
     }
@@ -123,7 +124,7 @@ impl Calendar {
         }
 
         let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
-        jvm.put_field(&mut this, "time", "J", time).await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "time", "J", time).await?;
 
         let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await?;
 
@@ -133,7 +134,7 @@ impl Calendar {
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Date>> {
         tracing::debug!("java.util.Calendar::getTime({this:?})");
 
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
         let date = jvm.new_class("java/util/Date", "(J)V", (time,)).await?;
 
         Ok(date.into())
@@ -142,18 +143,18 @@ impl Calendar {
     async fn set_time_in_millis(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Calendar::setTimeInMillis({this:?}, {time:?})");
 
-        jvm.put_field(&mut this, "time", "J", time).await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "time", "J", time).await?;
         jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
     }
 
     async fn get_time_in_millis(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.Calendar::getTimeInMillis({this:?})");
-        jvm.get_field(&this, "time", "J").await
+        jvm.get_field(&this, "java/util/Calendar", "time", "J").await
     }
 
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TimeZone>> {
         tracing::debug!("java.util.Calendar::getTimeZone({this:?})");
-        jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await
+        jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await
     }
 
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
@@ -161,18 +162,19 @@ impl Calendar {
         if time_zone.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
         }
-        jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
+        jvm.put_field(&mut this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;", time_zone)
+            .await?;
         jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
     }
 
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::isLenient({this:?})");
-        jvm.get_field(&this, "lenient", "Z").await
+        jvm.get_field(&this, "java/util/Calendar", "lenient", "Z").await
     }
 
     async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
         tracing::debug!("java.util.Calendar::setLenient({this:?}, {lenient:?})");
-        jvm.put_field(&mut this, "lenient", "Z", lenient).await
+        jvm.put_field(&mut this, "java/util/Calendar", "lenient", "Z", lenient).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
@@ -183,20 +185,20 @@ impl Calendar {
         }
 
         let other: ClassInstanceRef<Calendar> = ClassInstanceRef::new(other.instance);
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
-        let other_time: i64 = jvm.get_field(&other, "time", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "java/util/Calendar", "time", "J").await?;
         if time != other_time {
             return Ok(false);
         }
 
-        let lenient: bool = jvm.get_field(&this, "lenient", "Z").await?;
-        let other_lenient: bool = jvm.get_field(&other, "lenient", "Z").await?;
+        let lenient: bool = jvm.get_field(&this, "java/util/Calendar", "lenient", "Z").await?;
+        let other_lenient: bool = jvm.get_field(&other, "java/util/Calendar", "lenient", "Z").await?;
         if lenient != other_lenient {
             return Ok(false);
         }
 
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
-        let other_time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&other, "timeZone", "Ljava/util/TimeZone;").await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
+        let other_time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&other, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
         let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let other_raw_offset: i32 = jvm
             .invoke_virtual(&other_time_zone, "java/util/TimeZone", "getRawOffset", "()I", ())
@@ -218,14 +220,14 @@ impl Calendar {
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Calendar::hashCode({this:?})");
 
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
         let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let id: ClassInstanceRef<String> = jvm
             .invoke_virtual(&time_zone, "java/util/TimeZone", "getID", "()Ljava/lang/String;", ())
             .await?;
         let id_hash: i32 = jvm.invoke_virtual(&id, "java/lang/Object", "hashCode", "()I", ()).await?;
-        let lenient: bool = jvm.get_field(&this, "lenient", "Z").await?;
+        let lenient: bool = jvm.get_field(&this, "java/util/Calendar", "lenient", "Z").await?;
         Ok((time ^ ((time as u64 >> 32) as i64)) as i32 ^ raw_offset ^ id_hash ^ if lenient { 1 } else { 0 })
     }
 
@@ -237,8 +239,8 @@ impl Calendar {
         }
 
         let other: ClassInstanceRef<Calendar> = ClassInstanceRef::new(other.instance);
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
-        let other_time: i64 = jvm.get_field(&other, "time", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "java/util/Calendar", "time", "J").await?;
         Ok(time < other_time)
     }
 
@@ -250,8 +252,8 @@ impl Calendar {
         }
 
         let other: ClassInstanceRef<Calendar> = ClassInstanceRef::new(other.instance);
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
-        let other_time: i64 = jvm.get_field(&other, "time", "J").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
+        let other_time: i64 = jvm.get_field(&other, "java/util/Calendar", "time", "J").await?;
         Ok(time > other_time)
     }
 
@@ -262,7 +264,7 @@ impl Calendar {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "calendar field").await);
         }
 
-        let mut fields = jvm.get_field(&this, "fields", "[I").await?;
+        let mut fields = jvm.get_field(&this, "java/util/Calendar", "fields", "[I").await?;
         jvm.store_array(&mut fields, field as usize, vec![value]).await?;
 
         let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeTime", "()V", ()).await?;
@@ -278,7 +280,7 @@ impl Calendar {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "calendar field").await);
         }
 
-        let fields = jvm.get_field(&this, "fields", "[I").await?;
+        let fields = jvm.get_field(&this, "java/util/Calendar", "fields", "[I").await?;
         let value = jvm.load_array(&fields, field as usize, 1).await?[0];
 
         Ok(value)

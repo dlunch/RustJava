@@ -56,38 +56,103 @@ impl LinkedHashMapEntry {
 
     async fn on_access(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<HashMap>) -> Result<()> {
         let mut map: ClassInstanceRef<LinkedHashMap> = ClassInstanceRef::new(map.instance);
-        if !jvm.get_field::<bool>(&map, "accessOrder", "Z").await? {
+        if !jvm.get_field::<bool>(&map, "java/util/LinkedHashMap", "accessOrder", "Z").await? {
             return Ok(());
         }
 
-        let mut header: ClassInstanceRef<Self> = jvm.get_field(&map, "header", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut tail: ClassInstanceRef<Self> = jvm.get_field(&header, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
+        let mut header: ClassInstanceRef<Self> = jvm
+            .get_field(&map, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        let mut tail: ClassInstanceRef<Self> = jvm
+            .get_field(&header, "java/util/LinkedHashMap$Entry", "before", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
         if this.identity() == tail.identity() {
             return Ok(());
         }
 
-        let mut before: ClassInstanceRef<Self> = jvm.get_field(&this, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut after: ClassInstanceRef<Self> = jvm.get_field(&this, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
-        jvm.put_field(&mut before, "after", "Ljava/util/LinkedHashMap$Entry;", after.clone())
+        let mut before: ClassInstanceRef<Self> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$Entry", "before", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut after, "before", "Ljava/util/LinkedHashMap$Entry;", before).await?;
+        let mut after: ClassInstanceRef<Self> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut before,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            after.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut after,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            before,
+        )
+        .await?;
 
-        jvm.put_field(&mut this, "before", "Ljava/util/LinkedHashMap$Entry;", tail.clone())
-            .await?;
-        jvm.put_field(&mut this, "after", "Ljava/util/LinkedHashMap$Entry;", header.clone())
-            .await?;
-        jvm.put_field(&mut tail, "after", "Ljava/util/LinkedHashMap$Entry;", this.clone()).await?;
-        jvm.put_field(&mut header, "before", "Ljava/util/LinkedHashMap$Entry;", this).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            tail.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            header.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut tail,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            this.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut header,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            this,
+        )
+        .await?;
 
-        let mod_count: i32 = jvm.get_field(&map, "modCount", "I").await?;
-        jvm.put_field(&mut map, "modCount", "I", mod_count.wrapping_add(1)).await
+        let mod_count: i32 = jvm.get_field(&map, "java/util/LinkedHashMap", "modCount", "I").await?;
+        jvm.put_field(&mut map, "java/util/LinkedHashMap", "modCount", "I", mod_count.wrapping_add(1))
+            .await
     }
 
     async fn on_removal(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
-        let mut before: ClassInstanceRef<Self> = jvm.get_field(&this, "before", "Ljava/util/LinkedHashMap$Entry;").await?;
-        let mut after: ClassInstanceRef<Self> = jvm.get_field(&this, "after", "Ljava/util/LinkedHashMap$Entry;").await?;
-        jvm.put_field(&mut before, "after", "Ljava/util/LinkedHashMap$Entry;", after.clone())
+        let mut before: ClassInstanceRef<Self> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$Entry", "before", "Ljava/util/LinkedHashMap$Entry;")
             .await?;
-        jvm.put_field(&mut after, "before", "Ljava/util/LinkedHashMap$Entry;", before).await
+        let mut after: ClassInstanceRef<Self> = jvm
+            .get_field(&this, "java/util/LinkedHashMap$Entry", "after", "Ljava/util/LinkedHashMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut before,
+            "java/util/LinkedHashMap$Entry",
+            "after",
+            "Ljava/util/LinkedHashMap$Entry;",
+            after.clone(),
+        )
+        .await?;
+        jvm.put_field(
+            &mut after,
+            "java/util/LinkedHashMap$Entry",
+            "before",
+            "Ljava/util/LinkedHashMap$Entry;",
+            before,
+        )
+        .await
     }
 }

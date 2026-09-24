@@ -28,16 +28,17 @@ impl SnapshotCollection {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractCollection", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "elements", "[Ljava/lang/Object;", elements).await
+        jvm.put_field(&mut this, "SnapshotCollection", "elements", "[Ljava/lang/Object;", elements)
+            .await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "SnapshotCollection", "elements", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&elements).await? as i32)
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "SnapshotCollection", "elements", "[Ljava/lang/Object;").await?;
         Ok(jvm.new_class("SnapshotIterator", "([Ljava/lang/Object;)V", (elements,)).await?.into())
     }
 }
@@ -66,24 +67,25 @@ impl SnapshotIterator {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "elements", "[Ljava/lang/Object;", elements).await?;
-        jvm.put_field(&mut this, "index", "I", 0).await
+        jvm.put_field(&mut this, "SnapshotIterator", "elements", "[Ljava/lang/Object;", elements)
+            .await?;
+        jvm.put_field(&mut this, "SnapshotIterator", "index", "I", 0).await
     }
 
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "SnapshotIterator", "elements", "[Ljava/lang/Object;").await?;
+        let index: i32 = jvm.get_field(&this, "SnapshotIterator", "index", "I").await?;
         Ok(index < jvm.array_length(&elements).await? as i32)
     }
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "SnapshotIterator", "elements", "[Ljava/lang/Object;").await?;
+        let index: i32 = jvm.get_field(&this, "SnapshotIterator", "index", "I").await?;
         if index >= jvm.array_length(&elements).await? as i32 {
             return Err(jvm.exception("java/util/NoSuchElementException", "snapshot iterator exhausted").await);
         }
         let value = jvm.load_array::<ClassInstanceRef<Object>>(&elements, index as usize, 1).await?.remove(0);
-        jvm.put_field(&mut this, "index", "I", index + 1).await?;
+        jvm.put_field(&mut this, "SnapshotIterator", "index", "I", index + 1).await?;
         Ok(value)
     }
 
@@ -178,14 +180,14 @@ impl ConfigurableEqualsValue {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, result: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "result", "Z", result).await?;
-        jvm.put_field(&mut this, "equalsCalls", "I", 0).await
+        jvm.put_field(&mut this, "ConfigurableEqualsValue", "result", "Z", result).await?;
+        jvm.put_field(&mut this, "ConfigurableEqualsValue", "equalsCalls", "I", 0).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
-        let calls: i32 = jvm.get_field(&this, "equalsCalls", "I").await?;
-        jvm.put_field(&mut this, "equalsCalls", "I", calls + 1).await?;
-        jvm.get_field(&this, "result", "Z").await
+        let calls: i32 = jvm.get_field(&this, "ConfigurableEqualsValue", "equalsCalls", "I").await?;
+        jvm.put_field(&mut this, "ConfigurableEqualsValue", "equalsCalls", "I", calls + 1).await?;
+        jvm.get_field(&this, "ConfigurableEqualsValue", "result", "Z").await
     }
 }
 
@@ -235,34 +237,36 @@ impl StatefulMapEntry {
         mode: i32,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "firstKey", "Ljava/lang/Object;", first_key).await?;
-        jvm.put_field(&mut this, "laterKey", "Ljava/lang/Object;", later_key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "mode", "I", mode).await?;
-        jvm.put_field(&mut this, "keyCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "valueCalls", "I", 0).await
+        jvm.put_field(&mut this, "StatefulMapEntry", "firstKey", "Ljava/lang/Object;", first_key)
+            .await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "laterKey", "Ljava/lang/Object;", later_key)
+            .await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "value", "Ljava/lang/Object;", value).await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "mode", "I", mode).await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "keyCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "valueCalls", "I", 0).await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "keyCalls", "I").await?;
-        jvm.put_field(&mut this, "keyCalls", "I", calls + 1).await?;
-        if jvm.get_field::<i32>(&this, "mode", "I").await? == 1 {
+        let calls: i32 = jvm.get_field(&this, "StatefulMapEntry", "keyCalls", "I").await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "keyCalls", "I", calls + 1).await?;
+        if jvm.get_field::<i32>(&this, "StatefulMapEntry", "mode", "I").await? == 1 {
             return Err(jvm.exception("java/lang/IllegalStateException", "getKey failure").await);
         }
         if calls == 0 {
-            jvm.get_field(&this, "firstKey", "Ljava/lang/Object;").await
+            jvm.get_field(&this, "StatefulMapEntry", "firstKey", "Ljava/lang/Object;").await
         } else {
-            jvm.get_field(&this, "laterKey", "Ljava/lang/Object;").await
+            jvm.get_field(&this, "StatefulMapEntry", "laterKey", "Ljava/lang/Object;").await
         }
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "valueCalls", "I").await?;
-        jvm.put_field(&mut this, "valueCalls", "I", calls + 1).await?;
-        if jvm.get_field::<i32>(&this, "mode", "I").await? == 2 {
+        let calls: i32 = jvm.get_field(&this, "StatefulMapEntry", "valueCalls", "I").await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "valueCalls", "I", calls + 1).await?;
+        if jvm.get_field::<i32>(&this, "StatefulMapEntry", "mode", "I").await? == 2 {
             return Err(jvm.exception("java/lang/IllegalStateException", "getValue failure").await);
         }
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "StatefulMapEntry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -271,8 +275,8 @@ impl StatefulMapEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let previous: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let previous: ClassInstanceRef<Object> = jvm.get_field(&this, "StatefulMapEntry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "StatefulMapEntry", "value", "Ljava/lang/Object;", value).await?;
         Ok(previous)
     }
 }
@@ -300,16 +304,16 @@ impl ThrowingMap {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i32, mode: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "size", "I", size).await?;
-        jvm.put_field(&mut this, "mode", "I", mode).await
+        jvm.put_field(&mut this, "ThrowingMap", "size", "I", size).await?;
+        jvm.put_field(&mut this, "ThrowingMap", "mode", "I", mode).await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "size", "I").await
+        jvm.get_field(&this, "ThrowingMap", "size", "I").await
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
-        if jvm.get_field::<i32>(&this, "mode", "I").await? == 0 {
+        if jvm.get_field::<i32>(&this, "ThrowingMap", "mode", "I").await? == 0 {
             Err(jvm.exception("java/lang/NullPointerException", "test map get failure").await)
         } else {
             Err(jvm.exception("java/lang/ClassCastException", "test map get failure").await)
@@ -1770,8 +1774,11 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&asymmetric_contains, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&asymmetric_contains, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&asymmetric_contains, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&asymmetric_contains, "StatefulMapEntry", "valueCalls", "I").await?,
+        0
+    );
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&asymmetric_key_map, &asymmetric_key_map.class_definition().name(), "size", "()I", ())
             .await?,
@@ -1796,8 +1803,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&asymmetric_remove, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&asymmetric_remove, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&asymmetric_remove, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&asymmetric_remove, "StatefulMapEntry", "valueCalls", "I").await?, 0);
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&asymmetric_key_map, &asymmetric_key_map.class_definition().name(), "size", "()I", ())
             .await?,
@@ -1884,8 +1891,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&null_key_contains, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&null_key_contains, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_key_contains, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_key_contains, "StatefulMapEntry", "valueCalls", "I").await?, 1);
     let null_key_remove: ClassInstanceRef<Object> = jvm
         .new_class(
             "StatefulMapEntry",
@@ -1904,8 +1911,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&null_key_remove, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&null_key_remove, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_key_remove, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_key_remove, "StatefulMapEntry", "valueCalls", "I").await?, 1);
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&null_key_map, &null_key_map.class_definition().name(), "size", "()I", ())
             .await?,
@@ -1948,10 +1955,17 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             .await?,
             "{map_class} EntrySet.contains must use storedValue.equals(candidateValue)"
         );
-        assert_eq!(jvm.get_field::<i32>(&contains_candidate, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&contains_candidate, "valueCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&stored_value, "equalsCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&candidate_value, "equalsCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&contains_candidate, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&contains_candidate, "StatefulMapEntry", "valueCalls", "I").await?, 1);
+        assert_eq!(
+            jvm.get_field::<i32>(&stored_value, "ConfigurableEqualsValue", "equalsCalls", "I").await?,
+            1
+        );
+        assert_eq!(
+            jvm.get_field::<i32>(&candidate_value, "ConfigurableEqualsValue", "equalsCalls", "I")
+                .await?,
+            0
+        );
 
         let remove_candidate: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -1972,10 +1986,17 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             .await?,
             "{map_class} EntrySet.remove must use storedValue.equals(candidateValue)"
         );
-        assert_eq!(jvm.get_field::<i32>(&remove_candidate, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&remove_candidate, "valueCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&stored_value, "equalsCalls", "I").await?, 2);
-        assert_eq!(jvm.get_field::<i32>(&candidate_value, "equalsCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&remove_candidate, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&remove_candidate, "StatefulMapEntry", "valueCalls", "I").await?, 1);
+        assert_eq!(
+            jvm.get_field::<i32>(&stored_value, "ConfigurableEqualsValue", "equalsCalls", "I").await?,
+            2
+        );
+        assert_eq!(
+            jvm.get_field::<i32>(&candidate_value, "ConfigurableEqualsValue", "equalsCalls", "I")
+                .await?,
+            0
+        );
         assert_eq!(
             jvm.invoke_virtual::<_, i32>(&map, &map.class_definition().name(), "size", "()I", ())
                 .await?,
@@ -2022,8 +2043,16 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             )
             .await?
         );
-        assert_eq!(jvm.get_field::<i32>(&rejecting_stored, "equalsCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&accepting_candidate, "equalsCalls", "I").await?, 0);
+        assert_eq!(
+            jvm.get_field::<i32>(&rejecting_stored, "ConfigurableEqualsValue", "equalsCalls", "I")
+                .await?,
+            1
+        );
+        assert_eq!(
+            jvm.get_field::<i32>(&accepting_candidate, "ConfigurableEqualsValue", "equalsCalls", "I")
+                .await?,
+            0
+        );
 
         let stateful_map: ClassInstanceRef<Object> = jvm.new_class(map_class, "()V", ()).await?.into();
         let first_key = JavaLangString::from_rust_string(&jvm, "first-key").await?;
@@ -2073,8 +2102,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             )
             .await?
         );
-        assert_eq!(jvm.get_field::<i32>(&alternating, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&alternating, "valueCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&alternating, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&alternating, "StatefulMapEntry", "valueCalls", "I").await?, 1);
         assert!(
             !jvm.invoke_virtual::<_, bool>(
                 &stateful_map,
@@ -2125,8 +2154,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             )
             .await?
         );
-        assert_eq!(jvm.get_field::<i32>(&missing_contains, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&missing_contains, "valueCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&missing_contains, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&missing_contains, "StatefulMapEntry", "valueCalls", "I").await?, 0);
 
         let missing_remove: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -2146,8 +2175,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             )
             .await?
         );
-        assert_eq!(jvm.get_field::<i32>(&missing_remove, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&missing_remove, "valueCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&missing_remove, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&missing_remove, "StatefulMapEntry", "valueCalls", "I").await?, 0);
 
         let throwing_key: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -2170,8 +2199,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             panic!("{map_class} EntrySet.contains must propagate getKey exceptions");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-        assert_eq!(jvm.get_field::<i32>(&throwing_key, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&throwing_key, "valueCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&throwing_key, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&throwing_key, "StatefulMapEntry", "valueCalls", "I").await?, 0);
 
         let throwing_remove_key: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -2194,8 +2223,11 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             panic!("{map_class} EntrySet.remove must propagate getKey exceptions");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-        assert_eq!(jvm.get_field::<i32>(&throwing_remove_key, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&throwing_remove_key, "valueCalls", "I").await?, 0);
+        assert_eq!(jvm.get_field::<i32>(&throwing_remove_key, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(
+            jvm.get_field::<i32>(&throwing_remove_key, "StatefulMapEntry", "valueCalls", "I").await?,
+            0
+        );
 
         let throwing_contains_value: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -2218,8 +2250,16 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             panic!("{map_class} EntrySet.contains must propagate getValue exceptions for a found key");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-        assert_eq!(jvm.get_field::<i32>(&throwing_contains_value, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&throwing_contains_value, "valueCalls", "I").await?, 1);
+        assert_eq!(
+            jvm.get_field::<i32>(&throwing_contains_value, "StatefulMapEntry", "keyCalls", "I")
+                .await?,
+            1
+        );
+        assert_eq!(
+            jvm.get_field::<i32>(&throwing_contains_value, "StatefulMapEntry", "valueCalls", "I")
+                .await?,
+            1
+        );
 
         let throwing_value: ClassInstanceRef<Object> = jvm
             .new_class(
@@ -2242,8 +2282,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
             panic!("{map_class} EntrySet.remove must propagate getValue exceptions for a found key");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-        assert_eq!(jvm.get_field::<i32>(&throwing_value, "keyCalls", "I").await?, 1);
-        assert_eq!(jvm.get_field::<i32>(&throwing_value, "valueCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&throwing_value, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+        assert_eq!(jvm.get_field::<i32>(&throwing_value, "StatefulMapEntry", "valueCalls", "I").await?, 1);
         assert!(
             jvm.invoke_virtual::<_, bool>(
                 &stateful_map,
@@ -2308,8 +2348,8 @@ async fn coll_08_entry_set_contains_and_remove_snapshot_candidates_and_use_store
                 )
                 .await?
             );
-            assert_eq!(jvm.get_field::<i32>(&null_key, "keyCalls", "I").await?, 2);
-            assert_eq!(jvm.get_field::<i32>(&null_key, "valueCalls", "I").await?, 0);
+            assert_eq!(jvm.get_field::<i32>(&null_key, "StatefulMapEntry", "keyCalls", "I").await?, 2);
+            assert_eq!(jvm.get_field::<i32>(&null_key, "StatefulMapEntry", "valueCalls", "I").await?, 0);
         }
     }
 
@@ -2538,8 +2578,8 @@ async fn hashtable_entry_equals_and_hash_code_follow_map_entry_contract() -> Res
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&short_circuit, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&short_circuit, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&short_circuit, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&short_circuit, "StatefulMapEntry", "valueCalls", "I").await?, 0);
 
     let throwing_key: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -2562,8 +2602,8 @@ async fn hashtable_entry_equals_and_hash_code_follow_map_entry_contract() -> Res
         panic!("Hashtable.Entry.equals must propagate getKey exceptions");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&throwing_key, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&throwing_key, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&throwing_key, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&throwing_key, "StatefulMapEntry", "valueCalls", "I").await?, 0);
 
     let throwing_value: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -2586,8 +2626,8 @@ async fn hashtable_entry_equals_and_hash_code_follow_map_entry_contract() -> Res
         panic!("Hashtable.Entry.equals must propagate getValue exceptions after matching keys");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&throwing_value, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&throwing_value, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&throwing_value, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&throwing_value, "StatefulMapEntry", "valueCalls", "I").await?, 1);
 
     let directional_table: ClassInstanceRef<Object> = jvm.new_class("java/util/Hashtable", "()V", ()).await?.into();
     let stored_key: ClassInstanceRef<Object> = jvm.new_class("ConfigurableEqualsValue", "(Z)V", (true,)).await?.into();
@@ -2648,12 +2688,30 @@ async fn hashtable_entry_equals_and_hash_code_follow_map_entry_contract() -> Res
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&directional_candidate, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&directional_candidate, "valueCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&stored_key, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_key, "equalsCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&stored_value, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_value, "equalsCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&directional_candidate, "StatefulMapEntry", "keyCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&directional_candidate, "StatefulMapEntry", "valueCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(jvm.get_field::<i32>(&stored_key, "ConfigurableEqualsValue", "equalsCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&candidate_key, "ConfigurableEqualsValue", "equalsCalls", "I")
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&stored_value, "ConfigurableEqualsValue", "equalsCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&candidate_value, "ConfigurableEqualsValue", "equalsCalls", "I")
+            .await?,
+        0
+    );
 
     let integer_key: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (7,)).await?.into();
     let integer_value: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (11,)).await?.into();
@@ -2698,8 +2756,8 @@ async fn hashtable_entry_equals_and_hash_code_follow_map_entry_contract() -> Res
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&null_candidate, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&null_candidate, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_candidate, "StatefulMapEntry", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&null_candidate, "StatefulMapEntry", "valueCalls", "I").await?, 1);
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&null_entry, &null_entry.class_definition().name(), "hashCode", "()I", ())
             .await?,

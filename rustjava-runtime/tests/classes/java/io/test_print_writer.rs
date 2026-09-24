@@ -58,19 +58,20 @@ impl ProbeWriter {
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
         let content = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?;
-        jvm.put_field(&mut this, "content", "Ljava/lang/StringBuffer;", content).await?;
-        jvm.put_field(&mut this, "writeMode", "I", write_mode).await?;
-        jvm.put_field(&mut this, "flushMode", "I", flush_mode).await?;
-        jvm.put_field(&mut this, "closeMode", "I", close_mode).await?;
-        jvm.put_field(&mut this, "writeCount", "I", 0).await?;
-        jvm.put_field(&mut this, "flushCount", "I", 0).await?;
-        jvm.put_field(&mut this, "closeCount", "I", 0).await?;
-        jvm.put_field(&mut this, "blockFirstWrite", "Z", false).await?;
-        jvm.put_field(&mut this, "firstWriteEntered", "Z", false).await?;
-        jvm.put_field(&mut this, "releaseFirstWrite", "Z", false).await?;
-        jvm.put_field(&mut this, "blockFirstClose", "Z", false).await?;
-        jvm.put_field(&mut this, "firstCloseEntered", "Z", false).await?;
-        jvm.put_field(&mut this, "releaseFirstClose", "Z", false).await
+        jvm.put_field(&mut this, "ProbeWriter", "content", "Ljava/lang/StringBuffer;", content)
+            .await?;
+        jvm.put_field(&mut this, "ProbeWriter", "writeMode", "I", write_mode).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "flushMode", "I", flush_mode).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "closeMode", "I", close_mode).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "writeCount", "I", 0).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "flushCount", "I", 0).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "closeCount", "I", 0).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "blockFirstWrite", "Z", false).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "firstWriteEntered", "Z", false).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "releaseFirstWrite", "Z", false).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "blockFirstClose", "Z", false).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "firstCloseEntered", "Z", false).await?;
+        jvm.put_field(&mut this, "ProbeWriter", "releaseFirstClose", "Z", false).await
     }
 
     async fn write(
@@ -81,29 +82,29 @@ impl ProbeWriter {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        let write_count: i32 = jvm.get_field(&this, "writeCount", "I").await?;
-        jvm.put_field(&mut this, "writeCount", "I", write_count + 1).await?;
-        match jvm.get_field::<i32>(&this, "writeMode", "I").await? {
+        let write_count: i32 = jvm.get_field(&this, "ProbeWriter", "writeCount", "I").await?;
+        jvm.put_field(&mut this, "ProbeWriter", "writeCount", "I", write_count + 1).await?;
+        match jvm.get_field::<i32>(&this, "ProbeWriter", "writeMode", "I").await? {
             1 => return Err(jvm.exception("java/io/IOException", "write failed").await),
             2 => return Err(jvm.exception("java/lang/IllegalStateException", "write failed").await),
             _ => {}
         }
-        if write_count == 0 && jvm.get_field::<bool>(&this, "blockFirstWrite", "Z").await? {
-            jvm.put_field(&mut this, "firstWriteEntered", "Z", true).await?;
+        if write_count == 0 && jvm.get_field::<bool>(&this, "ProbeWriter", "blockFirstWrite", "Z").await? {
+            jvm.put_field(&mut this, "ProbeWriter", "firstWriteEntered", "Z", true).await?;
             for _ in 0..1000 {
-                if jvm.get_field::<bool>(&this, "releaseFirstWrite", "Z").await? {
+                if jvm.get_field::<bool>(&this, "ProbeWriter", "releaseFirstWrite", "Z").await? {
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(1)).await;
             }
-            if !jvm.get_field::<bool>(&this, "releaseFirstWrite", "Z").await? {
+            if !jvm.get_field::<bool>(&this, "ProbeWriter", "releaseFirstWrite", "Z").await? {
                 return Err(jvm
                     .exception("java/lang/IllegalStateException", "timed out waiting for write release")
                     .await);
             }
         }
 
-        let content: ClassInstanceRef<StringBuffer> = jvm.get_field(&this, "content", "Ljava/lang/StringBuffer;").await?;
+        let content: ClassInstanceRef<StringBuffer> = jvm.get_field(&this, "ProbeWriter", "content", "Ljava/lang/StringBuffer;").await?;
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
                 &content,
@@ -117,9 +118,9 @@ impl ProbeWriter {
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let flush_count: i32 = jvm.get_field(&this, "flushCount", "I").await?;
-        jvm.put_field(&mut this, "flushCount", "I", flush_count + 1).await?;
-        match jvm.get_field::<i32>(&this, "flushMode", "I").await? {
+        let flush_count: i32 = jvm.get_field(&this, "ProbeWriter", "flushCount", "I").await?;
+        jvm.put_field(&mut this, "ProbeWriter", "flushCount", "I", flush_count + 1).await?;
+        match jvm.get_field::<i32>(&this, "ProbeWriter", "flushMode", "I").await? {
             1 => Err(jvm.exception("java/io/IOException", "flush failed").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "flush failed").await),
             _ => Ok(()),
@@ -127,23 +128,23 @@ impl ProbeWriter {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let close_count: i32 = jvm.get_field(&this, "closeCount", "I").await?;
-        jvm.put_field(&mut this, "closeCount", "I", close_count + 1).await?;
-        if close_count == 0 && jvm.get_field::<bool>(&this, "blockFirstClose", "Z").await? {
-            jvm.put_field(&mut this, "firstCloseEntered", "Z", true).await?;
+        let close_count: i32 = jvm.get_field(&this, "ProbeWriter", "closeCount", "I").await?;
+        jvm.put_field(&mut this, "ProbeWriter", "closeCount", "I", close_count + 1).await?;
+        if close_count == 0 && jvm.get_field::<bool>(&this, "ProbeWriter", "blockFirstClose", "Z").await? {
+            jvm.put_field(&mut this, "ProbeWriter", "firstCloseEntered", "Z", true).await?;
             for _ in 0..1000 {
-                if jvm.get_field::<bool>(&this, "releaseFirstClose", "Z").await? {
+                if jvm.get_field::<bool>(&this, "ProbeWriter", "releaseFirstClose", "Z").await? {
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(1)).await;
             }
-            if !jvm.get_field::<bool>(&this, "releaseFirstClose", "Z").await? {
+            if !jvm.get_field::<bool>(&this, "ProbeWriter", "releaseFirstClose", "Z").await? {
                 return Err(jvm
                     .exception("java/lang/IllegalStateException", "timed out waiting for close release")
                     .await);
             }
         }
-        match jvm.get_field::<i32>(&this, "closeMode", "I").await? {
+        match jvm.get_field::<i32>(&this, "ProbeWriter", "closeMode", "I").await? {
             1 => Err(jvm.exception("java/io/IOException", "close failed").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "close failed").await),
             _ => Ok(()),
@@ -217,18 +218,19 @@ impl PrintWriterRunner {
         value: i32,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "writer", "Ljava/io/PrintWriter;", writer).await?;
-        jvm.put_field(&mut this, "value", "I", value).await?;
-        jvm.put_field(&mut this, "started", "Z", false).await?;
-        jvm.put_field(&mut this, "done", "Z", false).await
+        jvm.put_field(&mut this, "PrintWriterRunner", "writer", "Ljava/io/PrintWriter;", writer)
+            .await?;
+        jvm.put_field(&mut this, "PrintWriterRunner", "value", "I", value).await?;
+        jvm.put_field(&mut this, "PrintWriterRunner", "started", "Z", false).await?;
+        jvm.put_field(&mut this, "PrintWriterRunner", "done", "Z", false).await
     }
 
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "started", "Z", true).await?;
-        let writer: ClassInstanceRef<PrintWriter> = jvm.get_field(&this, "writer", "Ljava/io/PrintWriter;").await?;
-        let value: i32 = jvm.get_field(&this, "value", "I").await?;
+        jvm.put_field(&mut this, "PrintWriterRunner", "started", "Z", true).await?;
+        let writer: ClassInstanceRef<PrintWriter> = jvm.get_field(&this, "PrintWriterRunner", "writer", "Ljava/io/PrintWriter;").await?;
+        let value: i32 = jvm.get_field(&this, "PrintWriterRunner", "value", "I").await?;
         let _: () = jvm.invoke_virtual(&writer, "java/io/PrintWriter", "println", "(I)V", (value,)).await?;
-        jvm.put_field(&mut this, "done", "Z", true).await
+        jvm.put_field(&mut this, "PrintWriterRunner", "done", "Z", true).await
     }
 }
 
@@ -255,16 +257,17 @@ impl PrintWriterCloseRunner {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, writer: ClassInstanceRef<PrintWriter>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "writer", "Ljava/io/PrintWriter;", writer).await?;
-        jvm.put_field(&mut this, "started", "Z", false).await?;
-        jvm.put_field(&mut this, "done", "Z", false).await
+        jvm.put_field(&mut this, "PrintWriterCloseRunner", "writer", "Ljava/io/PrintWriter;", writer)
+            .await?;
+        jvm.put_field(&mut this, "PrintWriterCloseRunner", "started", "Z", false).await?;
+        jvm.put_field(&mut this, "PrintWriterCloseRunner", "done", "Z", false).await
     }
 
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        jvm.put_field(&mut this, "started", "Z", true).await?;
-        let writer: ClassInstanceRef<PrintWriter> = jvm.get_field(&this, "writer", "Ljava/io/PrintWriter;").await?;
+        jvm.put_field(&mut this, "PrintWriterCloseRunner", "started", "Z", true).await?;
+        let writer: ClassInstanceRef<PrintWriter> = jvm.get_field(&this, "PrintWriterCloseRunner", "writer", "Ljava/io/PrintWriter;").await?;
         let _: () = jvm.invoke_virtual(&writer, "java/io/PrintWriter", "close", "()V", ()).await?;
-        jvm.put_field(&mut this, "done", "Z", true).await
+        jvm.put_field(&mut this, "PrintWriterCloseRunner", "done", "Z", true).await
     }
 }
 
@@ -404,26 +407,31 @@ async fn pw_01_constructors_fields_descriptors_and_access_flags() -> Result<()> 
     let jvm = probe_jvm().await?;
     let writer: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 0, 0)).await?.into();
     let default_writer = jvm.new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (writer.clone(),)).await?;
-    assert!(!jvm.get_field::<bool>(&default_writer, "autoFlush", "Z").await?);
-    assert!(!jvm.get_field::<bool>(&default_writer, "trouble", "Z").await?);
-    let lock: ClassInstanceRef<Object> = jvm.get_field(&default_writer, "lock", "Ljava/lang/Object;").await?;
+    assert!(!jvm.get_field::<bool>(&default_writer, "java/io/PrintWriter", "autoFlush", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&default_writer, "java/io/PrintWriter", "trouble", "Z").await?);
+    let lock: ClassInstanceRef<Object> = jvm
+        .get_field(&default_writer, "java/io/PrintWriter", "lock", "Ljava/lang/Object;")
+        .await?;
     assert_eq!(lock.identity(), writer.identity());
-    let stored_out: ClassInstanceRef<Writer> = jvm.get_field(&default_writer, "out", "Ljava/io/Writer;").await?;
+    let stored_out: ClassInstanceRef<Writer> = jvm.get_field(&default_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
     assert_eq!(stored_out.identity(), writer.identity());
     let configured_writer = jvm
         .new_class("java/io/PrintWriter", "(Ljava/io/Writer;Z)V", (writer.clone(), true))
         .await?;
-    assert!(jvm.get_field::<bool>(&configured_writer, "autoFlush", "Z").await?);
+    assert!(jvm.get_field::<bool>(&configured_writer, "java/io/PrintWriter", "autoFlush", "Z").await?);
 
     let output: ClassInstanceRef<OutputStream> = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?.into();
     let output_writer = jvm
         .new_class("java/io/PrintWriter", "(Ljava/io/OutputStream;Z)V", (output.clone(), true))
         .await?;
-    assert!(jvm.get_field::<bool>(&output_writer, "autoFlush", "Z").await?);
+    assert!(jvm.get_field::<bool>(&output_writer, "java/io/PrintWriter", "autoFlush", "Z").await?);
     let default_output_writer = jvm
         .new_class("java/io/PrintWriter", "(Ljava/io/OutputStream;)V", (output.clone(),))
         .await?;
-    assert!(!jvm.get_field::<bool>(&default_output_writer, "autoFlush", "Z").await?);
+    assert!(
+        !jvm.get_field::<bool>(&default_output_writer, "java/io/PrintWriter", "autoFlush", "Z")
+            .await?
+    );
     let output_text = JavaLangString::from_rust_string(&jvm, "os").await?;
     let _: () = jvm
         .invoke_virtual(
@@ -515,7 +523,7 @@ async fn pw_02_write_overloads_suppress_only_ioexception() -> Result<()> {
         panic!("invalid String range must throw IndexOutOfBoundsException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
-    assert!(!jvm.get_field::<bool>(&writer, "trouble", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&writer, "java/io/PrintWriter", "trouble", "Z").await?);
 
     let null_chars: ClassInstanceRef<Array<JavaChar>> = None.into();
     let null_chars_result: Result<()> = jvm.invoke_virtual(&writer, "java/io/Writer", "write", "([C)V", (null_chars,)).await;
@@ -539,7 +547,7 @@ async fn pw_02_write_overloads_suppress_only_ioexception() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(&suppressing, &suppressing.class_definition().name(), "write", "(I)V", ('x' as i32,))
         .await?;
-    assert!(jvm.get_field::<bool>(&suppressing, "trouble", "Z").await?);
+    assert!(jvm.get_field::<bool>(&suppressing, "java/io/PrintWriter", "trouble", "Z").await?);
     assert_monitor_released(&jvm, &failing_writer).await?;
 
     let runtime_writer: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (2, 0, 0)).await?.into();
@@ -553,7 +561,7 @@ async fn pw_02_write_overloads_suppress_only_ioexception() -> Result<()> {
         panic!("user RuntimeException must propagate");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    assert!(!jvm.get_field::<bool>(&propagating, "trouble", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&propagating, "java/io/PrintWriter", "trouble", "Z").await?);
     assert_monitor_released(&jvm, &runtime_writer).await?;
 
     Ok(())
@@ -631,18 +639,18 @@ async fn pw_04_println_uses_line_separator_and_is_the_only_autoflush_path() -> R
     let _: () = jvm
         .invoke_virtual(&writer, "java/io/PrintWriter", "print", "(Ljava/lang/String;)V", (prefix,))
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&probe, "flushCount", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&probe, "ProbeWriter", "flushCount", "I").await?, 0);
     let newline = JavaLangString::from_rust_string(&jvm, "\n").await?;
     let _: () = jvm
         .invoke_virtual(&writer, "java/io/Writer", "write", "(Ljava/lang/String;)V", (newline,))
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&probe, "flushCount", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&probe, "ProbeWriter", "flushCount", "I").await?, 0);
     let _: () = jvm.invoke_virtual(&writer, "java/io/PrintWriter", "println", "(I)V", (7,)).await?;
-    assert_eq!(jvm.get_field::<i32>(&probe, "flushCount", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&probe, "ProbeWriter", "flushCount", "I").await?, 1);
     let _: () = jvm.invoke_virtual(&writer, "java/io/PrintWriter", "println", "()V", ()).await?;
-    assert_eq!(jvm.get_field::<i32>(&probe, "flushCount", "I").await?, 2);
+    assert_eq!(jvm.get_field::<i32>(&probe, "ProbeWriter", "flushCount", "I").await?, 2);
 
-    let content: ClassInstanceRef<StringBuffer> = jvm.get_field(&probe, "content", "Ljava/lang/StringBuffer;").await?;
+    let content: ClassInstanceRef<StringBuffer> = jvm.get_field(&probe, "ProbeWriter", "content", "Ljava/lang/StringBuffer;").await?;
     let content: ClassInstanceRef<String> = jvm
         .invoke_virtual(&content, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
@@ -655,7 +663,7 @@ async fn pw_04_println_uses_line_separator_and_is_the_only_autoflush_path() -> R
     let _: () = jvm
         .invoke_virtual(&no_flush_writer, &no_flush_writer.class_definition().name(), "println", "()V", ())
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&no_flush_probe, "flushCount", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&no_flush_probe, "ProbeWriter", "flushCount", "I").await?, 0);
 
     let newline_failure: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (1, 0, 0)).await?.into();
     let newline_failure_writer = jvm
@@ -670,9 +678,12 @@ async fn pw_04_println_uses_line_separator_and_is_the_only_autoflush_path() -> R
             (),
         )
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&newline_failure, "writeCount", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&newline_failure, "flushCount", "I").await?, 0);
-    assert!(jvm.get_field::<bool>(&newline_failure_writer, "trouble", "Z").await?);
+    assert_eq!(jvm.get_field::<i32>(&newline_failure, "ProbeWriter", "writeCount", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&newline_failure, "ProbeWriter", "flushCount", "I").await?, 0);
+    assert!(
+        jvm.get_field::<bool>(&newline_failure_writer, "java/io/PrintWriter", "trouble", "Z")
+            .await?
+    );
     assert_monitor_released(&jvm, &newline_failure).await?;
 
     let fallback_jvm = test_jvm().await?;
@@ -708,14 +719,16 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
     let _: () = jvm
         .invoke_virtual(&overriding_writer, &overriding_writer.class_definition().name(), "println", "(I)V", (7,))
         .await?;
-    let dispatch_content: ClassInstanceRef<StringBuffer> = jvm.get_field(&dispatch_probe, "content", "Ljava/lang/StringBuffer;").await?;
+    let dispatch_content: ClassInstanceRef<StringBuffer> = jvm
+        .get_field(&dispatch_probe, "ProbeWriter", "content", "Ljava/lang/StringBuffer;")
+        .await?;
     let dispatch_content: ClassInstanceRef<String> = jvm
         .invoke_virtual(&dispatch_content, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &dispatch_content).await?, "<7><newline>");
 
     let mut blocking_probe: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 0, 0)).await?.into();
-    jvm.put_field(&mut blocking_probe, "blockFirstWrite", "Z", true).await?;
+    jvm.put_field(&mut blocking_probe, "ProbeWriter", "blockFirstWrite", "Z", true).await?;
     let writer: ClassInstanceRef<PrintWriter> = jvm
         .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (blocking_probe.clone(),))
         .await?
@@ -736,7 +749,7 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
         .await?;
     let mut first_write_entered = false;
     for _ in 0..100 {
-        first_write_entered = jvm.get_field::<bool>(&blocking_probe, "firstWriteEntered", "Z").await?;
+        first_write_entered = jvm.get_field::<bool>(&blocking_probe, "ProbeWriter", "firstWriteEntered", "Z").await?;
         if first_write_entered {
             break;
         }
@@ -749,7 +762,7 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
         .await?;
     let mut second_started = false;
     for _ in 0..100 {
-        second_started = jvm.get_field::<bool>(&second_runner, "started", "Z").await?;
+        second_started = jvm.get_field::<bool>(&second_runner, "PrintWriterRunner", "started", "Z").await?;
         if second_started {
             break;
         }
@@ -758,30 +771,32 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
     tokio::time::sleep(Duration::from_millis(10)).await;
     assert!(second_started, "second println worker did not start");
     assert_eq!(
-        jvm.get_field::<i32>(&blocking_probe, "writeCount", "I").await?,
+        jvm.get_field::<i32>(&blocking_probe, "ProbeWriter", "writeCount", "I").await?,
         1,
         "second println entered the backing writer before the first line completed"
     );
-    assert!(!jvm.get_field::<bool>(&second_runner, "done", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&second_runner, "PrintWriterRunner", "done", "Z").await?);
 
-    jvm.put_field(&mut blocking_probe, "releaseFirstWrite", "Z", true).await?;
+    jvm.put_field(&mut blocking_probe, "ProbeWriter", "releaseFirstWrite", "Z", true).await?;
     let _: () = jvm
         .invoke_virtual(&first_thread, &first_thread.class_definition().name(), "join", "()V", ())
         .await?;
     let _: () = jvm
         .invoke_virtual(&second_thread, &second_thread.class_definition().name(), "join", "()V", ())
         .await?;
-    assert!(jvm.get_field::<bool>(&first_runner, "done", "Z").await?);
-    assert!(jvm.get_field::<bool>(&second_runner, "done", "Z").await?);
+    assert!(jvm.get_field::<bool>(&first_runner, "PrintWriterRunner", "done", "Z").await?);
+    assert!(jvm.get_field::<bool>(&second_runner, "PrintWriterRunner", "done", "Z").await?);
 
-    let content: ClassInstanceRef<StringBuffer> = jvm.get_field(&blocking_probe, "content", "Ljava/lang/StringBuffer;").await?;
+    let content: ClassInstanceRef<StringBuffer> = jvm
+        .get_field(&blocking_probe, "ProbeWriter", "content", "Ljava/lang/StringBuffer;")
+        .await?;
     let content: ClassInstanceRef<String> = jvm
         .invoke_virtual(&content, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &content).await?, "1\n2\n");
 
     let mut close_probe: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 0, 0)).await?.into();
-    jvm.put_field(&mut close_probe, "blockFirstClose", "Z", true).await?;
+    jvm.put_field(&mut close_probe, "ProbeWriter", "blockFirstClose", "Z", true).await?;
     let close_writer: ClassInstanceRef<PrintWriter> = jvm
         .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (close_probe.clone(),))
         .await?
@@ -804,7 +819,7 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
         .await?;
     let mut first_close_entered = false;
     for _ in 0..100 {
-        first_close_entered = jvm.get_field::<bool>(&close_probe, "firstCloseEntered", "Z").await?;
+        first_close_entered = jvm.get_field::<bool>(&close_probe, "ProbeWriter", "firstCloseEntered", "Z").await?;
         if first_close_entered {
             break;
         }
@@ -817,7 +832,9 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
         .await?;
     let mut second_close_started = false;
     for _ in 0..100 {
-        second_close_started = jvm.get_field::<bool>(&second_close_runner, "started", "Z").await?;
+        second_close_started = jvm
+            .get_field::<bool>(&second_close_runner, "PrintWriterCloseRunner", "started", "Z")
+            .await?;
         if second_close_started {
             break;
         }
@@ -825,20 +842,20 @@ async fn pw_04_println_is_atomic_and_uses_java_virtual_dispatch() -> Result<()> 
     }
     tokio::time::sleep(Duration::from_millis(10)).await;
     assert!(second_close_started, "second close worker did not start");
-    assert_eq!(jvm.get_field::<i32>(&close_probe, "closeCount", "I").await?, 1);
-    assert!(!jvm.get_field::<bool>(&second_close_runner, "done", "Z").await?);
+    assert_eq!(jvm.get_field::<i32>(&close_probe, "ProbeWriter", "closeCount", "I").await?, 1);
+    assert!(!jvm.get_field::<bool>(&second_close_runner, "PrintWriterCloseRunner", "done", "Z").await?);
 
-    jvm.put_field(&mut close_probe, "releaseFirstClose", "Z", true).await?;
+    jvm.put_field(&mut close_probe, "ProbeWriter", "releaseFirstClose", "Z", true).await?;
     let _: () = jvm
         .invoke_virtual(&first_close_thread, &first_close_thread.class_definition().name(), "join", "()V", ())
         .await?;
     let _: () = jvm
         .invoke_virtual(&second_close_thread, &second_close_thread.class_definition().name(), "join", "()V", ())
         .await?;
-    assert!(jvm.get_field::<bool>(&first_close_runner, "done", "Z").await?);
-    assert!(jvm.get_field::<bool>(&second_close_runner, "done", "Z").await?);
-    assert_eq!(jvm.get_field::<i32>(&close_probe, "closeCount", "I").await?, 1);
-    let closed_out: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "out", "Ljava/io/Writer;").await?;
+    assert!(jvm.get_field::<bool>(&first_close_runner, "PrintWriterCloseRunner", "done", "Z").await?);
+    assert!(jvm.get_field::<bool>(&second_close_runner, "PrintWriterCloseRunner", "done", "Z").await?);
+    assert_eq!(jvm.get_field::<i32>(&close_probe, "ProbeWriter", "closeCount", "I").await?, 1);
+    let closed_out: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
     assert!(closed_out.is_null());
 
     Ok(())
@@ -856,13 +873,13 @@ async fn pw_05_flush_close_and_check_error_preserve_trouble_state() -> Result<()
         jvm.invoke_virtual::<_, bool>(&flush_writer, &flush_writer.class_definition().name(), "checkError", "()Z", ())
             .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&flush_failure, "flushCount", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&flush_failure, "ProbeWriter", "flushCount", "I").await?, 1);
     assert_monitor_released(&jvm, &flush_failure).await?;
-    jvm.put_field(&mut flush_failure, "flushMode", "I", 0).await?;
+    jvm.put_field(&mut flush_failure, "ProbeWriter", "flushMode", "I", 0).await?;
     let _: () = jvm
         .invoke_virtual(&flush_writer, &flush_writer.class_definition().name(), "flush", "()V", ())
         .await?;
-    assert!(jvm.get_field::<bool>(&flush_writer, "trouble", "Z").await?);
+    assert!(jvm.get_field::<bool>(&flush_writer, "java/io/PrintWriter", "trouble", "Z").await?);
 
     let nested_failure: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 1, 0)).await?.into();
     let inner_writer: ClassInstanceRef<Writer> = jvm
@@ -880,18 +897,18 @@ async fn pw_05_flush_close_and_check_error_preserve_trouble_state() -> Result<()
         .new_class("java/io/PrintWriter", "(Ljava/io/Writer;)V", (close_failure.clone(),))
         .await?;
     let _: () = jvm.invoke_virtual(&close_writer, "java/io/PrintWriter", "close", "()V", ()).await?;
-    assert_eq!(jvm.get_field::<i32>(&close_failure, "closeCount", "I").await?, 1);
-    let open_after_failure: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "out", "Ljava/io/Writer;").await?;
+    assert_eq!(jvm.get_field::<i32>(&close_failure, "ProbeWriter", "closeCount", "I").await?, 1);
+    let open_after_failure: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
     assert!(!open_after_failure.is_null());
-    assert!(jvm.get_field::<bool>(&close_writer, "trouble", "Z").await?);
+    assert!(jvm.get_field::<bool>(&close_writer, "java/io/PrintWriter", "trouble", "Z").await?);
     assert_monitor_released(&jvm, &close_failure).await?;
 
-    jvm.put_field(&mut close_failure, "closeMode", "I", 0).await?;
+    jvm.put_field(&mut close_failure, "ProbeWriter", "closeMode", "I", 0).await?;
     let _: () = jvm.invoke_virtual(&close_writer, "java/io/PrintWriter", "close", "()V", ()).await?;
     let _: () = jvm.invoke_virtual(&close_writer, "java/io/PrintWriter", "close", "()V", ()).await?;
-    assert_eq!(jvm.get_field::<i32>(&close_failure, "closeCount", "I").await?, 2);
-    assert!(jvm.get_field::<bool>(&close_writer, "trouble", "Z").await?);
-    let closed_out: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "out", "Ljava/io/Writer;").await?;
+    assert_eq!(jvm.get_field::<i32>(&close_failure, "ProbeWriter", "closeCount", "I").await?, 2);
+    assert!(jvm.get_field::<bool>(&close_writer, "java/io/PrintWriter", "trouble", "Z").await?);
+    let closed_out: ClassInstanceRef<Writer> = jvm.get_field(&close_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;").await?;
     assert!(closed_out.is_null());
 
     let closed_probe: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 0, 0)).await?.into();
@@ -911,8 +928,8 @@ async fn pw_05_flush_close_and_check_error_preserve_trouble_state() -> Result<()
         jvm.invoke_virtual::<_, bool>(&closed_writer, &closed_writer.class_definition().name(), "checkError", "()Z", ())
             .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&closed_probe, "writeCount", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&closed_probe, "flushCount", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&closed_probe, "ProbeWriter", "writeCount", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&closed_probe, "ProbeWriter", "flushCount", "I").await?, 0);
 
     let runtime_flush: ClassInstanceRef<Writer> = jvm.new_class("ProbeWriter", "(III)V", (0, 2, 0)).await?.into();
     let runtime_flush_writer = jvm
@@ -938,14 +955,18 @@ async fn pw_05_flush_close_and_check_error_preserve_trouble_state() -> Result<()
         panic!("close RuntimeException must propagate");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    let open_after_runtime: ClassInstanceRef<Writer> = jvm.get_field(&runtime_close_writer, "out", "Ljava/io/Writer;").await?;
+    let open_after_runtime: ClassInstanceRef<Writer> = jvm
+        .get_field(&runtime_close_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;")
+        .await?;
     assert!(!open_after_runtime.is_null());
     assert_monitor_released(&jvm, &runtime_close).await?;
-    jvm.put_field(&mut runtime_close, "closeMode", "I", 0).await?;
+    jvm.put_field(&mut runtime_close, "ProbeWriter", "closeMode", "I", 0).await?;
     let _: () = jvm
         .invoke_virtual(&runtime_close_writer, &runtime_close_writer.class_definition().name(), "close", "()V", ())
         .await?;
-    let closed_after_retry: ClassInstanceRef<Writer> = jvm.get_field(&runtime_close_writer, "out", "Ljava/io/Writer;").await?;
+    let closed_after_retry: ClassInstanceRef<Writer> = jvm
+        .get_field(&runtime_close_writer, "java/io/PrintWriter", "out", "Ljava/io/Writer;")
+        .await?;
     assert!(closed_after_retry.is_null());
 
     Ok(())

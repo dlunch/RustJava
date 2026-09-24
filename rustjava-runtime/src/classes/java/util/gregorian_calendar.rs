@@ -32,7 +32,8 @@ impl GregorianCalendar {
         tracing::debug!("java.util.GregorianCalendar::<init>({this:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "time", "J", context.now() as i64).await?;
+        jvm.put_field(&mut this, "java/util/GregorianCalendar", "time", "J", context.now() as i64)
+            .await?;
         jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
@@ -49,8 +50,10 @@ impl GregorianCalendar {
         }
 
         let _: () = jvm.invoke_special(&this, "java/util/Calendar", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "timeZone", "Ljava/util/TimeZone;", time_zone).await?;
-        jvm.put_field(&mut this, "time", "J", context.now() as i64).await?;
+        jvm.put_field(&mut this, "java/util/GregorianCalendar", "timeZone", "Ljava/util/TimeZone;", time_zone)
+            .await?;
+        jvm.put_field(&mut this, "java/util/GregorianCalendar", "time", "J", context.now() as i64)
+            .await?;
         jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
@@ -59,7 +62,7 @@ impl GregorianCalendar {
 
         // fields -> time
 
-        let fields = jvm.get_field(&this, "fields", "[I").await?;
+        let fields = jvm.get_field(&this, "java/util/GregorianCalendar", "fields", "[I").await?;
 
         // TODO constant
         let fields: Vec<i32> = jvm.load_array(&fields, 0, 17).await?;
@@ -96,7 +99,8 @@ impl GregorianCalendar {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);
         };
 
-        jvm.put_field(&mut this, "time", "J", calculated_time).await?;
+        jvm.put_field(&mut this, "java/util/GregorianCalendar", "time", "J", calculated_time)
+            .await?;
 
         Ok(())
     }
@@ -106,8 +110,10 @@ impl GregorianCalendar {
 
         // time -> fields
 
-        let time: i64 = jvm.get_field(&this, "time", "J").await?;
-        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "timeZone", "Ljava/util/TimeZone;").await?;
+        let time: i64 = jvm.get_field(&this, "java/util/GregorianCalendar", "time", "J").await?;
+        let time_zone: ClassInstanceRef<TimeZone> = jvm
+            .get_field(&this, "java/util/GregorianCalendar", "timeZone", "Ljava/util/TimeZone;")
+            .await?;
         let zone_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let Some(adjusted_time) = time.checked_add(zone_offset as i64) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);
@@ -136,7 +142,7 @@ impl GregorianCalendar {
             0,
         ];
 
-        let mut fields = jvm.get_field(&this, "fields", "[I").await?;
+        let mut fields = jvm.get_field(&this, "java/util/GregorianCalendar", "fields", "[I").await?;
         jvm.store_array(&mut fields, 0, calculated_fields).await?;
 
         Ok(())

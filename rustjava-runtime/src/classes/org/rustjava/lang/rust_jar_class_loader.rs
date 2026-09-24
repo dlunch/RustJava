@@ -50,7 +50,14 @@ impl RustJarClassLoader {
             .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
 
-        jvm.put_field(&mut this, "classPaths", "[Ljava/lang/String;", class_paths).await?;
+        jvm.put_field(
+            &mut this,
+            "org/rustjava/lang/RustJarClassLoader",
+            "classPaths",
+            "[Ljava/lang/String;",
+            class_paths,
+        )
+        .await?;
 
         Ok(())
     }
@@ -64,7 +71,9 @@ impl RustJarClassLoader {
         tracing::debug!("org.rustjava.lang.RustJarClassLoader::findClass({this:?}, {name:?})");
 
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
-        let class_paths = jvm.get_field(&this, "classPaths", "[Ljava/lang/String;").await?;
+        let class_paths = jvm
+            .get_field(&this, "org/rustjava/lang/RustJarClassLoader", "classPaths", "[Ljava/lang/String;")
+            .await?;
         let class_paths: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_paths, 0, jvm.array_length(&class_paths).await? as usize).await?;
 
         for class_path in class_paths {

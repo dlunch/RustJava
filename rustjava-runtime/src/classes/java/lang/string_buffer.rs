@@ -958,7 +958,7 @@ impl StringBuffer {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::insert({this:?}, {offset}, {array:?})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if offset < 0 || offset > count {
             return Err(jvm
                 .exception(
@@ -1066,7 +1066,7 @@ impl StringBuffer {
     async fn delete(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, start: i32, end: i32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::delete({this:?}, {start}, {end})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         let end = end.min(count);
         if start < 0 || start > end {
             return Err(jvm
@@ -1078,10 +1078,11 @@ impl StringBuffer {
         }
 
         if start != end {
-            let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+            let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
             let tail: Vec<JavaChar> = jvm.load_array(&value, end as usize, (count - end) as usize).await?;
             jvm.store_array(&mut value, start as usize, tail).await?;
-            jvm.put_field(&mut this, "count", "I", count - (end - start)).await?;
+            jvm.put_field(&mut this, "java/lang/StringBuffer", "count", "I", count - (end - start))
+                .await?;
         }
         Ok(this)
     }
@@ -1089,7 +1090,7 @@ impl StringBuffer {
     async fn delete_char_at(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::deleteCharAt({this:?}, {index})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if index < 0 || index >= count {
             return Err(jvm
                 .exception(
@@ -1099,10 +1100,10 @@ impl StringBuffer {
                 .await);
         }
 
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         let tail: Vec<JavaChar> = jvm.load_array(&value, (index + 1) as usize, (count - index - 1) as usize).await?;
         jvm.store_array(&mut value, index as usize, tail).await?;
-        jvm.put_field(&mut this, "count", "I", count - 1).await?;
+        jvm.put_field(&mut this, "java/lang/StringBuffer", "count", "I", count - 1).await?;
         Ok(this)
     }
 
@@ -1116,7 +1117,7 @@ impl StringBuffer {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::replace({this:?}, {start}, {end}, {string:?})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         let end = end.min(count);
         if start < 0 || start > count || start > end {
             return Err(jvm
@@ -1135,18 +1136,18 @@ impl StringBuffer {
         let new_count = count + replacement_length - (end - start);
         Self::expand_capacity(jvm, &mut this, new_count).await?;
 
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         let tail: Vec<JavaChar> = jvm.load_array(&value, end as usize, (count - end) as usize).await?;
         jvm.store_array(&mut value, (start + replacement_length) as usize, tail).await?;
         jvm.store_array(&mut value, start as usize, replacement).await?;
-        jvm.put_field(&mut this, "count", "I", new_count).await?;
+        jvm.put_field(&mut this, "java/lang/StringBuffer", "count", "I", new_count).await?;
         Ok(this)
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, start: i32) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.StringBuffer::substring({this:?}, {start})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         jvm.invoke_virtual(&this, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (start, count))
             .await
     }
@@ -1160,7 +1161,7 @@ impl StringBuffer {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.StringBuffer::substring({this:?}, {start}, {end})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if start < 0 || end > count || start > end {
             return Err(jvm
                 .exception(
@@ -1170,7 +1171,7 @@ impl StringBuffer {
                 .await);
         }
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         Ok(jvm.new_class("java/lang/String", "([CII)V", (value, start, end - start)).await?.into())
     }
 
@@ -1190,8 +1191,8 @@ impl StringBuffer {
     async fn reverse(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::reverse({this:?})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         let mut chars: Vec<JavaChar> = jvm.load_array(&value, 0, count as usize).await?;
         chars.reverse();
         jvm.store_array(&mut value, 0, chars).await?;
@@ -1251,8 +1252,8 @@ impl StringBuffer {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.StringBuffer::toString({this:?})");
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
 
         // the buffer stays mutable, so snapshot it instead of handing it to the sharing constructor
         let chars: Vec<JavaChar> = jvm.load_array(&value, 0, count as usize).await?;
@@ -1263,7 +1264,7 @@ impl StringBuffer {
     async fn capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.StringBuffer::capacity({this:?})");
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         Ok(jvm.array_length(&value).await? as i32)
     }
 
@@ -1288,27 +1289,27 @@ impl StringBuffer {
             return Err(jvm.exception("java/lang/StringIndexOutOfBoundsException", &new_length.to_string()).await);
         }
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if new_length > count {
             Self::expand_capacity(jvm, &mut this, new_length).await?;
-            let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+            let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
             jvm.store_array(&mut value, count as usize, vec![0 as JavaChar; (new_length - count) as usize])
                 .await?;
         }
-        jvm.put_field(&mut this, "count", "I", new_length).await?;
+        jvm.put_field(&mut this, "java/lang/StringBuffer", "count", "I", new_length).await?;
         Ok(())
     }
 
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.StringBuffer::length({this:?})");
 
-        jvm.get_field(&this, "count", "I").await
+        jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await
     }
 
     async fn char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<JavaChar> {
         tracing::debug!("java.lang.StringBuffer::charAt({this:?}, {index})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if index < 0 || index >= count {
             return Err(jvm
                 .exception(
@@ -1318,7 +1319,7 @@ impl StringBuffer {
                 .await);
         }
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         Ok(jvm.load_array(&value, index as usize, 1).await?[0])
     }
 
@@ -1345,7 +1346,7 @@ impl StringBuffer {
     async fn set_char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, character: JavaChar) -> Result<()> {
         tracing::debug!("java.lang.StringBuffer::setCharAt({this:?}, {index}, {character})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if index < 0 || index >= count {
             return Err(jvm
                 .exception(
@@ -1355,7 +1356,7 @@ impl StringBuffer {
                 .await);
         }
 
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         jvm.store_array(&mut value, index as usize, [character]).await
     }
 
@@ -1370,7 +1371,7 @@ impl StringBuffer {
     ) -> Result<()> {
         tracing::debug!("java.lang.StringBuffer::getChars({this:?}, {src_begin}, {src_end}, {destination:?}, {dst_begin})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if src_begin < 0 || src_end > count || src_begin > src_end {
             return Err(jvm
                 .exception(
@@ -1394,38 +1395,38 @@ impl StringBuffer {
                 .await);
         }
 
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
         let chars: Vec<JavaChar> = jvm.load_array(&value, src_begin as usize, copy_length as usize).await?;
         jvm.store_array(&mut destination, dst_begin as usize, chars).await
     }
 
     async fn expand_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, minimum_capacity: i32) -> Result<()> {
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "value", "[C").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
         let old_capacity = jvm.array_length(&value).await? as i32;
         if minimum_capacity <= old_capacity {
             return Ok(());
         }
 
         let new_capacity = minimum_capacity.max(old_capacity.saturating_mul(2).saturating_add(2));
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/lang/StringBuffer", "count", "I").await?;
         let chars: Vec<JavaChar> = jvm.load_array(&value, 0, count as usize).await?;
         let mut new_value = jvm.instantiate_array("C", new_capacity as usize).await?;
         jvm.store_array(&mut new_value, 0, chars).await?;
-        jvm.put_field(this, "value", "[C", new_value).await
+        jvm.put_field(this, "java/lang/StringBuffer", "value", "[C", new_value).await
     }
 
     async fn append_utf16(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, chars: Vec<JavaChar>) -> Result<()> {
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/lang/StringBuffer", "count", "I").await?;
         let new_count = count + chars.len() as i32;
         Self::expand_capacity(jvm, this, new_count).await?;
 
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "value", "[C").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
         jvm.store_array(&mut value, count as usize, chars).await?;
-        jvm.put_field(this, "count", "I", new_count).await
+        jvm.put_field(this, "java/lang/StringBuffer", "count", "I", new_count).await
     }
 
     async fn insert_utf16(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, offset: i32, chars: Vec<JavaChar>) -> Result<()> {
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/lang/StringBuffer", "count", "I").await?;
         if offset < 0 || offset > count {
             return Err(jvm
                 .exception(
@@ -1438,10 +1439,10 @@ impl StringBuffer {
         let inserted_length = chars.len() as i32;
         let new_count = count + inserted_length;
         Self::expand_capacity(jvm, this, new_count).await?;
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "value", "[C").await?;
+        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
         let tail: Vec<JavaChar> = jvm.load_array(&value, offset as usize, (count - offset) as usize).await?;
         jvm.store_array(&mut value, (offset + inserted_length) as usize, tail).await?;
         jvm.store_array(&mut value, offset as usize, chars).await?;
-        jvm.put_field(this, "count", "I", new_count).await
+        jvm.put_field(this, "java/lang/StringBuffer", "count", "I", new_count).await
     }
 }

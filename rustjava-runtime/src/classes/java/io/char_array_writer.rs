@@ -61,8 +61,8 @@ impl CharArrayWriter {
         }
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
         let buffer = jvm.instantiate_array("C", size as usize).await?;
-        jvm.put_field(&mut this, "buf", "[C", buffer).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "buf", "[C", buffer).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", 0).await
     }
 
     async fn with_lock<T, F>(jvm: &Jvm, lock: &ClassInstanceRef<Object>, operation: F) -> Result<T>
@@ -85,12 +85,12 @@ impl CharArrayWriter {
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, minimum: i32) -> Result<()> {
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/io/CharArrayWriter", "buf", "[C").await?;
         let current = jvm.array_length(&buffer).await? as i32;
         if minimum > current {
             let new_length = current.saturating_mul(2).max(minimum).max(1);
             let new_buffer = jvm.instantiate_array("C", new_length as usize).await?;
-            let count: i32 = jvm.get_field(this, "count", "I").await?;
+            let count: i32 = jvm.get_field(this, "java/io/CharArrayWriter", "count", "I").await?;
             let _: () = jvm
                 .invoke_static(
                     "java/lang/System",
@@ -99,24 +99,24 @@ impl CharArrayWriter {
                     (buffer, 0, new_buffer.clone(), 0, count),
                 )
                 .await?;
-            jvm.put_field(this, "buf", "[C", new_buffer).await?;
+            jvm.put_field(this, "java/io/CharArrayWriter", "buf", "[C", new_buffer).await?;
         }
         Ok(())
     }
 
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_char_locked(jvm, this, value)).await
     }
 
     async fn write_char_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::write({this:?}, {value})");
 
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         Self::ensure_capacity(jvm, &mut this, count + 1).await?;
-        let mut buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let mut buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
         jvm.store_array(&mut buffer, count as usize, [value as JavaChar]).await?;
-        jvm.put_field(&mut this, "count", "I", count + 1).await
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + 1).await
     }
 
     async fn write_chars(
@@ -127,7 +127,7 @@ impl CharArrayWriter {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_chars_locked(jvm, this, chars, offset, length)).await
     }
 
@@ -147,9 +147,9 @@ impl CharArrayWriter {
         if offset < 0 || length < 0 || offset > source_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         Self::ensure_capacity(jvm, &mut this, count + length).await?;
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
         let _: () = jvm
             .invoke_static(
                 "java/lang/System",
@@ -158,7 +158,7 @@ impl CharArrayWriter {
                 (chars, offset, buffer, count, length),
             )
             .await?;
-        jvm.put_field(&mut this, "count", "I", count + length).await
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + length).await
     }
 
     async fn write_string(
@@ -169,7 +169,7 @@ impl CharArrayWriter {
         offset: i32,
         length: i32,
     ) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_string_locked(jvm, this, value, offset, length)).await
     }
 
@@ -189,9 +189,9 @@ impl CharArrayWriter {
         if offset < 0 || length < 0 || offset > source_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         Self::ensure_capacity(jvm, &mut this, count + length).await?;
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
         let _: () = jvm
             .invoke_virtual(
                 &value,
@@ -201,11 +201,11 @@ impl CharArrayWriter {
                 (offset, offset + length, buffer, count),
             )
             .await?;
-        jvm.put_field(&mut this, "count", "I", count + length).await
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + length).await
     }
 
     async fn write_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<Writer>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_to_locked(jvm, this, out)).await
     }
 
@@ -215,31 +215,31 @@ impl CharArrayWriter {
         if out.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "writer is null").await);
         }
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         jvm.invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (buffer, 0, count)).await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
     }
 
     async fn reset_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::reset({this:?})");
-        jvm.put_field(&mut this, "count", "I", 0).await
+        jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", 0).await
     }
 
     async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::to_char_array_locked(jvm, this)).await
     }
 
     async fn to_char_array_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
         tracing::debug!("java.io.CharArrayWriter::toCharArray({this:?})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         let copy = jvm.instantiate_array("C", count as usize).await?;
         let _: () = jvm
             .invoke_static(
@@ -253,25 +253,25 @@ impl CharArrayWriter {
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::size_locked(jvm, this)).await
     }
 
     async fn size_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.CharArrayWriter::size({this:?})");
-        jvm.get_field(&this, "count", "I").await
+        jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::to_string_locked(jvm, this)).await
     }
 
     async fn to_string_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.CharArrayWriter::toString({this:?})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayWriter", "buf", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await?;
         Ok(jvm.new_class("java/lang/String", "([CII)V", (buffer, 0, count)).await?.into())
     }
 

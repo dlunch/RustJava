@@ -87,7 +87,7 @@ impl File {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "path", "Ljava/lang/String;", pathname).await?;
+        jvm.put_field(&mut this, "java/io/File", "path", "Ljava/lang/String;", pathname).await?;
 
         Ok(())
     }
@@ -95,7 +95,7 @@ impl File {
     async fn get_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.File::getPath({this:?})");
 
-        jvm.get_field(&this, "path", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/io/File", "path", "Ljava/lang/String;").await
     }
 
     async fn exists(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {

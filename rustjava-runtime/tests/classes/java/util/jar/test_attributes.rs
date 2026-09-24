@@ -8,7 +8,7 @@ async fn test_attribute_get_set() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let attributes = jvm.new_class("java/util/jar/Attributes", "()V", ()).await?;
-    let map: ClassInstanceRef<Object> = jvm.get_field(&attributes, "map", "Ljava/util/Map;").await?;
+    let map: ClassInstanceRef<Object> = jvm.get_field(&attributes, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
     assert!(!map.is_null());
     assert!(jvm.is_instance(&**map, "java/util/HashMap"));
     assert!(jvm.is_instance(&**map, "java/util/Map"));

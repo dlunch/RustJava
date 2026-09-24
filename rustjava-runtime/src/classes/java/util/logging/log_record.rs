@@ -135,13 +135,18 @@ impl LogRecord {
             .invoke_static("java/util/logging/LogRecord", "allocateSequenceNumber", "()J", ())
             .await?;
         let current_thread = jvm.current_java_thread();
-        let thread_id: i64 = jvm.get_field(&current_thread, "id", "J").await?;
+        let thread_id: i64 = jvm.get_field(&current_thread, "java/lang/Thread", "id", "J").await?;
 
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await?;
-        jvm.put_field(&mut this, "message", "Ljava/lang/String;", message).await?;
-        jvm.put_field(&mut this, "sequenceNumber", "J", sequence_number).await?;
-        jvm.put_field(&mut this, "millis", "J", context.now() as i64).await?;
-        jvm.put_field(&mut this, "threadID", "I", thread_id as i32).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "level", "Ljava/util/logging/Level;", level)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "message", "Ljava/lang/String;", message)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "sequenceNumber", "J", sequence_number)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "millis", "J", context.now() as i64)
+            .await?;
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "threadID", "I", thread_id as i32)
+            .await
     }
 
     async fn allocate_sequence_number(jvm: &Jvm, _: &mut RuntimeContext) -> Result<i64> {
@@ -152,15 +157,18 @@ impl LogRecord {
     }
 
     async fn get_logger_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "loggerName", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "loggerName", "Ljava/lang/String;")
+            .await
     }
 
     async fn set_logger_name(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
-        jvm.put_field(&mut this, "loggerName", "Ljava/lang/String;", name).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "loggerName", "Ljava/lang/String;", name)
+            .await
     }
 
     async fn get_resource_bundle(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "resourceBundle", "Ljava/util/ResourceBundle;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "resourceBundle", "Ljava/util/ResourceBundle;")
+            .await
     }
 
     async fn set_resource_bundle(
@@ -169,11 +177,19 @@ impl LogRecord {
         mut this: ClassInstanceRef<Self>,
         bundle: ClassInstanceRef<Object>,
     ) -> Result<()> {
-        jvm.put_field(&mut this, "resourceBundle", "Ljava/util/ResourceBundle;", bundle).await
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/LogRecord",
+            "resourceBundle",
+            "Ljava/util/ResourceBundle;",
+            bundle,
+        )
+        .await
     }
 
     async fn get_resource_bundle_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "resourceBundleName", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "resourceBundleName", "Ljava/lang/String;")
+            .await
     }
 
     async fn set_resource_bundle_name(
@@ -182,11 +198,13 @@ impl LogRecord {
         mut this: ClassInstanceRef<Self>,
         name: ClassInstanceRef<String>,
     ) -> Result<()> {
-        jvm.put_field(&mut this, "resourceBundleName", "Ljava/lang/String;", name).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "resourceBundleName", "Ljava/lang/String;", name)
+            .await
     }
 
     async fn get_level(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Level>> {
-        jvm.get_field(&this, "level", "Ljava/util/logging/Level;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "level", "Ljava/util/logging/Level;")
+            .await
     }
 
     async fn set_level(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, level: ClassInstanceRef<Level>) -> Result<()> {
@@ -194,19 +212,22 @@ impl LogRecord {
             return Err(jvm.exception("java/lang/NullPointerException", "level").await);
         }
 
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "level", "Ljava/util/logging/Level;", level)
+            .await
     }
 
     async fn get_sequence_number(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        jvm.get_field(&this, "sequenceNumber", "J").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "sequenceNumber", "J").await
     }
 
     async fn set_sequence_number(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, sequence_number: i64) -> Result<()> {
-        jvm.put_field(&mut this, "sequenceNumber", "J", sequence_number).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "sequenceNumber", "J", sequence_number)
+            .await
     }
 
     async fn get_source_class_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "sourceClassName", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "sourceClassName", "Ljava/lang/String;")
+            .await
     }
 
     async fn set_source_class_name(
@@ -215,11 +236,19 @@ impl LogRecord {
         mut this: ClassInstanceRef<Self>,
         source_class_name: ClassInstanceRef<String>,
     ) -> Result<()> {
-        jvm.put_field(&mut this, "sourceClassName", "Ljava/lang/String;", source_class_name).await
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/LogRecord",
+            "sourceClassName",
+            "Ljava/lang/String;",
+            source_class_name,
+        )
+        .await
     }
 
     async fn get_source_method_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "sourceMethodName", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "sourceMethodName", "Ljava/lang/String;")
+            .await
     }
 
     async fn set_source_method_name(
@@ -228,44 +257,54 @@ impl LogRecord {
         mut this: ClassInstanceRef<Self>,
         source_method_name: ClassInstanceRef<String>,
     ) -> Result<()> {
-        jvm.put_field(&mut this, "sourceMethodName", "Ljava/lang/String;", source_method_name)
-            .await
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/LogRecord",
+            "sourceMethodName",
+            "Ljava/lang/String;",
+            source_method_name,
+        )
+        .await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "message", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "message", "Ljava/lang/String;").await
     }
 
     async fn set_message(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
-        jvm.put_field(&mut this, "message", "Ljava/lang/String;", message).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "message", "Ljava/lang/String;", message)
+            .await
     }
 
     async fn get_thread_id(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "threadID", "I").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "threadID", "I").await
     }
 
     async fn set_thread_id(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, thread_id: i32) -> Result<()> {
-        jvm.put_field(&mut this, "threadID", "I", thread_id).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "threadID", "I", thread_id).await
     }
 
     async fn get_millis(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        jvm.get_field(&this, "millis", "J").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "millis", "J").await
     }
 
     async fn set_millis(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
-        jvm.put_field(&mut this, "millis", "J", millis).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "millis", "J", millis).await
     }
 
     async fn get_thrown(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Throwable>> {
-        jvm.get_field(&this, "thrown", "Ljava/lang/Throwable;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "thrown", "Ljava/lang/Throwable;")
+            .await
     }
 
     async fn set_thrown(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, thrown: ClassInstanceRef<Throwable>) -> Result<()> {
-        jvm.put_field(&mut this, "thrown", "Ljava/lang/Throwable;", thrown).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "thrown", "Ljava/lang/Throwable;", thrown)
+            .await
     }
 
     async fn get_parameters(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
-        jvm.get_field(&this, "parameters", "[Ljava/lang/Object;").await
+        jvm.get_field(&this, "java/util/logging/LogRecord", "parameters", "[Ljava/lang/Object;")
+            .await
     }
 
     async fn set_parameters(
@@ -274,6 +313,7 @@ impl LogRecord {
         mut this: ClassInstanceRef<Self>,
         parameters: ClassInstanceRef<Array<Object>>,
     ) -> Result<()> {
-        jvm.put_field(&mut this, "parameters", "[Ljava/lang/Object;", parameters).await
+        jvm.put_field(&mut this, "java/util/logging/LogRecord", "parameters", "[Ljava/lang/Object;", parameters)
+            .await
     }
 }

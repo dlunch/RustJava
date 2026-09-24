@@ -61,7 +61,10 @@ async fn tok_01_constructors_and_utf16_delimiters() -> Result<()> {
     let jvm = test_jvm().await?;
     let input = JavaLangString::from_rust_string(&jvm, " one\t two\nthree ").await?;
     let tokenizer = jvm.new_class("java/util/StringTokenizer", "(Ljava/lang/String;)V", (input,)).await?;
-    assert_eq!(jvm.get_field::<i32>(&tokenizer, "maxPosition", "I").await?, 16);
+    assert_eq!(
+        jvm.get_field::<i32>(&tokenizer, "java/util/StringTokenizer", "maxPosition", "I").await?,
+        16
+    );
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&tokenizer, &tokenizer.class_definition().name(), "countTokens", "()I", ())
             .await?,
@@ -232,17 +235,17 @@ async fn tok_03_next_token_shares_input_value() -> Result<()> {
         .new_class("java/util/StringTokenizer", "(Ljava/lang/String;)V", (input.clone(),))
         .await?;
 
-    let input_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&input, "value", "[C").await?;
+    let input_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&input, "java/lang/String", "value", "[C").await?;
     for (expected, offset) in [("one", 1), ("two", 5)] {
         let token: ClassInstanceRef<String> = jvm
             .invoke_virtual(&tokenizer, &tokenizer.class_definition().name(), "nextToken", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &token).await?, expected);
 
-        let token_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&token, "value", "[C").await?;
+        let token_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&token, "java/lang/String", "value", "[C").await?;
         assert_eq!(input_value.identity(), token_value.identity());
-        assert_eq!(jvm.get_field::<i32>(&token, "offset", "I").await?, offset);
-        assert_eq!(jvm.get_field::<i32>(&token, "count", "I").await?, 3);
+        assert_eq!(jvm.get_field::<i32>(&token, "java/lang/String", "offset", "I").await?, offset);
+        assert_eq!(jvm.get_field::<i32>(&token, "java/lang/String", "count", "I").await?, 3);
     }
 
     Ok(())
@@ -257,12 +260,15 @@ async fn tok_04_substring_input_composes_offsets_and_shares_root_value() -> Resu
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &input).await?, "one two");
 
-    let root_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&root, "value", "[C").await?;
+    let root_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&root, "java/lang/String", "value", "[C").await?;
 
     let tokenizer = jvm
         .new_class("java/util/StringTokenizer", "(Ljava/lang/String;)V", (input.clone(),))
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&tokenizer, "maxPosition", "I").await?, 7);
+    assert_eq!(
+        jvm.get_field::<i32>(&tokenizer, "java/util/StringTokenizer", "maxPosition", "I").await?,
+        7
+    );
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&tokenizer, &tokenizer.class_definition().name(), "countTokens", "()I", ())
             .await?,
@@ -274,10 +280,10 @@ async fn tok_04_substring_input_composes_offsets_and_shares_root_value() -> Resu
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &token).await?, expected);
 
-        let token_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&token, "value", "[C").await?;
+        let token_value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&token, "java/lang/String", "value", "[C").await?;
         assert_eq!(root_value.identity(), token_value.identity());
-        assert_eq!(jvm.get_field::<i32>(&token, "offset", "I").await?, offset);
-        assert_eq!(jvm.get_field::<i32>(&token, "count", "I").await?, 3);
+        assert_eq!(jvm.get_field::<i32>(&token, "java/lang/String", "offset", "I").await?, offset);
+        assert_eq!(jvm.get_field::<i32>(&token, "java/lang/String", "count", "I").await?, 3);
     }
     assert!(
         !jvm.invoke_virtual::<_, bool>(&tokenizer, &tokenizer.class_definition().name(), "hasMoreTokens", "()Z", ())

@@ -37,16 +37,17 @@ impl ArraysArrayList {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, array: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "a", "[Ljava/lang/Object;", array).await
+        jvm.put_field(&mut this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;", array)
+            .await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "a", "[Ljava/lang/Object;").await?;
+        let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&array).await? as i32)
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "a", "[Ljava/lang/Object;").await?;
+        let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;").await?;
         let length = jvm.array_length(&array).await?;
         if index < 0 || index as usize >= length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "index").await);
@@ -61,7 +62,7 @@ impl ArraysArrayList {
         index: i32,
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let mut array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "a", "[Ljava/lang/Object;").await?;
+        let mut array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;").await?;
         let length = jvm.array_length(&array).await?;
         if index < 0 || index as usize >= length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "index").await);

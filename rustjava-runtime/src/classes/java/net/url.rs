@@ -132,7 +132,7 @@ impl URL {
 
         let handler = Self::get_handler(jvm, protocol).await?;
 
-        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
+        jvm.put_field(&mut this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;", handler.clone())
             .await?;
 
         let _: () = jvm
@@ -186,7 +186,7 @@ impl URL {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler.clone())
+        jvm.put_field(&mut this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;", handler.clone())
             .await?;
 
         let _: () = jvm
@@ -203,7 +203,8 @@ impl URL {
             let protocol = JavaLangString::to_rust_string(jvm, &protocol).await?;
             let handler = Self::get_handler(jvm, &protocol).await?;
 
-            jvm.put_field(&mut this, "handler", "Ljava/net/URLStreamHandler;", handler).await?;
+            jvm.put_field(&mut this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;", handler)
+                .await?;
         }
 
         Ok(())
@@ -222,10 +223,11 @@ impl URL {
     ) -> Result<()> {
         tracing::debug!("java.net.URL::set({this:?}, {protocol:?}, {host:?}, {port:?}, {file:?}, {:?})", &r#ref);
 
-        jvm.put_field(&mut this, "protocol", "Ljava/lang/String;", protocol).await?;
-        jvm.put_field(&mut this, "host", "Ljava/lang/String;", host).await?;
-        jvm.put_field(&mut this, "port", "I", port).await?;
-        jvm.put_field(&mut this, "file", "Ljava/lang/String;", file).await?;
+        jvm.put_field(&mut this, "java/net/URL", "protocol", "Ljava/lang/String;", protocol)
+            .await?;
+        jvm.put_field(&mut this, "java/net/URL", "host", "Ljava/lang/String;", host).await?;
+        jvm.put_field(&mut this, "java/net/URL", "port", "I", port).await?;
+        jvm.put_field(&mut this, "java/net/URL", "file", "Ljava/lang/String;", file).await?;
 
         Ok(())
     }
@@ -233,7 +235,7 @@ impl URL {
     async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("java.net.URL::openConnection({this:?})");
 
-        let handler = jvm.get_field(&this, "handler", "Ljava/net/URLStreamHandler;").await?;
+        let handler = jvm.get_field(&this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection = jvm
             .invoke_virtual(
                 &handler,
@@ -264,7 +266,7 @@ impl URL {
     async fn get_port(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.net.URL::getPort({this:?})");
 
-        let port = jvm.get_field(&this, "port", "I").await?;
+        let port = jvm.get_field(&this, "java/net/URL", "port", "I").await?;
 
         Ok(port)
     }
@@ -272,7 +274,7 @@ impl URL {
     async fn get_protocol(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getProtocol({this:?})");
 
-        let protocol = jvm.get_field(&this, "protocol", "Ljava/lang/String;").await?;
+        let protocol = jvm.get_field(&this, "java/net/URL", "protocol", "Ljava/lang/String;").await?;
 
         Ok(protocol)
     }
@@ -280,7 +282,7 @@ impl URL {
     async fn get_host(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getHost({this:?})");
 
-        let host = jvm.get_field(&this, "host", "Ljava/lang/String;").await?;
+        let host = jvm.get_field(&this, "java/net/URL", "host", "Ljava/lang/String;").await?;
 
         Ok(host)
     }
@@ -288,7 +290,7 @@ impl URL {
     async fn get_file(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getFile({this:?})");
 
-        let file = jvm.get_field(&this, "file", "Ljava/lang/String;").await?;
+        let file = jvm.get_field(&this, "java/net/URL", "file", "Ljava/lang/String;").await?;
 
         Ok(file)
     }

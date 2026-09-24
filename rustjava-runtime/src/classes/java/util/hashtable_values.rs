@@ -35,7 +35,8 @@ impl HashtableValues {
         tracing::debug!("java.util.Hashtable$Values::<init>({this:?}, {map:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/AbstractCollection", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/Hashtable;", map).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;", map)
+            .await?;
 
         Ok(())
     }
@@ -43,7 +44,7 @@ impl HashtableValues {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable$Values::size({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "size", "()I", ()).await
     }
@@ -51,7 +52,7 @@ impl HashtableValues {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$Values::isEmpty({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "isEmpty", "()Z", ()).await
     }
@@ -59,7 +60,7 @@ impl HashtableValues {
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$Values::contains({this:?}, {value:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
@@ -72,7 +73,7 @@ impl HashtableValues {
             return Err(jvm.exception("java/lang/NullPointerException", "Hashtable value is null").await);
         }
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
         let entries = Hashtable::entries_snapshot(jvm, &map).await?;
         let count = jvm.array_length(&entries).await?;
         for entry in jvm.load_array::<ClassInstanceRef<Object>>(&entries, 0, count).await? {
@@ -99,7 +100,7 @@ impl HashtableValues {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$Values::clear({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "clear", "()V", ()).await
     }
@@ -107,7 +108,7 @@ impl HashtableValues {
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Values::iterator({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "java/util/Hashtable$Values", "map", "Ljava/util/Hashtable;").await?;
         let snapshot = Hashtable::values_snapshot(jvm, &map).await?;
         let iterator = jvm
             .new_class("java/util/Hashtable$Enumerator", "([Ljava/lang/Object;)V", (snapshot,))

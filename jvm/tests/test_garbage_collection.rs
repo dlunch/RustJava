@@ -230,10 +230,11 @@ async fn field_and_method_results_are_local_references() -> JvmResult<()> {
     assert_eq!(jvm.collect_garbage()?, 0);
 
     jvm.push_native_frame();
-    let _: ClassInstanceRef<Array<Object>> = jvm.get_field(&vector, "elementData", "[Ljava/lang/Object;").await?;
+    let _: ClassInstanceRef<Array<Object>> = jvm.get_field(&vector, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
     let mut mutable_vector = (*vector).clone();
     jvm.put_field(
         &mut mutable_vector,
+        "java/util/Vector",
         "elementData",
         "[Ljava/lang/Object;",
         ClassInstanceRef::<Array<Object>>::new(None),

@@ -63,7 +63,8 @@ impl URLClassLoader {
             .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
 
-        jvm.put_field(&mut this, "urls", "[Ljava/net/URL;", urls).await?;
+        jvm.put_field(&mut this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;", urls)
+            .await?;
 
         Ok(())
     }
@@ -126,7 +127,7 @@ impl URLClassLoader {
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let urls = jvm.get_field(&this, "urls", "[Ljava/net/URL;").await?;
+        let urls = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
 
         for url in urls {

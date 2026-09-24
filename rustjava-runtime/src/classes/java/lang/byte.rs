@@ -115,7 +115,7 @@ impl Byte {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i8) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "B", value).await
+        jvm.put_field(&mut this, "java/lang/Byte", "value", "B", value).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -124,7 +124,7 @@ impl Byte {
             .await?;
         let mut this = this;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "B", value).await
+        jvm.put_field(&mut this, "java/lang/Byte", "value", "B", value).await
     }
 
     async fn parse_byte(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i8> {
@@ -177,7 +177,7 @@ impl Byte {
     }
 
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        jvm.get_field(&this, "value", "B").await
+        jvm.get_field(&this, "java/lang/Byte", "value", "B").await
     }
 
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {

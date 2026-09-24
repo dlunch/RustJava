@@ -51,7 +51,7 @@ impl ZipFile {
     }
 
     async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<Cursor<Vec<u8>>>> {
-        let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "zipData", "[B").await?;
+        let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/util/zip/ZipFile", "zipData", "[B").await?;
         let length = jvm.array_length(&zip_data).await?;
         let mut buf = vec![0u8; length];
         jvm.array_raw_buffer(&zip_data).await?.read(0, &mut buf)?;
@@ -73,7 +73,7 @@ impl ZipFile {
         let buf = jvm.instantiate_array("B", length as _).await?;
         let _: i32 = jvm.invoke_virtual(&is, "java/io/InputStream", "read", "([B)I", (buf.clone(),)).await?;
 
-        jvm.put_field(&mut this, "zipData", "[B", buf).await?;
+        jvm.put_field(&mut this, "java/util/zip/ZipFile", "zipData", "[B", buf).await?;
 
         // the constructor throws ZipException for a malformed archive
         let _ = Self::get_zip_archive(jvm, &this).await?;

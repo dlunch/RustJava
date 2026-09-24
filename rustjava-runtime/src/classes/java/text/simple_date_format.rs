@@ -393,7 +393,8 @@ impl SimpleDateFormat {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern character").await);
         }
         let _: () = jvm.invoke_special(&this, "java/text/DateFormat", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "pattern", "Ljava/lang/String;", pattern).await
+        jvm.put_field(&mut this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;", pattern)
+            .await
     }
 
     async fn apply_pattern(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
@@ -404,11 +405,12 @@ impl SimpleDateFormat {
         if Self::tokenize_pattern(&value).is_none() {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern character").await);
         }
-        jvm.put_field(&mut this, "pattern", "Ljava/lang/String;", pattern).await
+        jvm.put_field(&mut this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;", pattern)
+            .await
     }
 
     async fn to_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "pattern", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;").await
     }
 
     async fn format(
@@ -422,13 +424,17 @@ impl SimpleDateFormat {
         if date.is_null() || buffer.is_null() || position.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "date, buffer, or position").await);
         }
-        let pattern: ClassInstanceRef<String> = jvm.get_field(&this, "pattern", "Ljava/lang/String;").await?;
+        let pattern: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;")
+            .await?;
         let pattern = JavaLangString::to_rust_string(jvm, &pattern).await?;
         let Some(tokens) = Self::tokenize_pattern(&pattern) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern").await);
         };
         let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm
+            .get_field(&this, "java/text/SimpleDateFormat", "calendar", "Ljava/util/Calendar;")
+            .await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
             .await?;
@@ -550,7 +556,9 @@ impl SimpleDateFormat {
         if source.is_null() || position.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "source or position").await);
         }
-        let pattern: ClassInstanceRef<String> = jvm.get_field(&this, "pattern", "Ljava/lang/String;").await?;
+        let pattern: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;")
+            .await?;
         let pattern = JavaLangString::to_rust_string(jvm, &pattern).await?;
         let Some(tokens) = Self::tokenize_pattern(&pattern) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Illegal pattern").await);
@@ -577,7 +585,9 @@ impl SimpleDateFormat {
                 .await?;
             return Ok(ClassInstanceRef::new(None));
         };
-        let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "calendar", "Ljava/util/Calendar;").await?;
+        let calendar: ClassInstanceRef<Calendar> = jvm
+            .get_field(&this, "java/text/SimpleDateFormat", "calendar", "Ljava/util/Calendar;")
+            .await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
             .await?;

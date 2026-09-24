@@ -49,41 +49,80 @@ impl TreeMapPrivateEntryIterator {
         to_end: bool,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/TreeMap;", map).await?;
-        jvm.put_field(&mut this, "next", "Ljava/util/TreeMap$Entry;", next).await?;
-        jvm.put_field(&mut this, "upper", "Ljava/lang/Object;", upper).await?;
-        jvm.put_field(&mut this, "toEnd", "Z", to_end).await
+        jvm.put_field(&mut this, "java/util/TreeMap$PrivateEntryIterator", "map", "Ljava/util/TreeMap;", map)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/TreeMap$PrivateEntryIterator",
+            "next",
+            "Ljava/util/TreeMap$Entry;",
+            next,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$PrivateEntryIterator", "upper", "Ljava/lang/Object;", upper)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$PrivateEntryIterator", "toEnd", "Z", to_end)
+            .await
     }
 
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let next: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&this, "next", "Ljava/util/TreeMap$Entry;").await?;
+        let next: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "next", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if next.is_null() {
             return Ok(false);
         }
-        if jvm.get_field::<bool>(&this, "toEnd", "Z").await? {
+        if jvm
+            .get_field::<bool>(&this, "java/util/TreeMap$PrivateEntryIterator", "toEnd", "Z")
+            .await?
+        {
             return Ok(true);
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "map", "Ljava/util/TreeMap;").await?;
-        let key: ClassInstanceRef<Object> = jvm.get_field(&next, "key", "Ljava/lang/Object;").await?;
-        let upper: ClassInstanceRef<Object> = jvm.get_field(&this, "upper", "Ljava/lang/Object;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm
+            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "map", "Ljava/util/TreeMap;")
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&next, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+        let upper: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "upper", "Ljava/lang/Object;")
+            .await?;
         Ok(TreeMap::compare(jvm, &map, &key, &upper).await? < 0)
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let last_returned: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&this, "lastReturned", "Ljava/util/TreeMap$Entry;").await?;
+        let last_returned: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(
+                &this,
+                "java/util/TreeMap$PrivateEntryIterator",
+                "lastReturned",
+                "Ljava/util/TreeMap$Entry;",
+            )
+            .await?;
         if last_returned.is_null() {
             return Err(jvm.exception("java/lang/IllegalStateException", "iterator state").await);
         }
-        let left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&last_returned, "left", "Ljava/util/TreeMap$Entry;").await?;
-        let right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&last_returned, "right", "Ljava/util/TreeMap$Entry;").await?;
+        let left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&last_returned, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        let right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&last_returned, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if !left.is_null() && !right.is_null() {
-            jvm.put_field(&mut this, "next", "Ljava/util/TreeMap$Entry;", last_returned.clone())
-                .await?;
+            jvm.put_field(
+                &mut this,
+                "java/util/TreeMap$PrivateEntryIterator",
+                "next",
+                "Ljava/util/TreeMap$Entry;",
+                last_returned.clone(),
+            )
+            .await?;
         }
-        let mut map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "map", "Ljava/util/TreeMap;").await?;
+        let mut map: ClassInstanceRef<TreeMap> = jvm
+            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "map", "Ljava/util/TreeMap;")
+            .await?;
         TreeMap::delete_entry(jvm, &mut map, last_returned).await?;
         jvm.put_field(
             &mut this,
+            "java/util/TreeMap$PrivateEntryIterator",
             "lastReturned",
             "Ljava/util/TreeMap$Entry;",
             ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -92,22 +131,44 @@ impl TreeMapPrivateEntryIterator {
     }
 
     pub(super) async fn next_entry<T>(jvm: &Jvm, mut this: ClassInstanceRef<T>) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let next: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&this, "next", "Ljava/util/TreeMap$Entry;").await?;
+        let next: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "next", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if next.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "TreeMap iterator exhausted").await);
         }
-        if !jvm.get_field::<bool>(&this, "toEnd", "Z").await? {
-            let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "map", "Ljava/util/TreeMap;").await?;
-            let key: ClassInstanceRef<Object> = jvm.get_field(&next, "key", "Ljava/lang/Object;").await?;
-            let upper: ClassInstanceRef<Object> = jvm.get_field(&this, "upper", "Ljava/lang/Object;").await?;
+        if !jvm
+            .get_field::<bool>(&this, "java/util/TreeMap$PrivateEntryIterator", "toEnd", "Z")
+            .await?
+        {
+            let map: ClassInstanceRef<TreeMap> = jvm
+                .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "map", "Ljava/util/TreeMap;")
+                .await?;
+            let key: ClassInstanceRef<Object> = jvm.get_field(&next, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+            let upper: ClassInstanceRef<Object> = jvm
+                .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "upper", "Ljava/lang/Object;")
+                .await?;
             if TreeMap::compare(jvm, &map, &key, &upper).await? >= 0 {
                 return Err(jvm.exception("java/util/NoSuchElementException", "TreeMap iterator exhausted").await);
             }
         }
         let successor = TreeMap::successor(jvm, next.clone()).await?;
-        jvm.put_field(&mut this, "next", "Ljava/util/TreeMap$Entry;", successor).await?;
-        jvm.put_field(&mut this, "lastReturned", "Ljava/util/TreeMap$Entry;", next.clone())
-            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/TreeMap$PrivateEntryIterator",
+            "next",
+            "Ljava/util/TreeMap$Entry;",
+            successor,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/TreeMap$PrivateEntryIterator",
+            "lastReturned",
+            "Ljava/util/TreeMap$Entry;",
+            next.clone(),
+        )
+        .await?;
         Ok(next)
     }
 }

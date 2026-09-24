@@ -108,36 +108,47 @@ impl Matcher {
             return Err(jvm.exception("java/lang/NullPointerException", "input is null").await);
         }
 
-        let source: ClassInstanceRef<String> = jvm.get_field(&pattern, "pattern", "Ljava/lang/String;").await?;
-        let flags: i32 = jvm.get_field(&pattern, "flags", "I").await?;
+        let source: ClassInstanceRef<String> = jvm
+            .get_field(&pattern, "java/util/regex/Pattern", "pattern", "Ljava/lang/String;")
+            .await?;
+        let flags: i32 = jvm.get_field(&pattern, "java/util/regex/Pattern", "flags", "I").await?;
         let source_text = JavaLangString::to_rust_string(jvm, &source).await?;
         let regex = Pattern::build_regex(jvm, &source_text, &source, flags, false).await?;
         let mut groups = jvm.instantiate_array("I", regex.captures_len() * 2).await?;
         jvm.store_array(&mut groups, 0, vec![-1i32; regex.captures_len() * 2]).await?;
 
-        jvm.put_field(&mut this, "parentPattern", "Ljava/util/regex/Pattern;", pattern).await?;
-        jvm.put_field(&mut this, "text", "Ljava/lang/CharSequence;", input).await?;
-        jvm.put_field(&mut this, "groups", "[I", groups).await?;
-        jvm.put_field(&mut this, "searchPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "appendPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "hasMatch", "Z", false).await
+        jvm.put_field(
+            &mut this,
+            "java/util/regex/Matcher",
+            "parentPattern",
+            "Ljava/util/regex/Pattern;",
+            pattern,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;", input)
+            .await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "groups", "[I", groups).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "searchPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "appendPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "hasMatch", "Z", false).await
     }
 
     async fn pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Pattern>> {
         tracing::debug!("java.util.regex.Matcher::pattern({this:?})");
 
-        jvm.get_field(&this, "parentPattern", "Ljava/util/regex/Pattern;").await
+        jvm.get_field(&this, "java/util/regex/Matcher", "parentPattern", "Ljava/util/regex/Pattern;")
+            .await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.regex.Matcher::reset({this:?})");
 
-        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "groups", "[I").await?;
+        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "java/util/regex/Matcher", "groups", "[I").await?;
         let length = jvm.array_length(&groups).await?;
         jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-        jvm.put_field(&mut this, "searchPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "appendPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "hasMatch", "Z", false).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "searchPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "appendPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
         Ok(this)
     }
 
@@ -153,13 +164,14 @@ impl Matcher {
             return Err(jvm.exception("java/lang/NullPointerException", "input is null").await);
         }
 
-        jvm.put_field(&mut this, "text", "Ljava/lang/CharSequence;", input).await?;
-        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "groups", "[I").await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;", input)
+            .await?;
+        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "java/util/regex/Matcher", "groups", "[I").await?;
         let length = jvm.array_length(&groups).await?;
         jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-        jvm.put_field(&mut this, "searchPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "appendPosition", "I", 0).await?;
-        jvm.put_field(&mut this, "hasMatch", "Z", false).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "searchPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "appendPosition", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
         Ok(this)
     }
 
@@ -178,21 +190,21 @@ impl Matcher {
     async fn find(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.regex.Matcher::find({this:?})");
 
-        let search_position: i32 = jvm.get_field(&this, "searchPosition", "I").await?;
+        let search_position: i32 = jvm.get_field(&this, "java/util/regex/Matcher", "searchPosition", "I").await?;
         if search_position == -1 {
             return Ok(false);
         }
 
-        let has_match: bool = jvm.get_field(&this, "hasMatch", "Z").await?;
+        let has_match: bool = jvm.get_field(&this, "java/util/regex/Matcher", "hasMatch", "Z").await?;
         if has_match {
-            let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "groups", "[I").await?;
+            let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "java/util/regex/Matcher", "groups", "[I").await?;
             let range: Vec<i32> = jvm.load_array(&groups, 0, 2).await?;
             if range[0] == range[1] && range[1] == search_position {
                 let length = jvm.array_length(&groups).await?;
                 let mut groups = groups;
                 jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-                jvm.put_field(&mut this, "searchPosition", "I", -1).await?;
-                jvm.put_field(&mut this, "hasMatch", "Z", false).await?;
+                jvm.put_field(&mut this, "java/util/regex/Matcher", "searchPosition", "I", -1).await?;
+                jvm.put_field(&mut this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
                 return Ok(false);
             }
         }
@@ -214,7 +226,9 @@ impl Matcher {
         if start < 0 {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Illegal start index").await);
         }
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm
+            .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+            .await?;
         let length: i32 = jvm.invoke_virtual(&text, &text.class_definition().name(), "length", "()I", ()).await?;
         if start > length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Illegal start index").await);
@@ -255,7 +269,9 @@ impl Matcher {
         tracing::debug!("java.util.regex.Matcher::group({this:?})");
 
         let (start, end) = Self::group_range(jvm, &this, 0).await?;
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm
+            .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+            .await?;
         let group: ClassInstanceRef<CharSequence> = jvm
             .invoke_virtual(
                 &text,
@@ -276,7 +292,9 @@ impl Matcher {
         if start < 0 {
             return Ok(None.into());
         }
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm
+            .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+            .await?;
         let group: ClassInstanceRef<CharSequence> = jvm
             .invoke_virtual(
                 &text,
@@ -293,7 +311,7 @@ impl Matcher {
     async fn group_count(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::groupCount({this:?})");
 
-        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "groups", "[I").await?;
+        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "java/util/regex/Matcher", "groups", "[I").await?;
         Ok(jvm.array_length(&groups).await? as i32 / 2 - 1)
     }
 
@@ -306,16 +324,18 @@ impl Matcher {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.regex.Matcher::appendReplacement({this:?}, {buffer:?}, {replacement:?})");
 
-        let has_match: bool = jvm.get_field(&this, "hasMatch", "Z").await?;
+        let has_match: bool = jvm.get_field(&this, "java/util/regex/Matcher", "hasMatch", "Z").await?;
         if !has_match {
             return Err(jvm.exception("java/lang/IllegalStateException", "No match available").await);
         }
 
         let expanded = Self::expand_replacement(jvm, &this, &replacement).await?;
-        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "groups", "[I").await?;
+        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(&this, "java/util/regex/Matcher", "groups", "[I").await?;
         let match_range: Vec<i32> = jvm.load_array(&groups, 0, 2).await?;
-        let append_position: i32 = jvm.get_field(&this, "appendPosition", "I").await?;
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+        let append_position: i32 = jvm.get_field(&this, "java/util/regex/Matcher", "appendPosition", "I").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm
+            .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+            .await?;
         let prefix: ClassInstanceRef<CharSequence> = jvm
             .invoke_virtual(
                 &text,
@@ -351,7 +371,8 @@ impl Matcher {
                 (expanded,),
             )
             .await?;
-        jvm.put_field(&mut this, "appendPosition", "I", match_range[1]).await?;
+        jvm.put_field(&mut this, "java/util/regex/Matcher", "appendPosition", "I", match_range[1])
+            .await?;
         Ok(this)
     }
 
@@ -367,8 +388,10 @@ impl Matcher {
             return Err(jvm.exception("java/lang/NullPointerException", "buffer is null").await);
         }
 
-        let append_position: i32 = jvm.get_field(&this, "appendPosition", "I").await?;
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+        let append_position: i32 = jvm.get_field(&this, "java/util/regex/Matcher", "appendPosition", "I").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm
+            .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+            .await?;
         let length: i32 = jvm.invoke_virtual(&text, &text.class_definition().name(), "length", "()I", ()).await?;
         let tail: ClassInstanceRef<CharSequence> = jvm
             .invoke_virtual(
@@ -404,7 +427,9 @@ impl Matcher {
             .invoke_virtual(&this, "java/util/regex/Matcher", "reset", "()Ljava/util/regex/Matcher;", ())
             .await?;
         if !jvm.invoke_virtual::<_, bool>(&this, "java/util/regex/Matcher", "find", "()Z", ()).await? {
-            let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+            let text: ClassInstanceRef<CharSequence> = jvm
+                .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+                .await?;
             return jvm
                 .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
                 .await;
@@ -450,7 +475,9 @@ impl Matcher {
             .invoke_virtual(&this, "java/util/regex/Matcher", "reset", "()Ljava/util/regex/Matcher;", ())
             .await?;
         if !jvm.invoke_virtual::<_, bool>(&this, "java/util/regex/Matcher", "find", "()Z", ()).await? {
-            let text: ClassInstanceRef<CharSequence> = jvm.get_field(&this, "text", "Ljava/lang/CharSequence;").await?;
+            let text: ClassInstanceRef<CharSequence> = jvm
+                .get_field(&this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;")
+                .await?;
             return jvm
                 .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
                 .await;
@@ -480,12 +507,12 @@ impl Matcher {
     }
 
     async fn group_range(jvm: &Jvm, this: &ClassInstanceRef<Self>, group: i32) -> Result<(i32, i32)> {
-        let has_match: bool = jvm.get_field(this, "hasMatch", "Z").await?;
+        let has_match: bool = jvm.get_field(this, "java/util/regex/Matcher", "hasMatch", "Z").await?;
         if !has_match {
             return Err(jvm.exception("java/lang/IllegalStateException", "No match found").await);
         }
 
-        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
         let length = jvm.array_length(&groups).await?;
         if group < 0 || group as usize >= length / 2 {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "No group with this index").await);
@@ -500,10 +527,10 @@ impl Matcher {
         }
 
         let replacement = JavaLangString::to_utf16(jvm, replacement).await?;
-        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+        let groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
         let group_count = jvm.array_length(&groups).await? / 2 - 1;
         let ranges: Vec<i32> = jvm.load_array(&groups, 0, (group_count + 1) * 2).await?;
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(this, "text", "Ljava/lang/CharSequence;").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm.get_field(this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;").await?;
         let mut expanded = Vec::new();
         let mut index = 0;
 
@@ -573,15 +600,15 @@ impl Matcher {
 
     async fn execute_match(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, mode: MatchMode) -> Result<bool> {
         if let MatchMode::Find { start, reset: true } = mode {
-            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
             let length = jvm.array_length(&groups).await?;
             jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-            jvm.put_field(this, "searchPosition", "I", start).await?;
-            jvm.put_field(this, "appendPosition", "I", 0).await?;
-            jvm.put_field(this, "hasMatch", "Z", false).await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "searchPosition", "I", start).await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "appendPosition", "I", 0).await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
         }
 
-        let text: ClassInstanceRef<CharSequence> = jvm.get_field(this, "text", "Ljava/lang/CharSequence;").await?;
+        let text: ClassInstanceRef<CharSequence> = jvm.get_field(this, "java/util/regex/Matcher", "text", "Ljava/lang/CharSequence;").await?;
         let snapshot: ClassInstanceRef<String> = jvm
             .invoke_virtual(&text, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
             .await?;
@@ -591,17 +618,21 @@ impl Matcher {
         if let MatchMode::Find { start, .. } = mode
             && start as usize > utf16.len()
         {
-            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
             let length = jvm.array_length(&groups).await?;
             jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-            jvm.put_field(this, "searchPosition", "I", -1).await?;
-            jvm.put_field(this, "hasMatch", "Z", false).await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "searchPosition", "I", -1).await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
             return Ok(false);
         }
 
-        let pattern: ClassInstanceRef<Pattern> = jvm.get_field(this, "parentPattern", "Ljava/util/regex/Pattern;").await?;
-        let source: ClassInstanceRef<String> = jvm.get_field(&pattern, "pattern", "Ljava/lang/String;").await?;
-        let flags: i32 = jvm.get_field(&pattern, "flags", "I").await?;
+        let pattern: ClassInstanceRef<Pattern> = jvm
+            .get_field(this, "java/util/regex/Matcher", "parentPattern", "Ljava/util/regex/Pattern;")
+            .await?;
+        let source: ClassInstanceRef<String> = jvm
+            .get_field(&pattern, "java/util/regex/Pattern", "pattern", "Ljava/lang/String;")
+            .await?;
+        let flags: i32 = jvm.get_field(&pattern, "java/util/regex/Pattern", "flags", "I").await?;
         let source_text = JavaLangString::to_rust_string(jvm, &source).await?;
         let regex = Pattern::build_regex(jvm, &source_text, &source, flags, matches!(mode, MatchMode::Full)).await?;
 
@@ -613,12 +644,18 @@ impl Matcher {
             MatchMode::Find { start, .. } => regex.captures_at(&rust, Self::utf16_to_byte(&rust, start as usize)),
         };
         let Some(captures) = captures else {
-            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+            let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
             let length = jvm.array_length(&groups).await?;
             jvm.store_array(&mut groups, 0, vec![-1i32; length]).await?;
-            jvm.put_field(this, "searchPosition", "I", if matches!(mode, MatchMode::Find { .. }) { -1 } else { 0 })
-                .await?;
-            jvm.put_field(this, "hasMatch", "Z", false).await?;
+            jvm.put_field(
+                this,
+                "java/util/regex/Matcher",
+                "searchPosition",
+                "I",
+                if matches!(mode, MatchMode::Find { .. }) { -1 } else { 0 },
+            )
+            .await?;
+            jvm.put_field(this, "java/util/regex/Matcher", "hasMatch", "Z", false).await?;
             return Ok(false);
         };
 
@@ -636,7 +673,7 @@ impl Matcher {
                 }
             })
             .collect::<Vec<_>>();
-        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "groups", "[I").await?;
+        let mut groups: ClassInstanceRef<Array<i32>> = jvm.get_field(this, "java/util/regex/Matcher", "groups", "[I").await?;
         jvm.store_array(&mut groups, 0, ranges).await?;
 
         let end = Self::byte_to_utf16(&rust, byte_range.1) as i32;
@@ -645,8 +682,9 @@ impl Matcher {
         } else {
             end
         };
-        jvm.put_field(this, "searchPosition", "I", search_position).await?;
-        jvm.put_field(this, "hasMatch", "Z", true).await?;
+        jvm.put_field(this, "java/util/regex/Matcher", "searchPosition", "I", search_position)
+            .await?;
+        jvm.put_field(this, "java/util/regex/Matcher", "hasMatch", "Z", true).await?;
         Ok(true)
     }
 

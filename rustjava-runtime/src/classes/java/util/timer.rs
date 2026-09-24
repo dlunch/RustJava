@@ -64,8 +64,14 @@ impl Timer {
         let timer_thread = jvm
             .new_class("java/util/Timer$TimerThread", "(Ljava/util/Timer$TaskQueue;)V", (queue,))
             .await?;
-        jvm.put_field(&mut this, "thread", "Ljava/util/Timer$TimerThread;", timer_thread.clone())
-            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/Timer",
+            "thread",
+            "Ljava/util/Timer$TimerThread;",
+            timer_thread.clone(),
+        )
+        .await?;
         let _: () = jvm
             .invoke_virtual(&timer_thread, "java/util/Timer$TimerThread", "start", "()V", ())
             .await?;
@@ -220,26 +226,33 @@ impl Timer {
             }
         }
 
-        let thread: ClassInstanceRef<TimerThread> = jvm.get_field(&this, "thread", "Ljava/util/Timer$TimerThread;").await?;
-        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm.get_field(&thread, "queue", "Ljava/util/Timer$TaskQueue;").await?;
-        let lock: ClassInstanceRef<crate::classes::java::lang::Object> = jvm.get_field(&task, "lock", "Ljava/lang/Object;").await?;
+        let thread: ClassInstanceRef<TimerThread> = jvm.get_field(&this, "java/util/Timer", "thread", "Ljava/util/Timer$TimerThread;").await?;
+        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm
+            .get_field(&thread, "java/util/Timer$TimerThread", "queue", "Ljava/util/Timer$TaskQueue;")
+            .await?;
+        let lock: ClassInstanceRef<crate::classes::java::lang::Object> =
+            jvm.get_field(&task, "java/util/TimerTask", "lock", "Ljava/lang/Object;").await?;
 
         jvm.monitor_enter(&queue).await?;
         let schedule_result = async {
-            if !jvm.get_field::<bool>(&thread, "newTasksMayBeScheduled", "Z").await? {
+            if !jvm
+                .get_field::<bool>(&thread, "java/util/Timer$TimerThread", "newTasksMayBeScheduled", "Z")
+                .await?
+            {
                 return Err(jvm.exception("java/lang/IllegalStateException", "timer already cancelled").await);
             }
 
             jvm.monitor_enter(&lock).await?;
             let task_result = async {
-                if jvm.get_field::<i32>(&task, "state", "I").await? != TimerTask::VIRGIN {
+                if jvm.get_field::<i32>(&task, "java/util/TimerTask", "state", "I").await? != TimerTask::VIRGIN {
                     return Err(jvm
                         .exception("java/lang/IllegalStateException", "task already scheduled or cancelled")
                         .await);
                 }
-                jvm.put_field(&mut task, "nextExecutionTime", "J", time).await?;
-                jvm.put_field(&mut task, "period", "J", period).await?;
-                jvm.put_field(&mut task, "state", "I", TimerTask::SCHEDULED).await?;
+                jvm.put_field(&mut task, "java/util/TimerTask", "nextExecutionTime", "J", time).await?;
+                jvm.put_field(&mut task, "java/util/TimerTask", "period", "J", period).await?;
+                jvm.put_field(&mut task, "java/util/TimerTask", "state", "I", TimerTask::SCHEDULED)
+                    .await?;
                 TimerTaskQueue::add(jvm, &mut queue, task.clone()).await
             }
             .await;
@@ -273,11 +286,14 @@ impl Timer {
     async fn cancel(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Timer::cancel({this:?})");
 
-        let mut thread: ClassInstanceRef<TimerThread> = jvm.get_field(&this, "thread", "Ljava/util/Timer$TimerThread;").await?;
-        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm.get_field(&thread, "queue", "Ljava/util/Timer$TaskQueue;").await?;
+        let mut thread: ClassInstanceRef<TimerThread> = jvm.get_field(&this, "java/util/Timer", "thread", "Ljava/util/Timer$TimerThread;").await?;
+        let mut queue: ClassInstanceRef<TimerTaskQueue> = jvm
+            .get_field(&thread, "java/util/Timer$TimerThread", "queue", "Ljava/util/Timer$TaskQueue;")
+            .await?;
         jvm.monitor_enter(&queue).await?;
         let cancel_result = async {
-            jvm.put_field(&mut thread, "newTasksMayBeScheduled", "Z", false).await?;
+            jvm.put_field(&mut thread, "java/util/Timer$TimerThread", "newTasksMayBeScheduled", "Z", false)
+                .await?;
             TimerTaskQueue::clear(jvm, &mut queue).await?;
             jvm.object_notify(&queue, usize::MAX).await
         }

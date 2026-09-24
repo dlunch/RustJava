@@ -35,7 +35,8 @@ impl CollectionsSingletonSet {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "element", "Ljava/lang/Object;", element).await
+        jvm.put_field(&mut this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;", element)
+            .await
     }
 
     async fn size(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<i32> {
@@ -43,7 +44,9 @@ impl CollectionsSingletonSet {
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
+            .await?;
         if target.is_null() {
             return Ok(element.is_null());
         }
@@ -55,7 +58,9 @@ impl CollectionsSingletonSet {
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
+            .await?;
         let list = jvm
             .new_class("java/util/Collections$CopiesList", "(ILjava/lang/Object;)V", (1, element))
             .await?;
@@ -64,7 +69,9 @@ impl CollectionsSingletonSet {
     }
 
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
+            .await?;
         let equal = if target.is_null() {
             element.is_null()
         } else if element.is_null() {
@@ -100,7 +107,9 @@ impl CollectionsSingletonSet {
         let other_element: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&iterator, &iterator.class_definition().name(), "next", "()Ljava/lang/Object;", ())
             .await?;
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
+            .await?;
         if other_element.is_null() {
             return Ok(element.is_null());
         }
@@ -112,7 +121,9 @@ impl CollectionsSingletonSet {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm
+            .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
+            .await?;
         if element.is_null() {
             Ok(0)
         } else {

@@ -80,31 +80,35 @@ impl Handler {
         let level: ClassInstanceRef<Level> = jvm
             .get_static_field("java/util/logging/Level", "ALL", "Ljava/util/logging/Level;")
             .await?;
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await
+        jvm.put_field(&mut this, "java/util/logging/Handler", "level", "Ljava/util/logging/Level;", level)
+            .await
     }
 
     async fn get_encoding(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Handler::getEncoding({this:?})");
 
-        jvm.get_field(&this, "encoding", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/logging/Handler", "encoding", "Ljava/lang/String;").await
     }
 
     async fn get_filter(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Filter>> {
         tracing::debug!("java.util.logging.Handler::getFilter({this:?})");
 
-        jvm.get_field(&this, "filter", "Ljava/util/logging/Filter;").await
+        jvm.get_field(&this, "java/util/logging/Handler", "filter", "Ljava/util/logging/Filter;")
+            .await
     }
 
     async fn get_formatter(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Formatter>> {
         tracing::debug!("java.util.logging.Handler::getFormatter({this:?})");
 
-        jvm.get_field(&this, "formatter", "Ljava/util/logging/Formatter;").await
+        jvm.get_field(&this, "java/util/logging/Handler", "formatter", "Ljava/util/logging/Formatter;")
+            .await
     }
 
     async fn get_level(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Level>> {
         tracing::debug!("java.util.logging.Handler::getLevel({this:?})");
 
-        jvm.get_field(&this, "level", "Ljava/util/logging/Level;").await
+        jvm.get_field(&this, "java/util/logging/Handler", "level", "Ljava/util/logging/Level;")
+            .await
     }
 
     async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<bool> {
@@ -117,7 +121,9 @@ impl Handler {
         let record_level: ClassInstanceRef<Level> = jvm
             .invoke_virtual(&record, "java/util/logging/LogRecord", "getLevel", "()Ljava/util/logging/Level;", ())
             .await?;
-        let handler_level: ClassInstanceRef<Level> = jvm.get_field(&this, "level", "Ljava/util/logging/Level;").await?;
+        let handler_level: ClassInstanceRef<Level> = jvm
+            .get_field(&this, "java/util/logging/Handler", "level", "Ljava/util/logging/Level;")
+            .await?;
         let record_value: i32 = jvm
             .invoke_virtual(&record_level, "java/util/logging/Level", "intValue", "()I", ())
             .await?;
@@ -128,7 +134,9 @@ impl Handler {
             return Ok(false);
         }
 
-        let filter: ClassInstanceRef<Filter> = jvm.get_field(&this, "filter", "Ljava/util/logging/Filter;").await?;
+        let filter: ClassInstanceRef<Filter> = jvm
+            .get_field(&this, "java/util/logging/Handler", "filter", "Ljava/util/logging/Filter;")
+            .await?;
         if filter.is_null() {
             return Ok(true);
         }
@@ -162,13 +170,15 @@ impl Handler {
         if !encoding.is_null() {
             OutputStreamWriter::validate_encoding(jvm, &encoding).await?;
         }
-        jvm.put_field(&mut this, "encoding", "Ljava/lang/String;", encoding).await
+        jvm.put_field(&mut this, "java/util/logging/Handler", "encoding", "Ljava/lang/String;", encoding)
+            .await
     }
 
     async fn set_filter(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, filter: ClassInstanceRef<Filter>) -> Result<()> {
         tracing::debug!("java.util.logging.Handler::setFilter({this:?}, {filter:?})");
 
-        jvm.put_field(&mut this, "filter", "Ljava/util/logging/Filter;", filter).await
+        jvm.put_field(&mut this, "java/util/logging/Handler", "filter", "Ljava/util/logging/Filter;", filter)
+            .await
     }
 
     async fn set_formatter(
@@ -182,7 +192,14 @@ impl Handler {
         if formatter.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "formatter").await);
         }
-        jvm.put_field(&mut this, "formatter", "Ljava/util/logging/Formatter;", formatter).await
+        jvm.put_field(
+            &mut this,
+            "java/util/logging/Handler",
+            "formatter",
+            "Ljava/util/logging/Formatter;",
+            formatter,
+        )
+        .await
     }
 
     async fn set_level(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, level: ClassInstanceRef<Level>) -> Result<()> {
@@ -191,6 +208,7 @@ impl Handler {
         if level.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "level").await);
         }
-        jvm.put_field(&mut this, "level", "Ljava/util/logging/Level;", level).await
+        jvm.put_field(&mut this, "java/util/logging/Handler", "level", "Ljava/util/logging/Level;", level)
+            .await
     }
 }

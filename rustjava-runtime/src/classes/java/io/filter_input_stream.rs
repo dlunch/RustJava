@@ -37,7 +37,8 @@ impl FilterInputStream {
 
         let _: () = jvm.invoke_special(&this, "java/io/InputStream", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "in", "Ljava/io/InputStream;", r#in).await?;
+        jvm.put_field(&mut this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;", r#in)
+            .await?;
 
         Ok(())
     }
@@ -45,7 +46,7 @@ impl FilterInputStream {
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::available({this:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
 
         Ok(available)
@@ -54,7 +55,7 @@ impl FilterInputStream {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::close({this:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await?;
 
         Ok(())
@@ -63,7 +64,7 @@ impl FilterInputStream {
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::reset({this:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "java/io/InputStream", "reset", "()V", ()).await?;
 
         Ok(())
@@ -71,26 +72,26 @@ impl FilterInputStream {
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.FilterInputStream::skip({this:?}, {n})");
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (n,)).await
     }
 
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::mark({this:?}, {readlimit})");
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "mark", "(I)V", (readlimit,)).await
     }
 
     async fn mark_supported(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.FilterInputStream::markSupported({this:?})");
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "markSupported", "()Z", ()).await
     }
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::read({this:?}, {b:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "([B)I", (b,)).await?;
 
         Ok(result)
@@ -106,7 +107,7 @@ impl FilterInputStream {
     ) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::read({this:?}, {b:?}, {off}, {len})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "([BII)I", (b, off, len)).await?;
 
         Ok(result)
@@ -115,7 +116,7 @@ impl FilterInputStream {
     async fn read_byte_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::read({this:?})");
 
-        let r#in = jvm.get_field(&this, "in", "Ljava/io/InputStream;").await?;
+        let r#in = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
         let result: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", ()).await?;
 
         Ok(result)

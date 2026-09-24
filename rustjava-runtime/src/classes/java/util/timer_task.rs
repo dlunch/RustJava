@@ -42,8 +42,9 @@ impl TimerTask {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let lock = jvm.new_class("java/lang/Object", "()V", ()).await?;
-        jvm.put_field(&mut this, "lock", "Ljava/lang/Object;", lock).await?;
-        jvm.put_field(&mut this, "state", "I", Self::VIRGIN).await?;
+        jvm.put_field(&mut this, "java/util/TimerTask", "lock", "Ljava/lang/Object;", lock)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TimerTask", "state", "I", Self::VIRGIN).await?;
 
         Ok(())
     }
@@ -51,11 +52,11 @@ impl TimerTask {
     async fn cancel(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.TimerTask::cancel({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TimerTask", "lock", "Ljava/lang/Object;").await?;
         jvm.monitor_enter(&lock).await?;
         let result = async {
-            let state: i32 = jvm.get_field(&this, "state", "I").await?;
-            jvm.put_field(&mut this, "state", "I", Self::CANCELLED).await?;
+            let state: i32 = jvm.get_field(&this, "java/util/TimerTask", "state", "I").await?;
+            jvm.put_field(&mut this, "java/util/TimerTask", "state", "I", Self::CANCELLED).await?;
             Ok(state == Self::SCHEDULED)
         }
         .await;
@@ -75,9 +76,9 @@ impl TimerTask {
     async fn scheduled_execution_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.TimerTask::scheduledExecutionTime({this:?})");
 
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TimerTask", "lock", "Ljava/lang/Object;").await?;
         jvm.monitor_enter(&lock).await?;
-        let result = jvm.get_field(&this, "lastScheduledExecutionTime", "J").await;
+        let result = jvm.get_field(&this, "java/util/TimerTask", "lastScheduledExecutionTime", "J").await;
         let exit_result = jvm.monitor_exit(&lock).await;
         match result {
             Ok(value) => {

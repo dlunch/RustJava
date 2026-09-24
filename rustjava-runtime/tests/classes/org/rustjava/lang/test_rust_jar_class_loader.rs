@@ -36,7 +36,7 @@ async fn test_find_class_uses_rustjar_runtime_source() -> Result<()> {
         .await?;
     assert!(!class.is_null());
 
-    let defining_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&class, "classLoader", "Ljava/lang/ClassLoader;").await?;
+    let defining_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&class, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
     assert!(jvm.is_instance(&**defining_loader, "org/rustjava/lang/RustJarClassLoader"));
 
     Ok(())

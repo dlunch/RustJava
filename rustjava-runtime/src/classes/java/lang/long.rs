@@ -156,7 +156,7 @@ impl Long {
     }
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "J", value).await
+        jvm.put_field(&mut this, "java/lang/Long", "value", "J", value).await
     }
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         let value: i64 = jvm
@@ -164,7 +164,7 @@ impl Long {
             .await?;
         let mut this = this;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "J", value).await
+        jvm.put_field(&mut this, "java/lang/Long", "value", "J", value).await
     }
     fn parse_raw(value: &str, radix: u32) -> Option<i64> {
         if !(2..=36).contains(&radix) || value.is_empty() {
@@ -317,22 +317,22 @@ impl Long {
         }
     }
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
-        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i8)
+        Ok(jvm.get_field::<i64>(&this, "java/lang/Long", "value", "J").await? as i8)
     }
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
-        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i16)
+        Ok(jvm.get_field::<i64>(&this, "java/lang/Long", "value", "J").await? as i16)
     }
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as i32)
+        Ok(jvm.get_field::<i64>(&this, "java/lang/Long", "value", "J").await? as i32)
     }
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
-        jvm.get_field(&this, "value", "J").await
+        jvm.get_field(&this, "java/lang/Long", "value", "J").await
     }
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
-        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as f32)
+        Ok(jvm.get_field::<i64>(&this, "java/lang/Long", "value", "J").await? as f32)
     }
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
-        Ok(jvm.get_field::<i64>(&this, "value", "J").await? as f64)
+        Ok(jvm.get_field::<i64>(&this, "java/lang/Long", "value", "J").await? as f64)
     }
     fn format_value(value: i64, radix: u32) -> RustString {
         let radix = if (2..=36).contains(&radix) { radix } else { 10 };

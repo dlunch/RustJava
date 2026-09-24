@@ -40,7 +40,14 @@ impl CollectionsUnmodifiableMapEntrySet {
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
+        let set: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+                "c",
+                "Ljava/util/Collection;",
+            )
+            .await?;
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&set, &set.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
             .await?;
@@ -55,7 +62,14 @@ impl CollectionsUnmodifiableMapEntrySet {
     }
 
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
-        let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
+        let set: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+                "c",
+                "Ljava/util/Collection;",
+            )
+            .await?;
         let entries: ClassInstanceRef<Array<Object>> = jvm
             .invoke_virtual(&set, &set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
             .await?;
@@ -91,7 +105,14 @@ impl CollectionsUnmodifiableMapEntrySet {
         let class_definition = destination.class_definition();
         let class_name = class_definition.name();
         let component_descriptor = class_name.strip_prefix('[').unwrap();
-        let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
+        let set: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+                "c",
+                "Ljava/util/Collection;",
+            )
+            .await?;
         let entries: ClassInstanceRef<Array<Object>> = jvm
             .invoke_virtual(&set, &set.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
             .await?;
@@ -140,7 +161,14 @@ impl CollectionsUnmodifiableMapEntrySet {
             )
             .await?
             .into();
-        let set: ClassInstanceRef<Object> = jvm.get_field(&this, "c", "Ljava/util/Collection;").await?;
+        let set: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+                "c",
+                "Ljava/util/Collection;",
+            )
+            .await?;
         jvm.invoke_virtual(&set, &set.class_definition().name(), "contains", "(Ljava/lang/Object;)Z", (safe,))
             .await
     }

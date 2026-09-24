@@ -34,10 +34,11 @@ impl ParseException {
         let _: () = jvm
             .invoke_special(&this, "java/lang/Exception", "<init>", "(Ljava/lang/String;)V", (message,))
             .await?;
-        jvm.put_field(&mut this, "errorOffset", "I", error_offset).await
+        jvm.put_field(&mut this, "java/text/ParseException", "errorOffset", "I", error_offset)
+            .await
     }
 
     async fn get_error_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "errorOffset", "I").await
+        jvm.get_field(&this, "java/text/ParseException", "errorOffset", "I").await
     }
 }

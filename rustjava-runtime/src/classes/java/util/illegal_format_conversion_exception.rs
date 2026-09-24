@@ -48,21 +48,35 @@ impl IllegalFormatConversionException {
             return Err(jvm.exception("java/lang/NullPointerException", "argumentClass is null").await);
         }
         let _: () = jvm.invoke_special(&this, "java/util/IllegalFormatException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "conversion", "C", conversion).await?;
-        jvm.put_field(&mut this, "argumentClass", "Ljava/lang/Class;", argument_class).await
+        jvm.put_field(&mut this, "java/util/IllegalFormatConversionException", "conversion", "C", conversion)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/IllegalFormatConversionException",
+            "argumentClass",
+            "Ljava/lang/Class;",
+            argument_class,
+        )
+        .await
     }
 
     async fn get_conversion(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
-        jvm.get_field(&this, "conversion", "C").await
+        jvm.get_field(&this, "java/util/IllegalFormatConversionException", "conversion", "C")
+            .await
     }
 
     async fn get_argument_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Class>> {
-        jvm.get_field(&this, "argumentClass", "Ljava/lang/Class;").await
+        jvm.get_field(&this, "java/util/IllegalFormatConversionException", "argumentClass", "Ljava/lang/Class;")
+            .await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let conversion: JavaChar = jvm.get_field(&this, "conversion", "C").await?;
-        let argument_class: ClassInstanceRef<Class> = jvm.get_field(&this, "argumentClass", "Ljava/lang/Class;").await?;
+        let conversion: JavaChar = jvm
+            .get_field(&this, "java/util/IllegalFormatConversionException", "conversion", "C")
+            .await?;
+        let argument_class: ClassInstanceRef<Class> = jvm
+            .get_field(&this, "java/util/IllegalFormatConversionException", "argumentClass", "Ljava/lang/Class;")
+            .await?;
         let class_name: ClassInstanceRef<String> = jvm
             .invoke_virtual(&argument_class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
             .await?;

@@ -88,7 +88,7 @@ impl Boolean {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "Z", value).await
+        jvm.put_field(&mut this, "java/lang/Boolean", "value", "Z", value).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -99,11 +99,11 @@ impl Boolean {
         };
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "Z", parsed).await
+        jvm.put_field(&mut this, "java/lang/Boolean", "value", "Z", parsed).await
     }
 
     async fn boolean_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        jvm.get_field(&this, "value", "Z").await
+        jvm.get_field(&this, "java/lang/Boolean", "value", "Z").await
     }
 
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {

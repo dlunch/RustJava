@@ -40,7 +40,8 @@ impl ZipEntry {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
+        jvm.put_field(&mut this, "java/util/zip/ZipEntry", "name", "Ljava/lang/String;", name)
+            .await?;
 
         Ok(())
     }
@@ -55,11 +56,12 @@ impl ZipEntry {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        let name: ClassInstanceRef<String> = jvm.get_field(&zip_entry, "name", "Ljava/lang/String;").await?;
-        let size: i64 = jvm.get_field(&zip_entry, "size", "J").await?;
+        let name: ClassInstanceRef<String> = jvm.get_field(&zip_entry, "java/util/zip/ZipEntry", "name", "Ljava/lang/String;").await?;
+        let size: i64 = jvm.get_field(&zip_entry, "java/util/zip/ZipEntry", "size", "J").await?;
 
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
-        jvm.put_field(&mut this, "size", "J", size).await?;
+        jvm.put_field(&mut this, "java/util/zip/ZipEntry", "name", "Ljava/lang/String;", name)
+            .await?;
+        jvm.put_field(&mut this, "java/util/zip/ZipEntry", "size", "J", size).await?;
 
         Ok(())
     }
@@ -67,13 +69,13 @@ impl ZipEntry {
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.zip.ZipEntry::getName({this:?})");
 
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/zip/ZipEntry", "name", "Ljava/lang/String;").await
     }
 
     async fn set_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i64) -> Result<()> {
         tracing::debug!("java.util.zip.ZipEntry::setSize({this:?}, {size:?})");
 
-        jvm.put_field(&mut this, "size", "J", size).await?;
+        jvm.put_field(&mut this, "java/util/zip/ZipEntry", "size", "J", size).await?;
 
         Ok(())
     }
@@ -81,6 +83,6 @@ impl ZipEntry {
     async fn get_size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.zip.ZipEntry::getSize({this:?})");
 
-        jvm.get_field(&this, "size", "J").await
+        jvm.get_field(&this, "java/util/zip/ZipEntry", "size", "J").await
     }
 }

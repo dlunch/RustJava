@@ -78,8 +78,9 @@ impl ArrayList {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
 
         let element_data = jvm.instantiate_array("Ljava/lang/Object;", capacity as usize).await?;
-        jvm.put_field(&mut this, "elementData", "[Ljava/lang/Object;", element_data).await?;
-        jvm.put_field(&mut this, "size", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;", element_data)
+            .await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "size", "I", 0).await?;
 
         Ok(())
     }
@@ -109,12 +110,12 @@ impl ArrayList {
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::add({this:?}, {element:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (size + 1) as usize).await?;
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         jvm.store_array(&mut element_data, size as usize, core::iter::once(element)).await?;
-        jvm.put_field(&mut this, "size", "I", size + 1).await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "size", "I", size + 1).await?;
 
         Ok(true)
     }
@@ -128,14 +129,14 @@ impl ArrayList {
     ) -> Result<()> {
         tracing::debug!("java.util.ArrayList::add({this:?}, {index:?}, {element:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         if index < 0 || index > size {
             return Err(Self::index_out_of_bounds(jvm, index, size).await);
         }
 
         Self::ensure_capacity(jvm, &mut this, (size + 1) as usize).await?;
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let num_to_move = size - index;
         if num_to_move > 0 {
             let to_shift: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, index as usize, num_to_move as usize).await?;
@@ -143,7 +144,7 @@ impl ArrayList {
         }
 
         jvm.store_array(&mut element_data, index as usize, core::iter::once(element)).await?;
-        jvm.put_field(&mut this, "size", "I", size + 1).await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "size", "I", size + 1).await?;
 
         Ok(())
     }
@@ -151,12 +152,12 @@ impl ArrayList {
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::get({this:?}, {index:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(Self::index_out_of_bounds(jvm, index, size).await);
         }
 
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -171,12 +172,12 @@ impl ArrayList {
     ) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::set({this:?}, {index:?}, {element:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(Self::index_out_of_bounds(jvm, index, size).await);
         }
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let old_element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
         jvm.store_array(&mut element_data, index as usize, core::iter::once(element)).await?;
 
@@ -186,12 +187,12 @@ impl ArrayList {
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::remove({this:?}, {index:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(Self::index_out_of_bounds(jvm, index, size).await);
         }
 
-        let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let removed: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
 
         let num_to_move = size - index - 1;
@@ -203,7 +204,7 @@ impl ArrayList {
         let null_ref: ClassInstanceRef<Object> = None.into();
         jvm.store_array(&mut element_data, (size - 1) as usize, core::iter::once(null_ref))
             .await?;
-        jvm.put_field(&mut this, "size", "I", size - 1).await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "size", "I", size - 1).await?;
 
         Ok(removed)
     }
@@ -228,13 +229,13 @@ impl ArrayList {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.ArrayList::size({this:?})");
 
-        jvm.get_field(&this, "size", "I").await
+        jvm.get_field(&this, "java/util/ArrayList", "size", "I").await
     }
 
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::isEmpty({this:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
 
         Ok(size == 0)
     }
@@ -252,8 +253,8 @@ impl ArrayList {
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.util.ArrayList::indexOf({this:?}, {element:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        let element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
+        let element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
 
         for index in 0..size {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
@@ -268,14 +269,14 @@ impl ArrayList {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.ArrayList::clear({this:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
         if size > 0 {
-            let mut element_data = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+            let mut element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
             let nulls: Vec<ClassInstanceRef<Object>> = (0..size).map(|_| None.into()).collect();
             jvm.store_array(&mut element_data, 0, nulls).await?;
         }
 
-        jvm.put_field(&mut this, "size", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/ArrayList", "size", "I", 0).await?;
 
         Ok(())
     }
@@ -283,8 +284,8 @@ impl ArrayList {
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.ArrayList::toArray({this:?})");
 
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elementData", "[Ljava/lang/Object;").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
+        let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
 
         Self::copy_to_array(jvm, &element_data, size).await
     }
@@ -310,7 +311,7 @@ impl ArrayList {
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, min_capacity: usize) -> Result<()> {
-        let element_data = jvm.get_field(this, "elementData", "[Ljava/lang/Object;").await?;
+        let element_data = jvm.get_field(this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if min_capacity <= current_capacity {
@@ -318,14 +319,15 @@ impl ArrayList {
         }
 
         let new_capacity = if current_capacity == 0 { 1 } else { current_capacity * 2 }.max(min_capacity);
-        let size: i32 = jvm.get_field(this, "size", "I").await?;
+        let size: i32 = jvm.get_field(this, "java/util/ArrayList", "size", "I").await?;
         let old_elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, size as usize).await?;
 
         let mut new_element_data = jvm.instantiate_array("Ljava/lang/Object;", new_capacity).await?;
         if !old_elements.is_empty() {
             jvm.store_array(&mut new_element_data, 0, old_elements).await?;
         }
-        jvm.put_field(this, "elementData", "[Ljava/lang/Object;", new_element_data).await?;
+        jvm.put_field(this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;", new_element_data)
+            .await?;
 
         Ok(())
     }

@@ -103,7 +103,8 @@ impl TreeMap {
         comparator: ClassInstanceRef<Object>,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractMap", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "comparator", "Ljava/util/Comparator;", comparator).await
+        jvm.put_field(&mut this, "java/util/TreeMap", "comparator", "Ljava/util/Comparator;", comparator)
+            .await
     }
 
     async fn init_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
@@ -128,7 +129,7 @@ impl TreeMap {
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "size", "I").await
+        jvm.get_field(&this, "java/util/TreeMap", "size", "I").await
     }
 
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
@@ -138,7 +139,7 @@ impl TreeMap {
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let mut entry = Self::first_entry(jvm, &this).await?;
         while !entry.is_null() {
-            let current: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+            let current: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
             let equal = if value.is_null() {
                 current.is_null()
             } else {
@@ -158,7 +159,7 @@ impl TreeMap {
         if entry.is_null() {
             return Ok(None.into());
         }
-        jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
     async fn put(
@@ -168,7 +169,7 @@ impl TreeMap {
         key: ClassInstanceRef<Object>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         if root.is_null() {
             let _ = Self::compare(jvm, &this, &key, &key).await?;
             let entry: ClassInstanceRef<TreeMapEntry> = jvm
@@ -179,26 +180,30 @@ impl TreeMap {
                 )
                 .await?
                 .into();
-            jvm.put_field(&mut this, "root", "Ljava/util/TreeMap$Entry;", entry).await?;
-            jvm.put_field(&mut this, "size", "I", 1).await?;
+            jvm.put_field(&mut this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;", entry)
+                .await?;
+            jvm.put_field(&mut this, "java/util/TreeMap", "size", "I", 1).await?;
             return Ok(None.into());
         }
 
         let mut parent = root;
         let comparison;
         loop {
-            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&parent, "key", "Ljava/lang/Object;").await?;
+            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&parent, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
             let current_comparison = Self::compare(jvm, &this, &key, &stored_key).await?;
             if current_comparison == 0 {
-                let old_value: ClassInstanceRef<Object> = jvm.get_field(&parent, "value", "Ljava/lang/Object;").await?;
+                let old_value: ClassInstanceRef<Object> = jvm.get_field(&parent, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
                 let mut parent = parent;
-                jvm.put_field(&mut parent, "value", "Ljava/lang/Object;", value).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;", value)
+                    .await?;
                 return Ok(old_value);
             }
             let child: ClassInstanceRef<TreeMapEntry> = if current_comparison < 0 {
-                jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?
+                jvm.get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?
             } else {
-                jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?
+                jvm.get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?
             };
             if child.is_null() {
                 comparison = current_comparison;
@@ -215,15 +220,23 @@ impl TreeMap {
             )
             .await?
             .into();
-        jvm.put_field(&mut entry, "color", "Z", false).await?;
+        jvm.put_field(&mut entry, "java/util/TreeMap$Entry", "color", "Z", false).await?;
         let mut parent = parent;
         if comparison < 0 {
-            jvm.put_field(&mut parent, "left", "Ljava/util/TreeMap$Entry;", entry.clone()).await?;
+            jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;", entry.clone())
+                .await?;
         } else {
-            jvm.put_field(&mut parent, "right", "Ljava/util/TreeMap$Entry;", entry.clone()).await?;
+            jvm.put_field(
+                &mut parent,
+                "java/util/TreeMap$Entry",
+                "right",
+                "Ljava/util/TreeMap$Entry;",
+                entry.clone(),
+            )
+            .await?;
         }
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
-        jvm.put_field(&mut this, "size", "I", size + 1).await?;
+        let size: i32 = jvm.get_field(&this, "java/util/TreeMap", "size", "I").await?;
+        jvm.put_field(&mut this, "java/util/TreeMap", "size", "I", size + 1).await?;
         Self::fix_after_insertion(jvm, &mut this, entry).await?;
         Ok(None.into())
     }
@@ -248,7 +261,7 @@ impl TreeMap {
         if entry.is_null() {
             return Ok(None.into());
         }
-        let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        let old_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;
         Self::delete_entry(jvm, &mut this, entry).await?;
         Ok(old_value)
     }
@@ -256,16 +269,17 @@ impl TreeMap {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.put_field(
             &mut this,
+            "java/util/TreeMap",
             "root",
             "Ljava/util/TreeMap$Entry;",
             ClassInstanceRef::<TreeMapEntry>::from(None),
         )
         .await?;
-        jvm.put_field(&mut this, "size", "I", 0).await
+        jvm.put_field(&mut this, "java/util/TreeMap", "size", "I", 0).await
     }
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "comparator", "Ljava/util/Comparator;").await
+        jvm.get_field(&this, "java/util/TreeMap", "comparator", "Ljava/util/Comparator;").await
     }
 
     async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -273,7 +287,7 @@ impl TreeMap {
         if entry.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "empty TreeMap").await);
         }
-        jvm.get_field(&entry, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -281,7 +295,7 @@ impl TreeMap {
         if entry.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "empty TreeMap").await);
         }
-        jvm.get_field(&entry, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn sub_map(
@@ -434,7 +448,7 @@ impl TreeMap {
         left: &ClassInstanceRef<Object>,
         right: &ClassInstanceRef<Object>,
     ) -> Result<i32> {
-        let comparator: ClassInstanceRef<Object> = jvm.get_field(this, "comparator", "Ljava/util/Comparator;").await?;
+        let comparator: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap", "comparator", "Ljava/util/Comparator;").await?;
         if !comparator.is_null() {
             return jvm
                 .invoke_virtual(
@@ -467,7 +481,7 @@ impl TreeMap {
         this: &ClassInstanceRef<Self>,
         key: &ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let comparator: ClassInstanceRef<Object> = jvm.get_field(this, "comparator", "Ljava/util/Comparator;").await?;
+        let comparator: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap", "comparator", "Ljava/util/Comparator;").await?;
         if comparator.is_null() {
             if key.is_null() {
                 return Err(jvm.exception("java/lang/NullPointerException", "null key").await);
@@ -477,9 +491,9 @@ impl TreeMap {
             }
         }
 
-        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         while !entry.is_null() {
-            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
             let comparison: i32 = if comparator.is_null() {
                 jvm.invoke_virtual(key, &key.class_definition().name(), "compareTo", "(Ljava/lang/Object;)I", (stored_key,))
                     .await?
@@ -497,21 +511,25 @@ impl TreeMap {
                 return Ok(entry);
             }
             entry = if comparison < 0 {
-                jvm.get_field(&entry, "left", "Ljava/util/TreeMap$Entry;").await?
+                jvm.get_field(&entry, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?
             } else {
-                jvm.get_field(&entry, "right", "Ljava/util/TreeMap$Entry;").await?
+                jvm.get_field(&entry, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?
             };
         }
         Ok(None.into())
     }
 
     pub(super) async fn first_entry(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         if entry.is_null() {
             return Ok(entry);
         }
         loop {
-            let left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&entry, "left", "Ljava/util/TreeMap$Entry;").await?;
+            let left: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&entry, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if left.is_null() {
                 return Ok(entry);
             }
@@ -520,12 +538,14 @@ impl TreeMap {
     }
 
     pub(super) async fn last_entry(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         if entry.is_null() {
             return Ok(entry);
         }
         loop {
-            let right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&entry, "right", "Ljava/util/TreeMap$Entry;").await?;
+            let right: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&entry, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if right.is_null() {
                 return Ok(entry);
             }
@@ -538,19 +558,23 @@ impl TreeMap {
         this: &ClassInstanceRef<Self>,
         key: &ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         let mut candidate: ClassInstanceRef<TreeMapEntry> = None.into();
         while !entry.is_null() {
-            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
             let comparison = Self::compare(jvm, this, key, &stored_key).await?;
             if comparison == 0 {
                 return Ok(entry);
             }
             if comparison < 0 {
                 candidate = entry.clone();
-                entry = jvm.get_field(&entry, "left", "Ljava/util/TreeMap$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
             } else {
-                entry = jvm.get_field(&entry, "right", "Ljava/util/TreeMap$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?;
             }
         }
         Ok(candidate)
@@ -561,15 +585,19 @@ impl TreeMap {
         this: &ClassInstanceRef<Self>,
         key: &ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+        let mut entry: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
         let mut candidate: ClassInstanceRef<TreeMapEntry> = None.into();
         while !entry.is_null() {
-            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
+            let stored_key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
             if Self::compare(jvm, this, key, &stored_key).await? <= 0 {
-                entry = jvm.get_field(&entry, "left", "Ljava/util/TreeMap$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
             } else {
                 candidate = entry.clone();
-                entry = jvm.get_field(&entry, "right", "Ljava/util/TreeMap$Entry;").await?;
+                entry = jvm
+                    .get_field(&entry, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?;
             }
         }
         Ok(candidate)
@@ -579,11 +607,15 @@ impl TreeMap {
         if entry.is_null() {
             return Ok(None.into());
         }
-        let right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&entry, "right", "Ljava/util/TreeMap$Entry;").await?;
+        let right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&entry, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if !right.is_null() {
             let mut candidate = right;
             loop {
-                let left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&candidate, "left", "Ljava/util/TreeMap$Entry;").await?;
+                let left: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&candidate, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 if left.is_null() {
                     return Ok(candidate);
                 }
@@ -592,169 +624,304 @@ impl TreeMap {
         }
 
         let mut child = entry;
-        let mut parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&child, "parent", "Ljava/util/TreeMap$Entry;").await?;
+        let mut parent: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&child, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+            .await?;
         while !parent.is_null() {
-            let parent_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+            let parent_right: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if parent_right.is_null() || child.identity() != parent_right.identity() {
                 break;
             }
             child = parent;
-            parent = jvm.get_field(&child, "parent", "Ljava/util/TreeMap$Entry;").await?;
+            parent = jvm
+                .get_field(&child, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                .await?;
         }
         Ok(parent)
     }
 
     async fn rotate_left(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, mut pivot: ClassInstanceRef<TreeMapEntry>) -> Result<()> {
-        let mut right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&pivot, "right", "Ljava/util/TreeMap$Entry;").await?;
-        let right_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&right, "left", "Ljava/util/TreeMap$Entry;").await?;
-        jvm.put_field(&mut pivot, "right", "Ljava/util/TreeMap$Entry;", right_left.clone())
+        let mut right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&pivot, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
             .await?;
+        let right_left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&right, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut pivot,
+            "java/util/TreeMap$Entry",
+            "right",
+            "Ljava/util/TreeMap$Entry;",
+            right_left.clone(),
+        )
+        .await?;
         if !right_left.is_null() {
             let mut right_left = right_left;
-            jvm.put_field(&mut right_left, "parent", "Ljava/util/TreeMap$Entry;", pivot.clone())
-                .await?;
+            jvm.put_field(
+                &mut right_left,
+                "java/util/TreeMap$Entry",
+                "parent",
+                "Ljava/util/TreeMap$Entry;",
+                pivot.clone(),
+            )
+            .await?;
         }
-        let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&pivot, "parent", "Ljava/util/TreeMap$Entry;").await?;
-        jvm.put_field(&mut right, "parent", "Ljava/util/TreeMap$Entry;", parent.clone()).await?;
+        let parent: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&pivot, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut right,
+            "java/util/TreeMap$Entry",
+            "parent",
+            "Ljava/util/TreeMap$Entry;",
+            parent.clone(),
+        )
+        .await?;
         if parent.is_null() {
-            jvm.put_field(this, "root", "Ljava/util/TreeMap$Entry;", right.clone()).await?;
+            jvm.put_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;", right.clone())
+                .await?;
         } else {
-            let parent_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+            let parent_left: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                .await?;
             let mut parent = parent;
             if !parent_left.is_null() && parent_left.identity() == pivot.identity() {
-                jvm.put_field(&mut parent, "left", "Ljava/util/TreeMap$Entry;", right.clone()).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;", right.clone())
+                    .await?;
             } else {
-                jvm.put_field(&mut parent, "right", "Ljava/util/TreeMap$Entry;", right.clone()).await?;
+                jvm.put_field(
+                    &mut parent,
+                    "java/util/TreeMap$Entry",
+                    "right",
+                    "Ljava/util/TreeMap$Entry;",
+                    right.clone(),
+                )
+                .await?;
             }
         }
-        jvm.put_field(&mut right, "left", "Ljava/util/TreeMap$Entry;", pivot.clone()).await?;
-        jvm.put_field(&mut pivot, "parent", "Ljava/util/TreeMap$Entry;", right).await
+        jvm.put_field(&mut right, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;", pivot.clone())
+            .await?;
+        jvm.put_field(&mut pivot, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;", right)
+            .await
     }
 
     async fn rotate_right(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, mut pivot: ClassInstanceRef<TreeMapEntry>) -> Result<()> {
-        let mut left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&pivot, "left", "Ljava/util/TreeMap$Entry;").await?;
-        let left_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&left, "right", "Ljava/util/TreeMap$Entry;").await?;
-        jvm.put_field(&mut pivot, "left", "Ljava/util/TreeMap$Entry;", left_right.clone()).await?;
+        let mut left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&pivot, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        let left_right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&left, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut pivot,
+            "java/util/TreeMap$Entry",
+            "left",
+            "Ljava/util/TreeMap$Entry;",
+            left_right.clone(),
+        )
+        .await?;
         if !left_right.is_null() {
             let mut left_right = left_right;
-            jvm.put_field(&mut left_right, "parent", "Ljava/util/TreeMap$Entry;", pivot.clone())
-                .await?;
+            jvm.put_field(
+                &mut left_right,
+                "java/util/TreeMap$Entry",
+                "parent",
+                "Ljava/util/TreeMap$Entry;",
+                pivot.clone(),
+            )
+            .await?;
         }
-        let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&pivot, "parent", "Ljava/util/TreeMap$Entry;").await?;
-        jvm.put_field(&mut left, "parent", "Ljava/util/TreeMap$Entry;", parent.clone()).await?;
+        let parent: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&pivot, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        jvm.put_field(
+            &mut left,
+            "java/util/TreeMap$Entry",
+            "parent",
+            "Ljava/util/TreeMap$Entry;",
+            parent.clone(),
+        )
+        .await?;
         if parent.is_null() {
-            jvm.put_field(this, "root", "Ljava/util/TreeMap$Entry;", left.clone()).await?;
+            jvm.put_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;", left.clone())
+                .await?;
         } else {
-            let parent_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+            let parent_right: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                .await?;
             let mut parent = parent;
             if !parent_right.is_null() && parent_right.identity() == pivot.identity() {
-                jvm.put_field(&mut parent, "right", "Ljava/util/TreeMap$Entry;", left.clone()).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;", left.clone())
+                    .await?;
             } else {
-                jvm.put_field(&mut parent, "left", "Ljava/util/TreeMap$Entry;", left.clone()).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;", left.clone())
+                    .await?;
             }
         }
-        jvm.put_field(&mut left, "right", "Ljava/util/TreeMap$Entry;", pivot.clone()).await?;
-        jvm.put_field(&mut pivot, "parent", "Ljava/util/TreeMap$Entry;", left).await
+        jvm.put_field(&mut left, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;", pivot.clone())
+            .await?;
+        jvm.put_field(&mut pivot, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;", left)
+            .await
     }
 
     async fn fix_after_insertion(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, mut entry: ClassInstanceRef<TreeMapEntry>) -> Result<()> {
-        jvm.put_field(&mut entry, "color", "Z", false).await?;
+        jvm.put_field(&mut entry, "java/util/TreeMap$Entry", "color", "Z", false).await?;
         loop {
-            let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+            let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
             if entry.identity() == root.identity() {
                 break;
             }
-            let mut parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&entry, "parent", "Ljava/util/TreeMap$Entry;").await?;
-            if parent.is_null() || jvm.get_field::<bool>(&parent, "color", "Z").await? {
+            let mut parent: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&entry, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                .await?;
+            if parent.is_null() || jvm.get_field::<bool>(&parent, "java/util/TreeMap$Entry", "color", "Z").await? {
                 break;
             }
-            let mut grand: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "parent", "Ljava/util/TreeMap$Entry;").await?;
-            let grand_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&grand, "left", "Ljava/util/TreeMap$Entry;").await?;
+            let mut grand: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&parent, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                .await?;
+            let grand_left: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&grand, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if !grand_left.is_null() && grand_left.identity() == parent.identity() {
-                let mut uncle: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&grand, "right", "Ljava/util/TreeMap$Entry;").await?;
-                let uncle_is_red = !uncle.is_null() && !jvm.get_field::<bool>(&uncle, "color", "Z").await?;
+                let mut uncle: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&grand, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?;
+                let uncle_is_red = !uncle.is_null() && !jvm.get_field::<bool>(&uncle, "java/util/TreeMap$Entry", "color", "Z").await?;
                 if uncle_is_red {
-                    jvm.put_field(&mut parent, "color", "Z", true).await?;
-                    jvm.put_field(&mut uncle, "color", "Z", true).await?;
-                    jvm.put_field(&mut grand, "color", "Z", false).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                    jvm.put_field(&mut uncle, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                    jvm.put_field(&mut grand, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     entry = grand;
                     continue;
                 }
-                let parent_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+                let parent_right: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 if !parent_right.is_null() && parent_right.identity() == entry.identity() {
                     entry = parent.clone();
                     Self::rotate_left(jvm, this, entry.clone()).await?;
-                    parent = jvm.get_field(&entry, "parent", "Ljava/util/TreeMap$Entry;").await?;
-                    grand = jvm.get_field(&parent, "parent", "Ljava/util/TreeMap$Entry;").await?;
+                    parent = jvm
+                        .get_field(&entry, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                        .await?;
+                    grand = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                        .await?;
                 }
-                jvm.put_field(&mut parent, "color", "Z", true).await?;
-                jvm.put_field(&mut grand, "color", "Z", false).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                jvm.put_field(&mut grand, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                 Self::rotate_right(jvm, this, grand).await?;
             } else {
-                let mut uncle: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&grand, "left", "Ljava/util/TreeMap$Entry;").await?;
-                let uncle_is_red = !uncle.is_null() && !jvm.get_field::<bool>(&uncle, "color", "Z").await?;
+                let mut uncle: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&grand, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
+                let uncle_is_red = !uncle.is_null() && !jvm.get_field::<bool>(&uncle, "java/util/TreeMap$Entry", "color", "Z").await?;
                 if uncle_is_red {
-                    jvm.put_field(&mut parent, "color", "Z", true).await?;
-                    jvm.put_field(&mut uncle, "color", "Z", true).await?;
-                    jvm.put_field(&mut grand, "color", "Z", false).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                    jvm.put_field(&mut uncle, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                    jvm.put_field(&mut grand, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     entry = grand;
                     continue;
                 }
-                let parent_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+                let parent_left: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 if !parent_left.is_null() && parent_left.identity() == entry.identity() {
                     entry = parent.clone();
                     Self::rotate_right(jvm, this, entry.clone()).await?;
-                    parent = jvm.get_field(&entry, "parent", "Ljava/util/TreeMap$Entry;").await?;
-                    grand = jvm.get_field(&parent, "parent", "Ljava/util/TreeMap$Entry;").await?;
+                    parent = jvm
+                        .get_field(&entry, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                        .await?;
+                    grand = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                        .await?;
                 }
-                jvm.put_field(&mut parent, "color", "Z", true).await?;
-                jvm.put_field(&mut grand, "color", "Z", false).await?;
+                jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
+                jvm.put_field(&mut grand, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                 Self::rotate_left(jvm, this, grand).await?;
             }
         }
-        let mut root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
-        jvm.put_field(&mut root, "color", "Z", true).await?;
+        let mut root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
+        jvm.put_field(&mut root, "java/util/TreeMap$Entry", "color", "Z", true).await?;
         Ok(())
     }
 
     pub(super) async fn delete_entry(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, entry: ClassInstanceRef<TreeMapEntry>) -> Result<()> {
-        let size: i32 = jvm.get_field(this, "size", "I").await?;
-        jvm.put_field(this, "size", "I", size - 1).await?;
+        let size: i32 = jvm.get_field(this, "java/util/TreeMap", "size", "I").await?;
+        jvm.put_field(this, "java/util/TreeMap", "size", "I", size - 1).await?;
 
         let mut target = entry;
-        let left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "left", "Ljava/util/TreeMap$Entry;").await?;
-        let right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "right", "Ljava/util/TreeMap$Entry;").await?;
+        let left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&target, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        let right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&target, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if !left.is_null() && !right.is_null() {
             let successor = Self::successor(jvm, target.clone()).await?;
-            let key: ClassInstanceRef<Object> = jvm.get_field(&successor, "key", "Ljava/lang/Object;").await?;
-            let value: ClassInstanceRef<Object> = jvm.get_field(&successor, "value", "Ljava/lang/Object;").await?;
-            jvm.put_field(&mut target, "key", "Ljava/lang/Object;", key).await?;
-            jvm.put_field(&mut target, "value", "Ljava/lang/Object;", value).await?;
+            let key: ClassInstanceRef<Object> = jvm.get_field(&successor, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+            let value: ClassInstanceRef<Object> = jvm
+                .get_field(&successor, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;")
+                .await?;
+            jvm.put_field(&mut target, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;", key)
+                .await?;
+            jvm.put_field(&mut target, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;", value)
+                .await?;
             target = successor;
         }
 
-        let target_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "left", "Ljava/util/TreeMap$Entry;").await?;
-        let target_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "right", "Ljava/util/TreeMap$Entry;").await?;
+        let target_left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&target, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        let target_right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&target, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
         let mut replacement = if !target_left.is_null() { target_left } else { target_right };
         if !replacement.is_null() {
-            let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "parent", "Ljava/util/TreeMap$Entry;").await?;
-            jvm.put_field(&mut replacement, "parent", "Ljava/util/TreeMap$Entry;", parent.clone())
+            let parent: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&target, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
                 .await?;
+            jvm.put_field(
+                &mut replacement,
+                "java/util/TreeMap$Entry",
+                "parent",
+                "Ljava/util/TreeMap$Entry;",
+                parent.clone(),
+            )
+            .await?;
             if parent.is_null() {
-                jvm.put_field(this, "root", "Ljava/util/TreeMap$Entry;", replacement.clone()).await?;
+                jvm.put_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;", replacement.clone())
+                    .await?;
             } else {
-                let parent_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+                let parent_left: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 let mut parent = parent;
                 if !parent_left.is_null() && parent_left.identity() == target.identity() {
-                    jvm.put_field(&mut parent, "left", "Ljava/util/TreeMap$Entry;", replacement.clone())
-                        .await?;
+                    jvm.put_field(
+                        &mut parent,
+                        "java/util/TreeMap$Entry",
+                        "left",
+                        "Ljava/util/TreeMap$Entry;",
+                        replacement.clone(),
+                    )
+                    .await?;
                 } else {
-                    jvm.put_field(&mut parent, "right", "Ljava/util/TreeMap$Entry;", replacement.clone())
-                        .await?;
+                    jvm.put_field(
+                        &mut parent,
+                        "java/util/TreeMap$Entry",
+                        "right",
+                        "Ljava/util/TreeMap$Entry;",
+                        replacement.clone(),
+                    )
+                    .await?;
                 }
             }
             jvm.put_field(
                 &mut target,
+                "java/util/TreeMap$Entry",
                 "left",
                 "Ljava/util/TreeMap$Entry;",
                 ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -762,6 +929,7 @@ impl TreeMap {
             .await?;
             jvm.put_field(
                 &mut target,
+                "java/util/TreeMap$Entry",
                 "right",
                 "Ljava/util/TreeMap$Entry;",
                 ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -769,31 +937,47 @@ impl TreeMap {
             .await?;
             jvm.put_field(
                 &mut target,
+                "java/util/TreeMap$Entry",
                 "parent",
                 "Ljava/util/TreeMap$Entry;",
                 ClassInstanceRef::<TreeMapEntry>::from(None),
             )
             .await?;
-            if jvm.get_field::<bool>(&target, "color", "Z").await? {
+            if jvm.get_field::<bool>(&target, "java/util/TreeMap$Entry", "color", "Z").await? {
                 Self::fix_after_deletion(jvm, this, replacement).await?;
             }
         } else {
-            let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "parent", "Ljava/util/TreeMap$Entry;").await?;
+            let parent: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&target, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if parent.is_null() {
-                jvm.put_field(this, "root", "Ljava/util/TreeMap$Entry;", ClassInstanceRef::<TreeMapEntry>::from(None))
-                    .await?;
+                jvm.put_field(
+                    this,
+                    "java/util/TreeMap",
+                    "root",
+                    "Ljava/util/TreeMap$Entry;",
+                    ClassInstanceRef::<TreeMapEntry>::from(None),
+                )
+                .await?;
             } else {
-                if jvm.get_field::<bool>(&target, "color", "Z").await? {
+                if jvm.get_field::<bool>(&target, "java/util/TreeMap$Entry", "color", "Z").await? {
                     Self::fix_after_deletion(jvm, this, target.clone()).await?;
                 }
-                let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&target, "parent", "Ljava/util/TreeMap$Entry;").await?;
+                let parent: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&target, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 if !parent.is_null() {
-                    let parent_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
-                    let parent_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+                    let parent_left: ClassInstanceRef<TreeMapEntry> = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                        .await?;
+                    let parent_right: ClassInstanceRef<TreeMapEntry> = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                        .await?;
                     let mut parent = parent;
                     if !parent_left.is_null() && parent_left.identity() == target.identity() {
                         jvm.put_field(
                             &mut parent,
+                            "java/util/TreeMap$Entry",
                             "left",
                             "Ljava/util/TreeMap$Entry;",
                             ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -802,6 +986,7 @@ impl TreeMap {
                     } else if !parent_right.is_null() && parent_right.identity() == target.identity() {
                         jvm.put_field(
                             &mut parent,
+                            "java/util/TreeMap$Entry",
                             "right",
                             "Ljava/util/TreeMap$Entry;",
                             ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -810,6 +995,7 @@ impl TreeMap {
                     }
                     jvm.put_field(
                         &mut target,
+                        "java/util/TreeMap$Entry",
                         "parent",
                         "Ljava/util/TreeMap$Entry;",
                         ClassInstanceRef::<TreeMapEntry>::from(None),
@@ -823,122 +1009,146 @@ impl TreeMap {
 
     async fn fix_after_deletion(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, mut entry: ClassInstanceRef<TreeMapEntry>) -> Result<()> {
         loop {
-            let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
-            if entry.identity() == root.identity() || !jvm.get_field::<bool>(&entry, "color", "Z").await? {
+            let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
+            if entry.identity() == root.identity() || !jvm.get_field::<bool>(&entry, "java/util/TreeMap$Entry", "color", "Z").await? {
                 break;
             }
-            let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&entry, "parent", "Ljava/util/TreeMap$Entry;").await?;
-            let parent_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+            let parent: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&entry, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                .await?;
+            let parent_left: ClassInstanceRef<TreeMapEntry> = jvm
+                .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                .await?;
             if !parent_left.is_null() && parent_left.identity() == entry.identity() {
-                let mut sibling: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
-                if !sibling.is_null() && !jvm.get_field::<bool>(&sibling, "color", "Z").await? {
-                    jvm.put_field(&mut sibling, "color", "Z", true).await?;
+                let mut sibling: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                    .await?;
+                if !sibling.is_null() && !jvm.get_field::<bool>(&sibling, "java/util/TreeMap$Entry", "color", "Z").await? {
+                    jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                     let mut parent = parent.clone();
-                    jvm.put_field(&mut parent, "color", "Z", false).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     Self::rotate_left(jvm, this, parent.clone()).await?;
-                    sibling = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+                    sibling = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                        .await?;
                 }
                 let sibling_left: ClassInstanceRef<TreeMapEntry> = if sibling.is_null() {
                     None.into()
                 } else {
-                    jvm.get_field(&sibling, "left", "Ljava/util/TreeMap$Entry;").await?
+                    jvm.get_field(&sibling, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                        .await?
                 };
                 let sibling_right: ClassInstanceRef<TreeMapEntry> = if sibling.is_null() {
                     None.into()
                 } else {
-                    jvm.get_field(&sibling, "right", "Ljava/util/TreeMap$Entry;").await?
+                    jvm.get_field(&sibling, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                        .await?
                 };
-                let left_black = sibling_left.is_null() || jvm.get_field::<bool>(&sibling_left, "color", "Z").await?;
-                let right_black = sibling_right.is_null() || jvm.get_field::<bool>(&sibling_right, "color", "Z").await?;
+                let left_black = sibling_left.is_null() || jvm.get_field::<bool>(&sibling_left, "java/util/TreeMap$Entry", "color", "Z").await?;
+                let right_black = sibling_right.is_null() || jvm.get_field::<bool>(&sibling_right, "java/util/TreeMap$Entry", "color", "Z").await?;
                 if left_black && right_black {
                     if !sibling.is_null() {
-                        jvm.put_field(&mut sibling, "color", "Z", false).await?;
+                        jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     }
                     entry = parent;
                 } else {
                     if right_black {
                         if !sibling_left.is_null() {
                             let mut sibling_left = sibling_left;
-                            jvm.put_field(&mut sibling_left, "color", "Z", true).await?;
+                            jvm.put_field(&mut sibling_left, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                         }
                         if !sibling.is_null() {
-                            jvm.put_field(&mut sibling, "color", "Z", false).await?;
+                            jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                             Self::rotate_right(jvm, this, sibling.clone()).await?;
                         }
-                        sibling = jvm.get_field(&parent, "right", "Ljava/util/TreeMap$Entry;").await?;
+                        sibling = jvm
+                            .get_field(&parent, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                            .await?;
                     }
                     if !sibling.is_null() {
-                        let parent_color: bool = jvm.get_field(&parent, "color", "Z").await?;
-                        jvm.put_field(&mut sibling, "color", "Z", parent_color).await?;
+                        let parent_color: bool = jvm.get_field(&parent, "java/util/TreeMap$Entry", "color", "Z").await?;
+                        jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", parent_color).await?;
                     }
                     let mut parent = parent;
-                    jvm.put_field(&mut parent, "color", "Z", true).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                     if !sibling.is_null() {
-                        let mut sibling_right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&sibling, "right", "Ljava/util/TreeMap$Entry;").await?;
+                        let mut sibling_right: ClassInstanceRef<TreeMapEntry> = jvm
+                            .get_field(&sibling, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                            .await?;
                         if !sibling_right.is_null() {
-                            jvm.put_field(&mut sibling_right, "color", "Z", true).await?;
+                            jvm.put_field(&mut sibling_right, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                         }
                     }
                     Self::rotate_left(jvm, this, parent).await?;
-                    entry = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+                    entry = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
                 }
             } else {
-                let mut sibling: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
-                if !sibling.is_null() && !jvm.get_field::<bool>(&sibling, "color", "Z").await? {
-                    jvm.put_field(&mut sibling, "color", "Z", true).await?;
+                let mut sibling: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                    .await?;
+                if !sibling.is_null() && !jvm.get_field::<bool>(&sibling, "java/util/TreeMap$Entry", "color", "Z").await? {
+                    jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                     let mut parent = parent.clone();
-                    jvm.put_field(&mut parent, "color", "Z", false).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     Self::rotate_right(jvm, this, parent.clone()).await?;
-                    sibling = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+                    sibling = jvm
+                        .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                        .await?;
                 }
                 let sibling_left: ClassInstanceRef<TreeMapEntry> = if sibling.is_null() {
                     None.into()
                 } else {
-                    jvm.get_field(&sibling, "left", "Ljava/util/TreeMap$Entry;").await?
+                    jvm.get_field(&sibling, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                        .await?
                 };
                 let sibling_right: ClassInstanceRef<TreeMapEntry> = if sibling.is_null() {
                     None.into()
                 } else {
-                    jvm.get_field(&sibling, "right", "Ljava/util/TreeMap$Entry;").await?
+                    jvm.get_field(&sibling, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+                        .await?
                 };
-                let left_black = sibling_left.is_null() || jvm.get_field::<bool>(&sibling_left, "color", "Z").await?;
-                let right_black = sibling_right.is_null() || jvm.get_field::<bool>(&sibling_right, "color", "Z").await?;
+                let left_black = sibling_left.is_null() || jvm.get_field::<bool>(&sibling_left, "java/util/TreeMap$Entry", "color", "Z").await?;
+                let right_black = sibling_right.is_null() || jvm.get_field::<bool>(&sibling_right, "java/util/TreeMap$Entry", "color", "Z").await?;
                 if left_black && right_black {
                     if !sibling.is_null() {
-                        jvm.put_field(&mut sibling, "color", "Z", false).await?;
+                        jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                     }
                     entry = parent;
                 } else {
                     if left_black {
                         if !sibling_right.is_null() {
                             let mut sibling_right = sibling_right;
-                            jvm.put_field(&mut sibling_right, "color", "Z", true).await?;
+                            jvm.put_field(&mut sibling_right, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                         }
                         if !sibling.is_null() {
-                            jvm.put_field(&mut sibling, "color", "Z", false).await?;
+                            jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", false).await?;
                             Self::rotate_left(jvm, this, sibling.clone()).await?;
                         }
-                        sibling = jvm.get_field(&parent, "left", "Ljava/util/TreeMap$Entry;").await?;
+                        sibling = jvm
+                            .get_field(&parent, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                            .await?;
                     }
                     if !sibling.is_null() {
-                        let parent_color: bool = jvm.get_field(&parent, "color", "Z").await?;
-                        jvm.put_field(&mut sibling, "color", "Z", parent_color).await?;
+                        let parent_color: bool = jvm.get_field(&parent, "java/util/TreeMap$Entry", "color", "Z").await?;
+                        jvm.put_field(&mut sibling, "java/util/TreeMap$Entry", "color", "Z", parent_color).await?;
                     }
                     let mut parent = parent;
-                    jvm.put_field(&mut parent, "color", "Z", true).await?;
+                    jvm.put_field(&mut parent, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                     if !sibling.is_null() {
-                        let mut sibling_left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&sibling, "left", "Ljava/util/TreeMap$Entry;").await?;
+                        let mut sibling_left: ClassInstanceRef<TreeMapEntry> = jvm
+                            .get_field(&sibling, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+                            .await?;
                         if !sibling_left.is_null() {
-                            jvm.put_field(&mut sibling_left, "color", "Z", true).await?;
+                            jvm.put_field(&mut sibling_left, "java/util/TreeMap$Entry", "color", "Z", true).await?;
                         }
                     }
                     Self::rotate_right(jvm, this, parent).await?;
-                    entry = jvm.get_field(this, "root", "Ljava/util/TreeMap$Entry;").await?;
+                    entry = jvm.get_field(this, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
                 }
             }
         }
         if !entry.is_null() {
-            jvm.put_field(&mut entry, "color", "Z", true).await?;
+            jvm.put_field(&mut entry, "java/util/TreeMap$Entry", "color", "Z", true).await?;
         }
         Ok(())
     }

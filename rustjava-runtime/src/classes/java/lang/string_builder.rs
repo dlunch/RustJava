@@ -966,8 +966,8 @@ impl StringBuilder {
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "value", "[C").await?;
+        let count: i32 = jvm.get_field(&this, "java/lang/StringBuilder", "count", "I").await?;
+        let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuilder", "value", "[C").await?;
         Ok(JavaLangString::from_utf16(jvm, jvm.load_array(&value, 0, count as usize).await?)
             .await?
             .into())

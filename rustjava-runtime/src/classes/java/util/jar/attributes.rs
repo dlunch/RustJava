@@ -41,7 +41,8 @@ impl Attributes {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let map = jvm.new_class("java/util/HashMap", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/Map;", map).await?;
+        jvm.put_field(&mut this, "java/util/jar/Attributes", "map", "Ljava/util/Map;", map)
+            .await?;
 
         Ok(())
     }
@@ -56,7 +57,7 @@ impl Attributes {
         tracing::debug!("java.util.jar.Attributes::putValue({this:?}, {name:?}, {value:?})");
 
         // TODO we should store key in Attributes.Name type
-        let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
+        let map = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         let old = jvm
             .invoke_virtual(
                 &map,
@@ -78,7 +79,7 @@ impl Attributes {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.jar.Attributes::getValue({this:?}, {name:?})");
 
-        let map = jvm.get_field(&this, "map", "Ljava/util/Map;").await?;
+        let map = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         let value = jvm
             .invoke_virtual(
                 &map,

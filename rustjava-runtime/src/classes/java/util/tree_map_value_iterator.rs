@@ -52,6 +52,6 @@ impl TreeMapValueIterator {
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry = TreeMapPrivateEntryIterator::next_entry(jvm, this).await?;
-        jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 }

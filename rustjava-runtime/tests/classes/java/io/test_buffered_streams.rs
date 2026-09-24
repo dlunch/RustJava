@@ -190,12 +190,15 @@ async fn bio_01_bio_02_bio_03_buffered_input_stream_contract() -> Result<()> {
         panic!("zero skip after close must throw IOException");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    let position: i32 = jvm.get_field(&stream, "pos", "I").await?;
+    let position: i32 = jvm.get_field(&stream, "java/io/BufferedInputStream", "pos", "I").await?;
     let _: () = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "mark", "(I)V", (17,))
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&stream, "marklimit", "I").await?, 17);
-    assert_eq!(jvm.get_field::<i32>(&stream, "markpos", "I").await?, position);
+    assert_eq!(jvm.get_field::<i32>(&stream, "java/io/BufferedInputStream", "marklimit", "I").await?, 17);
+    assert_eq!(
+        jvm.get_field::<i32>(&stream, "java/io/BufferedInputStream", "markpos", "I").await?,
+        position
+    );
     let closed: Result<()> = jvm.invoke_virtual(&stream, &stream.class_definition().name(), "reset", "()V", ()).await;
     let Err(JavaError::JavaException(exception)) = closed else {
         panic!("reset after a post-close mark must still throw IOException");
@@ -368,7 +371,7 @@ async fn bio_06_bio_07_buffered_writer_contract() -> Result<()> {
     let writer = jvm
         .new_class("java/io/BufferedWriter", "(Ljava/io/Writer;I)V", (output.clone(), 4))
         .await?;
-    let lock: ClassInstanceRef<Object> = jvm.get_field(&writer, "lock", "Ljava/lang/Object;").await?;
+    let lock: ClassInstanceRef<Object> = jvm.get_field(&writer, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
     assert_eq!(
         lock.identity(),
         output.identity(),

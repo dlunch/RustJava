@@ -57,10 +57,12 @@ impl JarURLConnection {
 
         let file_url = JavaLangString::from_rust_string(jvm, split[0]).await?;
         let file_url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (file_url,)).await?;
-        jvm.put_field(&mut this, "fileUrl", "Ljava/net/URL;", file_url).await?;
+        jvm.put_field(&mut this, "java/net/JarURLConnection", "fileUrl", "Ljava/net/URL;", file_url)
+            .await?;
 
         let entry = JavaLangString::from_rust_string(jvm, split[1]).await?;
-        jvm.put_field(&mut this, "entry", "Ljava/lang/String;", entry).await?;
+        jvm.put_field(&mut this, "java/net/JarURLConnection", "entry", "Ljava/lang/String;", entry)
+            .await?;
 
         Ok(())
     }
@@ -68,7 +70,7 @@ impl JarURLConnection {
     async fn get_entry_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.JarURLConnection::getEntryName({this:?})");
 
-        let entry = jvm.get_field(&this, "entry", "Ljava/lang/String;").await?;
+        let entry = jvm.get_field(&this, "java/net/JarURLConnection", "entry", "Ljava/lang/String;").await?;
 
         Ok(entry)
     }
@@ -76,7 +78,7 @@ impl JarURLConnection {
     async fn get_jar_file_url(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.JarURLConnection::getJarFileURL({this:?})");
 
-        let file_url = jvm.get_field(&this, "fileUrl", "Ljava/net/URL;").await?;
+        let file_url = jvm.get_field(&this, "java/net/JarURLConnection", "fileUrl", "Ljava/net/URL;").await?;
 
         Ok(file_url)
     }

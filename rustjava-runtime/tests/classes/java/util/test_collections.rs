@@ -31,9 +31,9 @@ impl CollectionsSortValue {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, key: i32, id: i32, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "I", key).await?;
-        jvm.put_field(&mut this, "id", "I", id).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await
+        jvm.put_field(&mut this, "CollectionsSortValue", "key", "I", key).await?;
+        jvm.put_field(&mut this, "CollectionsSortValue", "id", "I", id).await?;
+        jvm.put_field(&mut this, "CollectionsSortValue", "fail", "Z", fail).await
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
@@ -43,14 +43,16 @@ impl CollectionsSortValue {
         if !jvm.is_instance(other.as_ref(), "CollectionsSortValue") {
             return Err(jvm.exception("java/lang/ClassCastException", "other").await);
         }
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? || jvm.get_field::<bool>(&other, "fail", "Z").await? {
+        if jvm.get_field::<bool>(&this, "CollectionsSortValue", "fail", "Z").await?
+            || jvm.get_field::<bool>(&other, "CollectionsSortValue", "fail", "Z").await?
+        {
             return Err(jvm.exception("java/lang/IllegalStateException", "comparison failure").await);
         }
 
         Ok(jvm
-            .get_field::<i32>(&this, "key", "I")
+            .get_field::<i32>(&this, "CollectionsSortValue", "key", "I")
             .await?
-            .cmp(&jvm.get_field::<i32>(&other, "key", "I").await?) as i32)
+            .cmp(&jvm.get_field::<i32>(&other, "CollectionsSortValue", "key", "I").await?) as i32)
     }
 }
 
@@ -83,9 +85,9 @@ impl CollectionsComparator {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, reverse: bool, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "reverse", "Z", reverse).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await?;
-        jvm.put_field(&mut this, "allowNull", "Z", false).await
+        jvm.put_field(&mut this, "CollectionsComparator", "reverse", "Z", reverse).await?;
+        jvm.put_field(&mut this, "CollectionsComparator", "fail", "Z", fail).await?;
+        jvm.put_field(&mut this, "CollectionsComparator", "allowNull", "Z", false).await
     }
 
     async fn init_with_nulls(
@@ -97,9 +99,9 @@ impl CollectionsComparator {
         allow_null: bool,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "reverse", "Z", reverse).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await?;
-        jvm.put_field(&mut this, "allowNull", "Z", allow_null).await
+        jvm.put_field(&mut this, "CollectionsComparator", "reverse", "Z", reverse).await?;
+        jvm.put_field(&mut this, "CollectionsComparator", "fail", "Z", fail).await?;
+        jvm.put_field(&mut this, "CollectionsComparator", "allowNull", "Z", allow_null).await
     }
 
     async fn compare(
@@ -109,11 +111,11 @@ impl CollectionsComparator {
         left: ClassInstanceRef<Object>,
         right: ClassInstanceRef<Object>,
     ) -> Result<i32> {
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? {
+        if jvm.get_field::<bool>(&this, "CollectionsComparator", "fail", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "comparison failure").await);
         }
         let comparison = if left.is_null() || right.is_null() {
-            if !jvm.get_field::<bool>(&this, "allowNull", "Z").await? {
+            if !jvm.get_field::<bool>(&this, "CollectionsComparator", "allowNull", "Z").await? {
                 return Err(jvm.exception("java/lang/NullPointerException", "value").await);
             }
             match (left.is_null(), right.is_null()) {
@@ -123,11 +125,11 @@ impl CollectionsComparator {
                 (false, false) => unreachable!(),
             }
         } else {
-            jvm.get_field::<i32>(&left, "key", "I")
+            jvm.get_field::<i32>(&left, "CollectionsSortValue", "key", "I")
                 .await?
-                .cmp(&jvm.get_field::<i32>(&right, "key", "I").await?) as i32
+                .cmp(&jvm.get_field::<i32>(&right, "CollectionsSortValue", "key", "I").await?) as i32
         };
-        Ok(if jvm.get_field::<bool>(&this, "reverse", "Z").await? {
+        Ok(if jvm.get_field::<bool>(&this, "CollectionsComparator", "reverse", "Z").await? {
             -comparison
         } else {
             comparison
@@ -172,18 +174,19 @@ impl CollectionsProbeList {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "elements", "[Ljava/lang/Object;", elements).await?;
-        jvm.put_field(&mut this, "listIteratorCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "setCalls", "I", 0).await
+        jvm.put_field(&mut this, "CollectionsProbeList", "elements", "[Ljava/lang/Object;", elements)
+            .await?;
+        jvm.put_field(&mut this, "CollectionsProbeList", "listIteratorCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "CollectionsProbeList", "setCalls", "I", 0).await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "CollectionsProbeList", "elements", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&elements).await? as i32)
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "CollectionsProbeList", "elements", "[Ljava/lang/Object;").await?;
         let length = jvm.array_length(&elements).await? as i32;
         if index < 0 || index >= length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "index").await);
@@ -203,7 +206,7 @@ impl CollectionsProbeList {
         index: i32,
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let mut elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
+        let mut elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "CollectionsProbeList", "elements", "[Ljava/lang/Object;").await?;
         let length = jvm.array_length(&elements).await? as i32;
         if index < 0 || index >= length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "index").await);
@@ -215,21 +218,23 @@ impl CollectionsProbeList {
             .next()
             .unwrap();
         jvm.store_array(&mut elements, index as usize, core::iter::once(element)).await?;
-        let calls: i32 = jvm.get_field(&this, "setCalls", "I").await?;
-        jvm.put_field(&mut this, "setCalls", "I", calls + 1).await?;
+        let calls: i32 = jvm.get_field(&this, "CollectionsProbeList", "setCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsProbeList", "setCalls", "I", calls + 1).await?;
         Ok(previous)
     }
 
     async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "listIteratorCalls", "I").await?;
-        jvm.put_field(&mut this, "listIteratorCalls", "I", calls + 1).await?;
+        let calls: i32 = jvm.get_field(&this, "CollectionsProbeList", "listIteratorCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsProbeList", "listIteratorCalls", "I", calls + 1)
+            .await?;
         jvm.invoke_special(&this, "java/util/AbstractList", "listIterator", "()Ljava/util/ListIterator;", ())
             .await
     }
 
     async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "listIteratorCalls", "I").await?;
-        jvm.put_field(&mut this, "listIteratorCalls", "I", calls + 1).await?;
+        let calls: i32 = jvm.get_field(&this, "CollectionsProbeList", "listIteratorCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsProbeList", "listIteratorCalls", "I", calls + 1)
+            .await?;
         jvm.invoke_special(&this, "java/util/AbstractList", "listIterator", "(I)Ljava/util/ListIterator;", (index,))
             .await
     }
@@ -254,11 +259,11 @@ impl CollectionsInvalidRandom {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, result: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/Random", "<init>", "(J)V", (0i64,)).await?;
-        jvm.put_field(&mut this, "result", "I", result).await
+        jvm.put_field(&mut this, "CollectionsInvalidRandom", "result", "I", result).await
     }
 
     async fn next_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: i32) -> Result<i32> {
-        jvm.get_field(&this, "result", "I").await
+        jvm.get_field(&this, "CollectionsInvalidRandom", "result", "I").await
     }
 }
 
@@ -286,8 +291,9 @@ impl CollectionsExceptionalSet {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>, mode: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "element", "Ljava/lang/Object;", element).await?;
-        jvm.put_field(&mut this, "mode", "I", mode).await
+        jvm.put_field(&mut this, "CollectionsExceptionalSet", "element", "Ljava/lang/Object;", element)
+            .await?;
+        jvm.put_field(&mut this, "CollectionsExceptionalSet", "mode", "I", mode).await
     }
 
     async fn size(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<i32> {
@@ -295,7 +301,7 @@ impl CollectionsExceptionalSet {
     }
 
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+        let element: ClassInstanceRef<Object> = jvm.get_field(&this, "CollectionsExceptionalSet", "element", "Ljava/lang/Object;").await?;
         let list = jvm
             .new_class("java/util/Collections$CopiesList", "(ILjava/lang/Object;)V", (1, element))
             .await?;
@@ -304,12 +310,12 @@ impl CollectionsExceptionalSet {
     }
 
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
-        match jvm.get_field::<i32>(&this, "mode", "I").await? {
+        match jvm.get_field::<i32>(&this, "CollectionsExceptionalSet", "mode", "I").await? {
             0 => Err(jvm.exception("java/lang/ClassCastException", "incompatible element").await),
             1 if target.is_null() => Err(jvm.exception("java/lang/NullPointerException", "null element").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "unexpected contains failure").await),
             _ => {
-                let element: ClassInstanceRef<Object> = jvm.get_field(&this, "element", "Ljava/lang/Object;").await?;
+                let element: ClassInstanceRef<Object> = jvm.get_field(&this, "CollectionsExceptionalSet", "element", "Ljava/lang/Object;").await?;
                 if element.is_null() {
                     Ok(target.is_null())
                 } else if target.is_null() {
@@ -342,11 +348,11 @@ impl CollectionsAsymmetricEquals {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, result: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "result", "Z", result).await
+        jvm.put_field(&mut this, "CollectionsAsymmetricEquals", "result", "Z", result).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
-        jvm.get_field(&this, "result", "Z").await
+        jvm.get_field(&this, "CollectionsAsymmetricEquals", "result", "Z").await
     }
 }
 
@@ -373,18 +379,18 @@ impl CollectionsEqualsProbe {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, result: bool, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "result", "Z", result).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await?;
-        jvm.put_field(&mut this, "equalsCalls", "I", 0).await
+        jvm.put_field(&mut this, "CollectionsEqualsProbe", "result", "Z", result).await?;
+        jvm.put_field(&mut this, "CollectionsEqualsProbe", "fail", "Z", fail).await?;
+        jvm.put_field(&mut this, "CollectionsEqualsProbe", "equalsCalls", "I", 0).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
-        let calls: i32 = jvm.get_field(&this, "equalsCalls", "I").await?;
-        jvm.put_field(&mut this, "equalsCalls", "I", calls + 1).await?;
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? {
+        let calls: i32 = jvm.get_field(&this, "CollectionsEqualsProbe", "equalsCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsEqualsProbe", "equalsCalls", "I", calls + 1).await?;
+        if jvm.get_field::<bool>(&this, "CollectionsEqualsProbe", "fail", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "equals failure").await);
         }
-        jvm.get_field(&this, "result", "Z").await
+        jvm.get_field(&this, "CollectionsEqualsProbe", "result", "Z").await
     }
 }
 
@@ -435,31 +441,33 @@ impl CollectionsEntryProbe {
         throw_value: bool,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "throwKey", "Z", throw_key).await?;
-        jvm.put_field(&mut this, "throwValue", "Z", throw_value).await?;
-        jvm.put_field(&mut this, "keyCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "valueCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "setValueCalls", "I", 0).await
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "key", "Ljava/lang/Object;", key)
+            .await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "value", "Ljava/lang/Object;", value)
+            .await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "throwKey", "Z", throw_key).await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "throwValue", "Z", throw_value).await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "keyCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "valueCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "setValueCalls", "I", 0).await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "keyCalls", "I").await?;
-        jvm.put_field(&mut this, "keyCalls", "I", calls + 1).await?;
-        if jvm.get_field::<bool>(&this, "throwKey", "Z").await? {
+        let calls: i32 = jvm.get_field(&this, "CollectionsEntryProbe", "keyCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "keyCalls", "I", calls + 1).await?;
+        if jvm.get_field::<bool>(&this, "CollectionsEntryProbe", "throwKey", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "getKey failure").await);
         }
-        jvm.get_field(&this, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "CollectionsEntryProbe", "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "valueCalls", "I").await?;
-        jvm.put_field(&mut this, "valueCalls", "I", calls + 1).await?;
-        if jvm.get_field::<bool>(&this, "throwValue", "Z").await? {
+        let calls: i32 = jvm.get_field(&this, "CollectionsEntryProbe", "valueCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "valueCalls", "I", calls + 1).await?;
+        if jvm.get_field::<bool>(&this, "CollectionsEntryProbe", "throwValue", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "getValue failure").await);
         }
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "CollectionsEntryProbe", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -468,10 +476,11 @@ impl CollectionsEntryProbe {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "setValueCalls", "I").await?;
-        jvm.put_field(&mut this, "setValueCalls", "I", calls + 1).await?;
-        let previous: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let calls: i32 = jvm.get_field(&this, "CollectionsEntryProbe", "setValueCalls", "I").await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "setValueCalls", "I", calls + 1).await?;
+        let previous: ClassInstanceRef<Object> = jvm.get_field(&this, "CollectionsEntryProbe", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "CollectionsEntryProbe", "value", "Ljava/lang/Object;", value)
+            .await?;
         Ok(previous)
     }
 }
@@ -660,18 +669,18 @@ async fn test_coll_02_stable_sort_and_comparator_failure_is_atomic() -> Result<(
 
     jvm.invoke_static::<_, ()>("java/util/Collections", "sort", "(Ljava/util/List;)V", (list.clone(),))
         .await?;
-    let sorted: ClassInstanceRef<Array<Object>> = jvm.get_field(&list, "elements", "[Ljava/lang/Object;").await?;
+    let sorted: ClassInstanceRef<Array<Object>> = jvm.get_field(&list, "CollectionsProbeList", "elements", "[Ljava/lang/Object;").await?;
     let sorted = jvm.load_array::<ClassInstanceRef<Object>>(&sorted, 0, 4).await?;
     let mut keys_and_ids = vec![];
     for value in sorted {
         keys_and_ids.push((
-            jvm.get_field::<i32>(&value, "key", "I").await?,
-            jvm.get_field::<i32>(&value, "id", "I").await?,
+            jvm.get_field::<i32>(&value, "CollectionsSortValue", "key", "I").await?,
+            jvm.get_field::<i32>(&value, "CollectionsSortValue", "id", "I").await?,
         ));
     }
     assert_eq!(keys_and_ids, vec![(1, 1), (1, 3), (2, 0), (2, 2)]);
-    assert_eq!(jvm.get_field::<i32>(&list, "listIteratorCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&list, "setCalls", "I").await?, 4);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "listIteratorCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "setCalls", "I").await?, 4);
 
     let reverse: ClassInstanceRef<Object> = jvm.new_class("CollectionsComparator", "(ZZ)V", (true, false)).await?.into();
     jvm.invoke_static::<_, ()>(
@@ -681,13 +690,13 @@ async fn test_coll_02_stable_sort_and_comparator_failure_is_atomic() -> Result<(
         (list.clone(), reverse),
     )
     .await?;
-    let reverse_sorted: ClassInstanceRef<Array<Object>> = jvm.get_field(&list, "elements", "[Ljava/lang/Object;").await?;
+    let reverse_sorted: ClassInstanceRef<Array<Object>> = jvm.get_field(&list, "CollectionsProbeList", "elements", "[Ljava/lang/Object;").await?;
     let reverse_sorted = jvm.load_array::<ClassInstanceRef<Object>>(&reverse_sorted, 0, 4).await?;
     let mut reverse_keys_and_ids = vec![];
     for value in reverse_sorted {
         reverse_keys_and_ids.push((
-            jvm.get_field::<i32>(&value, "key", "I").await?,
-            jvm.get_field::<i32>(&value, "id", "I").await?,
+            jvm.get_field::<i32>(&value, "CollectionsSortValue", "key", "I").await?,
+            jvm.get_field::<i32>(&value, "CollectionsSortValue", "id", "I").await?,
         ));
     }
     assert_eq!(reverse_keys_and_ids, vec![(2, 0), (2, 2), (1, 1), (1, 3)]);
@@ -716,14 +725,20 @@ async fn test_coll_02_stable_sort_and_comparator_failure_is_atomic() -> Result<(
         panic!("failing comparator must propagate");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    let after: ClassInstanceRef<Array<Object>> = jvm.get_field(&failing_list, "elements", "[Ljava/lang/Object;").await?;
+    let after: ClassInstanceRef<Array<Object>> = jvm
+        .get_field(&failing_list, "CollectionsProbeList", "elements", "[Ljava/lang/Object;")
+        .await?;
     let after = jvm.load_array::<ClassInstanceRef<Object>>(&after, 0, 3).await?;
     assert_eq!(
         after.iter().map(|element| element.identity()).collect::<Vec<_>>(),
         failing_original.iter().map(|element| element.identity()).collect::<Vec<_>>()
     );
-    assert_eq!(jvm.get_field::<i32>(&failing_list, "listIteratorCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&failing_list, "setCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&failing_list, "CollectionsProbeList", "listIteratorCalls", "I")
+            .await?,
+        0
+    );
+    assert_eq!(jvm.get_field::<i32>(&failing_list, "CollectionsProbeList", "setCalls", "I").await?, 0);
 
     Ok(())
 }
@@ -812,8 +827,8 @@ async fn test_coll_04_reverse_fill_copy_use_list_iterator_and_validate_destinati
     jvm.invoke_static::<_, ()>("java/util/Collections", "reverse", "(Ljava/util/List;)V", (list.clone(),))
         .await?;
     assert_eq!(integer_values(&jvm, &list).await?, vec![4, 3, 2, 1]);
-    assert_eq!(jvm.get_field::<i32>(&list, "listIteratorCalls", "I").await?, 2);
-    assert_eq!(jvm.get_field::<i32>(&list, "setCalls", "I").await?, 4);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "listIteratorCalls", "I").await?, 2);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "setCalls", "I").await?, 4);
 
     let fill_value: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (7,)).await?.into();
     jvm.invoke_static::<_, ()>(
@@ -824,7 +839,7 @@ async fn test_coll_04_reverse_fill_copy_use_list_iterator_and_validate_destinati
     )
     .await?;
     assert_eq!(integer_values(&jvm, &list).await?, vec![7, 7, 7, 7]);
-    assert_eq!(jvm.get_field::<i32>(&list, "listIteratorCalls", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "listIteratorCalls", "I").await?, 3);
 
     let source = integer_list(&jvm, &[8, 9]).await?;
     jvm.invoke_static::<_, ()>(
@@ -835,7 +850,7 @@ async fn test_coll_04_reverse_fill_copy_use_list_iterator_and_validate_destinati
     )
     .await?;
     assert_eq!(integer_values(&jvm, &list).await?, vec![8, 9, 7, 7]);
-    assert_eq!(jvm.get_field::<i32>(&list, "listIteratorCalls", "I").await?, 4);
+    assert_eq!(jvm.get_field::<i32>(&list, "CollectionsProbeList", "listIteratorCalls", "I").await?, 4);
 
     let odd = integer_list(&jvm, &[1, 2, 3, 4, 5]).await?;
     jvm.invoke_static::<_, ()>("java/util/Collections", "reverse", "(Ljava/util/List;)V", (odd.clone(),))
@@ -1008,8 +1023,8 @@ async fn test_coll_06_min_max_natural_comparator_empty_and_null() -> Result<()> 
             (comparable_values, reverse),
         )
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&comparator_min, "key", "I").await?, 3);
-    assert_eq!(jvm.get_field::<i32>(&comparator_max, "key", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&comparator_min, "CollectionsSortValue", "key", "I").await?, 3);
+    assert_eq!(jvm.get_field::<i32>(&comparator_max, "CollectionsSortValue", "key", "I").await?, 1);
 
     let empty = integer_list(&jvm, &[]).await?;
     for name in ["min", "max"] {
@@ -3227,12 +3242,21 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&backing_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing_entry, "valueCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "valueCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&rejecting_key, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_key, "equalsCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&backing_entry, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing_entry, "CollectionsEntryProbe", "valueCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&candidate_entry, "CollectionsEntryProbe", "valueCalls", "I").await?,
+        0
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&rejecting_key, "CollectionsEqualsProbe", "equalsCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&candidate_key, "CollectionsEqualsProbe", "equalsCalls", "I").await?,
+        0
+    );
 
     let accepting_key: ClassInstanceRef<Object> = jvm.new_class("CollectionsEqualsProbe", "(ZZ)V", (true, false)).await?.into();
     let accepting_value: ClassInstanceRef<Object> = jvm.new_class("CollectionsEqualsProbe", "(ZZ)V", (true, false)).await?.into();
@@ -3272,14 +3296,32 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&backing_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing_entry, "valueCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "valueCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&accepting_key, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&accepting_value, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&reverse_direction_key, "equalsCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&reverse_direction_value, "equalsCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&backing_entry, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing_entry, "CollectionsEntryProbe", "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&candidate_entry, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&candidate_entry, "CollectionsEntryProbe", "valueCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&accepting_key, "CollectionsEqualsProbe", "equalsCalls", "I").await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&accepting_value, "CollectionsEqualsProbe", "equalsCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&reverse_direction_key, "CollectionsEqualsProbe", "equalsCalls", "I")
+            .await?,
+        0
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&reverse_direction_value, "CollectionsEqualsProbe", "equalsCalls", "I")
+            .await?,
+        0
+    );
 
     let replacement: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
     let result: Result<ClassInstanceRef<Object>> = jvm
@@ -3295,7 +3337,11 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("wrapped custom entry.setValue must throw");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    assert_eq!(jvm.get_field::<i32>(&backing_entry, "setValueCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&backing_entry, "CollectionsEntryProbe", "setValueCalls", "I")
+            .await?,
+        0
+    );
 
     let throwing_key_entry: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -3334,8 +3380,16 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("backing getKey exception must propagate");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&throwing_key_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&untouched_candidate, "keyCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&throwing_key_entry, "CollectionsEntryProbe", "keyCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&untouched_candidate, "CollectionsEntryProbe", "keyCalls", "I")
+            .await?,
+        0
+    );
 
     let throwing_equals_key: ClassInstanceRef<Object> = jvm.new_class("CollectionsEqualsProbe", "(ZZ)V", (true, true)).await?.into();
     let throwing_equals_entry: ClassInstanceRef<Object> = jvm
@@ -3367,8 +3421,16 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("backing key.equals exception must propagate");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&throwing_equals_key, "equalsCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&throwing_equals_entry, "valueCalls", "I").await?, 0);
+    assert_eq!(
+        jvm.get_field::<i32>(&throwing_equals_key, "CollectionsEqualsProbe", "equalsCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&throwing_equals_entry, "CollectionsEntryProbe", "valueCalls", "I")
+            .await?,
+        0
+    );
 
     let required_throwing_value_entry: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -3391,8 +3453,16 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("candidate getValue exception must propagate after equal keys");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&required_throwing_value_entry, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&required_throwing_value_entry, "valueCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&required_throwing_value_entry, "CollectionsEntryProbe", "keyCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&required_throwing_value_entry, "CollectionsEntryProbe", "valueCalls", "I")
+            .await?,
+        1
+    );
 
     let map: ClassInstanceRef<Object> = jvm.new_class("java/util/HashMap", "()V", ()).await?.into();
     let map_key: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (7,)).await?.into();
@@ -3430,8 +3500,8 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&matching, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&matching, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&matching, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&matching, "CollectionsEntryProbe", "valueCalls", "I").await?, 1);
 
     let missing_key: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (8,)).await?.into();
     let null: ClassInstanceRef<Object> = None.into();
@@ -3453,8 +3523,8 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&missing, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&missing, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&missing, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&missing, "CollectionsEntryProbe", "valueCalls", "I").await?, 0);
 
     let existing_key: ClassInstanceRef<Object> = jvm.new_class("java/lang/Integer", "(I)V", (7,)).await?.into();
     let required_throwing_value: ClassInstanceRef<Object> = jvm
@@ -3478,8 +3548,16 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("contains must propagate getValue failure after finding the key");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&required_throwing_value, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&required_throwing_value, "valueCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&required_throwing_value, "CollectionsEntryProbe", "keyCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(
+        jvm.get_field::<i32>(&required_throwing_value, "CollectionsEntryProbe", "valueCalls", "I")
+            .await?,
+        1
+    );
 
     let throwing_key: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -3502,8 +3580,8 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         panic!("contains must propagate getKey failure");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&throwing_key, "keyCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&throwing_key, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&throwing_key, "CollectionsEntryProbe", "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&throwing_key, "CollectionsEntryProbe", "valueCalls", "I").await?, 0);
 
     let never_reached: ClassInstanceRef<Object> = jvm
         .new_class(
@@ -3551,8 +3629,8 @@ async fn test_coll_08_unmodifiable_entry_equals_and_contains_preserve_jdk_orderi
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&never_reached, "keyCalls", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&never_reached, "valueCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&never_reached, "CollectionsEntryProbe", "keyCalls", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&never_reached, "CollectionsEntryProbe", "valueCalls", "I").await?, 0);
 
     Ok(())
 }
@@ -4220,7 +4298,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         .await?
     );
 
-    jvm.put_field(&mut comparator.clone(), "fail", "Z", true).await?;
+    jvm.put_field(&mut comparator.clone(), "CollectionsComparator", "fail", "Z", true).await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &map_range,
@@ -4247,7 +4325,8 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         panic!("unmodifiable map mutation must throw before comparator range validation");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/UnsupportedOperationException"));
-    jvm.put_field(&mut comparator.clone(), "fail", "Z", false).await?;
+    jvm.put_field(&mut comparator.clone(), "CollectionsComparator", "fail", "Z", false)
+        .await?;
 
     let set: ClassInstanceRef<Object> = jvm
         .new_class("java/util/TreeSet", "(Ljava/util/Comparator;)V", (comparator.clone(),))
@@ -4414,7 +4493,7 @@ async fn test_coll_08_unmodifiable_sorted_ranges_preserve_custom_comparator_boun
         .await?
     );
 
-    jvm.put_field(&mut comparator.clone(), "fail", "Z", true).await?;
+    jvm.put_field(&mut comparator.clone(), "CollectionsComparator", "fail", "Z", true).await?;
     let result: Result<ClassInstanceRef<Object>> = jvm
         .invoke_virtual(
             &set_range,

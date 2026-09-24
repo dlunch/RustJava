@@ -34,8 +34,9 @@ impl HashMapHashIterator {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "elements", "[Ljava/lang/Object;", elements).await?;
-        jvm.put_field(&mut this, "index", "I", 0).await?;
+        jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "elements", "[Ljava/lang/Object;", elements)
+            .await?;
+        jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "index", "I", 0).await?;
 
         Ok(())
     }
@@ -43,8 +44,10 @@ impl HashMapHashIterator {
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$HashIterator::hasNext({this:?})");
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .get_field(&this, "java/util/HashMap$HashIterator", "elements", "[Ljava/lang/Object;")
+            .await?;
+        let index: i32 = jvm.get_field(&this, "java/util/HashMap$HashIterator", "index", "I").await?;
         if index < 0 {
             return Ok(false);
         }
@@ -55,8 +58,10 @@ impl HashMapHashIterator {
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$HashIterator::next({this:?})");
 
-        let elements: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "elements", "[Ljava/lang/Object;").await?;
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
+        let elements: ClassInstanceRef<Array<Object>> = jvm
+            .get_field(&this, "java/util/HashMap$HashIterator", "elements", "[Ljava/lang/Object;")
+            .await?;
+        let index: i32 = jvm.get_field(&this, "java/util/HashMap$HashIterator", "index", "I").await?;
         if index < 0 || index as usize >= jvm.array_length(&elements).await? {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         }
@@ -65,7 +70,8 @@ impl HashMapHashIterator {
         let Some(element) = values.pop() else {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         };
-        jvm.put_field(&mut this, "index", "I", index + 1).await?;
+        jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "index", "I", index + 1)
+            .await?;
 
         Ok(element)
     }

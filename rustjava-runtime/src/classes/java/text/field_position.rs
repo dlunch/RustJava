@@ -40,29 +40,29 @@ impl FieldPosition {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, field: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "field", "I", field).await?;
-        jvm.put_field(&mut this, "beginIndex", "I", 0).await?;
-        jvm.put_field(&mut this, "endIndex", "I", 0).await
+        jvm.put_field(&mut this, "java/text/FieldPosition", "field", "I", field).await?;
+        jvm.put_field(&mut this, "java/text/FieldPosition", "beginIndex", "I", 0).await?;
+        jvm.put_field(&mut this, "java/text/FieldPosition", "endIndex", "I", 0).await
     }
 
     async fn get_field(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "field", "I").await
+        jvm.get_field(&this, "java/text/FieldPosition", "field", "I").await
     }
 
     async fn get_begin_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "beginIndex", "I").await
+        jvm.get_field(&this, "java/text/FieldPosition", "beginIndex", "I").await
     }
 
     async fn get_end_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "endIndex", "I").await
+        jvm.get_field(&this, "java/text/FieldPosition", "endIndex", "I").await
     }
 
     async fn set_begin_index(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        jvm.put_field(&mut this, "beginIndex", "I", value).await
+        jvm.put_field(&mut this, "java/text/FieldPosition", "beginIndex", "I", value).await
     }
 
     async fn set_end_index(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
-        jvm.put_field(&mut this, "endIndex", "I", value).await
+        jvm.put_field(&mut this, "java/text/FieldPosition", "endIndex", "I", value).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
@@ -71,26 +71,26 @@ impl FieldPosition {
         }
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
-        let field: i32 = jvm.get_field(&this, "field", "I").await?;
-        let other_field: i32 = jvm.get_field(&other, "field", "I").await?;
-        let begin_index: i32 = jvm.get_field(&this, "beginIndex", "I").await?;
-        let other_begin_index: i32 = jvm.get_field(&other, "beginIndex", "I").await?;
-        let end_index: i32 = jvm.get_field(&this, "endIndex", "I").await?;
-        let other_end_index: i32 = jvm.get_field(&other, "endIndex", "I").await?;
+        let field: i32 = jvm.get_field(&this, "java/text/FieldPosition", "field", "I").await?;
+        let other_field: i32 = jvm.get_field(&other, "java/text/FieldPosition", "field", "I").await?;
+        let begin_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "beginIndex", "I").await?;
+        let other_begin_index: i32 = jvm.get_field(&other, "java/text/FieldPosition", "beginIndex", "I").await?;
+        let end_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "endIndex", "I").await?;
+        let other_end_index: i32 = jvm.get_field(&other, "java/text/FieldPosition", "endIndex", "I").await?;
         Ok(field == other_field && begin_index == other_begin_index && end_index == other_end_index)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let field: i32 = jvm.get_field(&this, "field", "I").await?;
-        let begin_index: i32 = jvm.get_field(&this, "beginIndex", "I").await?;
-        let end_index: i32 = jvm.get_field(&this, "endIndex", "I").await?;
+        let field: i32 = jvm.get_field(&this, "java/text/FieldPosition", "field", "I").await?;
+        let begin_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "beginIndex", "I").await?;
+        let end_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "endIndex", "I").await?;
         Ok(field ^ begin_index.rotate_left(11) ^ end_index.rotate_left(22))
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let field: i32 = jvm.get_field(&this, "field", "I").await?;
-        let begin_index: i32 = jvm.get_field(&this, "beginIndex", "I").await?;
-        let end_index: i32 = jvm.get_field(&this, "endIndex", "I").await?;
+        let field: i32 = jvm.get_field(&this, "java/text/FieldPosition", "field", "I").await?;
+        let begin_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "beginIndex", "I").await?;
+        let end_index: i32 = jvm.get_field(&this, "java/text/FieldPosition", "endIndex", "I").await?;
         Ok(JavaLangString::from_rust_string(
             jvm,
             &format!("java.text.FieldPosition[field={field},beginIndex={begin_index},endIndex={end_index}]"),

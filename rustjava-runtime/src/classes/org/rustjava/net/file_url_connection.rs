@@ -48,7 +48,8 @@ impl FileURLConnection {
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url,))
             .await?;
 
-        jvm.put_field(&mut this, "file", "Ljava/io/File;", file).await?;
+        jvm.put_field(&mut this, "org/rustjava/net/FileURLConnection", "file", "Ljava/io/File;", file)
+            .await?;
 
         Ok(())
     }
@@ -56,7 +57,9 @@ impl FileURLConnection {
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("org.rustjava.net.FileURLConnection::getInputStream({this:?})");
 
-        let file: ClassInstanceRef<File> = jvm.get_field(&this, "file", "Ljava/io/File;").await?;
+        let file: ClassInstanceRef<File> = jvm
+            .get_field(&this, "org/rustjava/net/FileURLConnection", "file", "Ljava/io/File;")
+            .await?;
         let file_input_stream = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
 
         Ok(file_input_stream.into())

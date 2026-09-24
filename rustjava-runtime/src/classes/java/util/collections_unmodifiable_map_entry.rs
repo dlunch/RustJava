@@ -43,17 +43,38 @@ impl CollectionsUnmodifiableMapEntry {
             return Err(jvm.exception("java/lang/NullPointerException", "entry").await);
         }
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "e", "Ljava/util/Map$Entry;", entry).await
+        jvm.put_field(
+            &mut this,
+            "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+            "e",
+            "Ljava/util/Map$Entry;",
+            entry,
+        )
+        .await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let entry: ClassInstanceRef<Object> = jvm.get_field(&this, "e", "Ljava/util/Map$Entry;").await?;
+        let entry: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+                "e",
+                "Ljava/util/Map$Entry;",
+            )
+            .await?;
         jvm.invoke_virtual(&entry, &entry.class_definition().name(), "getKey", "()Ljava/lang/Object;", ())
             .await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let entry: ClassInstanceRef<Object> = jvm.get_field(&this, "e", "Ljava/util/Map$Entry;").await?;
+        let entry: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+                "e",
+                "Ljava/util/Map$Entry;",
+            )
+            .await?;
         jvm.invoke_virtual(&entry, &entry.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await
     }
@@ -116,12 +137,26 @@ impl CollectionsUnmodifiableMapEntry {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let entry: ClassInstanceRef<Object> = jvm.get_field(&this, "e", "Ljava/util/Map$Entry;").await?;
+        let entry: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+                "e",
+                "Ljava/util/Map$Entry;",
+            )
+            .await?;
         jvm.invoke_virtual(&entry, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let entry: ClassInstanceRef<Object> = jvm.get_field(&this, "e", "Ljava/util/Map$Entry;").await?;
+        let entry: ClassInstanceRef<Object> = jvm
+            .get_field(
+                &this,
+                "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+                "e",
+                "Ljava/util/Map$Entry;",
+            )
+            .await?;
         jvm.invoke_virtual(&entry, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
             .await
     }

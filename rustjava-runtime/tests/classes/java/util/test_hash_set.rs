@@ -80,7 +80,7 @@ async fn test_hash_set_add_duplicate_contains_remove_null_and_clear() -> Result<
     assert!(jvm.is_instance(&*hash_set, "java/util/AbstractSet"));
     assert!(!jvm.is_instance(&*hash_set, "java/util/List"));
 
-    let present: ClassInstanceRef<Object> = jvm.get_field(&hash_set, "present", "Ljava/lang/Object;").await?;
+    let present: ClassInstanceRef<Object> = jvm.get_field(&hash_set, "java/util/HashSet", "present", "Ljava/lang/Object;").await?;
     assert!(!present.is_null());
 
     let value = JavaLangString::from_rust_string(&jvm, "same").await?;
@@ -321,8 +321,8 @@ async fn test_hash_set_zero_capacity_add_path() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let hash_set = jvm.new_class("java/util/HashSet", "(I)V", (0,)).await?;
-    let map: ClassInstanceRef<Object> = jvm.get_field(&hash_set, "map", "Ljava/util/HashMap;").await?;
-    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&map, "table", "[Ljava/util/HashMap$Entry;").await?;
+    let map: ClassInstanceRef<Object> = jvm.get_field(&hash_set, "java/util/HashSet", "map", "Ljava/util/HashMap;").await?;
+    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&map, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;").await?;
     assert_eq!(jvm.array_length(&table).await?, 0);
 
     let value = JavaLangString::from_rust_string(&jvm, "zero-capacity").await?;
@@ -353,7 +353,7 @@ async fn test_hash_set_zero_capacity_add_path() -> Result<()> {
         .await?;
     assert!(!added);
 
-    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&map, "table", "[Ljava/util/HashMap$Entry;").await?;
+    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&map, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;").await?;
     assert!(jvm.array_length(&table).await? >= 1);
 
     let size: i32 = jvm

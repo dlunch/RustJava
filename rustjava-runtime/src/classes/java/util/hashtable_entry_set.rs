@@ -35,7 +35,8 @@ impl HashtableEntrySet {
         tracing::debug!("java.util.Hashtable$EntrySet::<init>({this:?}, {map:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "map", "Ljava/util/Hashtable;", map).await?;
+        jvm.put_field(&mut this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;", map)
+            .await?;
 
         Ok(())
     }
@@ -43,7 +44,9 @@ impl HashtableEntrySet {
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable$EntrySet::size({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "size", "()I", ()).await
     }
@@ -51,7 +54,9 @@ impl HashtableEntrySet {
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$EntrySet::isEmpty({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "isEmpty", "()Z", ()).await
     }
@@ -70,7 +75,9 @@ impl HashtableEntrySet {
             return Ok(false);
         }
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
         let entry = Hashtable::find_entry(jvm, &map, &candidate_key).await?;
         if entry.is_null() {
             return Ok(false);
@@ -79,7 +86,7 @@ impl HashtableEntrySet {
         let candidate_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
-        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
 
         Self::object_equals(jvm, &entry_value, &candidate_value).await
     }
@@ -97,7 +104,9 @@ impl HashtableEntrySet {
         if candidate_key.is_null() {
             return Ok(false);
         }
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
         let entry = Hashtable::find_entry(jvm, &map, &candidate_key).await?;
         if entry.is_null() {
             return Ok(false);
@@ -105,7 +114,7 @@ impl HashtableEntrySet {
         let candidate_value: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&candidate, &candidate.class_definition().name(), "getValue", "()Ljava/lang/Object;", ())
             .await?;
-        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "value", "Ljava/lang/Object;").await?;
+        let entry_value: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;
         if !Self::object_equals(jvm, &entry_value, &candidate_value).await? {
             return Ok(false);
         }
@@ -126,7 +135,9 @@ impl HashtableEntrySet {
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$EntrySet::clear({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
 
         jvm.invoke_virtual(&map, "java/util/Hashtable", "clear", "()V", ()).await
     }
@@ -134,7 +145,9 @@ impl HashtableEntrySet {
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$EntrySet::iterator({this:?})");
 
-        let map: ClassInstanceRef<Hashtable> = jvm.get_field(&this, "map", "Ljava/util/Hashtable;").await?;
+        let map: ClassInstanceRef<Hashtable> = jvm
+            .get_field(&this, "java/util/Hashtable$EntrySet", "map", "Ljava/util/Hashtable;")
+            .await?;
         let snapshot = Hashtable::entries_snapshot(jvm, &map).await?;
         let iterator = jvm
             .new_class("java/util/Hashtable$Enumerator", "([Ljava/lang/Object;)V", (snapshot,))

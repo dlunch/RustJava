@@ -40,7 +40,8 @@ impl StringWriter {
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
 
         let buf = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?;
-        jvm.put_field(&mut this, "buf", "Ljava/lang/StringBuffer;", buf).await?;
+        jvm.put_field(&mut this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;", buf)
+            .await?;
 
         Ok(())
     }
@@ -55,7 +56,7 @@ impl StringWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.StringWriter::write({this:?}, {chars:?}, {off:?}, {len:?})");
 
-        let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
+        let buf = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
 
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
@@ -83,7 +84,7 @@ impl StringWriter {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.StringWriter::toString({this:?})");
 
-        let buf = jvm.get_field(&this, "buf", "Ljava/lang/StringBuffer;").await?;
+        let buf = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
 
         let string = jvm
             .invoke_virtual(&buf, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())

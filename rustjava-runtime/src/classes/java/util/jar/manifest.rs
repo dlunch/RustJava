@@ -85,7 +85,14 @@ impl Manifest {
                 .await?;
         }
 
-        jvm.put_field(&mut this, "attrs", "Ljava/util/jar/Attributes;", main_attributes).await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/jar/Manifest",
+            "attrs",
+            "Ljava/util/jar/Attributes;",
+            main_attributes,
+        )
+        .await?;
 
         Ok(())
     }
@@ -93,6 +100,7 @@ impl Manifest {
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
         tracing::debug!("java.util.jar.Manifest::getMainAttributes({this:?})");
 
-        jvm.get_field(&this, "attrs", "Ljava/util/jar/Attributes;").await
+        jvm.get_field(&this, "java/util/jar/Manifest", "attrs", "Ljava/util/jar/Attributes;")
+            .await
     }
 }

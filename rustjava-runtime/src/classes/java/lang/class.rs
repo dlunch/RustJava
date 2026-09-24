@@ -224,7 +224,7 @@ impl Class {
     async fn get_class_loader(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<ClassLoader>> {
         tracing::debug!("java.lang.Class::getClassLoader({this:?})");
 
-        jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await
+        jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await
     }
 
     async fn get_component_type(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
@@ -255,7 +255,8 @@ impl Class {
         } else {
             component_descriptor
         };
-        let defining_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
+        let defining_loader: ClassInstanceRef<ClassLoader> =
+            jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
         if defining_loader.is_null() {
             return Ok(jvm.resolve_class(component_name).await?.java_class().into());
         }
@@ -301,7 +302,7 @@ impl Class {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.lang.Class::getResourceAsStream({this:?}, {name:?})");
 
-        let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "classLoader", "Ljava/lang/ClassLoader;").await?;
+        let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
 
         let class_loader = if class_loader.is_null() {
             // TODO ClassLoader.getSystemResourceAsStream?

@@ -39,8 +39,17 @@ impl LinkedListEntry {
         previous: ClassInstanceRef<Self>,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "element", "Ljava/lang/Object;", element).await?;
-        jvm.put_field(&mut this, "next", "Ljava/util/LinkedList$Entry;", next).await?;
-        jvm.put_field(&mut this, "previous", "Ljava/util/LinkedList$Entry;", previous).await
+        jvm.put_field(&mut this, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;", element)
+            .await?;
+        jvm.put_field(&mut this, "java/util/LinkedList$Entry", "next", "Ljava/util/LinkedList$Entry;", next)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/LinkedList$Entry",
+            "previous",
+            "Ljava/util/LinkedList$Entry;",
+            previous,
+        )
+        .await
     }
 }

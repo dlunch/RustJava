@@ -240,9 +240,9 @@ impl String {
     }
 
     async fn value_range(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<(ClassInstanceRef<Array<JavaChar>>, usize, usize)> {
-        let value = jvm.get_field(this, "value", "[C").await?;
-        let offset: i32 = jvm.get_field(this, "offset", "I").await?;
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let value = jvm.get_field(this, "java/lang/String", "value", "[C").await?;
+        let offset: i32 = jvm.get_field(this, "java/lang/String", "offset", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/lang/String", "count", "I").await?;
 
         // access flags are not enforced, so bytecode can leave a negative here, which would widen into a huge usize
         if offset < 0 || count < 0 {
@@ -312,9 +312,9 @@ impl String {
         let data: Vec<JavaChar> = jvm.load_array(&value, offset as _, count as _).await?;
         jvm.store_array(&mut array, 0, data).await?;
 
-        jvm.put_field(&mut this, "value", "[C", array).await?;
-        jvm.put_field(&mut this, "offset", "I", 0).await?;
-        jvm.put_field(&mut this, "count", "I", count).await?;
+        jvm.put_field(&mut this, "java/lang/String", "value", "[C", array).await?;
+        jvm.put_field(&mut this, "java/lang/String", "offset", "I", 0).await?;
+        jvm.put_field(&mut this, "java/lang/String", "count", "I", count).await?;
 
         Ok(())
     }
@@ -346,9 +346,9 @@ impl String {
                 .await);
         }
 
-        jvm.put_field(&mut this, "value", "[C", value).await?;
-        jvm.put_field(&mut this, "offset", "I", offset).await?;
-        jvm.put_field(&mut this, "count", "I", count).await?;
+        jvm.put_field(&mut this, "java/lang/String", "value", "[C", value).await?;
+        jvm.put_field(&mut this, "java/lang/String", "offset", "I", offset).await?;
+        jvm.put_field(&mut this, "java/lang/String", "count", "I", count).await?;
 
         Ok(())
     }
@@ -434,8 +434,8 @@ impl String {
             return Ok(true);
         }
 
-        let this_count: i32 = jvm.get_field(&this, "count", "I").await?;
-        let other_count: i32 = jvm.get_field(&other, "count", "I").await?;
+        let this_count: i32 = jvm.get_field(&this, "java/lang/String", "count", "I").await?;
+        let other_count: i32 = jvm.get_field(&other, "java/lang/String", "count", "I").await?;
         if this_count != other_count {
             return Ok(false);
         }
@@ -613,7 +613,7 @@ impl String {
     async fn length(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::length({this:?})");
 
-        jvm.get_field(&this, "count", "I").await
+        jvm.get_field(&this, "java/lang/String", "count", "I").await
     }
 
     async fn substring(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, begin_index: i32) -> Result<ClassInstanceRef<Self>> {
@@ -868,9 +868,9 @@ impl String {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let array = jvm.instantiate_array("C", 0).await?;
-        jvm.put_field(&mut this, "value", "[C", array).await?;
-        jvm.put_field(&mut this, "offset", "I", 0).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await?;
+        jvm.put_field(&mut this, "java/lang/String", "value", "[C", array).await?;
+        jvm.put_field(&mut this, "java/lang/String", "offset", "I", 0).await?;
+        jvm.put_field(&mut this, "java/lang/String", "count", "I", 0).await?;
 
         Ok(())
     }
@@ -1293,7 +1293,7 @@ impl String {
     async fn last_index_of_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, str: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.String::lastIndexOf({this:?}, {str:?})");
 
-        let length: i32 = jvm.get_field(&this, "count", "I").await?;
+        let length: i32 = jvm.get_field(&this, "java/lang/String", "count", "I").await?;
         jvm.invoke_virtual(&this, "java/lang/String", "lastIndexOf", "(Ljava/lang/String;I)I", (str, length))
             .await
     }

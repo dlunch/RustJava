@@ -263,21 +263,72 @@ impl DecimalFormat {
         let positive_suffix = JavaLangString::from_rust_string(jvm, &parsed.positive_suffix).await?;
         let negative_prefix = JavaLangString::from_rust_string(jvm, &parsed.negative_prefix).await?;
         let negative_suffix = JavaLangString::from_rust_string(jvm, &parsed.negative_suffix).await?;
-        jvm.put_field(&mut this, "pattern", "Ljava/lang/String;", pattern).await?;
-        jvm.put_field(&mut this, "positivePrefix", "Ljava/lang/String;", positive_prefix).await?;
-        jvm.put_field(&mut this, "positiveSuffix", "Ljava/lang/String;", positive_suffix).await?;
-        jvm.put_field(&mut this, "negativePrefix", "Ljava/lang/String;", negative_prefix).await?;
-        jvm.put_field(&mut this, "negativeSuffix", "Ljava/lang/String;", negative_suffix).await?;
-        jvm.put_field(&mut this, "multiplier", "I", parsed.multiplier).await?;
-        jvm.put_field(&mut this, "groupingSize", "I", parsed.grouping_size).await?;
-        jvm.put_field(&mut this, "groupingUsed", "Z", parsed.grouping_used).await?;
-        jvm.put_field(&mut this, "maximumIntegerDigits", "I", 309).await?;
-        jvm.put_field(&mut this, "minimumIntegerDigits", "I", parsed.minimum_integer_digits)
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "pattern", "Ljava/lang/String;", pattern)
             .await?;
-        jvm.put_field(&mut this, "maximumFractionDigits", "I", parsed.maximum_fraction_digits)
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "positivePrefix",
+            "Ljava/lang/String;",
+            positive_prefix,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "positiveSuffix",
+            "Ljava/lang/String;",
+            positive_suffix,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "negativePrefix",
+            "Ljava/lang/String;",
+            negative_prefix,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "negativeSuffix",
+            "Ljava/lang/String;",
+            negative_suffix,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "multiplier", "I", parsed.multiplier)
             .await?;
-        jvm.put_field(&mut this, "minimumFractionDigits", "I", parsed.minimum_fraction_digits)
-            .await
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "groupingSize", "I", parsed.grouping_size)
+            .await?;
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "groupingUsed", "Z", parsed.grouping_used)
+            .await?;
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "maximumIntegerDigits", "I", 309)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "minimumIntegerDigits",
+            "I",
+            parsed.minimum_integer_digits,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "maximumFractionDigits",
+            "I",
+            parsed.maximum_fraction_digits,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/text/DecimalFormat",
+            "minimumFractionDigits",
+            "I",
+            parsed.minimum_fraction_digits,
+        )
+        .await
     }
 
     async fn append_formatted(
@@ -292,11 +343,11 @@ impl DecimalFormat {
         if buffer.is_null() || position.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "buffer or position").await);
         }
-        let minimum_integer_digits: i32 = jvm.get_field(this, "minimumIntegerDigits", "I").await?;
-        let maximum_integer_digits: i32 = jvm.get_field(this, "maximumIntegerDigits", "I").await?;
-        let minimum_fraction_digits: i32 = jvm.get_field(this, "minimumFractionDigits", "I").await?;
-        let grouping_used: bool = jvm.get_field(this, "groupingUsed", "Z").await?;
-        let grouping_size: i32 = jvm.get_field(this, "groupingSize", "I").await?;
+        let minimum_integer_digits: i32 = jvm.get_field(this, "java/text/DecimalFormat", "minimumIntegerDigits", "I").await?;
+        let maximum_integer_digits: i32 = jvm.get_field(this, "java/text/DecimalFormat", "maximumIntegerDigits", "I").await?;
+        let minimum_fraction_digits: i32 = jvm.get_field(this, "java/text/DecimalFormat", "minimumFractionDigits", "I").await?;
+        let grouping_used: bool = jvm.get_field(this, "java/text/DecimalFormat", "groupingUsed", "Z").await?;
+        let grouping_size: i32 = jvm.get_field(this, "java/text/DecimalFormat", "groupingSize", "I").await?;
 
         if integer.len() > maximum_integer_digits.max(0) as usize {
             integer = integer[integer.len() - maximum_integer_digits.max(0) as usize..].to_string();
@@ -325,10 +376,20 @@ impl DecimalFormat {
         }
 
         let prefix: ClassInstanceRef<String> = jvm
-            .get_field(this, if negative { "negativePrefix" } else { "positivePrefix" }, "Ljava/lang/String;")
+            .get_field(
+                this,
+                "java/text/DecimalFormat",
+                if negative { "negativePrefix" } else { "positivePrefix" },
+                "Ljava/lang/String;",
+            )
             .await?;
         let suffix: ClassInstanceRef<String> = jvm
-            .get_field(this, if negative { "negativeSuffix" } else { "positiveSuffix" }, "Ljava/lang/String;")
+            .get_field(
+                this,
+                "java/text/DecimalFormat",
+                if negative { "negativeSuffix" } else { "positiveSuffix" },
+                "Ljava/lang/String;",
+            )
             .await?;
         let prefix = JavaLangString::to_rust_string(jvm, &prefix).await?;
         let suffix = JavaLangString::to_rust_string(jvm, &suffix).await?;
@@ -407,12 +468,12 @@ impl DecimalFormat {
         }
 
         let negative = value.is_sign_negative();
-        let multiplier: i32 = jvm.get_field(&this, "multiplier", "I").await?;
+        let multiplier: i32 = jvm.get_field(&this, "java/text/DecimalFormat", "multiplier", "I").await?;
         let scaled = value.abs() * f64::from(multiplier);
         if scaled.is_infinite() {
             return Self::append_formatted(jvm, &this, negative, "\u{221e}".to_string(), RustString::new(), buffer, position).await;
         }
-        let maximum_fraction_digits: i32 = jvm.get_field(&this, "maximumFractionDigits", "I").await?;
+        let maximum_fraction_digits: i32 = jvm.get_field(&this, "java/text/DecimalFormat", "maximumFractionDigits", "I").await?;
         let precision = maximum_fraction_digits.clamp(0, 340) as usize;
         let numeric = format!("{scaled:.precision$}");
         let (integer, fraction) = numeric
@@ -430,7 +491,7 @@ impl DecimalFormat {
         buffer: ClassInstanceRef<StringBuffer>,
         position: ClassInstanceRef<FieldPosition>,
     ) -> Result<ClassInstanceRef<StringBuffer>> {
-        let multiplier: i32 = jvm.get_field(&this, "multiplier", "I").await?;
+        let multiplier: i32 = jvm.get_field(&this, "java/text/DecimalFormat", "multiplier", "I").await?;
         let scaled = i128::from(value) * i128::from(multiplier);
         let negative = scaled < 0;
         Self::append_formatted(
@@ -478,10 +539,18 @@ impl DecimalFormat {
             return Ok(ClassInstanceRef::new(None));
         };
 
-        let positive_prefix: ClassInstanceRef<String> = jvm.get_field(&this, "positivePrefix", "Ljava/lang/String;").await?;
-        let positive_suffix: ClassInstanceRef<String> = jvm.get_field(&this, "positiveSuffix", "Ljava/lang/String;").await?;
-        let negative_prefix: ClassInstanceRef<String> = jvm.get_field(&this, "negativePrefix", "Ljava/lang/String;").await?;
-        let negative_suffix: ClassInstanceRef<String> = jvm.get_field(&this, "negativeSuffix", "Ljava/lang/String;").await?;
+        let positive_prefix: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/DecimalFormat", "positivePrefix", "Ljava/lang/String;")
+            .await?;
+        let positive_suffix: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/DecimalFormat", "positiveSuffix", "Ljava/lang/String;")
+            .await?;
+        let negative_prefix: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/DecimalFormat", "negativePrefix", "Ljava/lang/String;")
+            .await?;
+        let negative_suffix: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/text/DecimalFormat", "negativeSuffix", "Ljava/lang/String;")
+            .await?;
         let positive_prefix: Vec<char> = JavaLangString::to_rust_string(jvm, &positive_prefix).await?.chars().collect();
         let positive_suffix: Vec<char> = JavaLangString::to_rust_string(jvm, &positive_suffix).await?.chars().collect();
         let negative_prefix: Vec<char> = JavaLangString::to_rust_string(jvm, &negative_prefix).await?.chars().collect();
@@ -501,7 +570,7 @@ impl DecimalFormat {
             return Ok(ClassInstanceRef::new(None));
         };
 
-        let parse_integer_only: bool = jvm.get_field(&this, "parseIntegerOnly", "Z").await?;
+        let parse_integer_only: bool = jvm.get_field(&this, "java/text/DecimalFormat", "parseIntegerOnly", "Z").await?;
         let mut normalized = RustString::new();
         let mut digits = 0;
         let mut decimal = false;
@@ -581,7 +650,7 @@ impl DecimalFormat {
                 .await?;
             return Ok(ClassInstanceRef::new(None));
         };
-        let multiplier: i32 = jvm.get_field(&this, "multiplier", "I").await?;
+        let multiplier: i32 = jvm.get_field(&this, "java/text/DecimalFormat", "multiplier", "I").await?;
         if multiplier != 0 {
             value /= f64::from(multiplier);
         }
@@ -608,14 +677,14 @@ impl DecimalFormat {
     }
 
     async fn to_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "pattern", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/text/DecimalFormat", "pattern", "Ljava/lang/String;").await
     }
 
     async fn get_multiplier(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "multiplier", "I").await
+        jvm.get_field(&this, "java/text/DecimalFormat", "multiplier", "I").await
     }
 
     async fn set_multiplier(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, multiplier: i32) -> Result<()> {
-        jvm.put_field(&mut this, "multiplier", "I", multiplier).await
+        jvm.put_field(&mut this, "java/text/DecimalFormat", "multiplier", "I", multiplier).await
     }
 }

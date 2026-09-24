@@ -215,12 +215,14 @@ impl NumberFormat {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/text/Format", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "groupingUsed", "Z", true).await?;
-        jvm.put_field(&mut this, "parseIntegerOnly", "Z", false).await?;
-        jvm.put_field(&mut this, "maximumIntegerDigits", "I", 40).await?;
-        jvm.put_field(&mut this, "minimumIntegerDigits", "I", 1).await?;
-        jvm.put_field(&mut this, "maximumFractionDigits", "I", 3).await?;
-        jvm.put_field(&mut this, "minimumFractionDigits", "I", 0).await
+        jvm.put_field(&mut this, "java/text/NumberFormat", "groupingUsed", "Z", true).await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "parseIntegerOnly", "Z", false).await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "maximumIntegerDigits", "I", 40)
+            .await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "minimumIntegerDigits", "I", 1).await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "maximumFractionDigits", "I", 3)
+            .await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "minimumFractionDigits", "I", 0).await
     }
 
     async fn format_object(
@@ -470,73 +472,81 @@ impl NumberFormat {
     }
 
     async fn is_grouping_used(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        jvm.get_field(&this, "groupingUsed", "Z").await
+        jvm.get_field(&this, "java/text/NumberFormat", "groupingUsed", "Z").await
     }
 
     async fn set_grouping_used(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
-        jvm.put_field(&mut this, "groupingUsed", "Z", value).await
+        jvm.put_field(&mut this, "java/text/NumberFormat", "groupingUsed", "Z", value).await
     }
 
     async fn is_parse_integer_only(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        jvm.get_field(&this, "parseIntegerOnly", "Z").await
+        jvm.get_field(&this, "java/text/NumberFormat", "parseIntegerOnly", "Z").await
     }
 
     async fn set_parse_integer_only(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
-        jvm.put_field(&mut this, "parseIntegerOnly", "Z", value).await
+        jvm.put_field(&mut this, "java/text/NumberFormat", "parseIntegerOnly", "Z", value).await
     }
 
     async fn get_maximum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "maximumIntegerDigits", "I").await
+        jvm.get_field(&this, "java/text/NumberFormat", "maximumIntegerDigits", "I").await
     }
 
     async fn set_maximum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
-        jvm.put_field(&mut this, "maximumIntegerDigits", "I", value).await?;
-        let minimum: i32 = jvm.get_field(&this, "minimumIntegerDigits", "I").await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "maximumIntegerDigits", "I", value)
+            .await?;
+        let minimum: i32 = jvm.get_field(&this, "java/text/NumberFormat", "minimumIntegerDigits", "I").await?;
         if minimum > value {
-            jvm.put_field(&mut this, "minimumIntegerDigits", "I", value).await?;
+            jvm.put_field(&mut this, "java/text/NumberFormat", "minimumIntegerDigits", "I", value)
+                .await?;
         }
         Ok(())
     }
 
     async fn get_minimum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "minimumIntegerDigits", "I").await
+        jvm.get_field(&this, "java/text/NumberFormat", "minimumIntegerDigits", "I").await
     }
 
     async fn set_minimum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
-        jvm.put_field(&mut this, "minimumIntegerDigits", "I", value).await?;
-        let maximum: i32 = jvm.get_field(&this, "maximumIntegerDigits", "I").await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "minimumIntegerDigits", "I", value)
+            .await?;
+        let maximum: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumIntegerDigits", "I").await?;
         if maximum < value {
-            jvm.put_field(&mut this, "maximumIntegerDigits", "I", value).await?;
+            jvm.put_field(&mut this, "java/text/NumberFormat", "maximumIntegerDigits", "I", value)
+                .await?;
         }
         Ok(())
     }
 
     async fn get_maximum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "maximumFractionDigits", "I").await
+        jvm.get_field(&this, "java/text/NumberFormat", "maximumFractionDigits", "I").await
     }
 
     async fn set_maximum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
-        jvm.put_field(&mut this, "maximumFractionDigits", "I", value).await?;
-        let minimum: i32 = jvm.get_field(&this, "minimumFractionDigits", "I").await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "maximumFractionDigits", "I", value)
+            .await?;
+        let minimum: i32 = jvm.get_field(&this, "java/text/NumberFormat", "minimumFractionDigits", "I").await?;
         if minimum > value {
-            jvm.put_field(&mut this, "minimumFractionDigits", "I", value).await?;
+            jvm.put_field(&mut this, "java/text/NumberFormat", "minimumFractionDigits", "I", value)
+                .await?;
         }
         Ok(())
     }
 
     async fn get_minimum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "minimumFractionDigits", "I").await
+        jvm.get_field(&this, "java/text/NumberFormat", "minimumFractionDigits", "I").await
     }
 
     async fn set_minimum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
-        jvm.put_field(&mut this, "minimumFractionDigits", "I", value).await?;
-        let maximum: i32 = jvm.get_field(&this, "maximumFractionDigits", "I").await?;
+        jvm.put_field(&mut this, "java/text/NumberFormat", "minimumFractionDigits", "I", value)
+            .await?;
+        let maximum: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumFractionDigits", "I").await?;
         if maximum < value {
-            jvm.put_field(&mut this, "maximumFractionDigits", "I", value).await?;
+            jvm.put_field(&mut this, "java/text/NumberFormat", "maximumFractionDigits", "I", value)
+                .await?;
         }
         Ok(())
     }
@@ -555,14 +565,14 @@ impl NumberFormat {
             ("minimumFractionDigits", "I"),
         ] {
             if descriptor == "Z" {
-                let value: bool = jvm.get_field(&this, name, descriptor).await?;
-                let other_value: bool = jvm.get_field(&other, name, descriptor).await?;
+                let value: bool = jvm.get_field(&this, "java/text/NumberFormat", name, descriptor).await?;
+                let other_value: bool = jvm.get_field(&other, "java/text/NumberFormat", name, descriptor).await?;
                 if value != other_value {
                     return Ok(false);
                 }
             } else {
-                let value: i32 = jvm.get_field(&this, name, descriptor).await?;
-                let other_value: i32 = jvm.get_field(&other, name, descriptor).await?;
+                let value: i32 = jvm.get_field(&this, "java/text/NumberFormat", name, descriptor).await?;
+                let other_value: i32 = jvm.get_field(&other, "java/text/NumberFormat", name, descriptor).await?;
                 if value != other_value {
                     return Ok(false);
                 }
@@ -572,8 +582,8 @@ impl NumberFormat {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let maximum_integer_digits: i32 = jvm.get_field(&this, "maximumIntegerDigits", "I").await?;
-        let maximum_fraction_digits: i32 = jvm.get_field(&this, "maximumFractionDigits", "I").await?;
+        let maximum_integer_digits: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumIntegerDigits", "I").await?;
+        let maximum_fraction_digits: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumFractionDigits", "I").await?;
         Ok(maximum_integer_digits * 37 + maximum_fraction_digits)
     }
 }

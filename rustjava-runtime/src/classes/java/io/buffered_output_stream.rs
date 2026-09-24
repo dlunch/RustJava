@@ -69,22 +69,24 @@ impl BufferedOutputStream {
             .invoke_special(&this, "java/io/FilterOutputStream", "<init>", "(Ljava/io/OutputStream;)V", (out,))
             .await?;
         let buffer = jvm.instantiate_array("B", size as usize).await?;
-        jvm.put_field(&mut this, "buf", "[B", buffer).await?;
-        jvm.put_field(&mut this, "count", "I", 0).await
+        jvm.put_field(&mut this, "java/io/BufferedOutputStream", "buf", "[B", buffer).await?;
+        jvm.put_field(&mut this, "java/io/BufferedOutputStream", "count", "I", 0).await
     }
 
     async fn flush_buffer(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
-        let out: ClassInstanceRef<OutputStream> = jvm.get_field(this, "out", "Ljava/io/OutputStream;").await?;
-        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "buf", "[B").await?;
+        let out: ClassInstanceRef<OutputStream> = jvm
+            .get_field(this, "java/io/BufferedOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
+        let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/io/BufferedOutputStream", "buf", "[B").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let count: i32 = jvm.get_field(this, "count", "I").await?;
+        let count: i32 = jvm.get_field(this, "java/io/BufferedOutputStream", "count", "I").await?;
         if count > 0 {
             let _: () = jvm
                 .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (buffer, 0, count))
                 .await?;
-            jvm.put_field(this, "count", "I", 0).await?;
+            jvm.put_field(this, "java/io/BufferedOutputStream", "count", "I", 0).await?;
         }
         Ok(())
     }
@@ -92,19 +94,21 @@ impl BufferedOutputStream {
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::write({this:?}, {value})");
 
-        let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let out: ClassInstanceRef<OutputStream> = jvm
+            .get_field(&this, "java/io/BufferedOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
+        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedOutputStream", "buf", "[B").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let mut count: i32 = jvm.get_field(&this, "java/io/BufferedOutputStream", "count", "I").await?;
         if count >= jvm.array_length(&buffer).await? as i32 {
             Self::flush_buffer(jvm, &mut this).await?;
             count = 0;
-            buffer = jvm.get_field(&this, "buf", "[B").await?;
+            buffer = jvm.get_field(&this, "java/io/BufferedOutputStream", "buf", "[B").await?;
         }
         jvm.store_array(&mut buffer, count as usize, [value as i8]).await?;
-        jvm.put_field(&mut this, "count", "I", count + 1).await
+        jvm.put_field(&mut this, "java/io/BufferedOutputStream", "count", "I", count + 1).await
     }
 
     async fn write_bytes(
@@ -121,8 +125,10 @@ impl BufferedOutputStream {
         if offset < 0 || length < 0 || offset > source_length - length {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
         }
-        let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
-        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "buf", "[B").await?;
+        let out: ClassInstanceRef<OutputStream> = jvm
+            .get_field(&this, "java/io/BufferedOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
+        let mut buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/BufferedOutputStream", "buf", "[B").await?;
         if out.is_null() || buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -138,11 +144,11 @@ impl BufferedOutputStream {
                 .await;
         }
 
-        let mut count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let mut count: i32 = jvm.get_field(&this, "java/io/BufferedOutputStream", "count", "I").await?;
         if length > buffer_length - count {
             Self::flush_buffer(jvm, &mut this).await?;
             count = 0;
-            buffer = jvm.get_field(&this, "buf", "[B").await?;
+            buffer = jvm.get_field(&this, "java/io/BufferedOutputStream", "buf", "[B").await?;
         }
         let _: () = jvm
             .invoke_static(
@@ -152,14 +158,17 @@ impl BufferedOutputStream {
                 (bytes, offset, buffer, count, length),
             )
             .await?;
-        jvm.put_field(&mut this, "count", "I", count + length).await
+        jvm.put_field(&mut this, "java/io/BufferedOutputStream", "count", "I", count + length)
+            .await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::flush({this:?})");
 
         Self::flush_buffer(jvm, &mut this).await?;
-        let out: ClassInstanceRef<OutputStream> = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out: ClassInstanceRef<OutputStream> = jvm
+            .get_field(&this, "java/io/BufferedOutputStream", "out", "Ljava/io/OutputStream;")
+            .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 }

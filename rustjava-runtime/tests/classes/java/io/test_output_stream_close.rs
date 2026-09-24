@@ -34,22 +34,22 @@ impl CloseProbeOutputStream {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, flush_mode: i32, close_mode: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "flushMode", "I", flush_mode).await?;
-        jvm.put_field(&mut this, "closeMode", "I", close_mode).await?;
-        jvm.put_field(&mut this, "bytesWritten", "I", 0).await?;
-        jvm.put_field(&mut this, "flushCalls", "I", 0).await?;
-        jvm.put_field(&mut this, "closeCalls", "I", 0).await
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "flushMode", "I", flush_mode).await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "closeMode", "I", close_mode).await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "bytesWritten", "I", 0).await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "flushCalls", "I", 0).await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "closeCalls", "I", 0).await
     }
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, _: i32) -> Result<()> {
-        let count: i32 = jvm.get_field(&this, "bytesWritten", "I").await?;
-        jvm.put_field(&mut this, "bytesWritten", "I", count + 1).await
+        let count: i32 = jvm.get_field(&this, "CloseProbeOutputStream", "bytesWritten", "I").await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "bytesWritten", "I", count + 1).await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let calls: i32 = jvm.get_field(&this, "flushCalls", "I").await?;
-        jvm.put_field(&mut this, "flushCalls", "I", calls + 1).await?;
-        match jvm.get_field::<i32>(&this, "flushMode", "I").await? {
+        let calls: i32 = jvm.get_field(&this, "CloseProbeOutputStream", "flushCalls", "I").await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "flushCalls", "I", calls + 1).await?;
+        match jvm.get_field::<i32>(&this, "CloseProbeOutputStream", "flushMode", "I").await? {
             1 => Err(jvm.exception("java/io/IOException", "flush failed").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "flush failed").await),
             _ => Ok(()),
@@ -57,9 +57,9 @@ impl CloseProbeOutputStream {
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let calls: i32 = jvm.get_field(&this, "closeCalls", "I").await?;
-        jvm.put_field(&mut this, "closeCalls", "I", calls + 1).await?;
-        match jvm.get_field::<i32>(&this, "closeMode", "I").await? {
+        let calls: i32 = jvm.get_field(&this, "CloseProbeOutputStream", "closeCalls", "I").await?;
+        jvm.put_field(&mut this, "CloseProbeOutputStream", "closeCalls", "I", calls + 1).await?;
+        match jvm.get_field::<i32>(&this, "CloseProbeOutputStream", "closeMode", "I").await? {
             1 => Err(jvm.exception("java/io/IOException", "close failed").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "close failed").await),
             _ => Ok(()),
@@ -98,14 +98,16 @@ impl FlushOverrideBufferedOutputStream {
         let _: () = jvm
             .invoke_special(&this, "java/io/BufferedOutputStream", "<init>", "(Ljava/io/OutputStream;I)V", (out, size))
             .await?;
-        jvm.put_field(&mut this, "flushMode", "I", flush_mode).await?;
-        jvm.put_field(&mut this, "flushCalls", "I", 0).await
+        jvm.put_field(&mut this, "FlushOverrideBufferedOutputStream", "flushMode", "I", flush_mode)
+            .await?;
+        jvm.put_field(&mut this, "FlushOverrideBufferedOutputStream", "flushCalls", "I", 0).await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let calls: i32 = jvm.get_field(&this, "flushCalls", "I").await?;
-        jvm.put_field(&mut this, "flushCalls", "I", calls + 1).await?;
-        match jvm.get_field::<i32>(&this, "flushMode", "I").await? {
+        let calls: i32 = jvm.get_field(&this, "FlushOverrideBufferedOutputStream", "flushCalls", "I").await?;
+        jvm.put_field(&mut this, "FlushOverrideBufferedOutputStream", "flushCalls", "I", calls + 1)
+            .await?;
+        match jvm.get_field::<i32>(&this, "FlushOverrideBufferedOutputStream", "flushMode", "I").await? {
             1 => Err(jvm.exception("java/io/IOException", "override flush failed").await),
             2 => Err(jvm.exception("java/lang/IllegalStateException", "override flush failed").await),
             _ => jvm.invoke_special(&this, "java/io/BufferedOutputStream", "flush", "()V", ()).await,
@@ -144,7 +146,7 @@ async fn buffered_output_stream_inherited_close_dispatches_virtual_flush() -> Re
         .new_class("FlushOverrideBufferedOutputStream", "(Ljava/io/OutputStream;II)V", (output, 4, 0))
         .await?
         .into();
-    let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&stream, "buf", "[B").await?;
+    let buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&stream, "FlushOverrideBufferedOutputStream", "buf", "[B").await?;
 
     let _: () = jvm
         .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "write", "(I)V", (7,))
@@ -153,21 +155,31 @@ async fn buffered_output_stream_inherited_close_dispatches_virtual_flush() -> Re
         .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
         .await?;
 
-    assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "bytesWritten", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&stream, "count", "I").await?, 0);
-    let retained_buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&stream, "buf", "[B").await?;
+    assert_eq!(
+        jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "flushCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "bytesWritten", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "flushCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "closeCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "count", "I").await?, 0);
+    let retained_buffer: ClassInstanceRef<Array<i8>> = jvm.get_field(&stream, "FlushOverrideBufferedOutputStream", "buf", "[B").await?;
     assert_eq!(retained_buffer.identity(), buffer.identity());
-    let closed_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
+    let closed_output: ClassInstanceRef<OutputStream> = jvm
+        .get_field(&stream, "FlushOverrideBufferedOutputStream", "out", "Ljava/io/OutputStream;")
+        .await?;
     assert!(closed_output.is_null());
 
     let _: () = jvm
         .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 1);
+    assert_eq!(
+        jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "flushCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "closeCalls", "I").await?, 1);
     Ok(())
 }
 
@@ -187,11 +199,17 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
     let _: () = jvm
         .invoke_virtual(&stream, "FlushOverrideBufferedOutputStream", "close", "()V", ())
         .await?;
-    assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&stream, "count", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "bytesWritten", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 1);
-    let closed_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
+    assert_eq!(
+        jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "flushCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "count", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "bytesWritten", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "closeCalls", "I").await?, 1);
+    let closed_output: ClassInstanceRef<OutputStream> = jvm
+        .get_field(&stream, "FlushOverrideBufferedOutputStream", "out", "Ljava/io/OutputStream;")
+        .await?;
     assert!(closed_output.is_null());
 
     let backing: ClassInstanceRef<CloseProbeOutputStream> = jvm.new_class("CloseProbeOutputStream", "(II)V", (0, 0)).await?.into();
@@ -205,8 +223,10 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
         panic!("unchecked flush failure must escape inherited close");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 0);
-    let closed_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "closeCalls", "I").await?, 0);
+    let closed_output: ClassInstanceRef<OutputStream> = jvm
+        .get_field(&stream, "FlushOverrideBufferedOutputStream", "out", "Ljava/io/OutputStream;")
+        .await?;
     assert!(closed_output.is_null());
 
     let backing: ClassInstanceRef<CloseProbeOutputStream> = jvm.new_class("CloseProbeOutputStream", "(II)V", (0, 1)).await?.into();
@@ -223,12 +243,18 @@ async fn filter_output_stream_close_preserves_failure_sequence_and_state() -> Re
         panic!("backing close failure must escape inherited close");
     };
     assert!(jvm.is_instance(&*exception, "java/io/IOException"));
-    assert_eq!(jvm.get_field::<i32>(&stream, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&stream, "count", "I").await?, 0);
-    assert_eq!(jvm.get_field::<i32>(&backing, "bytesWritten", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "flushCalls", "I").await?, 1);
-    assert_eq!(jvm.get_field::<i32>(&backing, "closeCalls", "I").await?, 1);
-    let closed_output: ClassInstanceRef<OutputStream> = jvm.get_field(&stream, "out", "Ljava/io/OutputStream;").await?;
+    assert_eq!(
+        jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "flushCalls", "I")
+            .await?,
+        1
+    );
+    assert_eq!(jvm.get_field::<i32>(&stream, "FlushOverrideBufferedOutputStream", "count", "I").await?, 0);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "bytesWritten", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "flushCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&backing, "CloseProbeOutputStream", "closeCalls", "I").await?, 1);
+    let closed_output: ClassInstanceRef<OutputStream> = jvm
+        .get_field(&stream, "FlushOverrideBufferedOutputStream", "out", "Ljava/io/OutputStream;")
+        .await?;
     assert!(closed_output.is_null());
 
     Ok(())

@@ -97,7 +97,8 @@ impl Throwable {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;", message)
+            .await?;
 
         let _: ClassInstanceRef<Self> = jvm
             .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
@@ -117,8 +118,10 @@ impl Throwable {
             jvm.invoke_virtual(&cause, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
                 .await?
         };
-        jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
-        jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;", message)
+            .await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "cause", "Ljava/lang/Throwable;", cause)
+            .await?;
 
         let _: ClassInstanceRef<Self> = jvm
             .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
@@ -138,8 +141,10 @@ impl Throwable {
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
-        jvm.put_field(&mut this, "detailMessage", "Ljava/lang/String;", message).await?;
-        jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;", message)
+            .await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "cause", "Ljava/lang/Throwable;", cause)
+            .await?;
 
         let _: ClassInstanceRef<Self> = jvm
             .invoke_virtual(&this, "java/lang/Throwable", "fillInStackTrace", "()Ljava/lang/Throwable;", ())
@@ -151,13 +156,13 @@ impl Throwable {
     async fn get_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::getCause({this:?})");
 
-        jvm.get_field(&this, "cause", "Ljava/lang/Throwable;").await
+        jvm.get_field(&this, "java/lang/Throwable", "cause", "Ljava/lang/Throwable;").await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::getMessage({this:?})");
 
-        jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;").await
     }
 
     async fn get_localized_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
@@ -175,7 +180,8 @@ impl Throwable {
     ) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::initCause({this:?}, {cause:?})");
 
-        jvm.put_field(&mut this, "cause", "Ljava/lang/Throwable;", cause).await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "cause", "Ljava/lang/Throwable;", cause)
+            .await?;
 
         Ok(this)
     }
@@ -189,7 +195,8 @@ impl Throwable {
             let java_line = JavaLangString::from_rust_string(jvm, line).await?;
             jvm.store_array(&mut stack_trace_array, i, core::iter::once(java_line)).await?;
         }
-        jvm.put_field(&mut this, "stackTrace", "[Ljava/lang/String;", stack_trace_array).await?;
+        jvm.put_field(&mut this, "java/lang/Throwable", "stackTrace", "[Ljava/lang/String;", stack_trace_array)
+            .await?;
 
         Ok(this)
     }
@@ -242,7 +249,7 @@ impl Throwable {
             .invoke_virtual(&class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
             .await?;
 
-        let message: ClassInstanceRef<String> = jvm.get_field(&this, "detailMessage", "Ljava/lang/String;").await?;
+        let message: ClassInstanceRef<String> = jvm.get_field(&this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;").await?;
 
         let class_name = JavaLangString::to_rust_string(jvm, &class_name).await?;
         let message = if message.is_null() {
@@ -287,7 +294,9 @@ impl Throwable {
                 )
                 .await?;
 
-            let stack_trace: ClassInstanceRef<Array<ClassInstanceRef<String>>> = jvm.get_field(&current, "stackTrace", "[Ljava/lang/String;").await?;
+            let stack_trace: ClassInstanceRef<Array<ClassInstanceRef<String>>> = jvm
+                .get_field(&current, "java/lang/Throwable", "stackTrace", "[Ljava/lang/String;")
+                .await?;
             if !stack_trace.is_null() {
                 let length = jvm.array_length(&stack_trace).await?;
                 let lines: Vec<ClassInstanceRef<String>> = jvm.load_array(&stack_trace, 0, length).await?;

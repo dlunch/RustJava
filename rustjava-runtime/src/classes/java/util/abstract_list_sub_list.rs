@@ -73,23 +73,31 @@ impl AbstractListSubList {
         size: i32,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "root", "Ljava/util/List;", root).await?;
-        jvm.put_field(&mut this, "parent", "Ljava/util/AbstractList$SubList;", parent).await?;
-        jvm.put_field(&mut this, "offset", "I", offset).await?;
-        jvm.put_field(&mut this, "size", "I", size).await
+        jvm.put_field(&mut this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;", root)
+            .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/AbstractList$SubList",
+            "parent",
+            "Ljava/util/AbstractList$SubList;",
+            parent,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/AbstractList$SubList", "offset", "I", offset).await?;
+        jvm.put_field(&mut this, "java/util/AbstractList$SubList", "size", "I", size).await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "size", "I").await
+        jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await
     }
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList index").await);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         jvm.invoke_virtual(&root, &root.class_definition().name(), "get", "(I)Ljava/lang/Object;", (offset + index,))
             .await
     }
@@ -101,12 +109,12 @@ impl AbstractListSubList {
         index: i32,
         element: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList index").await);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         jvm.invoke_virtual(
             &root,
             &root.class_definition().name(),
@@ -118,7 +126,7 @@ impl AbstractListSubList {
     }
 
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         let _: () = jvm
             .invoke_virtual(&this, "java/util/AbstractList$SubList", "add", "(ILjava/lang/Object;)V", (size, element))
             .await?;
@@ -126,12 +134,12 @@ impl AbstractListSubList {
     }
 
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, element: ClassInstanceRef<Object>) -> Result<()> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index > size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList index").await);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         let _: () = jvm
             .invoke_virtual(
                 &root,
@@ -145,7 +153,7 @@ impl AbstractListSubList {
     }
 
     async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         jvm.invoke_virtual(
             &this,
             "java/util/AbstractList$SubList",
@@ -163,7 +171,7 @@ impl AbstractListSubList {
         index: i32,
         collection: ClassInstanceRef<Object>,
     ) -> Result<bool> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index > size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList index").await);
         }
@@ -177,8 +185,8 @@ impl AbstractListSubList {
         {
             return Ok(false);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         let old_root_size: i32 = jvm.invoke_virtual(&root, &root.class_definition().name(), "size", "()I", ()).await?;
         let modified: bool = jvm
             .invoke_virtual(
@@ -197,12 +205,12 @@ impl AbstractListSubList {
     }
 
     async fn remove_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index >= size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList index").await);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         let removed = jvm
             .invoke_virtual(
                 &root,
@@ -230,7 +238,7 @@ impl AbstractListSubList {
     }
 
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         for index in 0..size {
             let current: ClassInstanceRef<Object> = jvm
                 .invoke_virtual(&this, "java/util/AbstractList$SubList", "get", "(I)Ljava/lang/Object;", (index,))
@@ -248,7 +256,7 @@ impl AbstractListSubList {
     }
 
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         for index in (0..size).rev() {
             let current: ClassInstanceRef<Object> = jvm
                 .invoke_virtual(&this, "java/util/AbstractList$SubList", "get", "(I)Ljava/lang/Object;", (index,))
@@ -266,7 +274,7 @@ impl AbstractListSubList {
     }
 
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        while jvm.get_field::<i32>(&this, "size", "I").await? > 0 {
+        while jvm.get_field::<i32>(&this, "java/util/AbstractList$SubList", "size", "I").await? > 0 {
             let _: ClassInstanceRef<Object> = jvm
                 .invoke_virtual(&this, "java/util/AbstractList$SubList", "remove", "(I)Ljava/lang/Object;", (0,))
                 .await?;
@@ -292,15 +300,15 @@ impl AbstractListSubList {
     }
 
     async fn sub_list(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, from: i32, to: i32) -> Result<ClassInstanceRef<Object>> {
-        let size: i32 = jvm.get_field(&this, "size", "I").await?;
+        let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if from < 0 || to > size {
             return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "subList range").await);
         }
         if from > to {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "fromIndex > toIndex").await);
         }
-        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "root", "Ljava/util/List;").await?;
-        let offset: i32 = jvm.get_field(&this, "offset", "I").await?;
+        let root: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/AbstractList$SubList", "root", "Ljava/util/List;").await?;
+        let offset: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "offset", "I").await?;
         let sub_list = jvm
             .new_class(
                 "java/util/AbstractList$SubList",
@@ -313,9 +321,12 @@ impl AbstractListSubList {
 
     async fn update_sizes(jvm: &Jvm, mut current: ClassInstanceRef<Self>, delta: i32) -> Result<()> {
         while !current.is_null() {
-            let size: i32 = jvm.get_field(&current, "size", "I").await?;
-            jvm.put_field(&mut current, "size", "I", size + delta).await?;
-            current = jvm.get_field(&current, "parent", "Ljava/util/AbstractList$SubList;").await?;
+            let size: i32 = jvm.get_field(&current, "java/util/AbstractList$SubList", "size", "I").await?;
+            jvm.put_field(&mut current, "java/util/AbstractList$SubList", "size", "I", size + delta)
+                .await?;
+            current = jvm
+                .get_field(&current, "java/util/AbstractList$SubList", "parent", "Ljava/util/AbstractList$SubList;")
+                .await?;
         }
         Ok(())
     }

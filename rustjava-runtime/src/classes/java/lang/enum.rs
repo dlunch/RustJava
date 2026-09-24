@@ -77,20 +77,20 @@ impl Enum {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>, ordinal: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "name", "Ljava/lang/String;", name).await?;
-        jvm.put_field(&mut this, "ordinal", "I", ordinal).await
+        jvm.put_field(&mut this, "java/lang/Enum", "name", "Ljava/lang/String;", name).await?;
+        jvm.put_field(&mut this, "java/lang/Enum", "ordinal", "I", ordinal).await
     }
 
     async fn name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/lang/Enum", "name", "Ljava/lang/String;").await
     }
 
     async fn ordinal(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "ordinal", "I").await
+        jvm.get_field(&this, "java/lang/Enum", "ordinal", "I").await
     }
 
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "name", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/lang/Enum", "name", "Ljava/lang/String;").await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
@@ -125,8 +125,8 @@ impl Enum {
         if this_declaring_class != other_declaring_class {
             return Err(jvm.exception("java/lang/ClassCastException", "enum types differ").await);
         }
-        let this_ordinal: i32 = jvm.get_field(&this, "ordinal", "I").await?;
-        let other_ordinal: i32 = jvm.get_field(&other, "ordinal", "I").await?;
+        let this_ordinal: i32 = jvm.get_field(&this, "java/lang/Enum", "ordinal", "I").await?;
+        let other_ordinal: i32 = jvm.get_field(&other, "java/lang/Enum", "ordinal", "I").await?;
         Ok(this_ordinal - other_ordinal)
     }
 

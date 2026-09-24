@@ -49,10 +49,11 @@ impl StringReader {
         }
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
         let length: i32 = jvm.invoke_virtual(&value, "java/lang/String", "length", "()I", ()).await?;
-        jvm.put_field(&mut this, "str", "Ljava/lang/String;", value).await?;
-        jvm.put_field(&mut this, "length", "I", length).await?;
-        jvm.put_field(&mut this, "next", "I", 0).await?;
-        jvm.put_field(&mut this, "mark", "I", 0).await
+        jvm.put_field(&mut this, "java/io/StringReader", "str", "Ljava/lang/String;", value)
+            .await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "length", "I", length).await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "next", "I", 0).await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "mark", "I", 0).await
     }
 
     async fn with_lock<T, F>(jvm: &Jvm, lock: &ClassInstanceRef<Object>, operation: F) -> Result<T>
@@ -75,24 +76,24 @@ impl StringReader {
     }
 
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
     }
 
     async fn read_char_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.StringReader::read({this:?})");
 
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let next: i32 = jvm.get_field(&this, "next", "I").await?;
-        let length: i32 = jvm.get_field(&this, "length", "I").await?;
+        let next: i32 = jvm.get_field(&this, "java/io/StringReader", "next", "I").await?;
+        let length: i32 = jvm.get_field(&this, "java/io/StringReader", "length", "I").await?;
         if next >= length {
             return Ok(-1);
         }
         let result: JavaChar = jvm.invoke_virtual(&value, "java/lang/String", "charAt", "(I)C", (next,)).await?;
-        jvm.put_field(&mut this, "next", "I", next + 1).await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "next", "I", next + 1).await?;
         Ok(result as i32)
     }
 
@@ -104,7 +105,7 @@ impl StringReader {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_locked(jvm, this, target, offset, length)).await
     }
 
@@ -117,7 +118,7 @@ impl StringReader {
     ) -> Result<i32> {
         tracing::debug!("java.io.StringReader::read({this:?}, {target:?}, {offset}, {length})");
 
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -132,8 +133,8 @@ impl StringReader {
             return Ok(0);
         }
 
-        let next: i32 = jvm.get_field(&this, "next", "I").await?;
-        let source_length: i32 = jvm.get_field(&this, "length", "I").await?;
+        let next: i32 = jvm.get_field(&this, "java/io/StringReader", "next", "I").await?;
+        let source_length: i32 = jvm.get_field(&this, "java/io/StringReader", "length", "I").await?;
         if next >= source_length {
             return Ok(-1);
         }
@@ -141,41 +142,42 @@ impl StringReader {
         let _: () = jvm
             .invoke_virtual(&value, "java/lang/String", "getChars", "(II[CI)V", (next, next + copied, target, offset))
             .await?;
-        jvm.put_field(&mut this, "next", "I", next + copied).await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "next", "I", next + copied).await?;
         Ok(copied)
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, amount)).await
     }
 
     async fn skip_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         tracing::debug!("java.io.StringReader::skip({this:?}, {amount})");
 
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
         if amount <= 0 {
             return Ok(0);
         }
-        let next: i32 = jvm.get_field(&this, "next", "I").await?;
-        let length: i32 = jvm.get_field(&this, "length", "I").await?;
+        let next: i32 = jvm.get_field(&this, "java/io/StringReader", "next", "I").await?;
+        let length: i32 = jvm.get_field(&this, "java/io/StringReader", "length", "I").await?;
         let skipped = amount.min((length - next) as i64);
-        jvm.put_field(&mut this, "next", "I", next + skipped as i32).await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "next", "I", next + skipped as i32)
+            .await?;
         Ok(skipped)
     }
 
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
     }
 
     async fn ready_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.StringReader::ready({this:?})");
 
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -193,37 +195,37 @@ impl StringReader {
         if read_ahead_limit < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "Read-ahead limit < 0").await);
         }
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::mark_locked(jvm, this)).await
     }
 
     async fn mark_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let next: i32 = jvm.get_field(&this, "next", "I").await?;
-        jvm.put_field(&mut this, "mark", "I", next).await
+        let next: i32 = jvm.get_field(&this, "java/io/StringReader", "next", "I").await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "mark", "I", next).await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
     }
 
     async fn reset_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.StringReader::reset({this:?})");
 
-        let value: ClassInstanceRef<String> = jvm.get_field(&this, "str", "Ljava/lang/String;").await?;
+        let value: ClassInstanceRef<String> = jvm.get_field(&this, "java/io/StringReader", "str", "Ljava/lang/String;").await?;
         if value.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let mark: i32 = jvm.get_field(&this, "mark", "I").await?;
-        jvm.put_field(&mut this, "next", "I", mark).await
+        let mark: i32 = jvm.get_field(&this, "java/io/StringReader", "mark", "I").await?;
+        jvm.put_field(&mut this, "java/io/StringReader", "next", "I", mark).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await
     }
 
@@ -231,6 +233,7 @@ impl StringReader {
         tracing::debug!("java.io.StringReader::close({this:?})");
 
         let null_string: ClassInstanceRef<String> = None.into();
-        jvm.put_field(&mut this, "str", "Ljava/lang/String;", null_string).await
+        jvm.put_field(&mut this, "java/io/StringReader", "str", "Ljava/lang/String;", null_string)
+            .await
     }
 }

@@ -223,15 +223,15 @@ async fn rng_01_gaussian_matches_jdk_seed_oracle_and_consumes_cache() -> Result<
         .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
         .await?;
     assert!((first - 1.1419053154730547).abs() < 1e-15);
-    assert!(jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
-    let cached: f64 = jvm.get_field(&random, "nextNextGaussian", "D").await?;
+    assert!(jvm.get_field::<bool>(&random, "java/util/Random", "haveNextNextGaussian", "Z").await?);
+    let cached: f64 = jvm.get_field(&random, "java/util/Random", "nextNextGaussian", "D").await?;
 
     let second: f64 = jvm
         .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
         .await?;
     assert_eq!(second.to_bits(), cached.to_bits());
     assert!((second - 0.9194079489827879).abs() < 1e-15);
-    assert!(!jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&random, "java/util/Random", "haveNextNextGaussian", "Z").await?);
 
     let after_cached: i32 = jvm
         .invoke_virtual(&random, &random.class_definition().name(), "nextInt", "()I", ())
@@ -260,12 +260,12 @@ async fn rng_02_set_seed_clears_gaussian_cache() -> Result<()> {
     let first: f64 = jvm
         .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
         .await?;
-    assert!(jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
+    assert!(jvm.get_field::<bool>(&random, "java/util/Random", "haveNextNextGaussian", "Z").await?);
 
     let _: () = jvm
         .invoke_virtual(&random, &random.class_definition().name(), "setSeed", "(J)V", (42i64,))
         .await?;
-    assert!(!jvm.get_field::<bool>(&random, "haveNextNextGaussian", "Z").await?);
+    assert!(!jvm.get_field::<bool>(&random, "java/util/Random", "haveNextNextGaussian", "Z").await?);
     let reset_first: f64 = jvm
         .invoke_virtual(&random, &random.class_definition().name(), "nextGaussian", "()D", ())
         .await?;

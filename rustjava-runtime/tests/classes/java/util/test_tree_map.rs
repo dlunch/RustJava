@@ -52,9 +52,9 @@ impl TreeTestComparator {
         absolute: bool,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "reverse", "Z", reverse).await?;
-        jvm.put_field(&mut this, "allowNull", "Z", allow_null).await?;
-        jvm.put_field(&mut this, "absolute", "Z", absolute).await
+        jvm.put_field(&mut this, "TreeTestComparator", "reverse", "Z", reverse).await?;
+        jvm.put_field(&mut this, "TreeTestComparator", "allowNull", "Z", allow_null).await?;
+        jvm.put_field(&mut this, "TreeTestComparator", "absolute", "Z", absolute).await
     }
 
     async fn compare(
@@ -64,7 +64,7 @@ impl TreeTestComparator {
         left: ClassInstanceRef<Object>,
         right: ClassInstanceRef<Object>,
     ) -> Result<i32> {
-        let allow_null: bool = jvm.get_field(&this, "allowNull", "Z").await?;
+        let allow_null: bool = jvm.get_field(&this, "TreeTestComparator", "allowNull", "Z").await?;
         let mut comparison = if left.is_null() || right.is_null() {
             if !allow_null {
                 return Err(jvm.exception("java/lang/NullPointerException", "null key").await);
@@ -83,13 +83,13 @@ impl TreeTestComparator {
             let mut right_value: i32 = jvm
                 .invoke_virtual(&right, &right.class_definition().name(), "intValue", "()I", ())
                 .await?;
-            if jvm.get_field::<bool>(&this, "absolute", "Z").await? {
+            if jvm.get_field::<bool>(&this, "TreeTestComparator", "absolute", "Z").await? {
                 left_value = left_value.saturating_abs();
                 right_value = right_value.saturating_abs();
             }
             left_value.cmp(&right_value) as i32
         };
-        if jvm.get_field::<bool>(&this, "reverse", "Z").await? {
+        if jvm.get_field::<bool>(&this, "TreeTestComparator", "reverse", "Z").await? {
             comparison = -comparison;
         }
         Ok(comparison)
@@ -118,21 +118,21 @@ impl TreeDirectionalKey {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32, fail: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await?;
-        jvm.put_field(&mut this, "fail", "Z", fail).await
+        jvm.put_field(&mut this, "TreeDirectionalKey", "value", "I", value).await?;
+        jvm.put_field(&mut this, "TreeDirectionalKey", "fail", "Z", fail).await
     }
 
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
-        if jvm.get_field::<bool>(&this, "fail", "Z").await? {
+        if jvm.get_field::<bool>(&this, "TreeDirectionalKey", "fail", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "stored key comparison").await);
         }
         if other.is_null() || !jvm.is_instance(other.as_ref(), "TreeDirectionalKey") {
             return Err(jvm.exception("java/lang/ClassCastException", "TreeDirectionalKey required").await);
         }
         Ok(jvm
-            .get_field::<i32>(&this, "value", "I")
+            .get_field::<i32>(&this, "TreeDirectionalKey", "value", "I")
             .await?
-            .cmp(&jvm.get_field::<i32>(&other, "value", "I").await?) as i32)
+            .cmp(&jvm.get_field::<i32>(&other, "TreeDirectionalKey", "value", "I").await?) as i32)
     }
 }
 
@@ -159,22 +159,21 @@ impl TreeEqualsValue {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, group: i32, answer: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "group", "I", group).await?;
-        jvm.put_field(&mut this, "answer", "Z", answer).await
+        jvm.put_field(&mut this, "TreeEqualsValue", "group", "I", group).await?;
+        jvm.put_field(&mut this, "TreeEqualsValue", "answer", "Z", answer).await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "TreeEqualsValue") {
             return Ok(false);
         }
-        Ok(
-            jvm.get_field::<i32>(&this, "group", "I").await? == jvm.get_field::<i32>(&other, "group", "I").await?
-                && jvm.get_field::<bool>(&this, "answer", "Z").await?,
-        )
+        Ok(jvm.get_field::<i32>(&this, "TreeEqualsValue", "group", "I").await?
+            == jvm.get_field::<i32>(&other, "TreeEqualsValue", "group", "I").await?
+            && jvm.get_field::<bool>(&this, "TreeEqualsValue", "answer", "Z").await?)
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "group", "I").await
+        jvm.get_field(&this, "TreeEqualsValue", "group", "I").await
     }
 }
 
@@ -223,23 +222,25 @@ impl TreeChangingEntry {
         value: ClassInstanceRef<Object>,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "firstKey", "Ljava/lang/Object;", first_key).await?;
-        jvm.put_field(&mut this, "secondKey", "Ljava/lang/Object;", second_key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await
+        jvm.put_field(&mut this, "TreeChangingEntry", "firstKey", "Ljava/lang/Object;", first_key)
+            .await?;
+        jvm.put_field(&mut this, "TreeChangingEntry", "secondKey", "Ljava/lang/Object;", second_key)
+            .await?;
+        jvm.put_field(&mut this, "TreeChangingEntry", "value", "Ljava/lang/Object;", value).await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "keyCalls", "I").await?;
-        jvm.put_field(&mut this, "keyCalls", "I", calls + 1).await?;
+        let calls: i32 = jvm.get_field(&this, "TreeChangingEntry", "keyCalls", "I").await?;
+        jvm.put_field(&mut this, "TreeChangingEntry", "keyCalls", "I", calls + 1).await?;
         if calls == 0 {
-            jvm.get_field(&this, "firstKey", "Ljava/lang/Object;").await
+            jvm.get_field(&this, "TreeChangingEntry", "firstKey", "Ljava/lang/Object;").await
         } else {
-            jvm.get_field(&this, "secondKey", "Ljava/lang/Object;").await
+            jvm.get_field(&this, "TreeChangingEntry", "secondKey", "Ljava/lang/Object;").await
         }
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "TreeChangingEntry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -248,8 +249,9 @@ impl TreeChangingEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let old = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let old = jvm.get_field(&this, "TreeChangingEntry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "TreeChangingEntry", "value", "Ljava/lang/Object;", value)
+            .await?;
         Ok(old)
     }
 
@@ -307,22 +309,23 @@ impl TreeValueProbeEntry {
         throw_value: bool,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
-        jvm.put_field(&mut this, "throwValue", "Z", throw_value).await
+        jvm.put_field(&mut this, "TreeValueProbeEntry", "key", "Ljava/lang/Object;", key).await?;
+        jvm.put_field(&mut this, "TreeValueProbeEntry", "value", "Ljava/lang/Object;", value)
+            .await?;
+        jvm.put_field(&mut this, "TreeValueProbeEntry", "throwValue", "Z", throw_value).await
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "TreeValueProbeEntry", "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let calls: i32 = jvm.get_field(&this, "valueCalls", "I").await?;
-        jvm.put_field(&mut this, "valueCalls", "I", calls + 1).await?;
-        if jvm.get_field::<bool>(&this, "throwValue", "Z").await? {
+        let calls: i32 = jvm.get_field(&this, "TreeValueProbeEntry", "valueCalls", "I").await?;
+        jvm.put_field(&mut this, "TreeValueProbeEntry", "valueCalls", "I", calls + 1).await?;
+        if jvm.get_field::<bool>(&this, "TreeValueProbeEntry", "throwValue", "Z").await? {
             return Err(jvm.exception("java/lang/IllegalStateException", "getValue called").await);
         }
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "TreeValueProbeEntry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -331,8 +334,9 @@ impl TreeValueProbeEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let old = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let old = jvm.get_field(&this, "TreeValueProbeEntry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "TreeValueProbeEntry", "value", "Ljava/lang/Object;", value)
+            .await?;
         Ok(old)
     }
 
@@ -441,14 +445,19 @@ async fn ordered_integer_keys(jvm: &Jvm, map: &ClassInstanceRef<Object>) -> Resu
 }
 
 async fn assert_red_black_invariants(jvm: &Jvm, map: &ClassInstanceRef<Object>) -> Result<()> {
-    let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(map, "root", "Ljava/util/TreeMap$Entry;").await?;
+    let root: ClassInstanceRef<TreeMapEntry> = jvm.get_field(map, "java/util/TreeMap", "root", "Ljava/util/TreeMap$Entry;").await?;
     let expected_size: i32 = jvm.invoke_virtual(map, &map.class_definition().name(), "size", "()I", ()).await?;
     if root.is_null() {
         assert_eq!(expected_size, 0);
         return Ok(());
     }
-    assert!(jvm.get_field::<bool>(&root, "color", "Z").await?, "root must be black");
-    let root_parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&root, "parent", "Ljava/util/TreeMap$Entry;").await?;
+    assert!(
+        jvm.get_field::<bool>(&root, "java/util/TreeMap$Entry", "color", "Z").await?,
+        "root must be black"
+    );
+    let root_parent: ClassInstanceRef<TreeMapEntry> = jvm
+        .get_field(&root, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+        .await?;
     assert!(root_parent.is_null());
 
     let mut seen = BTreeSet::new();
@@ -456,20 +465,30 @@ async fn assert_red_black_invariants(jvm: &Jvm, map: &ClassInstanceRef<Object>) 
     let mut stack = vec![(root, None::<i32>, None::<i32>, 0i32)];
     while let Some((node, lower, upper, black_count)) = stack.pop() {
         assert!(seen.insert(node.identity()), "tree must not contain a cycle");
-        let key: ClassInstanceRef<Object> = jvm.get_field(&node, "key", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&node, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
         let key: i32 = jvm.invoke_virtual(&key, &key.class_definition().name(), "intValue", "()I", ()).await?;
         assert!(lower.is_none_or(|lower| key > lower));
         assert!(upper.is_none_or(|upper| key < upper));
-        let black = jvm.get_field::<bool>(&node, "color", "Z").await?;
+        let black = jvm.get_field::<bool>(&node, "java/util/TreeMap$Entry", "color", "Z").await?;
         let next_black_count = black_count + i32::from(black);
-        let left: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&node, "left", "Ljava/util/TreeMap$Entry;").await?;
-        let right: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&node, "right", "Ljava/util/TreeMap$Entry;").await?;
+        let left: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&node, "java/util/TreeMap$Entry", "left", "Ljava/util/TreeMap$Entry;")
+            .await?;
+        let right: ClassInstanceRef<TreeMapEntry> = jvm
+            .get_field(&node, "java/util/TreeMap$Entry", "right", "Ljava/util/TreeMap$Entry;")
+            .await?;
         if !black {
             if !left.is_null() {
-                assert!(jvm.get_field::<bool>(&left, "color", "Z").await?, "red node has red left child");
+                assert!(
+                    jvm.get_field::<bool>(&left, "java/util/TreeMap$Entry", "color", "Z").await?,
+                    "red node has red left child"
+                );
             }
             if !right.is_null() {
-                assert!(jvm.get_field::<bool>(&right, "color", "Z").await?, "red node has red right child");
+                assert!(
+                    jvm.get_field::<bool>(&right, "java/util/TreeMap$Entry", "color", "Z").await?,
+                    "red node has red right child"
+                );
             }
         }
         for (child, child_lower, child_upper) in [(left, lower, Some(key)), (right, Some(key), upper)] {
@@ -477,7 +496,9 @@ async fn assert_red_black_invariants(jvm: &Jvm, map: &ClassInstanceRef<Object>) 
                 let leaf_height = next_black_count + 1;
                 assert_eq!(*black_height.get_or_insert(leaf_height), leaf_height);
             } else {
-                let parent: ClassInstanceRef<TreeMapEntry> = jvm.get_field(&child, "parent", "Ljava/util/TreeMap$Entry;").await?;
+                let parent: ClassInstanceRef<TreeMapEntry> = jvm
+                    .get_field(&child, "java/util/TreeMap$Entry", "parent", "Ljava/util/TreeMap$Entry;")
+                    .await?;
                 assert!(!parent.is_null() && parent.identity() == node.identity());
                 stack.push((child, child_lower, child_upper, next_black_count));
             }
@@ -910,7 +931,7 @@ async fn tm_02_tm_03_natural_and_custom_comparator_contracts() -> Result<()> {
         )
         .await?;
     let mut stored_for_mutation = stored_for_mutation;
-    jvm.put_field(&mut stored_for_mutation, "fail", "Z", true).await?;
+    jvm.put_field(&mut stored_for_mutation, "TreeDirectionalKey", "fail", "Z", true).await?;
     let query: ClassInstanceRef<Object> = jvm.new_class("TreeDirectionalKey", "(IZ)V", (7, false)).await?.into();
     let found: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
@@ -2127,7 +2148,7 @@ async fn tm_03_views_use_jdk_value_equals_directions() -> Result<()> {
         )
         .await?
     );
-    assert_eq!(jvm.get_field::<i32>(&changing_entry, "keyCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&changing_entry, "TreeChangingEntry", "keyCalls", "I").await?, 1);
     assert!(
         !jvm.invoke_virtual::<_, bool>(
             &changing_map,
@@ -2573,7 +2594,7 @@ async fn tm_03_entry_equals_short_circuits_before_reading_value() -> Result<()> 
         .await?
     );
     assert_eq!(
-        jvm.get_field::<i32>(&different_key, "valueCalls", "I").await?,
+        jvm.get_field::<i32>(&different_key, "TreeValueProbeEntry", "valueCalls", "I").await?,
         0,
         "TreeMap.Entry.equals must not call getValue after a key mismatch"
     );
@@ -2599,7 +2620,7 @@ async fn tm_03_entry_equals_short_circuits_before_reading_value() -> Result<()> 
         panic!("TreeMap.Entry.equals must call getValue after an equal key and propagate its exception");
     };
     assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalStateException"));
-    assert_eq!(jvm.get_field::<i32>(&equal_key, "valueCalls", "I").await?, 1);
+    assert_eq!(jvm.get_field::<i32>(&equal_key, "TreeValueProbeEntry", "valueCalls", "I").await?, 1);
     Ok(())
 }
 

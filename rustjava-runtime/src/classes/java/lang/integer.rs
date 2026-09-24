@@ -155,7 +155,7 @@ impl Integer {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await
+        jvm.put_field(&mut this, "java/lang/Integer", "value", "I", value).await
     }
 
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
@@ -166,7 +166,7 @@ impl Integer {
         let value = Self::parse_value(jvm, &value, 10).await?;
         let mut this = this;
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "I", value).await
+        jvm.put_field(&mut this, "java/lang/Integer", "value", "I", value).await
     }
 
     fn parse_value_raw(value: &str, radix: u32) -> Option<i32> {
@@ -337,7 +337,7 @@ impl Integer {
     }
 
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "value", "I").await
+        jvm.get_field(&this, "java/lang/Integer", "value", "I").await
     }
 
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
@@ -417,7 +417,7 @@ impl Integer {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        jvm.get_field(&this, "value", "I").await
+        jvm.get_field(&this, "java/lang/Integer", "value", "I").await
     }
 
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {

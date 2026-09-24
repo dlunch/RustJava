@@ -80,7 +80,8 @@ impl Properties {
         tracing::debug!("java.util.Properties::<init>({this:?}, {defaults:?})");
 
         let _: () = jvm.invoke_special(&this, "java/util/Hashtable", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "defaults", "Ljava/util/Properties;", defaults).await
+        jvm.put_field(&mut this, "java/util/Properties", "defaults", "Ljava/util/Properties;", defaults)
+            .await
     }
 
     async fn get_property(
@@ -104,7 +105,7 @@ impl Properties {
             return Ok(ClassInstanceRef::new(result.instance));
         }
 
-        let defaults: ClassInstanceRef<Self> = jvm.get_field(&this, "defaults", "Ljava/util/Properties;").await?;
+        let defaults: ClassInstanceRef<Self> = jvm.get_field(&this, "java/util/Properties", "defaults", "Ljava/util/Properties;").await?;
         if defaults.is_null() {
             Ok(None.into())
         } else {
@@ -389,7 +390,9 @@ impl Properties {
         let mut current = this.clone();
         while !current.is_null() {
             layers.push(current.clone());
-            current = jvm.get_field(&current, "defaults", "Ljava/util/Properties;").await?;
+            current = jvm
+                .get_field(&current, "java/util/Properties", "defaults", "Ljava/util/Properties;")
+                .await?;
         }
 
         for layer in layers.into_iter().rev() {

@@ -70,10 +70,11 @@ impl CharArrayReader {
         }
 
         let _: () = jvm.invoke_special(&this, "java/io/Reader", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "buf", "[C", buffer).await?;
-        jvm.put_field(&mut this, "pos", "I", offset).await?;
-        jvm.put_field(&mut this, "markedPos", "I", offset).await?;
-        jvm.put_field(&mut this, "count", "I", end.min(buffer_length as i64) as i32).await
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "buf", "[C", buffer).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", offset).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "markedPos", "I", offset).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "count", "I", end.min(buffer_length as i64) as i32)
+            .await
     }
 
     async fn with_lock<T, F>(jvm: &Jvm, lock: &ClassInstanceRef<Object>, operation: F) -> Result<T>
@@ -96,24 +97,24 @@ impl CharArrayReader {
     }
 
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
     }
 
     async fn read_char_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.CharArrayReader::read({this:?})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "pos", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "count", "I").await?;
         if position >= count {
             return Ok(-1);
         }
         let value = jvm.load_array::<JavaChar>(&buffer, position as usize, 1).await?[0];
-        jvm.put_field(&mut this, "pos", "I", position + 1).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", position + 1).await?;
         Ok(value as i32)
     }
 
@@ -125,7 +126,7 @@ impl CharArrayReader {
         offset: i32,
         length: i32,
     ) -> Result<i32> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_locked(jvm, this, target, offset, length)).await
     }
 
@@ -138,7 +139,7 @@ impl CharArrayReader {
     ) -> Result<i32> {
         tracing::debug!("java.io.CharArrayReader::read({this:?}, {target:?}, {offset}, {length})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
@@ -152,8 +153,8 @@ impl CharArrayReader {
         if length == 0 {
             return Ok(0);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "pos", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "count", "I").await?;
         if position >= count {
             return Ok(-1);
         }
@@ -166,46 +167,47 @@ impl CharArrayReader {
                 (buffer, position, target, offset, copied),
             )
             .await?;
-        jvm.put_field(&mut this, "pos", "I", position + copied).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", position + copied).await?;
         Ok(copied)
     }
 
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, amount)).await
     }
 
     async fn skip_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         tracing::debug!("java.io.CharArrayReader::skip({this:?}, {amount})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
         if amount <= 0 {
             return Ok(0);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "pos", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "count", "I").await?;
         let skipped = amount.min((count - position) as i64);
-        jvm.put_field(&mut this, "pos", "I", position + skipped as i32).await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", position + skipped as i32)
+            .await?;
         Ok(skipped)
     }
 
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
     }
 
     async fn ready_locked(jvm: &Jvm, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.CharArrayReader::ready({this:?})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        let count: i32 = jvm.get_field(&this, "count", "I").await?;
+        let position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "pos", "I").await?;
+        let count: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "count", "I").await?;
         Ok(count - position > 0)
     }
 
@@ -215,39 +217,39 @@ impl CharArrayReader {
     }
 
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::mark_locked(jvm, this, read_ahead_limit)).await
     }
 
     async fn mark_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         tracing::debug!("java.io.CharArrayReader::mark({this:?}, {read_ahead_limit})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let position: i32 = jvm.get_field(&this, "pos", "I").await?;
-        jvm.put_field(&mut this, "markedPos", "I", position).await
+        let position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "pos", "I").await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "markedPos", "I", position).await
     }
 
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
     }
 
     async fn reset_locked(jvm: &Jvm, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.CharArrayReader::reset({this:?})");
 
-        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "buf", "[C").await?;
+        let buffer: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/CharArrayReader", "buf", "[C").await?;
         if buffer.is_null() {
             return Err(jvm.exception("java/io/IOException", "Stream closed").await);
         }
-        let marked_position: i32 = jvm.get_field(&this, "markedPos", "I").await?;
-        jvm.put_field(&mut this, "pos", "I", marked_position).await
+        let marked_position: i32 = jvm.get_field(&this, "java/io/CharArrayReader", "markedPos", "I").await?;
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", marked_position).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
-        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "lock", "Ljava/lang/Object;").await?;
+        let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await
     }
 
@@ -255,6 +257,6 @@ impl CharArrayReader {
         tracing::debug!("java.io.CharArrayReader::close({this:?})");
 
         let null_buffer: ClassInstanceRef<Array<JavaChar>> = None.into();
-        jvm.put_field(&mut this, "buf", "[C", null_buffer).await
+        jvm.put_field(&mut this, "java/io/CharArrayReader", "buf", "[C", null_buffer).await
     }
 }

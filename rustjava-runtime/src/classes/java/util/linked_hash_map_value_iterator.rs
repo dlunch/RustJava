@@ -48,6 +48,7 @@ impl LinkedHashMapValueIterator {
             )
             .await?;
 
-        jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/LinkedHashMap$Entry", "value", "Ljava/lang/Object;")
+            .await
     }
 }

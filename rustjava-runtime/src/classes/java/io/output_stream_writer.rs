@@ -73,9 +73,12 @@ impl OutputStreamWriter {
         Self::validate_encoding(jvm, &encoding).await?;
 
         let _: () = jvm.invoke_special(&this, "java/io/Writer", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "out", "Ljava/io/OutputStream;", out).await?;
-        jvm.put_field(&mut this, "encoding", "Ljava/lang/String;", encoding).await?;
-        jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", false).await?;
+        jvm.put_field(&mut this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;", out)
+            .await?;
+        jvm.put_field(&mut this, "java/io/OutputStreamWriter", "encoding", "Ljava/lang/String;", encoding)
+            .await?;
+        jvm.put_field(&mut this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z", false)
+            .await?;
 
         Ok(())
     }
@@ -110,25 +113,30 @@ impl OutputStreamWriter {
         }
 
         let mut utf16: Vec<JavaChar> = jvm.load_array(&chars, off as usize, len as usize).await?;
-        let has_pending: bool = jvm.get_field(&this, "hasPendingHighSurrogate", "Z").await?;
+        let has_pending: bool = jvm.get_field(&this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z").await?;
         if has_pending {
-            let pending: JavaChar = jvm.get_field(&this, "pendingHighSurrogate", "C").await?;
+            let pending: JavaChar = jvm.get_field(&this, "java/io/OutputStreamWriter", "pendingHighSurrogate", "C").await?;
             utf16.insert(0, pending);
-            jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", false).await?;
+            jvm.put_field(&mut this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z", false)
+                .await?;
         }
         if utf16.last().is_some_and(|value| (0xd800..=0xdbff).contains(value)) {
             let Some(pending) = utf16.pop() else {
                 return Ok(());
             };
-            jvm.put_field(&mut this, "pendingHighSurrogate", "C", pending).await?;
-            jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", true).await?;
+            jvm.put_field(&mut this, "java/io/OutputStreamWriter", "pendingHighSurrogate", "C", pending)
+                .await?;
+            jvm.put_field(&mut this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z", true)
+                .await?;
         }
         if utf16.is_empty() {
             return Ok(());
         }
 
         let value: RustString = char::decode_utf16(utf16).map(|value| value.unwrap_or('?')).collect();
-        let encoding: ClassInstanceRef<String> = jvm.get_field(&this, "encoding", "Ljava/lang/String;").await?;
+        let encoding: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/io/OutputStreamWriter", "encoding", "Ljava/lang/String;")
+            .await?;
         let encoding = JavaLangString::to_rust_string(jvm, &encoding).await?.to_ascii_uppercase();
         let bytes = if matches!(encoding.as_str(), "UTF-8" | "UTF8") {
             value.into_bytes()
@@ -139,22 +147,27 @@ impl OutputStreamWriter {
         let mut java_bytes = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.store_array(&mut java_bytes, 0, bytes.into_iter().map(|value| value as i8)).await?;
 
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
+            .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (java_bytes,)).await
     }
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::flush({this:?})");
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
+            .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::close({this:?})");
 
-        let has_pending: bool = jvm.get_field(&this, "hasPendingHighSurrogate", "Z").await?;
+        let has_pending: bool = jvm.get_field(&this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z").await?;
         if has_pending {
-            jvm.put_field(&mut this, "hasPendingHighSurrogate", "Z", false).await?;
+            jvm.put_field(&mut this, "java/io/OutputStreamWriter", "hasPendingHighSurrogate", "Z", false)
+                .await?;
             let mut replacement = jvm.instantiate_array("C", 1).await?;
             jvm.store_array(&mut replacement, 0, ['?' as JavaChar]).await?;
             let _: () = jvm
@@ -162,7 +175,9 @@ impl OutputStreamWriter {
                 .await?;
         }
 
-        let out = jvm.get_field(&this, "out", "Ljava/io/OutputStream;").await?;
+        let out = jvm
+            .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
+            .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "close", "()V", ()).await
     }
 }

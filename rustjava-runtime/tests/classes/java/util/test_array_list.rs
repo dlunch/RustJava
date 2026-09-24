@@ -8,7 +8,9 @@ async fn test_array_list_basic_operations_and_capacity_zero() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let array_list = jvm.new_class("java/util/ArrayList", "(I)V", (0,)).await?;
-    let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&array_list, "elementData", "[Ljava/lang/Object;").await?;
+    let element_data: ClassInstanceRef<Array<Object>> = jvm
+        .get_field(&array_list, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;")
+        .await?;
     assert_eq!(jvm.array_length(&element_data).await?, 0);
 
     let first = JavaLangString::from_rust_string(&jvm, "first").await?;
@@ -27,7 +29,9 @@ async fn test_array_list_basic_operations_and_capacity_zero() -> Result<()> {
         .await?;
     assert!(added);
 
-    let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&array_list, "elementData", "[Ljava/lang/Object;").await?;
+    let element_data: ClassInstanceRef<Array<Object>> = jvm
+        .get_field(&array_list, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;")
+        .await?;
     assert!(jvm.array_length(&element_data).await? >= 1);
 
     let _: bool = jvm
@@ -91,7 +95,9 @@ async fn test_array_list_basic_operations_and_capacity_zero() -> Result<()> {
         .await?;
     assert_eq!(size, 2);
 
-    let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&array_list, "elementData", "[Ljava/lang/Object;").await?;
+    let element_data: ClassInstanceRef<Array<Object>> = jvm
+        .get_field(&array_list, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;")
+        .await?;
     let removed_tail_slot: ClassInstanceRef<Object> = jvm.load_array(&element_data, 2, 1).await?.into_iter().next().unwrap();
     assert!(removed_tail_slot.is_null());
 
@@ -120,7 +126,9 @@ async fn test_array_list_basic_operations_and_capacity_zero() -> Result<()> {
         .await?;
     assert_eq!(jvm.array_length(&array).await?, 0);
 
-    let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(&array_list, "elementData", "[Ljava/lang/Object;").await?;
+    let element_data: ClassInstanceRef<Array<Object>> = jvm
+        .get_field(&array_list, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;")
+        .await?;
     let cleared_slots: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, 2).await?;
     assert!(cleared_slots[0].is_null());
     assert!(cleared_slots[1].is_null());

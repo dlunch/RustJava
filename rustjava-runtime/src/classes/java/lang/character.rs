@@ -384,11 +384,11 @@ impl Character {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "value", "C", value).await
+        jvm.put_field(&mut this, "java/lang/Character", "value", "C", value).await
     }
 
     async fn char_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
-        jvm.get_field(&this, "value", "C").await
+        jvm.get_field(&this, "java/lang/Character", "value", "C").await
     }
 
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {

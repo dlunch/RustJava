@@ -35,15 +35,25 @@ impl MissingFormatArgumentException {
             return Err(jvm.exception("java/lang/NullPointerException", "specifier is null").await);
         }
         let _: () = jvm.invoke_special(&this, "java/util/IllegalFormatException", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "specifier", "Ljava/lang/String;", specifier).await
+        jvm.put_field(
+            &mut this,
+            "java/util/MissingFormatArgumentException",
+            "specifier",
+            "Ljava/lang/String;",
+            specifier,
+        )
+        .await
     }
 
     async fn get_format_specifier(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        jvm.get_field(&this, "specifier", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/MissingFormatArgumentException", "specifier", "Ljava/lang/String;")
+            .await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
-        let specifier: ClassInstanceRef<String> = jvm.get_field(&this, "specifier", "Ljava/lang/String;").await?;
+        let specifier: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/MissingFormatArgumentException", "specifier", "Ljava/lang/String;")
+            .await?;
         JavaLangString::from_rust_string(
             jvm,
             &alloc::format!("Format specifier '{}'", JavaLangString::to_rust_string(jvm, &specifier).await?),

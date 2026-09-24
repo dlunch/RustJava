@@ -564,9 +564,12 @@ impl Locale {
         let country = JavaLangString::from_rust_string(jvm, &country).await?;
         let variant = JavaLangString::from_rust_string(jvm, &variant).await?;
 
-        jvm.put_field(&mut this, "language", "Ljava/lang/String;", language).await?;
-        jvm.put_field(&mut this, "country", "Ljava/lang/String;", country).await?;
-        jvm.put_field(&mut this, "variant", "Ljava/lang/String;", variant).await?;
+        jvm.put_field(&mut this, "java/util/Locale", "language", "Ljava/lang/String;", language)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Locale", "country", "Ljava/lang/String;", country)
+            .await?;
+        jvm.put_field(&mut this, "java/util/Locale", "variant", "Ljava/lang/String;", variant)
+            .await?;
 
         Ok(())
     }
@@ -648,25 +651,25 @@ impl Locale {
     async fn get_language(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getLanguage({this:?})");
 
-        jvm.get_field(&this, "language", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await
     }
 
     async fn get_country(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getCountry({this:?})");
 
-        jvm.get_field(&this, "country", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await
     }
 
     async fn get_variant(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getVariant({this:?})");
 
-        jvm.get_field(&this, "variant", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await
     }
 
     async fn get_iso3_language(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getISO3Language({this:?})");
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
         let iso3 = match language.as_str() {
             "" => "",
@@ -686,7 +689,7 @@ impl Locale {
     async fn get_iso3_country(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getISO3Country({this:?})");
 
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;
         let iso3 = match country.as_str() {
             "" => "",
@@ -723,7 +726,7 @@ impl Locale {
             return Err(jvm.exception("java/lang/NullPointerException", "display locale is null").await);
         }
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
 
         Ok(JavaLangString::from_rust_string(jvm, Self::display_language(&language)).await?.into())
@@ -746,7 +749,7 @@ impl Locale {
             return Err(jvm.exception("java/lang/NullPointerException", "display locale is null").await);
         }
 
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;
 
         Ok(JavaLangString::from_rust_string(jvm, Self::display_country(&country)).await?.into())
@@ -769,7 +772,7 @@ impl Locale {
             return Err(jvm.exception("java/lang/NullPointerException", "display locale is null").await);
         }
 
-        jvm.get_field(&this, "variant", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await
     }
 
     async fn get_display_name_default(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
@@ -789,9 +792,9 @@ impl Locale {
             return Err(jvm.exception("java/lang/NullPointerException", "display locale is null").await);
         }
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
-        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "variant", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
 
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;
@@ -862,12 +865,12 @@ impl Locale {
 
         let other: ClassInstanceRef<Self> = ClassInstanceRef::new(other.instance);
 
-        let this_language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
-        let this_country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
-        let this_variant: ClassInstanceRef<String> = jvm.get_field(&this, "variant", "Ljava/lang/String;").await?;
-        let other_language: ClassInstanceRef<String> = jvm.get_field(&other, "language", "Ljava/lang/String;").await?;
-        let other_country: ClassInstanceRef<String> = jvm.get_field(&other, "country", "Ljava/lang/String;").await?;
-        let other_variant: ClassInstanceRef<String> = jvm.get_field(&other, "variant", "Ljava/lang/String;").await?;
+        let this_language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let this_country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let this_variant: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
+        let other_language: ClassInstanceRef<String> = jvm.get_field(&other, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let other_country: ClassInstanceRef<String> = jvm.get_field(&other, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let other_variant: ClassInstanceRef<String> = jvm.get_field(&other, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
 
         let this_language = JavaLangString::to_rust_string(jvm, &this_language).await?;
         let this_country = JavaLangString::to_rust_string(jvm, &this_country).await?;
@@ -882,9 +885,9 @@ impl Locale {
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Locale::hashCode({this:?})");
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
-        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "variant", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
 
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;
@@ -900,9 +903,9 @@ impl Locale {
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Locale::clone({this:?})");
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
-        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "variant", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
 
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;
@@ -925,9 +928,9 @@ impl Locale {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::toString({this:?})");
 
-        let language: ClassInstanceRef<String> = jvm.get_field(&this, "language", "Ljava/lang/String;").await?;
-        let country: ClassInstanceRef<String> = jvm.get_field(&this, "country", "Ljava/lang/String;").await?;
-        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "variant", "Ljava/lang/String;").await?;
+        let language: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await?;
+        let country: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await?;
+        let variant: ClassInstanceRef<String> = jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await?;
 
         let language = JavaLangString::to_rust_string(jvm, &language).await?;
         let country = JavaLangString::to_rust_string(jvm, &country).await?;

@@ -98,7 +98,7 @@ impl CollisionKey {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, id: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "id", "I", id).await?;
+        jvm.put_field(&mut this, "HashMapCollisionKey", "id", "I", id).await?;
 
         Ok(())
     }
@@ -112,8 +112,8 @@ impl CollisionKey {
             return Ok(false);
         }
 
-        let this_id: i32 = jvm.get_field(&this, "id", "I").await?;
-        let other_id: i32 = jvm.get_field(&other, "id", "I").await?;
+        let this_id: i32 = jvm.get_field(&this, "HashMapCollisionKey", "id", "I").await?;
+        let other_id: i32 = jvm.get_field(&other, "HashMapCollisionKey", "id", "I").await?;
 
         Ok(this_id == other_id)
     }
@@ -154,18 +154,18 @@ impl CustomMapEntry {
         value: ClassInstanceRef<Object>,
     ) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "key", "Ljava/lang/Object;", key).await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        jvm.put_field(&mut this, "CustomMapEntry", "key", "Ljava/lang/Object;", key).await?;
+        jvm.put_field(&mut this, "CustomMapEntry", "value", "Ljava/lang/Object;", value).await?;
 
         Ok(())
     }
 
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "CustomMapEntry", "key", "Ljava/lang/Object;").await
     }
 
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        jvm.get_field(&this, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&this, "CustomMapEntry", "value", "Ljava/lang/Object;").await
     }
 
     async fn set_value(
@@ -174,8 +174,8 @@ impl CustomMapEntry {
         mut this: ClassInstanceRef<Self>,
         value: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let old_value: ClassInstanceRef<Object> = jvm.get_field(&this, "value", "Ljava/lang/Object;").await?;
-        jvm.put_field(&mut this, "value", "Ljava/lang/Object;", value).await?;
+        let old_value: ClassInstanceRef<Object> = jvm.get_field(&this, "CustomMapEntry", "value", "Ljava/lang/Object;").await?;
+        jvm.put_field(&mut this, "CustomMapEntry", "value", "Ljava/lang/Object;", value).await?;
 
         Ok(old_value)
     }
@@ -689,7 +689,9 @@ async fn test_hash_map_zero_and_negative_capacity() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let hash_map = jvm.new_class("java/util/HashMap", "(I)V", (0,)).await?;
-    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&hash_map, "table", "[Ljava/util/HashMap$Entry;").await?;
+    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm
+        .get_field(&hash_map, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;")
+        .await?;
     assert_eq!(jvm.array_length(&table).await?, 0);
 
     let key = JavaLangString::from_rust_string(&jvm, "zero-key").await?;
@@ -717,7 +719,9 @@ async fn test_hash_map_zero_and_negative_capacity() -> Result<()> {
         .await?;
     assert!(old.is_null());
 
-    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&hash_map, "table", "[Ljava/util/HashMap$Entry;").await?;
+    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm
+        .get_field(&hash_map, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;")
+        .await?;
     assert!(jvm.array_length(&table).await? >= 1);
 
     let found: ClassInstanceRef<Object> = jvm
@@ -877,7 +881,9 @@ async fn test_hash_map_clear_removes_entries_and_bucket_chains() -> Result<()> {
         .await?;
     assert!(!contains_value);
 
-    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(&hash_map, "table", "[Ljava/util/HashMap$Entry;").await?;
+    let table: ClassInstanceRef<Array<HashMapEntry>> = jvm
+        .get_field(&hash_map, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;")
+        .await?;
     let table_len = jvm.array_length(&table).await?;
     let buckets: Vec<ClassInstanceRef<HashMapEntry>> = jvm.load_array(&table, 0, table_len).await?;
     assert!(buckets.iter().all(ClassInstanceRef::is_null));

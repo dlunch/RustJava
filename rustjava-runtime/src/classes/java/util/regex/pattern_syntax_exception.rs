@@ -69,35 +69,56 @@ impl PatternSyntaxException {
         let _: () = jvm
             .invoke_special(&this, "java/lang/IllegalArgumentException", "<init>", "()V", ())
             .await?;
-        jvm.put_field(&mut this, "desc", "Ljava/lang/String;", description).await?;
-        jvm.put_field(&mut this, "pattern", "Ljava/lang/String;", pattern).await?;
-        jvm.put_field(&mut this, "index", "I", index).await
+        jvm.put_field(
+            &mut this,
+            "java/util/regex/PatternSyntaxException",
+            "desc",
+            "Ljava/lang/String;",
+            description,
+        )
+        .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/regex/PatternSyntaxException",
+            "pattern",
+            "Ljava/lang/String;",
+            pattern,
+        )
+        .await?;
+        jvm.put_field(&mut this, "java/util/regex/PatternSyntaxException", "index", "I", index)
+            .await
     }
 
     async fn get_description(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getDescription({this:?})");
 
-        jvm.get_field(&this, "desc", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/regex/PatternSyntaxException", "desc", "Ljava/lang/String;")
+            .await
     }
 
     async fn get_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getPattern({this:?})");
 
-        jvm.get_field(&this, "pattern", "Ljava/lang/String;").await
+        jvm.get_field(&this, "java/util/regex/PatternSyntaxException", "pattern", "Ljava/lang/String;")
+            .await
     }
 
     async fn get_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getIndex({this:?})");
 
-        jvm.get_field(&this, "index", "I").await
+        jvm.get_field(&this, "java/util/regex/PatternSyntaxException", "index", "I").await
     }
 
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getMessage({this:?})");
 
-        let description: ClassInstanceRef<String> = jvm.get_field(&this, "desc", "Ljava/lang/String;").await?;
-        let pattern: ClassInstanceRef<String> = jvm.get_field(&this, "pattern", "Ljava/lang/String;").await?;
-        let index: i32 = jvm.get_field(&this, "index", "I").await?;
+        let description: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/regex/PatternSyntaxException", "desc", "Ljava/lang/String;")
+            .await?;
+        let pattern: ClassInstanceRef<String> = jvm
+            .get_field(&this, "java/util/regex/PatternSyntaxException", "pattern", "Ljava/lang/String;")
+            .await?;
+        let index: i32 = jvm.get_field(&this, "java/util/regex/PatternSyntaxException", "index", "I").await?;
         let line_separator: ClassInstanceRef<String> = jvm
             .get_static_field("java/util/regex/PatternSyntaxException", "nl", "Ljava/lang/String;")
             .await?;

@@ -114,11 +114,14 @@ impl TreeMapSubMap {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "fromKey > toKey").await);
         }
         let _: () = jvm.invoke_special(&this, "java/util/AbstractMap", "<init>", "()V", ()).await?;
-        jvm.put_field(&mut this, "m", "Ljava/util/TreeMap;", map).await?;
-        jvm.put_field(&mut this, "fromStart", "Z", from_start).await?;
-        jvm.put_field(&mut this, "fromKey", "Ljava/lang/Object;", from_key).await?;
-        jvm.put_field(&mut this, "toEnd", "Z", to_end).await?;
-        jvm.put_field(&mut this, "toKey", "Ljava/lang/Object;", to_key).await
+        jvm.put_field(&mut this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;", map)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$SubMap", "fromStart", "Z", from_start).await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$SubMap", "fromKey", "Ljava/lang/Object;", from_key)
+            .await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$SubMap", "toEnd", "Z", to_end).await?;
+        jvm.put_field(&mut this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;", to_key)
+            .await
     }
 
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
@@ -142,7 +145,7 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Ok(false);
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         Ok(!TreeMap::find_entry(jvm, &map, &key).await?.is_null())
     }
 
@@ -174,12 +177,12 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Ok(None.into());
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let entry = TreeMap::find_entry(jvm, &map, &key).await?;
         if entry.is_null() {
             return Ok(None.into());
         }
-        jvm.get_field(&entry, "value", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
     async fn put(
@@ -192,7 +195,7 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "key outside range").await);
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         jvm.invoke_virtual(
             &map,
             "java/util/TreeMap",
@@ -212,7 +215,7 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Ok(None.into());
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         jvm.invoke_virtual(&map, "java/util/TreeMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
             .await
     }
@@ -236,7 +239,7 @@ impl TreeMapSubMap {
     }
 
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         jvm.invoke_virtual(&map, "java/util/TreeMap", "comparator", "()Ljava/util/Comparator;", ())
             .await
     }
@@ -246,7 +249,7 @@ impl TreeMapSubMap {
         if entry.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "empty subMap").await);
         }
-        jvm.get_field(&entry, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
@@ -254,7 +257,7 @@ impl TreeMapSubMap {
         if entry.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "empty subMap").await);
         }
-        jvm.get_field(&entry, "key", "Ljava/lang/Object;").await
+        jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
     async fn sub_map(
@@ -264,7 +267,7 @@ impl TreeMapSubMap {
         from_key: ClassInstanceRef<Object>,
         to_key: ClassInstanceRef<Object>,
     ) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         if !Self::in_range(jvm, &this, &from_key, false).await? {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "fromKey outside range").await);
         }
@@ -293,9 +296,9 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &to_key, true).await? {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "endpoint outside range").await);
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
-        let from_start: bool = jvm.get_field(&this, "fromStart", "Z").await?;
-        let from_key: ClassInstanceRef<Object> = jvm.get_field(&this, "fromKey", "Ljava/lang/Object;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
+        let from_start: bool = jvm.get_field(&this, "java/util/TreeMap$SubMap", "fromStart", "Z").await?;
+        let from_key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "fromKey", "Ljava/lang/Object;").await?;
         Ok(jvm
             .new_class(
                 "java/util/TreeMap$SubMap",
@@ -315,9 +318,9 @@ impl TreeMapSubMap {
         if !Self::in_range(jvm, &this, &from_key, false).await? {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "endpoint outside range").await);
         }
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
-        let to_end: bool = jvm.get_field(&this, "toEnd", "Z").await?;
-        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "toKey", "Ljava/lang/Object;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
+        let to_end: bool = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toEnd", "Z").await?;
+        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
         Ok(jvm
             .new_class(
                 "java/util/TreeMap$SubMap",
@@ -350,10 +353,10 @@ impl TreeMapSubMap {
     }
 
     async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;
-        let to_end: bool = jvm.get_field(&this, "toEnd", "Z").await?;
-        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "toKey", "Ljava/lang/Object;").await?;
+        let to_end: bool = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toEnd", "Z").await?;
+        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
         Ok(jvm
             .new_class(
                 "java/util/TreeMap$KeyIterator",
@@ -365,10 +368,10 @@ impl TreeMapSubMap {
     }
 
     async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;
-        let to_end: bool = jvm.get_field(&this, "toEnd", "Z").await?;
-        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "toKey", "Ljava/lang/Object;").await?;
+        let to_end: bool = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toEnd", "Z").await?;
+        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
         Ok(jvm
             .new_class(
                 "java/util/TreeMap$ValueIterator",
@@ -380,10 +383,10 @@ impl TreeMapSubMap {
     }
 
     async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "m", "Ljava/util/TreeMap;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;
-        let to_end: bool = jvm.get_field(&this, "toEnd", "Z").await?;
-        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "toKey", "Ljava/lang/Object;").await?;
+        let to_end: bool = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toEnd", "Z").await?;
+        let to_key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
         Ok(jvm
             .new_class(
                 "java/util/TreeMap$EntryIterator",
@@ -395,15 +398,15 @@ impl TreeMapSubMap {
     }
 
     async fn in_range(jvm: &Jvm, this: &ClassInstanceRef<Self>, key: &ClassInstanceRef<Object>, allow_equal_upper: bool) -> Result<bool> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "m", "Ljava/util/TreeMap;").await?;
-        if !jvm.get_field::<bool>(this, "fromStart", "Z").await? {
-            let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "fromKey", "Ljava/lang/Object;").await?;
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
+        if !jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "fromStart", "Z").await? {
+            let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "fromKey", "Ljava/lang/Object;").await?;
             if TreeMap::compare(jvm, &map, key, &from_key).await? < 0 {
                 return Ok(false);
             }
         }
-        if !jvm.get_field::<bool>(this, "toEnd", "Z").await? {
-            let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "toKey", "Ljava/lang/Object;").await?;
+        if !jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "toEnd", "Z").await? {
+            let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
             let comparison = TreeMap::compare(jvm, &map, key, &to_key).await?;
             if comparison > 0 || (!allow_equal_upper && comparison == 0) {
                 return Ok(false);
@@ -413,18 +416,18 @@ impl TreeMapSubMap {
     }
 
     async fn first_entry(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "m", "Ljava/util/TreeMap;").await?;
-        let entry = if jvm.get_field::<bool>(this, "fromStart", "Z").await? {
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
+        let entry = if jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "fromStart", "Z").await? {
             TreeMap::first_entry(jvm, &map).await?
         } else {
-            let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "fromKey", "Ljava/lang/Object;").await?;
+            let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "fromKey", "Ljava/lang/Object;").await?;
             TreeMap::ceiling_entry(jvm, &map, &from_key).await?
         };
-        if entry.is_null() || jvm.get_field::<bool>(this, "toEnd", "Z").await? {
+        if entry.is_null() || jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "toEnd", "Z").await? {
             return Ok(entry);
         }
-        let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-        let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "toKey", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+        let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
         if TreeMap::compare(jvm, &map, &key, &to_key).await? >= 0 {
             Ok(None.into())
         } else {
@@ -433,18 +436,18 @@ impl TreeMapSubMap {
     }
 
     async fn last_entry(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TreeMapEntry>> {
-        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "m", "Ljava/util/TreeMap;").await?;
-        let entry = if jvm.get_field::<bool>(this, "toEnd", "Z").await? {
+        let map: ClassInstanceRef<TreeMap> = jvm.get_field(this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
+        let entry = if jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "toEnd", "Z").await? {
             TreeMap::last_entry(jvm, &map).await?
         } else {
-            let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "toKey", "Ljava/lang/Object;").await?;
+            let to_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "toKey", "Ljava/lang/Object;").await?;
             TreeMap::lower_entry(jvm, &map, &to_key).await?
         };
-        if entry.is_null() || jvm.get_field::<bool>(this, "fromStart", "Z").await? {
+        if entry.is_null() || jvm.get_field::<bool>(this, "java/util/TreeMap$SubMap", "fromStart", "Z").await? {
             return Ok(entry);
         }
-        let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "key", "Ljava/lang/Object;").await?;
-        let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "fromKey", "Ljava/lang/Object;").await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
+        let from_key: ClassInstanceRef<Object> = jvm.get_field(this, "java/util/TreeMap$SubMap", "fromKey", "Ljava/lang/Object;").await?;
         if TreeMap::compare(jvm, &map, &key, &from_key).await? < 0 {
             Ok(None.into())
         } else {
