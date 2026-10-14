@@ -1,62 +1,20 @@
-use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
-use core::char::REPLACEMENT_CHARACTER;
+use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
+use jvm_types::modified_utf8;
 use nom::{
     IResult, Parser,
     bytes::complete::take,
-    combinator::map_res,
+    combinator::map_opt,
     error::{Error, ErrorKind},
     number::complete::{be_f32, be_f64, be_i32, be_i64, be_u16, u8},
 };
 
 fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
     let (data, length) = be_u16(data)?;
-    map_res(take(length as usize), |utf8: &[u8]| decode_modified_utf8(utf8).map(Arc::new)).parse(data)
-}
-
-// CONSTANT_Utf8 is *modified* UTF-8 (JVMS §4.4.7), not UTF-8: NUL is the two bytes C0 80, and a
-// supplementary character is its UTF-16 surrogate pair with each half encoded as three bytes
-// (ED A0..AF xx ED B0..BF xx). `String::from_utf8` rejects both, so any class holding "\0" or a
-// supplementary character in a constant failed to load with ClassFormatError. Decoding goes
-// through UTF-16 units, which is what the Java string is anyway.
-//
-// Strictly wider than before: input that is valid UTF-8 takes the old path unchanged. On the slow
-// path the standard 4-byte form is accepted too (javac never emits it, but the old parser did
-// accept it, so rejecting it now would be a regression), and a lone surrogate — legal in a Java
-// string, unrepresentable in a Rust `String` — becomes U+FFFD instead of failing the whole class.
-fn decode_modified_utf8(bytes: &[u8]) -> Result<String, ()> {
-    if let Ok(x) = core::str::from_utf8(bytes) {
-        return Ok(x.into());
-    }
-
-    let continuation = |i: usize| match bytes.get(i) {
-        Some(&b) if b & 0xC0 == 0x80 => Ok((b & 0x3F) as u32),
-        _ => Err(()),
-    };
-
-    let mut units = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        let b = bytes[i] as u32;
-        let (code_point, length) = match bytes[i] {
-            0x00..=0x7F => (b, 1),
-            0xC0..=0xDF => (((b & 0x1F) << 6) | continuation(i + 1)?, 2),
-            0xE0..=0xEF => (((b & 0x0F) << 12) | (continuation(i + 1)? << 6) | continuation(i + 2)?, 3),
-            0xF0..=0xF4 => (
-                ((b & 0x07) << 18) | (continuation(i + 1)? << 12) | (continuation(i + 2)? << 6) | continuation(i + 3)?,
-                4,
-            ),
-            _ => return Err(()),
-        };
-        match char::from_u32(code_point) {
-            Some(c) if code_point > 0xFFFF => units.extend_from_slice(c.encode_utf16(&mut [0; 2])),
-            None if code_point > 0x10FFFF => return Err(()),
-            _ => units.push(code_point as u16), // BMP, or one surrogate half (paired up below)
-        }
-        i += length;
-    }
-
-    Ok(char::decode_utf16(units).map(|x| x.unwrap_or(REPLACEMENT_CHARACTER)).collect())
+    map_opt(take(length as usize), |utf8: &[u8]| {
+        modified_utf8::decode(utf8).map(|units| Arc::new(String::from_utf16_lossy(&units)))
+    })
+    .parse(data)
 }
 
 #[derive(Debug)]
@@ -381,9 +339,8 @@ mod modified_utf8_tests {
     }
 
     #[test]
-    fn edges_of_the_wider_decoder() {
-        // standard 4-byte UTF-8 next to C0 80: the old parser accepted the first alone
-        assert_eq!(constant(b"\xF0\x9F\x90\x8D\xC0\x80").as_deref(), Some("\u{1F40D}\0"));
+    fn malformed_input_and_unpaired_surrogates() {
+        assert_eq!(constant(b"\xF0\x9F\x90\x8D"), None);
         // a lone surrogate half cannot live in a Rust String
         assert_eq!(constant(b"x\xED\xA0\xBD").as_deref(), Some("x\u{FFFD}"));
         // still malformed: truncated sequence, stray continuation byte, invalid lead byte

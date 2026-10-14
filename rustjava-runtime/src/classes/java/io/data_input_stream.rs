@@ -2,7 +2,7 @@ use alloc::{vec, vec::Vec};
 
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, MethodAccessFlags, modified_utf8};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -205,36 +205,9 @@ impl DataInputStream {
         let bytes: Vec<i8> = jvm.load_array(&java_array, 0, length as usize).await?;
         let bytes: Vec<u8> = bytes.into_iter().map(|value| value as u8).collect();
 
-        let mut chars = Vec::with_capacity(length as usize);
-        let mut index = 0;
-        while index < bytes.len() {
-            let first = bytes[index];
-            match first >> 4 {
-                0..=7 => {
-                    chars.push(first as JavaChar);
-                    index += 1;
-                }
-                12 | 13 => {
-                    if index + 1 >= bytes.len() || bytes[index + 1] & 0xc0 != 0x80 {
-                        return Err(jvm.exception("java/io/UTFDataFormatException", "malformed modified UTF-8").await);
-                    }
-                    chars.push((((first & 0x1f) as JavaChar) << 6) | ((bytes[index + 1] & 0x3f) as JavaChar));
-                    index += 2;
-                }
-                14 => {
-                    if index + 2 >= bytes.len() || bytes[index + 1] & 0xc0 != 0x80 || bytes[index + 2] & 0xc0 != 0x80 {
-                        return Err(jvm.exception("java/io/UTFDataFormatException", "malformed modified UTF-8").await);
-                    }
-                    chars.push(
-                        (((first & 0x0f) as JavaChar) << 12)
-                            | (((bytes[index + 1] & 0x3f) as JavaChar) << 6)
-                            | ((bytes[index + 2] & 0x3f) as JavaChar),
-                    );
-                    index += 3;
-                }
-                _ => return Err(jvm.exception("java/io/UTFDataFormatException", "malformed modified UTF-8").await),
-            }
-        }
+        let Some(chars) = modified_utf8::decode(&bytes) else {
+            return Err(jvm.exception("java/io/UTFDataFormatException", "malformed modified UTF-8").await);
+        };
 
         Ok(JavaLangString::from_utf16(jvm, chars).await?.into())
     }
