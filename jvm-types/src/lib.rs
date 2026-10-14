@@ -1,3 +1,9 @@
+#![no_std]
+
+extern crate alloc;
+
+pub mod modified_utf8;
+
 bitflags::bitflags! {
     #[derive(Eq, PartialEq, Default, Clone, Copy, Debug, Ord, PartialOrd)]
     pub struct FieldAccessFlags: u16 {

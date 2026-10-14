@@ -4,7 +4,7 @@ use bytemuck::cast_vec;
 
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, MethodAccessFlags, modified_utf8};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -225,19 +225,7 @@ impl DataOutputStream {
         let chars: ClassInstanceRef<Array<JavaChar>> = jvm.invoke_virtual(&s, "java/lang/String", "toCharArray", "()[C", ()).await?;
         let length = jvm.array_length(&chars).await?;
         let chars: Vec<JavaChar> = jvm.load_array(&chars, 0, length).await?;
-        let mut data = Vec::new();
-        for value in chars {
-            if (0x0001..=0x007f).contains(&value) {
-                data.push(value as i8);
-            } else if value <= 0x07ff {
-                data.push((0xc0 | ((value >> 6) & 0x1f)) as i8);
-                data.push((0x80 | (value & 0x3f)) as i8);
-            } else {
-                data.push((0xe0 | ((value >> 12) & 0x0f)) as i8);
-                data.push((0x80 | ((value >> 6) & 0x3f)) as i8);
-                data.push((0x80 | (value & 0x3f)) as i8);
-            }
-        }
+        let data: Vec<i8> = cast_vec(modified_utf8::encode(&chars));
 
         if data.len() > u16::MAX as usize {
             return Err(jvm.exception("java/io/UTFDataFormatException", "encoded string is too long").await);
