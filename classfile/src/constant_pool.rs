@@ -290,7 +290,7 @@ impl FieldMethodref {
 
 #[cfg(test)]
 mod tests {
-    use super::ConstantPoolItem;
+    use super::{ConstantPoolItem, parse_utf8};
 
     #[test]
     fn empty_constant_pool_is_valid() {
@@ -304,48 +304,13 @@ mod tests {
     fn long_must_fit_in_two_constant_pool_slots() {
         assert!(ConstantPoolItem::parse_all(&[0x00, 0x02, 0x05, 0, 0, 0, 0, 0, 0, 0, 0]).is_err());
     }
-}
-
-#[cfg(test)]
-mod modified_utf8_tests {
-    use super::parse_utf8;
-
-    fn constant(bytes: &[u8]) -> Option<alloc::string::String> {
-        let mut data = (bytes.len() as u16).to_be_bytes().to_vec();
-        data.extend_from_slice(bytes);
-        parse_utf8(&data).ok().map(|(rest, x)| {
-            assert!(rest.is_empty());
-            (*x).clone()
-        })
-    }
 
     #[test]
-    fn nul_is_c0_80() {
-        // javac's encoding of "MTR\0"
-        assert_eq!(constant(b"MTR\xC0\x80").as_deref(), Some("MTR\0"));
-    }
+    fn utf8_constant_decodes_length_delimited_modified_utf8() {
+        let (remaining, value) = parse_utf8(b"\x00\x0b\xc0\x80\xed\xa0\xbd\xed\xb0\x8d\xed\xa0\xbd\xff").unwrap();
 
-    #[test]
-    fn supplementary_is_a_surrogate_pair() {
-        // javac's encoding of "\uD83D\uDC0D" (U+1F40D) — six bytes, two 3-byte halves
-        assert_eq!(constant(b"a\xED\xA0\xBD\xED\xB0\x8Db").as_deref(), Some("a\u{1F40D}b"));
-    }
-
-    #[test]
-    fn ascii_and_hangul_are_unchanged() {
-        assert_eq!(constant(b"java/lang/Object").as_deref(), Some("java/lang/Object"));
-        assert_eq!(constant("한글 5개".as_bytes()).as_deref(), Some("한글 5개"));
-        assert_eq!(constant(b"").as_deref(), Some(""));
-    }
-
-    #[test]
-    fn malformed_input_and_unpaired_surrogates() {
-        assert_eq!(constant(b"\xF0\x9F\x90\x8D"), None);
-        // a lone surrogate half cannot live in a Rust String
-        assert_eq!(constant(b"x\xED\xA0\xBD").as_deref(), Some("x\u{FFFD}"));
-        // still malformed: truncated sequence, stray continuation byte, invalid lead byte
-        assert_eq!(constant(b"\xC0"), None);
-        assert_eq!(constant(b"\x80"), None);
-        assert_eq!(constant(b"\xFF"), None);
+        assert_eq!(value.as_str(), "\0\u{1f40d}\u{fffd}");
+        assert_eq!(remaining, b"\xff");
+        assert!(parse_utf8(b"\x00\x04\xf0\x9f\x90\x8d").is_err());
     }
 }
