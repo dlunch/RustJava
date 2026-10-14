@@ -104,6 +104,55 @@ async fn test_isr() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_input_stream_reader_drains_available_input() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let value = "123456789한글\r\n가나다".repeat(20);
+    let expected: Vec<JavaChar> = value.encode_utf16().collect();
+
+    for encoding in [encoding_rs::UTF_8, encoding_rs::EUC_KR] {
+        let (encoded, _, _) = encoding.encode(&value);
+        let mut bytes = jvm.instantiate_array("B", encoded.len()).await?;
+        jvm.store_array(&mut bytes, 0, encoded.iter().map(|byte| *byte as i8)).await?;
+        let input = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?;
+        let charset = JavaLangString::from_rust_string(&jvm, encoding.name()).await?;
+        let reader = jvm
+            .new_class(
+                "java/io/InputStreamReader",
+                "(Ljava/io/InputStream;Ljava/lang/String;)V",
+                (input.clone(), charset),
+            )
+            .await?;
+        let mut chars = jvm.instantiate_array("C", expected.len() + 4).await?;
+        jvm.store_array(&mut chars, 0, vec!['!' as JavaChar; expected.len() + 4]).await?;
+
+        let read: i32 = jvm
+            .invoke_virtual(
+                &reader,
+                "java/io/Reader",
+                "read",
+                "([CII)I",
+                (chars.clone(), 2, (expected.len() + 2) as i32),
+            )
+            .await?;
+        assert_eq!(read as usize, expected.len(), "{}", encoding.name());
+        assert_eq!(jvm.load_array::<JavaChar>(&chars, 2, expected.len()).await?, expected);
+        assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 2).await?, ['!' as JavaChar; 2]);
+        assert_eq!(jvm.load_array::<JavaChar>(&chars, expected.len() + 2, 2).await?, ['!' as JavaChar; 2]);
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&input, "java/io/InputStream", "available", "()I", ())
+                .await?,
+            0
+        );
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&reader, "java/io/Reader", "read", "([C)I", (chars,)).await?,
+            -1
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_input_stream_reader_preserves_split_multibyte_and_buffered_eof() -> Result<()> {
     let jvm = test_jvm().await?;
     let value = "123456789한";
@@ -138,7 +187,7 @@ async fn test_input_stream_reader_preserves_split_multibyte_and_buffered_eof() -
 }
 
 #[tokio::test]
-async fn test_input_stream_reader_does_not_return_zero_for_split_multibyte_input() -> Result<()> {
+async fn test_input_stream_reader_waits_only_until_a_character_is_available() -> Result<()> {
     let runtime = TestRuntime::new(BTreeMap::new());
     let jvm = create_test_jvm(runtime.clone()).await?;
     jvm.register_class(
@@ -150,24 +199,39 @@ async fn test_input_stream_reader_does_not_return_zero_for_split_multibyte_input
     )
     .await?;
 
-    let value = "한";
-    let mut bytes = jvm.instantiate_array("B", value.len()).await?;
-    jvm.store_array(&mut bytes, 0, value.as_bytes().iter().map(|byte| *byte as i8)).await?;
-    let input = jvm.new_class("OneByteInputStream", "([B)V", (bytes,)).await?;
-    let reader = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (input,)).await?;
-    let chars = jvm.instantiate_array("C", 1).await?;
+    for (encoding, trailing_lead) in [(encoding_rs::UTF_8, 0xed), (encoding_rs::EUC_KR, 0xc7)] {
+        let (encoded, _, _) = encoding.encode("한글");
+        let mut bytes = jvm.instantiate_array("B", encoded.len() + 1).await?;
+        jvm.store_array(&mut bytes, 0, encoded.iter().map(|byte| *byte as i8)).await?;
+        jvm.store_array(&mut bytes, encoded.len(), [trailing_lead as i8]).await?;
+        let input = jvm.new_class("OneByteInputStream", "([B)V", (bytes,)).await?;
+        let charset = JavaLangString::from_rust_string(&jvm, encoding.name()).await?;
+        let reader = jvm
+            .new_class(
+                "java/io/InputStreamReader",
+                "(Ljava/io/InputStream;Ljava/lang/String;)V",
+                (input.clone(), charset),
+            )
+            .await?;
+        let chars = jvm.instantiate_array("C", 16).await?;
 
-    assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "([CII)I", (chars.clone(), 0, 1))
-            .await?,
-        1
-    );
-    assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 1).await?, ['한' as JavaChar]);
-    assert_eq!(
-        jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "([CII)I", (chars, 0, 1))
-            .await?,
-        -1
-    );
+        for (expected, position) in [('한', encoded.len() / 2), ('글', encoded.len()), ('\u{fffd}', encoded.len() + 1)] {
+            assert_eq!(
+                jvm.invoke_virtual::<_, i32>(&reader, "java/io/Reader", "read", "([C)I", (chars.clone(),))
+                    .await?,
+                1
+            );
+            assert_eq!(jvm.load_array::<JavaChar>(&chars, 0, 1).await?, [expected as JavaChar]);
+            assert_eq!(
+                jvm.get_field::<i32>(&input, "OneByteInputStream", "position", "I").await?,
+                position as i32
+            );
+        }
+        assert_eq!(
+            jvm.invoke_virtual::<_, i32>(&reader, "java/io/Reader", "read", "([C)I", (chars,)).await?,
+            -1
+        );
+    }
 
     Ok(())
 }
@@ -215,7 +279,7 @@ async fn test_reader_default_contract_and_lifecycle() -> Result<()> {
         'a' as i32
     );
 
-    let chars = jvm.instantiate_array("C", 2).await?;
+    let chars = jvm.instantiate_array("C", 4).await?;
     assert_eq!(
         jvm.invoke_virtual::<_, i32>(&reader, &reader.class_definition().name(), "read", "([C)I", (chars.clone(),))
             .await?,
