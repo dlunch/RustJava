@@ -1,4 +1,4 @@
-use jvm::{Result, runtime::JavaLangString};
+use jvm::{JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -37,6 +37,16 @@ async fn test_manifest_parsing() -> Result<()> {
         .await?;
 
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "test");
+
+    let data = b"Manifest-Version: 1.0\r\nBad Name: value\r\n\r\n";
+    let mut bytes = jvm.instantiate_array("B", data.len()).await?;
+    jvm.array_raw_buffer_mut(&mut bytes).await?.write(0, data)?;
+    let input = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?;
+    let result = jvm.new_class("java/util/jar/Manifest", "(Ljava/io/InputStream;)V", (input,)).await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("invalid manifest attribute names must throw IOException");
+    };
+    assert!(jvm.is_instance(&*exception, "java/io/IOException"));
 
     Ok(())
 }

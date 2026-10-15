@@ -6,6 +6,8 @@ use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
+use super::{HashMap, HashMapEntry};
+
 // abstract class java.util.HashMap$HashIterator
 pub struct HashMapHashIterator;
 
@@ -16,12 +18,19 @@ impl HashMapHashIterator {
             parent_class: Some("java/lang/Object"),
             interfaces: vec!["java/util/Iterator"],
             methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
+                JavaMethodProto::new(
+                    "<init>",
+                    "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
+                    Self::init,
+                    MethodAccessFlags::empty(),
+                ),
                 JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
                 JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
             ],
             fields: vec![
+                JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::PRIVATE),
+                JavaFieldProto::new("lastReturned", "Ljava/util/HashMap$Entry;", FieldAccessFlags::PRIVATE),
                 JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
                 JavaFieldProto::new("index", "I", FieldAccessFlags::empty()),
             ],
@@ -29,11 +38,19 @@ impl HashMapHashIterator {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
+    async fn init(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        mut this: ClassInstanceRef<Self>,
+        map: ClassInstanceRef<HashMap>,
+        elements: ClassInstanceRef<Array<Object>>,
+    ) -> Result<()> {
         tracing::debug!("java.util.HashMap$HashIterator::<init>({this:?}, {elements:?})");
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
+        jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "map", "Ljava/util/HashMap;", map)
+            .await?;
         jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "elements", "[Ljava/lang/Object;", elements)
             .await?;
         jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "index", "I", 0).await?;
@@ -66,19 +83,48 @@ impl HashMapHashIterator {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         }
 
-        let mut values = jvm.load_array(&elements, index as usize, 1).await?;
+        let mut values: alloc::vec::Vec<ClassInstanceRef<Object>> = jvm.load_array(&elements, index as usize, 1).await?;
         let Some(element) = values.pop() else {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         };
         jvm.put_field(&mut this, "java/util/HashMap$HashIterator", "index", "I", index + 1)
             .await?;
+        jvm.put_field(
+            &mut this,
+            "java/util/HashMap$HashIterator",
+            "lastReturned",
+            "Ljava/util/HashMap$Entry;",
+            element.clone(),
+        )
+        .await?;
 
         Ok(element)
     }
 
-    async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
+    async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap$HashIterator::remove({this:?})");
 
-        Err(jvm.exception("java/lang/UnsupportedOperationException", "Iterator.remove").await)
+        let entry: ClassInstanceRef<HashMapEntry> = jvm
+            .get_field(&this, "java/util/HashMap$HashIterator", "lastReturned", "Ljava/util/HashMap$Entry;")
+            .await?;
+        if entry.is_null() {
+            return Err(jvm.exception("java/lang/IllegalStateException", "No entry to remove").await);
+        }
+        let map = jvm
+            .get_field(&this, "java/util/HashMap$HashIterator", "map", "Ljava/util/HashMap;")
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&map, "java/util/HashMap", "remove", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
+            .await?;
+        let null_entry: ClassInstanceRef<HashMapEntry> = None.into();
+        jvm.put_field(
+            &mut this,
+            "java/util/HashMap$HashIterator",
+            "lastReturned",
+            "Ljava/util/HashMap$Entry;",
+            null_entry,
+        )
+        .await
     }
 }

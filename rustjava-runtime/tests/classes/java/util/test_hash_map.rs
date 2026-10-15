@@ -263,15 +263,67 @@ async fn assert_next_throws_no_such_element(jvm: &Jvm, iterator: &ClassInstanceR
     Ok(())
 }
 
-async fn assert_remove_throws_unsupported(jvm: &Jvm, iterator: &ClassInstanceRef<Object>) -> Result<()> {
+async fn assert_remove_throws_illegal_state(jvm: &Jvm, iterator: &ClassInstanceRef<Object>) -> Result<()> {
     let result: Result<()> = jvm
         .invoke_virtual(iterator, &iterator.class_definition().name(), "remove", "()V", ())
         .await;
     let Err(JavaError::JavaException(exception)) = result else {
         panic!("Expected JavaException, got {:?}", result);
     };
-    assert!(jvm.is_instance(&*exception, "java/lang/UnsupportedOperationException"));
+    assert!(jvm.is_instance(&*exception, "java/lang/IllegalStateException"));
 
+    Ok(())
+}
+
+async fn assert_view_iterator_removal(jvm: &Jvm, map: &ClassInstanceRef<Object>, view: &ClassInstanceRef<Object>) -> Result<()> {
+    let value: ClassInstanceRef<Object> = JavaLangString::from_rust_string(jvm, "duplicate").await?.into();
+    let first_key = JavaLangString::from_rust_string(jvm, "first").await?;
+    let second_key = JavaLangString::from_rust_string(jvm, "second").await?;
+    let null: ClassInstanceRef<Object> = None.into();
+    for (key, value) in [(null.clone(), value.clone()), (first_key.into(), value), (second_key.into(), null)] {
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(
+                map,
+                "java/util/HashMap",
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                (key, value),
+            )
+            .await?;
+    }
+
+    let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(map, "java/util/HashMap", "entrySet", "()Ljava/util/Set;", ()).await?;
+    let entry_iterator = jvm
+        .invoke_virtual(&entries, "java/util/Set", "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    let iterator = jvm
+        .invoke_virtual(view, &view.class_definition().name(), "iterator", "()Ljava/util/Iterator;", ())
+        .await?;
+    assert_remove_throws_illegal_state(jvm, &iterator).await?;
+    for remaining in (0..3).rev() {
+        let entry = jvm
+            .invoke_virtual(&entry_iterator, "java/util/Iterator", "next", "()Ljava/lang/Object;", ())
+            .await?;
+        let key: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&entry, "java/util/Map$Entry", "getKey", "()Ljava/lang/Object;", ())
+            .await?;
+        let _: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(&iterator, "java/util/Iterator", "next", "()Ljava/lang/Object;", ())
+            .await?;
+        if remaining == 0 {
+            assert_next_throws_no_such_element(jvm, &iterator).await?;
+        }
+        let _: () = jvm.invoke_virtual(&iterator, "java/util/Iterator", "remove", "()V", ()).await?;
+        let contains: bool = jvm
+            .invoke_virtual(map, "java/util/HashMap", "containsKey", "(Ljava/lang/Object;)Z", (key,))
+            .await?;
+        assert!(!contains);
+        let size: i32 = jvm.invoke_virtual(map, "java/util/HashMap", "size", "()I", ()).await?;
+        assert_eq!(size, remaining);
+        assert_remove_throws_illegal_state(jvm, &iterator).await?;
+    }
+    let has_next: bool = jvm.invoke_virtual(&iterator, "java/util/Iterator", "hasNext", "()Z", ()).await?;
+    assert!(!has_next);
     Ok(())
 }
 
@@ -1094,7 +1146,6 @@ async fn test_hash_map_key_set_view_backing_and_iterator_snapshot() -> Result<()
     let snapshot = sorted_optional_strings(iterator_to_optional_strings(&jvm, &iterator).await?);
     assert_eq!(snapshot, vec![Some("first".to_string()), Some("second".to_string())]);
     assert_next_throws_no_such_element(&jvm, &iterator).await?;
-    assert_remove_throws_unsupported(&jvm, &iterator).await?;
 
     let size: i32 = jvm
         .invoke_virtual(&key_set, &key_set.class_definition().name(), "size", "()I", ())
@@ -1195,6 +1246,8 @@ async fn test_hash_map_key_set_view_backing_and_iterator_snapshot() -> Result<()
     assert!(!has_next);
     assert_next_throws_no_such_element(&jvm, &empty_iterator).await?;
 
+    assert_view_iterator_removal(&jvm, &hash_map.into(), &key_set).await?;
+
     Ok(())
 }
 
@@ -1294,7 +1347,6 @@ async fn test_hash_map_values_view_contains_clear_and_iterator_snapshot() -> Res
     let snapshot = sorted_optional_strings(iterator_to_optional_strings(&jvm, &iterator).await?);
     assert_eq!(snapshot, vec![None, Some("same-value".to_string())]);
     assert_next_throws_no_such_element(&jvm, &iterator).await?;
-    assert_remove_throws_unsupported(&jvm, &iterator).await?;
 
     let size: i32 = jvm.invoke_virtual(&values, &values.class_definition().name(), "size", "()I", ()).await?;
     assert_eq!(size, 3);
@@ -1313,6 +1365,8 @@ async fn test_hash_map_values_view_contains_clear_and_iterator_snapshot() -> Res
         .invoke_virtual(&values, &values.class_definition().name(), "toArray", "()[Ljava/lang/Object;", ())
         .await?;
     assert_eq!(jvm.array_length(&values_array).await?, 0);
+
+    assert_view_iterator_removal(&jvm, &hash_map.into(), &values).await?;
 
     Ok(())
 }
@@ -1382,7 +1436,6 @@ async fn test_hash_map_entry_set_view_backing_clear_and_iterator_snapshot() -> R
         ]
     );
     assert_next_throws_no_such_element(&jvm, &iterator).await?;
-    assert_remove_throws_unsupported(&jvm, &iterator).await?;
 
     let size: i32 = jvm
         .invoke_virtual(&entry_set, &entry_set.class_definition().name(), "size", "()I", ())
@@ -1409,6 +1462,8 @@ async fn test_hash_map_entry_set_view_backing_clear_and_iterator_snapshot() -> R
         .await?;
     assert!(!has_next);
     assert_next_throws_no_such_element(&jvm, &empty_iterator).await?;
+
+    assert_view_iterator_removal(&jvm, &hash_map.into(), &entry_set).await?;
 
     Ok(())
 }

@@ -53,18 +53,6 @@ async fn assert_next_throws_no_such_element(jvm: &jvm::Jvm, iterator: &ClassInst
     Ok(())
 }
 
-async fn assert_remove_throws_unsupported(jvm: &jvm::Jvm, iterator: &ClassInstanceRef<Object>) -> Result<()> {
-    let result: Result<()> = jvm
-        .invoke_virtual(iterator, &iterator.class_definition().name(), "remove", "()V", ())
-        .await;
-    let Err(JavaError::JavaException(exception)) = result else {
-        panic!("Expected JavaException, got {:?}", result);
-    };
-    assert!(jvm.is_instance(&*exception, "java/lang/UnsupportedOperationException"));
-
-    Ok(())
-}
-
 fn sorted_optional_strings(mut values: Vec<Option<String>>) -> Vec<Option<String>> {
     values.sort();
     values
@@ -287,15 +275,23 @@ async fn test_hash_set_to_array_and_iterator_snapshot_exhaustion_remove() -> Res
         .invoke_virtual(&hash_set, &hash_set.class_definition().name(), "add", "(Ljava/lang/Object;)Z", (third,))
         .await?;
 
-    let snapshot = sorted_optional_strings(iterator_to_optional_strings(&jvm, &iterator).await?);
-    assert_eq!(snapshot, vec![Some("first".to_string()), Some("second".to_string())]);
+    let snapshot = iterator_to_optional_strings(&jvm, &iterator).await?;
+    let last = JavaLangString::from_rust_string(&jvm, snapshot.last().unwrap().as_deref().unwrap()).await?;
+    assert_eq!(
+        sorted_optional_strings(snapshot),
+        vec![Some("first".to_string()), Some("second".to_string())]
+    );
     assert_next_throws_no_such_element(&jvm, &iterator).await?;
-    assert_remove_throws_unsupported(&jvm, &iterator).await?;
+    let _: () = jvm.invoke_virtual(&iterator, "java/util/Iterator", "remove", "()V", ()).await?;
+    let contains: bool = jvm
+        .invoke_virtual(&hash_set, "java/util/HashSet", "contains", "(Ljava/lang/Object;)Z", (last,))
+        .await?;
+    assert!(!contains);
 
     let size: i32 = jvm
         .invoke_virtual(&hash_set, &hash_set.class_definition().name(), "size", "()I", ())
         .await?;
-    assert_eq!(size, 3);
+    assert_eq!(size, 2);
 
     let empty_hash_set = jvm.new_class("java/util/HashSet", "()V", ()).await?;
     let empty_iterator: ClassInstanceRef<Object> = jvm

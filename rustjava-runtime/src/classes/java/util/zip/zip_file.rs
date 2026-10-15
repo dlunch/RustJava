@@ -50,7 +50,7 @@ impl ZipFile {
         }
     }
 
-    async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<Cursor<Vec<u8>>>> {
+    pub(crate) async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<Cursor<Vec<u8>>>> {
         let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/util/zip/ZipFile", "zipData", "[B").await?;
         let length = jvm.array_length(&zip_data).await?;
         let mut buf = vec![0u8; length];

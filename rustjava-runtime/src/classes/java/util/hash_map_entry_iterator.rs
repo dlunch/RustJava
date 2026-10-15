@@ -6,6 +6,8 @@ use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
 use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
 
+use super::HashMap;
+
 // class java.util.HashMap$EntryIterator
 pub struct HashMapEntryIterator;
 
@@ -17,7 +19,7 @@ impl HashMapEntryIterator {
             interfaces: vec![],
             methods: vec![JavaMethodProto::new(
                 "<init>",
-                "([Ljava/lang/Object;)V",
+                "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
                 Self::init,
                 MethodAccessFlags::empty(),
             )],
@@ -26,10 +28,22 @@ impl HashMapEntryIterator {
         }
     }
 
-    async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
+    async fn init(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        map: ClassInstanceRef<HashMap>,
+        elements: ClassInstanceRef<Array<Object>>,
+    ) -> Result<()> {
         tracing::debug!("java.util.HashMap$EntryIterator::<init>({this:?}, {elements:?})");
 
-        jvm.invoke_special(&this, "java/util/HashMap$HashIterator", "<init>", "([Ljava/lang/Object;)V", (elements,))
-            .await
+        jvm.invoke_special(
+            &this,
+            "java/util/HashMap$HashIterator",
+            "<init>",
+            "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
+            (map, elements),
+        )
+        .await
     }
 }

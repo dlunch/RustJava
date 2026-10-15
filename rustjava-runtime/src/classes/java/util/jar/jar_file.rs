@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{string::ToString, vec};
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::JavaMethodProto;
@@ -12,7 +12,7 @@ use crate::{
         util::{
             Enumeration,
             jar::{JarEntry, Manifest},
-            zip::ZipEntry,
+            zip::{ZipEntry, ZipFile},
         },
     },
 };
@@ -112,7 +112,7 @@ impl JarFile {
         tracing::debug!("java.util.jar.JarFile::getManifest({this:?})");
 
         let manifest_name = JavaLangString::from_rust_string(jvm, "META-INF/MANIFEST.MF").await?;
-        let manifest_file: ClassInstanceRef<JarEntry> = jvm
+        let mut manifest_file: ClassInstanceRef<JarEntry> = jvm
             .invoke_virtual(
                 &this,
                 "java/util/jar/JarFile",
@@ -121,6 +121,28 @@ impl JarFile {
                 (manifest_name,),
             )
             .await?;
+
+        if manifest_file.is_null() {
+            let name = {
+                let zip = ZipFile::get_zip_archive(jvm, &ClassInstanceRef::from(this.instance.clone())).await?;
+                zip.file_names()
+                    .find(|name| name.eq_ignore_ascii_case("META-INF/MANIFEST.MF"))
+                    .map(ToString::to_string)
+            };
+            let Some(name) = name else {
+                return Ok(None.into());
+            };
+            let name = JavaLangString::from_rust_string(jvm, &name).await?;
+            manifest_file = jvm
+                .invoke_virtual(
+                    &this,
+                    "java/util/jar/JarFile",
+                    "getJarEntry",
+                    "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
+                    (name,),
+                )
+                .await?;
+        }
 
         let input_stream: ClassInstanceRef<InputStream> = jvm
             .invoke_virtual(
