@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -83,7 +83,7 @@ impl HashMapHashIterator {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         }
 
-        let mut values: alloc::vec::Vec<ClassInstanceRef<Object>> = jvm.load_array(&elements, index as usize, 1).await?;
+        let mut values: Vec<ClassInstanceRef<Object>> = jvm.load_array(&elements, index as usize, 1).await?;
         let Some(element) = values.pop() else {
             return Err(jvm.exception("java/util/NoSuchElementException", "HashMap iterator exhausted").await);
         };

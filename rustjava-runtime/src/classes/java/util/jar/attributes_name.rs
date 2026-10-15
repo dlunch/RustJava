@@ -9,6 +9,7 @@ use crate::{
     classes::java::lang::{Object, String},
 };
 
+// class java.util.jar.Attributes$Name
 pub struct AttributesName;
 
 impl AttributesName {
