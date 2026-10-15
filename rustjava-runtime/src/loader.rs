@@ -260,6 +260,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::util::VectorItr::as_proto(),
         crate::classes::java::util::VectorItr::list_proto(),
         crate::classes::java::util::jar::Attributes::as_proto(),
+        crate::classes::java::util::jar::AttributesName::as_proto(),
         crate::classes::java::util::jar::JarEntry::as_proto(),
         crate::classes::java::util::jar::JarFile::as_proto(),
         crate::classes::java::util::jar::JarFileEntries::as_proto(),

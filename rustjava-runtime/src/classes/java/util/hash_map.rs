@@ -125,18 +125,6 @@ impl HashMap {
         Ok(entry_set.into())
     }
 
-    async fn keys_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
-        Self::snapshot_entries(jvm, this, SnapshotKind::Keys).await
-    }
-
-    async fn values_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
-        Self::snapshot_entries(jvm, this, SnapshotKind::Values).await
-    }
-
-    async fn entries_snapshot(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
-        Self::snapshot_entries(jvm, this, SnapshotKind::Entries).await
-    }
-
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?}, {capacity:?})");
 
@@ -473,28 +461,40 @@ impl HashMap {
     }
 
     async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let snapshot = Self::keys_snapshot(jvm, &this).await?;
+        let snapshot = Self::snapshot_entries(jvm, &this).await?;
 
         Ok(jvm
-            .new_class("java/util/HashMap$KeyIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .new_class(
+                "java/util/HashMap$KeyIterator",
+                "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
+                (this, snapshot),
+            )
             .await?
             .into())
     }
 
     async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let snapshot = Self::values_snapshot(jvm, &this).await?;
+        let snapshot = Self::snapshot_entries(jvm, &this).await?;
 
         Ok(jvm
-            .new_class("java/util/HashMap$ValueIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .new_class(
+                "java/util/HashMap$ValueIterator",
+                "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
+                (this, snapshot),
+            )
             .await?
             .into())
     }
 
     async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let snapshot = Self::entries_snapshot(jvm, &this).await?;
+        let snapshot = Self::snapshot_entries(jvm, &this).await?;
 
         Ok(jvm
-            .new_class("java/util/HashMap$EntryIterator", "([Ljava/lang/Object;)V", (snapshot,))
+            .new_class(
+                "java/util/HashMap$EntryIterator",
+                "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
+                (this, snapshot),
+            )
             .await?
             .into())
     }
@@ -655,7 +655,7 @@ impl HashMap {
         (hash & 0x7FFFFFFF) as usize % table_len
     }
 
-    async fn snapshot_entries(jvm: &Jvm, this: &ClassInstanceRef<Self>, kind: SnapshotKind) -> Result<ClassInstanceRef<Array<Object>>> {
+    async fn snapshot_entries(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         let table: ClassInstanceRef<Array<HashMapEntry>> = jvm.get_field(this, "java/util/HashMap", "table", "[Ljava/util/HashMap$Entry;").await?;
         let table_len = jvm.array_length(&table).await?;
         let size: i32 = jvm.get_field(this, "java/util/HashMap", "size", "I").await?;
@@ -664,12 +664,7 @@ impl HashMap {
         for bucket_index in 0..table_len {
             let mut entry = Self::load_bucket(jvm, &table, bucket_index).await?;
             while !entry.is_null() {
-                let element = match kind {
-                    SnapshotKind::Keys => jvm.get_field(&entry, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?,
-                    SnapshotKind::Values => jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await?,
-                    SnapshotKind::Entries => ClassInstanceRef::new(entry.clone().instance),
-                };
-                elements.push(element);
+                elements.push(ClassInstanceRef::new(entry.clone().instance));
 
                 entry = jvm
                     .get_field(&entry, "java/util/HashMap$Entry", "next", "Ljava/util/HashMap$Entry;")
@@ -688,11 +683,4 @@ impl HashMap {
     fn threshold_for_capacity(capacity: i32, load_factor: f32) -> i32 {
         if capacity <= 0 { 0 } else { (capacity as f32 * load_factor) as i32 }
     }
-}
-
-#[derive(Copy, Clone)]
-enum SnapshotKind {
-    Keys,
-    Values,
-    Entries,
 }

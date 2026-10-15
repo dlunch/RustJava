@@ -1,6 +1,6 @@
 use alloc::{vec, vec::Vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -74,7 +74,7 @@ impl Manifest {
             let key = JavaLangString::from_rust_string(jvm, parts[0].trim()).await?;
             let value = JavaLangString::from_rust_string(jvm, parts[1].trim()).await?;
 
-            let _: ClassInstanceRef<String> = jvm
+            let result: Result<ClassInstanceRef<String>> = jvm
                 .invoke_virtual(
                     &main_attributes,
                     "java/util/jar/Attributes",
@@ -82,7 +82,15 @@ impl Manifest {
                     "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
                     (key, value),
                 )
-                .await?;
+                .await;
+            match result {
+                Err(JavaError::JavaException(exception)) if jvm.is_instance(&*exception, "java/lang/IllegalArgumentException") => {
+                    return Err(jvm.exception("java/io/IOException", "invalid manifest attribute name").await);
+                }
+                result => {
+                    result?;
+                }
+            }
         }
 
         jvm.put_field(
