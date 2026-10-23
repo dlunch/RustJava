@@ -13,6 +13,7 @@ dyn-clone = { workspace = true }
 hashbrown = { workspace = true }
 libm = { version = "^0.2", default-features = false }
 parking_lot = { workspace = true }
+percent-encoding = { version = "^2.3", features = ["alloc"], default-features = false }
 regex = { version = "1.13.1", default-features = false, features = ["unicode"] }
 tracing = { workspace = true }
 

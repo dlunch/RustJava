@@ -3,12 +3,13 @@ use alloc::{format, vec, vec::Vec};
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use percent_encoding::utf8_percent_encode;
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, String},
-        net::URL,
+        net::{URL, URL_PATH},
     },
 };
 
@@ -118,7 +119,7 @@ impl ClassLoader {
                 for path in class_path.split(path_separator.as_str()) {
                     class_paths.push(JavaLangString::from_rust_string(jvm, path).await?);
 
-                    let path = JavaLangString::from_rust_string(jvm, &format!("file:{path}")).await?;
+                    let path = JavaLangString::from_rust_string(jvm, &format!("file:{}", utf8_percent_encode(path, URL_PATH))).await?;
                     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (path,)).await?;
                     urls.push(url);
                 }

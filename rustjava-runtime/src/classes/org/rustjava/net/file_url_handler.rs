@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::JavaMethodProto;
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
@@ -8,7 +8,7 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::String,
-        net::{URL, URLConnection},
+        net::{URL, URLConnection, decode_url_path},
     },
 };
 
@@ -52,6 +52,8 @@ impl FileURLHandler {
         tracing::debug!("org.rustjava.net.FileURLHandler::openConnection({this:?}, {url:?})");
 
         let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
+        let file = JavaLangString::to_rust_string(jvm, &file).await?;
+        let file = JavaLangString::from_rust_string(jvm, &decode_url_path(jvm, &file).await?).await?;
         let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
 
         let connection = jvm

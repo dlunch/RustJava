@@ -6,7 +6,7 @@ use test_utils::test_jvm;
 async fn test_jar_filename() -> Result<()> {
     let jvm = test_jvm().await?;
 
-    let url = JavaLangString::from_rust_string(&jvm, "jar:file:path/to/file.jar!/path/to/entry").await?;
+    let url = JavaLangString::from_rust_string(&jvm, "jar:file:path/to/%ED%95%9C%EA%B8%80.jar!/path/to/%ED%95%9C%EA%B8%80%20+%2520").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url,)).await?;
 
     let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
@@ -39,7 +39,7 @@ async fn test_jar_filename() -> Result<()> {
         )
         .await?;
 
-    assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "path/to/file.jar");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "path/to/%ED%95%9C%EA%B8%80.jar");
     assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "file");
 
     let entry_name = jvm
@@ -51,7 +51,15 @@ async fn test_jar_filename() -> Result<()> {
             (),
         )
         .await?;
-    assert_eq!(JavaLangString::to_rust_string(&jvm, &entry_name).await?, "path/to/entry");
+    assert_eq!(JavaLangString::to_rust_string(&jvm, &entry_name).await?, "path/to/\u{d55c}\u{ae00} +%20");
+
+    let invalid = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/%FF").await?;
+    let invalid = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (invalid,)).await?;
+    let result = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (invalid,)).await;
+    let Err(jvm::JavaError::JavaException(exception)) = result else {
+        panic!("expected IllegalArgumentException for invalid UTF-8");
+    };
+    assert!(jvm.is_instance(exception.as_ref(), "java/lang/IllegalArgumentException"));
 
     Ok(())
 }

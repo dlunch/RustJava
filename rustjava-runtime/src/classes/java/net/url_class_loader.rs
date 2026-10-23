@@ -1,4 +1,4 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{format, string::ToString, vec, vec::Vec};
 
 use jvm::{
     Array, ClassInstanceRef, Jvm, Result,
@@ -6,12 +6,13 @@ use jvm::{
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use percent_encoding::utf8_percent_encode;
 
 use crate::{
     FileType, RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, ClassLoader, String},
-        net::{JarURLConnection, URL},
+        net::{JarURLConnection, URL, URL_PATH, decode_url_path},
         util::jar::JarEntry,
     },
 };
@@ -133,16 +134,17 @@ impl URLClassLoader {
         for url in urls {
             let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
+            let path = decode_url_path(jvm, &file).await?;
 
-            let metadata = runtime.metadata(&file).await;
-            if file.ends_with('/') || file.is_empty() || metadata.as_ref().is_ok_and(|metadata| metadata.r#type == FileType::Directory) {
+            let metadata = runtime.metadata(&path).await;
+            if path.ends_with('/') || path.is_empty() || metadata.as_ref().is_ok_and(|metadata| metadata.r#type == FileType::Directory) {
                 // directory
-                let final_path = if file.is_empty() {
+                let final_path = if path.is_empty() {
                     name_str.clone()
-                } else if file.ends_with('/') {
-                    format!("{file}{name_str}")
+                } else if path.ends_with('/') {
+                    format!("{path}{name_str}")
                 } else {
-                    format!("{file}/{name_str}")
+                    format!("{path}/{name_str}")
                 };
 
                 if runtime.metadata(&final_path).await.is_ok() {
@@ -153,7 +155,7 @@ impl URLClassLoader {
                             (
                                 JavaLangString::from_rust_string(jvm, "file").await?,
                                 JavaLangString::from_rust_string(jvm, "").await?,
-                                JavaLangString::from_rust_string(jvm, &final_path).await?,
+                                JavaLangString::from_rust_string(jvm, &utf8_percent_encode(&final_path, URL_PATH).to_string()).await?,
                             ),
                         )
                         .await?;
@@ -166,7 +168,7 @@ impl URLClassLoader {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
 
-                let jar_url_str = format!("jar:file:{file}!/{name_str}"); // TODO url might not be file
+                let jar_url_str = format!("jar:file:{file}!/{}", utf8_percent_encode(name_str, URL_PATH)); // TODO url might not be file
                 let jar_url = JavaLangString::from_rust_string(jvm, &jar_url_str).await?;
                 let jar_url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (jar_url,)).await?;
                 let connection: ClassInstanceRef<JarURLConnection> = jvm

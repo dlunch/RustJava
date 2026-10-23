@@ -6,7 +6,11 @@ use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
-    classes::java::{lang::String, net::URL, util::jar::Attributes},
+    classes::java::{
+        lang::String,
+        net::{URL, decode_url_path},
+        util::jar::Attributes,
+    },
 };
 
 // abstract class java.net.JarURLConnection
@@ -60,7 +64,7 @@ impl JarURLConnection {
         jvm.put_field(&mut this, "java/net/JarURLConnection", "fileUrl", "Ljava/net/URL;", file_url)
             .await?;
 
-        let entry = JavaLangString::from_rust_string(jvm, split[1]).await?;
+        let entry = JavaLangString::from_rust_string(jvm, &decode_url_path(jvm, split[1]).await?).await?;
         jvm.put_field(&mut this, "java/net/JarURLConnection", "entry", "Ljava/lang/String;", entry)
             .await?;
 

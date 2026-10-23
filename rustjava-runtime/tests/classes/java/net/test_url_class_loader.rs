@@ -1,17 +1,24 @@
 use alloc::vec;
+use std::io::{Cursor, Write};
 
 use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::{lang::Class, net::URL};
+use zip::{ZipWriter, write::SimpleFileOptions};
 
 use test_utils::test_jvm_filesystem;
 
 #[tokio::test]
 async fn test_jar_loading() -> Result<()> {
-    let jar = include_bytes!("../../../../../test-data/test.jar");
-    let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
+    let entry_name = "\u{c790}\u{b8cc} +%20#.txt";
+    let mut archive = ZipWriter::new(Cursor::new(Vec::new()));
+    archive.start_file(entry_name, SimpleFileOptions::default()).unwrap();
+    archive.write_all(b"test content\n").unwrap();
+    let filesystem = [("\u{d55c}\u{ae00} +%20#.jar".into(), archive.finish().unwrap().into_inner())]
+        .into_iter()
+        .collect();
     let jvm = test_jvm_filesystem(filesystem).await?;
 
-    let url_str = JavaLangString::from_rust_string(&jvm, "file:test.jar").await?;
+    let url_str = JavaLangString::from_rust_string(&jvm, "file:%ED%95%9C%EA%B8%80%20+%2520%23.jar").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_str,)).await?;
     let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
     jvm.store_array(&mut urls, 0, vec![url]).await?;
@@ -20,8 +27,8 @@ async fn test_jar_loading() -> Result<()> {
         .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
         .await?;
 
-    let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
-    let resource = jvm
+    let resource_name = JavaLangString::from_rust_string(&jvm, entry_name).await?;
+    let resource: ClassInstanceRef<URL> = jvm
         .invoke_virtual(
             &class_loader,
             &class_loader.class_definition().name(),
@@ -30,6 +37,7 @@ async fn test_jar_loading() -> Result<()> {
             (resource_name,),
         )
         .await?;
+    assert!(!resource.is_null());
 
     let stream = jvm
         .invoke_virtual(
@@ -95,10 +103,12 @@ async fn test_jar_loading_with_slash() -> Result<()> {
 
 #[tokio::test]
 async fn test_load_from_dir() -> Result<()> {
-    let filesystem = [("test.txt".into(), b"test content\n".to_vec())].into_iter().collect();
+    let filesystem = [("\u{d55c}\u{ae00} +%20#/\u{c790}\u{b8cc} +%20#.txt".into(), b"test content\n".to_vec())]
+        .into_iter()
+        .collect();
     let jvm = test_jvm_filesystem(filesystem).await?;
 
-    let url_str = JavaLangString::from_rust_string(&jvm, "file:.").await?;
+    let url_str = JavaLangString::from_rust_string(&jvm, "file:%ED%95%9C%EA%B8%80%20+%2520%23/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_str,)).await?;
     let mut urls = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
     jvm.store_array(&mut urls, 0, vec![url]).await?;
@@ -107,7 +117,7 @@ async fn test_load_from_dir() -> Result<()> {
         .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
         .await?;
 
-    let resource_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
+    let resource_name = JavaLangString::from_rust_string(&jvm, "\u{c790}\u{b8cc} +%20#.txt").await?;
     let resource = jvm
         .invoke_virtual(
             &class_loader,

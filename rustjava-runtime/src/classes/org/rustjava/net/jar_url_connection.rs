@@ -9,7 +9,7 @@ use crate::{
     classes::java::{
         io::InputStream,
         lang::{Object, String},
-        net::URL,
+        net::{URL, decode_url_path},
         util::jar::JarFile,
     },
 };
@@ -89,7 +89,9 @@ impl JarURLConnection {
             if !cache.is_null() {
                 Ok(cache)
             } else {
-                let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name.clone(),)).await?;
+                let path = JavaLangString::to_rust_string(jvm, &name).await?;
+                let path = JavaLangString::from_rust_string(jvm, &decode_url_path(jvm, &path).await?).await?;
+                let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?;
                 let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
                 let _: ClassInstanceRef<Object> = jvm
