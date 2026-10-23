@@ -273,6 +273,7 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::org::rustjava::net::FileURLHandler::as_proto(),
         crate::classes::org::rustjava::net::JarURLConnection::as_proto(),
         crate::classes::org::rustjava::net::JarURLHandler::as_proto(),
+        crate::classes::org::rustjava::net::URLPath::as_proto(),
         crate::classes::org::rustjava::lang::RustJarClassLoader::as_proto(),
     ];
 

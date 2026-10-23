@@ -9,7 +9,7 @@ use crate::{
     classes::java::{
         io::InputStream,
         lang::{Object, String},
-        net::{URL, decode_url_path},
+        net::URL,
         util::jar::JarFile,
     },
 };
@@ -89,8 +89,14 @@ impl JarURLConnection {
             if !cache.is_null() {
                 Ok(cache)
             } else {
-                let path = JavaLangString::to_rust_string(jvm, &name).await?;
-                let path = JavaLangString::from_rust_string(jvm, &decode_url_path(jvm, &path).await?).await?;
+                let path: ClassInstanceRef<String> = jvm
+                    .invoke_static(
+                        "org/rustjava/net/URLPath",
+                        "decode",
+                        "(Ljava/lang/String;)Ljava/lang/String;",
+                        (name.clone(),),
+                    )
+                    .await?;
                 let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?;
                 let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 

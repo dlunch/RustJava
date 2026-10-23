@@ -1,4 +1,4 @@
-use alloc::{format, string::ToString, vec, vec::Vec};
+use alloc::{format, vec, vec::Vec};
 
 use jvm::{
     Array, ClassInstanceRef, Jvm, Result,
@@ -6,13 +6,12 @@ use jvm::{
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
-use percent_encoding::utf8_percent_encode;
 
 use crate::{
     FileType, RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{Class, ClassLoader, String},
-        net::{JarURLConnection, URL, URL_PATH, decode_url_path},
+        net::{JarURLConnection, URL},
         util::jar::JarEntry,
     },
 };
@@ -132,9 +131,17 @@ impl URLClassLoader {
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
 
         for url in urls {
-            let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
+            let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
+            let path = jvm
+                .invoke_static(
+                    "org/rustjava/net/URLPath",
+                    "decode",
+                    "(Ljava/lang/String;)Ljava/lang/String;",
+                    (file.clone(),),
+                )
+                .await?;
             let file = JavaLangString::to_rust_string(jvm, &file).await?;
-            let path = decode_url_path(jvm, &file).await?;
+            let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
             let metadata = runtime.metadata(&path).await;
             if path.ends_with('/') || path.is_empty() || metadata.as_ref().is_ok_and(|metadata| metadata.r#type == FileType::Directory) {
@@ -148,6 +155,15 @@ impl URLClassLoader {
                 };
 
                 if runtime.metadata(&final_path).await.is_ok() {
+                    let final_path = JavaLangString::from_rust_string(jvm, &final_path).await?;
+                    let final_path: ClassInstanceRef<String> = jvm
+                        .invoke_static(
+                            "org/rustjava/net/URLPath",
+                            "encode",
+                            "(Ljava/lang/String;)Ljava/lang/String;",
+                            (final_path,),
+                        )
+                        .await?;
                     let new_url = jvm
                         .new_class(
                             "java/net/URL",
@@ -155,7 +171,7 @@ impl URLClassLoader {
                             (
                                 JavaLangString::from_rust_string(jvm, "file").await?,
                                 JavaLangString::from_rust_string(jvm, "").await?,
-                                JavaLangString::from_rust_string(jvm, &utf8_percent_encode(&final_path, URL_PATH).to_string()).await?,
+                                final_path,
                             ),
                         )
                         .await?;
@@ -167,8 +183,12 @@ impl URLClassLoader {
             } else {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
-
-                let jar_url_str = format!("jar:file:{file}!/{}", utf8_percent_encode(name_str, URL_PATH)); // TODO url might not be file
+                let entry = JavaLangString::from_rust_string(jvm, name_str).await?;
+                let entry = jvm
+                    .invoke_static("org/rustjava/net/URLPath", "encode", "(Ljava/lang/String;)Ljava/lang/String;", (entry,))
+                    .await?;
+                let entry = JavaLangString::to_rust_string(jvm, &entry).await?;
+                let jar_url_str = format!("jar:file:{file}!/{entry}"); // TODO url might not be file
                 let jar_url = JavaLangString::from_rust_string(jvm, &jar_url_str).await?;
                 let jar_url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (jar_url,)).await?;
                 let connection: ClassInstanceRef<JarURLConnection> = jvm
