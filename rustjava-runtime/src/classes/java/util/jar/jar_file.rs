@@ -125,9 +125,18 @@ impl JarFile {
         if manifest_file.is_null() {
             let name = {
                 let zip = ZipFile::get_zip_archive(jvm, &ClassInstanceRef::from(this.instance.clone())).await?;
-                zip.file_names()
-                    .find(|name| name.eq_ignore_ascii_case("META-INF/MANIFEST.MF"))
-                    .map(ToString::to_string)
+                let mut manifest_name = None;
+                for name in zip.file_names() {
+                    let name = match name {
+                        Ok(name) => name,
+                        Err(err) => return Err(jvm.exception("java/util/zip/ZipException", &err.to_string()).await),
+                    };
+                    if name.eq_ignore_ascii_case("META-INF/MANIFEST.MF") {
+                        manifest_name = Some(name.into_owned());
+                        break;
+                    }
+                }
+                manifest_name
             };
             let Some(name) = name else {
                 return Ok(None.into());

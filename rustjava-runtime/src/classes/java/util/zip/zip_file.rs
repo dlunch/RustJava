@@ -110,7 +110,10 @@ impl ZipFile {
         tracing::debug!("java.util.zip.ZipFile::entries({this:?})");
 
         let zip = Self::get_zip_archive(jvm, &this).await?;
-        let names = zip.file_names().map(|x| x.to_string()).collect::<Vec<_>>();
+        let names = match zip.file_names().collect::<core::result::Result<Vec<_>, _>>() {
+            Ok(names) => names,
+            Err(err) => return Err(jvm.exception("java/util/zip/ZipException", &err.to_string()).await),
+        };
 
         let mut name_array = jvm.instantiate_array("Ljava/lang/String;", names.len() as _).await?;
         for (i, name) in names.iter().enumerate() {
