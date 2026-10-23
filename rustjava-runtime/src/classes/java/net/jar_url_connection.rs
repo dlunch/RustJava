@@ -61,6 +61,9 @@ impl JarURLConnection {
             .await?;
 
         let entry = JavaLangString::from_rust_string(jvm, split[1]).await?;
+        let entry: ClassInstanceRef<String> = jvm
+            .invoke_static("org/rustjava/net/URLPath", "decode", "(Ljava/lang/String;)Ljava/lang/String;", (entry,))
+            .await?;
         jvm.put_field(&mut this, "java/net/JarURLConnection", "entry", "Ljava/lang/String;", entry)
             .await?;
 

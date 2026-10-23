@@ -89,7 +89,15 @@ impl JarURLConnection {
             if !cache.is_null() {
                 Ok(cache)
             } else {
-                let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name.clone(),)).await?;
+                let path: ClassInstanceRef<String> = jvm
+                    .invoke_static(
+                        "org/rustjava/net/URLPath",
+                        "decode",
+                        "(Ljava/lang/String;)Ljava/lang/String;",
+                        (name.clone(),),
+                    )
+                    .await?;
+                let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (path,)).await?;
                 let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
                 let _: ClassInstanceRef<Object> = jvm
