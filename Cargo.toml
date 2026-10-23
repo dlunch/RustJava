@@ -2,7 +2,7 @@
 members = ["classfile", "jvm", "jvm-bytecode", "jvm-class-proto", "jvm-types", "rustjava-runtime"]
 
 [workspace.package]
-version = "0.3.3"
+version = "0.3.4"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/dlunch/RustJava"
@@ -21,12 +21,12 @@ tracing = { version = "^0.1", default-features = false, features = ["attributes"
 
 tokio = { version = "^1.54.1", features = ["macros"] }
 
-classfile = { path = "classfile", version = "0.3.3" }
-jvm = { path = "jvm", version = "0.3.3" }
-jvm-bytecode = { path = "jvm-bytecode", version = "0.3.3" }
-jvm-class-proto = { path = "jvm-class-proto", version = "0.3.3" }
-jvm-types = { path = "jvm-types", version = "0.3.3" }
-rustjava-runtime = { path = "rustjava-runtime", version = "0.3.3" }
+classfile = { path = "classfile", version = "0.3.4" }
+jvm = { path = "jvm", version = "0.3.4" }
+jvm-bytecode = { path = "jvm-bytecode", version = "0.3.4" }
+jvm-class-proto = { path = "jvm-class-proto", version = "0.3.4" }
+jvm-types = { path = "jvm-types", version = "0.3.4" }
+rustjava-runtime = { path = "rustjava-runtime", version = "0.3.4" }
 test-utils = { path = "test-utils" }
 
 [package]
