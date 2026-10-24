@@ -254,7 +254,7 @@ impl Integer {
 
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
-            return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
+            return Err(jvm.exception("java/lang/NullPointerException", "value").await);
         }
         let value = JavaLangString::to_rust_string(jvm, &value).await?;
         let (sign, body) = if let Some(body) = value.strip_prefix('-') {

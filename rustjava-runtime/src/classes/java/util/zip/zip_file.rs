@@ -65,6 +65,10 @@ impl ZipFile {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.util.zip.ZipFile::<init>({this:?}, {file:?})");
 
+        if file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "file is null").await);
+        }
+
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let length: i64 = jvm.invoke_virtual(&file, "java/io/File", "length", "()J", ()).await?;
@@ -139,6 +143,10 @@ impl ZipFile {
         entry: ClassInstanceRef<ZipEntry>,
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.util.zip.ZipFile::getInputStream({this:?}, {entry:?})");
+
+        if entry.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "entry is null").await);
+        }
 
         let entry_name = jvm
             .invoke_virtual(&entry, "java/util/zip/ZipEntry", "getName", "()Ljava/lang/String;", ())

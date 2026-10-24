@@ -114,6 +114,9 @@ impl InputStreamReader {
         length: i32,
     ) -> Result<i32> {
         tracing::debug!("java.io.InputStreamReader::read({this:?}, {buf:?}, {offset:?}, {length:?})");
+        if buf.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let destination_length = jvm.array_length(&buf).await? as i32;
         if offset < 0 || length < 0 || offset > destination_length - length {

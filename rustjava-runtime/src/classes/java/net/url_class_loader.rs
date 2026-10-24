@@ -59,6 +59,14 @@ impl URLClassLoader {
     ) -> Result<()> {
         tracing::debug!("java.net.URLClassLoader::<init>({this:?}, {urls:?}, {parent:?})");
 
+        if urls.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "urls is null").await);
+        }
+        let entries: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
+        if entries.iter().any(|url| url.is_null()) {
+            return Err(jvm.exception("java/lang/NullPointerException", "URL element is null").await);
+        }
+
         let _: () = jvm
             .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
@@ -76,6 +84,10 @@ impl URLClassLoader {
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.net.URLClassLoader::findClass({this:?}, {name:?})");
+
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
@@ -124,6 +136,10 @@ impl URLClassLoader {
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.URLClassLoader::findResource({this:?}, {name:?})");
+
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 

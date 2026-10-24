@@ -462,6 +462,14 @@ async fn test_string_concat() -> Result<()> {
 
     assert_eq!(string, "test1test2");
 
+    let result: Result<ClassInstanceRef<JavaString>> = jvm
+        .invoke_virtual(&string1, "java/lang/String", "concat", "(Ljava/lang/String;)Ljava/lang/String;", (None,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("concat must reject null");
+    };
+    assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+
     Ok(())
 }
 
@@ -684,6 +692,14 @@ async fn test_get_chars() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let string = JavaLangString::from_rust_string(&jvm, "Hello, 테스트!").await?;
+
+    let result: Result<()> = jvm
+        .invoke_virtual(&string, "java/lang/String", "getChars", "(II[CI)V", (0, 0, None, 0))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("getChars must reject a null destination even for an empty range");
+    };
+    assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
 
     let char_array = jvm.instantiate_array("[C", 11).await?;
 
@@ -909,6 +925,33 @@ async fn test_init_empty() -> Result<()> {
     let string = jvm.new_class("java/lang/String", "()V", ()).await?;
     let result = JavaLangString::to_rust_string(&jvm, &string).await?;
     assert_eq!(result, "");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_init_rejects_null() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let bytes: ClassInstanceRef<Array<i8>> = None.into();
+    let charset = JavaLangString::from_rust_string(&jvm, "UTF-8").await?;
+
+    for result in [
+        jvm.new_class("java/lang/String", "([B)V", (bytes.clone(),)).await,
+        jvm.new_class("java/lang/String", "([BII)V", (bytes.clone(), 0, 0)).await,
+        jvm.new_class("java/lang/String", "([BLjava/lang/String;)V", (bytes.clone(), charset.clone()))
+            .await,
+        jvm.new_class("java/lang/String", "([BIILjava/lang/String;)V", (bytes, 0, 0, charset))
+            .await,
+        jvm.new_class("java/lang/String", "([C)V", (None,)).await,
+        jvm.new_class("java/lang/String", "([CII)V", (None, 0, 0)).await,
+        jvm.new_class("java/lang/String", "(Ljava/lang/String;)V", (None,)).await,
+        jvm.new_class("java/lang/String", "(Ljava/lang/StringBuffer;)V", (None,)).await,
+    ] {
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("String constructors must reject null");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
 
     Ok(())
 }

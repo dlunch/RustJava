@@ -5,6 +5,21 @@ use jvm::{Result, runtime::JavaLangString};
 use test_utils::test_jvm_filesystem;
 
 #[tokio::test]
+async fn test_null_url_path() -> Result<()> {
+    let jvm = test_jvm_filesystem(Default::default()).await?;
+    for method in ["encode", "decode"] {
+        let result: Result<jvm::ClassInstanceRef<rustjava_runtime::classes::java::lang::String>> = jvm
+            .invoke_static("org/rustjava/net/URLPath", method, "(Ljava/lang/String;)Ljava/lang/String;", (None,))
+            .await;
+        let Err(jvm::JavaError::JavaException(exception)) = result else {
+            panic!("expected NullPointerException for {method}(null)");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_file_url() -> Result<()> {
     let filesystem = [("test.txt".into(), b"test file content".to_vec())].into_iter().collect();
     let jvm = test_jvm_filesystem(filesystem).await?;

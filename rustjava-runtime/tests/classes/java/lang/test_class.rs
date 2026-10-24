@@ -6,7 +6,7 @@ use jvm_types::MethodAccessFlags;
 use rustjava_runtime::{
     Runtime,
     classes::java::{
-        lang::{Class, ClassLoader, String},
+        lang::{Class, ClassLoader, Object, String},
         net::URL,
     },
     get_bootstrap_class_loader,
@@ -505,6 +505,28 @@ async fn test_base_class_loader_delegates_to_bootstrap_and_find_class_throws() -
         .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
         .await?
         .into();
+
+    let loaded: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(
+            &loader,
+            "java/lang/ClassLoader",
+            "findLoadedClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            (None,),
+        )
+        .await?;
+    assert!(loaded.is_null());
+    for (method, descriptor) in [
+        ("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;"),
+        ("getResource", "(Ljava/lang/String;)Ljava/net/URL;"),
+        ("getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;"),
+    ] {
+        let result: Result<ClassInstanceRef<Object>> = jvm.invoke_virtual(&loader, "java/lang/ClassLoader", method, descriptor, (None,)).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("ClassLoader.{method} must reject null");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
 
     let name = JavaLangString::from_rust_string(&jvm, "java/util/Random").await?;
     let class: ClassInstanceRef<Class> = jvm

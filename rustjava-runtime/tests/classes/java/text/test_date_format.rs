@@ -8,6 +8,112 @@ use rustjava_runtime::classes::java::{
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn test_date_format_null_calendar_operations() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let pattern = JavaLangString::from_rust_string(&jvm, "yyyy-MM-dd").await?;
+    let format = jvm.new_class("java/text/SimpleDateFormat", "(Ljava/lang/String;)V", (pattern,)).await?;
+    let _: () = jvm
+        .invoke_virtual(&format, "java/text/DateFormat", "setCalendar", "(Ljava/util/Calendar;)V", (None,))
+        .await?;
+
+    for (method, descriptor, args) in [
+        ("getTimeZone", "()Ljava/util/TimeZone;", vec![]),
+        ("setTimeZone", "(Ljava/util/TimeZone;)V", vec![jvm::JavaValue::Object(None)]),
+        ("isLenient", "()Z", vec![]),
+        ("setLenient", "(Z)V", vec![true.into()]),
+        (
+            "format",
+            "(Ljava/util/Date;)Ljava/lang/String;",
+            vec![jvm.new_class("java/util/Date", "(J)V", (0i64,)).await?.into()],
+        ),
+        (
+            "parse",
+            "(Ljava/lang/String;)Ljava/util/Date;",
+            vec![JavaLangString::from_rust_string(&jvm, "1970-01-01").await?.into()],
+        ),
+    ] {
+        let result: Result<jvm::JavaValue> = jvm.invoke_virtual(&format, "java/text/DateFormat", method, descriptor, args).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{method} with a null calendar must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"), "{method}");
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_date_format_nullable_setters() -> Result<()> {
+    let jvm = test_jvm().await?;
+    for (setter, getter, class) in [
+        ("setCalendar", "getCalendar", "java/util/Calendar"),
+        ("setNumberFormat", "getNumberFormat", "java/text/NumberFormat"),
+    ] {
+        let format = jvm.new_class("java/text/SimpleDateFormat", "()V", ()).await?;
+        let _: () = jvm
+            .invoke_virtual(&format, "java/text/DateFormat", setter, &format!("(L{class};)V"), (None,))
+            .await?;
+        let value: ClassInstanceRef<rustjava_runtime::classes::java::lang::Object> = jvm
+            .invoke_virtual(&format, "java/text/DateFormat", getter, &format!("()L{class};"), ())
+            .await?;
+        assert!(value.is_null());
+        let result: Result<ClassInstanceRef<rustjava_runtime::classes::java::lang::Object>> = jvm
+            .invoke_virtual(&format, "java/text/DateFormat", "clone", "()Ljava/lang/Object;", ())
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("clone after {setter}(null) must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    }
+    for (pattern, source, expected) in [
+        ("yyyy", "1970", "npe"),
+        ("yyyy", " 1970", "npe"),
+        ("yyyy", " ", "invalid"),
+        ("yyyy", "\t", "invalid"),
+        ("'x'yyyy", "x1970", "npe"),
+        ("'x'yyyy", "wrong", "invalid"),
+        ("'x'yyyy", "x", "invalid"),
+        ("'literal'", "literal", "date"),
+        ("MMMM", "January", "date"),
+        ("z", "GMT+01:00", "date"),
+    ] {
+        let pattern = JavaLangString::from_rust_string(&jvm, pattern).await?;
+        let format = jvm.new_class("java/text/SimpleDateFormat", "(Ljava/lang/String;)V", (pattern,)).await?;
+        let _: () = jvm
+            .invoke_virtual(&format, "java/text/DateFormat", "setNumberFormat", "(Ljava/text/NumberFormat;)V", (None,))
+            .await?;
+        let date = jvm.new_class("java/util/Date", "(J)V", (0i64,)).await?;
+        let result: Result<ClassInstanceRef<String>> = jvm
+            .invoke_virtual(&format, "java/text/DateFormat", "format", "(Ljava/util/Date;)Ljava/lang/String;", (date,))
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("format with null numberFormat must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+
+        let source = JavaLangString::from_rust_string(&jvm, source).await?;
+        let position = jvm.new_class("java/text/ParsePosition", "(I)V", (0,)).await?;
+        let result: Result<ClassInstanceRef<Date>> = jvm
+            .invoke_virtual(
+                &format,
+                "java/text/DateFormat",
+                "parse",
+                "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
+                (source, position),
+            )
+            .await;
+        if expected == "npe" {
+            let Err(JavaError::JavaException(exception)) = result else {
+                panic!("numeric parsing with null numberFormat must throw NullPointerException");
+            };
+            assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+        } else {
+            assert_eq!(result?.is_null(), expected == "invalid");
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_date_format_factories_use_english_patterns() -> Result<()> {
     let jvm = test_jvm().await?;
     let date: ClassInstanceRef<Date> = jvm.new_class("java/util/Date", "(J)V", (0i64,)).await?.into();

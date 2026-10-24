@@ -13,6 +13,27 @@ use rustjava_runtime::{
 use test_utils::{TestRuntime, create_test_jvm};
 
 #[tokio::test]
+async fn test_arraycopy_rejects_null_arrays() -> Result<()> {
+    let jvm = create_test_jvm(TestRuntime::new(BTreeMap::new())).await?;
+    let array = jvm.instantiate_array("B", 1).await?;
+    for (source, destination) in [(None, Some(array.clone())), (Some(array), None), (None, None)] {
+        let result: Result<()> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+                (source, 0, destination, 0, 0),
+            )
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("arraycopy must reject null arrays even for zero length");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_system_time_yield_and_exit_runtime_contract() -> Result<()> {
     let runtime = TestRuntime::new(BTreeMap::new());
     let jvm = create_test_jvm(runtime.clone()).await?;

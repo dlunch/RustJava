@@ -38,6 +38,10 @@ impl ZipEntry {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.zip.ZipEntry::<init>({this:?}, {name:?})");
 
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
+
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         jvm.put_field(&mut this, "java/util/zip/ZipEntry", "name", "Ljava/lang/String;", name)
@@ -53,6 +57,10 @@ impl ZipEntry {
         zip_entry: ClassInstanceRef<Self>,
     ) -> Result<()> {
         tracing::debug!("java.util.zip.ZipEntry::<init>({this:?}, {zip_entry:?})");
+
+        if zip_entry.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "entry is null").await);
+        }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

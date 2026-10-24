@@ -32,33 +32,13 @@ impl FileDescriptor {
     async fn cl_init(jvm: &Jvm, runtime: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.io.FileDescriptor::<clinit>()");
 
-        let stderr_fd = runtime.stderr();
-        if let Ok(stderr_fd) = stderr_fd {
-            let mut stderr = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-            jvm.put_field(&mut stderr, "java/io/FileDescriptor", "fd", "I", stderr_fd.id() as i32)
-                .await?;
-
-            jvm.put_static_field("java/io/FileDescriptor", "err", "Ljava/io/FileDescriptor;", stderr)
-                .await?;
-        }
-
-        let stdin_fd = runtime.stdin();
-        if let Ok(stdin_fd) = stdin_fd {
-            let mut stdin = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-            jvm.put_field(&mut stdin, "java/io/FileDescriptor", "fd", "I", stdin_fd.id() as i32)
-                .await?;
-
-            jvm.put_static_field("java/io/FileDescriptor", "in", "Ljava/io/FileDescriptor;", stdin)
-                .await?;
-        }
-
-        let stdout_fd = runtime.stdout();
-        if let Ok(stdout_fd) = stdout_fd {
-            let mut stdout = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
-            jvm.put_field(&mut stdout, "java/io/FileDescriptor", "fd", "I", stdout_fd.id() as i32)
-                .await?;
-
-            jvm.put_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;", stdout)
+        for (name, host_descriptor) in [("err", runtime.stderr()), ("in", runtime.stdin()), ("out", runtime.stdout())] {
+            let mut descriptor = jvm.new_class("java/io/FileDescriptor", "()V", []).await?;
+            if let Ok(host_descriptor) = host_descriptor {
+                jvm.put_field(&mut descriptor, "java/io/FileDescriptor", "fd", "I", host_descriptor.id() as i32)
+                    .await?;
+            }
+            jvm.put_static_field("java/io/FileDescriptor", name, "Ljava/io/FileDescriptor;", descriptor)
                 .await?;
         }
 

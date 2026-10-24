@@ -159,12 +159,13 @@ impl Calendar {
 
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
         tracing::debug!("java.util.Calendar::setTimeZone({this:?}, {time_zone:?})");
-        if time_zone.is_null() {
-            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
-        }
+        let has_time_zone = !time_zone.is_null();
         jvm.put_field(&mut this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;", time_zone)
             .await?;
-        jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
+        if has_time_zone {
+            let _: () = jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await?;
+        }
+        Ok(())
     }
 
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
@@ -183,6 +184,9 @@ impl Calendar {
         if other.is_null() || !jvm.is_instance(&**other, "java/util/Calendar") {
             return Ok(false);
         }
+        if this.identity() == other.identity() {
+            return Ok(true);
+        }
 
         let other: ClassInstanceRef<Calendar> = ClassInstanceRef::new(other.instance);
         let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
@@ -199,6 +203,9 @@ impl Calendar {
 
         let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
         let other_time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&other, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
+        if time_zone.is_null() || other_time_zone.is_null() {
+            return Ok(false);
+        }
         let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let other_raw_offset: i32 = jvm
             .invoke_virtual(&other_time_zone, "java/util/TimeZone", "getRawOffset", "()I", ())
@@ -222,6 +229,9 @@ impl Calendar {
 
         let time: i64 = jvm.get_field(&this, "java/util/Calendar", "time", "J").await?;
         let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
         let raw_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let id: ClassInstanceRef<String> = jvm
             .invoke_virtual(&time_zone, "java/util/TimeZone", "getID", "()Ljava/lang/String;", ())
@@ -275,6 +285,11 @@ impl Calendar {
 
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32) -> Result<i32> {
         tracing::debug!("java.util.Calendar::get({this:?}, {field:?})");
+
+        let time_zone: ClassInstanceRef<TimeZone> = jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await?;
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
 
         if !(0..17).contains(&field) {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "calendar field").await);

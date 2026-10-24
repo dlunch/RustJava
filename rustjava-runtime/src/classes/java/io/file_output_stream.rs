@@ -55,6 +55,9 @@ impl FileOutputStream {
         append: bool,
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file:?}, {append})");
+        if file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let path = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
@@ -89,6 +92,9 @@ impl FileOutputStream {
         file_descriptor: ClassInstanceRef<FileDescriptor>,
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file_descriptor:?})");
+        if file_descriptor.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let _: () = jvm.invoke_special(&this, "java/io/OutputStream", "<init>", "()V", ()).await?;
 
@@ -108,6 +114,9 @@ impl FileOutputStream {
         length: i32,
     ) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::write({this:?}, {buffer:?}, {offset:?}, {length:?})");
+        if buffer.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let fd = jvm.get_field(&this, "java/io/FileOutputStream", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut file = FileDescriptor::file(jvm, context, fd).await?;

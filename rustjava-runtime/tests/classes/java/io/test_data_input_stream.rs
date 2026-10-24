@@ -8,6 +8,60 @@ use rustjava_runtime::classes::java::lang::String;
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn null_input_arguments_and_delegates() -> Result<()> {
+    use jvm::{JavaError, JavaValue};
+
+    let jvm = test_jvm().await?;
+    let input = jvm
+        .new_class("java/io/DataInputStream", "(Ljava/io/InputStream;)V", [JavaValue::Object(None)])
+        .await?;
+    for (method, signature, args) in [
+        ("available", "()I", vec![]),
+        ("close", "()V", vec![]),
+        ("reset", "()V", vec![]),
+        ("markSupported", "()Z", vec![]),
+        ("mark", "(I)V", vec![1.into()]),
+        ("skip", "(J)J", vec![1i64.into()]),
+        ("read", "()I", vec![]),
+        ("read", "([B)I", vec![JavaValue::Object(None)]),
+        ("read", "([BII)I", vec![JavaValue::Object(None), 0.into(), 1.into()]),
+        ("readByte", "()B", vec![]),
+        ("skipBytes", "(I)I", vec![1.into()]),
+        ("readFully", "([B)V", vec![JavaValue::Object(None)]),
+        ("readFully", "([BII)V", vec![JavaValue::Object(None), 0.into(), 0.into()]),
+    ] {
+        let result: Result<JavaValue> = jvm.invoke_virtual(&input, "java/io/DataInputStream", method, signature, args).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{method}{signature} must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"), "{method}{signature}");
+    }
+    let result: Result<JavaValue> = jvm
+        .invoke_static(
+            "java/io/DataInputStream",
+            "readUTF",
+            "(Ljava/io/DataInput;)Ljava/lang/String;",
+            [JavaValue::Object(None)],
+        )
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("static readUTF must reject null");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    for amount in [0, -1] {
+        let skipped: i32 = jvm
+            .invoke_virtual(&input, "java/io/DataInputStream", "skipBytes", "(I)I", (amount,))
+            .await?;
+        assert_eq!(skipped, 0);
+    }
+    let empty = jvm.instantiate_array("B", 0).await?;
+    let _: () = jvm
+        .invoke_virtual(&input, "java/io/DataInputStream", "readFully", "([BII)V", (empty, 0, 0))
+        .await?;
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_data_input_stream() -> Result<()> {
     let jvm = test_jvm().await?;
 

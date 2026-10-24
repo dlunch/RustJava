@@ -116,12 +116,10 @@ impl System {
 
         let in_descriptor: ClassInstanceRef<FileDescriptor> =
             jvm.get_static_field("java/io/FileDescriptor", "in", "Ljava/io/FileDescriptor;").await?;
-        if !in_descriptor.is_null() {
-            let input = jvm
-                .new_class("java/io/FileInputStream", "(Ljava/io/FileDescriptor;)V", (in_descriptor,))
-                .await?;
-            jvm.put_static_field("java/lang/System", "in", "Ljava/io/InputStream;", input).await?;
-        }
+        let input = jvm
+            .new_class("java/io/FileInputStream", "(Ljava/io/FileDescriptor;)V", (in_descriptor,))
+            .await?;
+        jvm.put_static_field("java/lang/System", "in", "Ljava/io/InputStream;", input).await?;
 
         let out_descriptor: ClassInstanceRef<FileDescriptor> =
             jvm.get_static_field("java/io/FileDescriptor", "out", "Ljava/io/FileDescriptor;").await?;
@@ -174,6 +172,10 @@ impl System {
         length: i32,
     ) -> Result<()> {
         tracing::debug!("java.lang.System::arraycopy({src:?}, {src_pos}, {dest:?}, {dest_pos}, {length})");
+
+        if src.is_null() || dest.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "array is null").await);
+        }
 
         // TODO i think we can make it faster
         let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _).await?;

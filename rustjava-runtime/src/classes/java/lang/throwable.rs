@@ -221,6 +221,10 @@ impl Throwable {
     ) -> Result<()> {
         tracing::debug!("java.lang.Throwable::printStackTrace({this:?}, {stream:?})");
 
+        if stream.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "stream is null").await);
+        }
+
         Self::do_print_stack_trace(jvm, this, stream.into()).await?;
 
         Ok(())
@@ -233,6 +237,10 @@ impl Throwable {
         writer: ClassInstanceRef<PrintWriter>,
     ) -> Result<()> {
         tracing::debug!("java.lang.Throwable::printStackTrace({this:?}, {writer:?})");
+
+        if writer.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "writer is null").await);
+        }
 
         Self::do_print_stack_trace(jvm, this, writer.into()).await?;
 

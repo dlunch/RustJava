@@ -48,6 +48,9 @@ impl URLPath {
     }
 
     async fn encode(jvm: &Jvm, _: &mut RuntimeContext, path: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
+        if path.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "path is null").await);
+        }
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
         Ok(
             JavaLangString::from_rust_string(jvm, &utf8_percent_encode(&path, Self::ESCAPED).to_string())
@@ -57,6 +60,9 @@ impl URLPath {
     }
 
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, path: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
+        if path.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "path is null").await);
+        }
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
         match percent_decode_str(&path).decode_utf8() {
             Ok(path) => Ok(JavaLangString::from_rust_string(jvm, &path).await?.into()),

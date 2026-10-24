@@ -4,6 +4,46 @@ use rustjava_runtime::classes::java::lang::String;
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn character_streams_reject_null_buffers_and_strings() -> Result<()> {
+    use jvm::JavaValue;
+
+    let jvm = test_jvm().await?;
+    let bytes = jvm.instantiate_array("B", 0).await?;
+    let input = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (bytes,)).await?;
+    let reader = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (input,)).await?;
+    for (signature, args) in [
+        ("([C)I", vec![JavaValue::Object(None)]),
+        ("([CII)I", vec![JavaValue::Object(None), 0.into(), 0.into()]),
+    ] {
+        let result: Result<i32> = jvm.invoke_virtual(&reader, "java/io/Reader", "read", signature, args).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("read{signature} must reject null");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    }
+    let string_writer = jvm.new_class("java/io/StringWriter", "()V", ()).await?;
+    let output = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
+    let stream_writer = jvm
+        .new_class("java/io/OutputStreamWriter", "(Ljava/io/OutputStream;)V", (output,))
+        .await?;
+    for writer in [&string_writer, &stream_writer] {
+        for (signature, args) in [
+            ("([C)V", vec![JavaValue::Object(None)]),
+            ("([CII)V", vec![JavaValue::Object(None), 0.into(), 0.into()]),
+            ("(Ljava/lang/String;)V", vec![JavaValue::Object(None)]),
+            ("(Ljava/lang/String;II)V", vec![JavaValue::Object(None), 0.into(), 0.into()]),
+        ] {
+            let result: Result<()> = jvm.invoke_virtual(writer, "java/io/Writer", "write", signature, args).await;
+            let Err(JavaError::JavaException(exception)) = result else {
+                panic!("write{signature} must reject null");
+            };
+            assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn cr_01_cr_02_string_reader_contract() -> Result<()> {
     let jvm = test_jvm().await?;
 
