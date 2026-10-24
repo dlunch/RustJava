@@ -8,6 +8,7 @@ mod class_definition;
 mod class_instance;
 mod class_loader;
 mod error;
+mod external_roots;
 mod field;
 mod garbage_collector;
 mod global_ref;
@@ -38,9 +39,10 @@ pub use self::{
     class_instance::{Array, AsClassInstance, ClassInstance, ClassInstanceRef},
     class_loader::BootstrapClassLoader,
     error::JavaError,
+    external_roots::ExternalRoots,
     field::Field,
     global_ref::GlobalRef,
-    jvm::Jvm,
+    jvm::{Jvm, NativeFrame},
     method::Method,
     monitor::{MonitorWait, MonitorWaitTimeout},
     r#type::JavaType,

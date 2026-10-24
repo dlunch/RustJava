@@ -565,7 +565,7 @@ async fn test_system_class_loader_uses_rustjar_parent() -> Result<()> {
     let bootstrap_class_loader = get_bootstrap_class_loader(Box::new(runtime.clone()));
     let class_path = std::env::join_paths(["external.rustjar", "classes"]).unwrap().into_string().unwrap();
     let properties = [("java.class.path", class_path.as_str())].into_iter().collect();
-    let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?;
+    let jvm = Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties, None).await?;
 
     let system_class_loader: ClassInstanceRef<ClassLoader> = jvm
         .invoke_static("java/lang/ClassLoader", "getSystemClassLoader", "()Ljava/lang/ClassLoader;", ())

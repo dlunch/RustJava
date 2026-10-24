@@ -60,7 +60,7 @@ where
     let class_path_str = build_class_path(start_type, class_path)?;
     let properties = [("java.class.path", class_path_str.as_str())].into_iter().collect();
 
-    Ok(Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await?)
+    Ok(Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties, None).await?)
 }
 
 fn build_class_path(start_type: &StartType<'_>, class_path: &[&Path]) -> anyhow::Result<String> {

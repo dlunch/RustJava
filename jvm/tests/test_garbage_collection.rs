@@ -1,8 +1,182 @@
-use jvm::{Array, ClassInstanceRef, JavaValue, Result as JvmResult, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, ExternalRoots, JavaError, JavaValue, Jvm, runtime::JavaLangString};
 
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    future::{Future, poll_fn},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
+    task::Poll,
+};
 
-use test_utils::{TestRuntime, create_test_jvm, test_jvm};
+use test_utils::{TestRuntime, create_test_jvm, get_bootstrap_class_loader, test_jvm};
+
+use anyhow::Result as JvmResult;
+
+#[tokio::test]
+async fn external_roots_trace_children_and_failed_discovery_does_not_sweep() -> JvmResult<()> {
+    struct Roots(Arc<Mutex<Option<Vec<usize>>>>);
+
+    impl ExternalRoots for Roots {
+        fn roots(&self, objects: &[&dyn ClassInstance]) -> anyhow::Result<Vec<usize>> {
+            let state = self.0.lock().unwrap();
+            let roots = state.as_ref().ok_or_else(|| anyhow::anyhow!("root memory unreadable"))?;
+            for identity in roots {
+                assert!(objects.iter().any(|object| object.identity() == *identity));
+            }
+            Ok(roots.clone())
+        }
+    }
+
+    let roots = Arc::new(Mutex::new(Some(Vec::new())));
+    let jvm = Jvm::new(
+        get_bootstrap_class_loader(Box::new(TestRuntime::new(BTreeMap::new()))),
+        || 0,
+        BTreeMap::new(),
+        Some(Box::new(Roots(roots.clone()))),
+    )
+    .await?;
+    jvm.collect_garbage()?;
+
+    let string = {
+        let _frame = jvm.native_frame(&[]);
+        let string = JavaLangString::from_rust_string(&jvm, "external").await?;
+        jvm.new_class("java/lang/Object", "()V", ()).await?;
+        *roots.lock().unwrap() = Some(vec![string.identity()]);
+        string
+    };
+
+    *roots.lock().unwrap() = None;
+    assert_eq!(jvm.collect_garbage().unwrap_err().to_string(), "root memory unreadable");
+    *roots.lock().unwrap() = Some(vec![string.identity()]);
+    assert_eq!(jvm.collect_garbage()?, 1);
+    {
+        let _frame = jvm.native_frame(&[]);
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "external");
+    }
+    *roots.lock().unwrap() = Some(Vec::new());
+    assert_eq!(jvm.collect_garbage()?, 2);
+
+    let _frame = jvm.native_frame(&[]);
+    let runtime: Box<dyn ClassInstance> = jvm.invoke_static("java/lang/Runtime", "getRuntime", "()Ljava/lang/Runtime;", ()).await?;
+    *roots.lock().unwrap() = None;
+    for result in [
+        jvm.invoke_static::<_, ()>("java/lang/System", "gc", "()V", ()).await,
+        jvm.invoke_virtual::<_, ()>(&runtime, "java/lang/Runtime", "gc", "()V", ()).await,
+    ] {
+        let JavaError::JavaException(exception) = result.unwrap_err();
+        assert!(jvm.is_instance(&*exception, "java/lang/InternalError"));
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn native_frames_seed_arguments_discard_temporaries_and_remember_their_thread() -> JvmResult<()> {
+    let current_thread = Arc::new(AtomicU64::new(0));
+    let jvm = Jvm::new(
+        get_bootstrap_class_loader(Box::new(TestRuntime::new(BTreeMap::new()))),
+        {
+            let current_thread = current_thread.clone();
+            move || current_thread.load(Ordering::Relaxed)
+        },
+        BTreeMap::new(),
+        None,
+    )
+    .await?;
+    current_thread.store(1, Ordering::Relaxed);
+    jvm.attach_thread(None).await?;
+    current_thread.store(0, Ordering::Relaxed);
+    jvm.collect_garbage()?;
+
+    let argument = {
+        let _frame = jvm.native_frame(&[]);
+        JavaLangString::from_rust_string(&jvm, "argument").await?
+    };
+    let frame = jvm.native_frame(&[JavaValue::from(argument), JavaValue::Int(7), JavaValue::Object(None)]);
+    jvm.new_class("java/lang/Object", "()V", ()).await?;
+    tokio::task::yield_now().await;
+    assert_eq!(jvm.collect_garbage()?, 0);
+
+    current_thread.store(1, Ordering::Relaxed);
+    let other_frame = jvm.native_frame(&[]);
+    jvm.new_class("java/lang/Object", "()V", ()).await?;
+    drop(frame);
+    assert_eq!(jvm.collect_garbage()?, 3);
+    drop(other_frame);
+    assert_eq!(jvm.collect_garbage()?, 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn active_monitors_are_roots_until_release_including_wait_reacquisition() -> JvmResult<()> {
+    let jvm = test_jvm().await?;
+    jvm.collect_garbage()?;
+    let object = {
+        let _frame = jvm.native_frame(&[]);
+        JavaLangString::from_rust_string(&jvm, "monitor").await?
+    };
+    jvm.monitor_enter(&object).await?;
+    assert_eq!(jvm.collect_garbage()?, 0);
+    let (wait, timeout) = jvm.object_wait_prepare(&object).await?;
+    assert_eq!(jvm.collect_garbage()?, 0);
+    timeout.clone().notify();
+    assert_eq!(jvm.collect_garbage()?, 0);
+    jvm.object_wait(wait).await?;
+    assert_eq!(jvm.collect_garbage()?, 0);
+    jvm.monitor_exit(&object).await?;
+    assert_eq!(jvm.collect_garbage()?, 2);
+    timeout.notify();
+    Ok(())
+}
+
+#[tokio::test]
+async fn synchronized_entry_roots_arguments_while_waiting_for_the_monitor() -> JvmResult<()> {
+    let current_thread = Arc::new(AtomicU64::new(0));
+    let jvm = Jvm::new(
+        get_bootstrap_class_loader(Box::new(TestRuntime::new(BTreeMap::new()))),
+        {
+            let current_thread = current_thread.clone();
+            move || current_thread.load(Ordering::Relaxed)
+        },
+        BTreeMap::new(),
+        None,
+    )
+    .await?;
+    current_thread.store(1, Ordering::Relaxed);
+    jvm.attach_thread(None).await?;
+    current_thread.store(0, Ordering::Relaxed);
+    let vector = {
+        let _frame = jvm.native_frame(&[]);
+        let vector = jvm.new_class("java/util/Vector", "(I)V", (1,)).await?;
+        jvm.monitor_enter(&vector).await?;
+        vector
+    };
+    jvm.collect_garbage()?;
+    let argument = {
+        let _frame = jvm.native_frame(&[]);
+        JavaLangString::from_rust_string(&jvm, "pending argument").await?
+    };
+    current_thread.store(1, Ordering::Relaxed);
+    let mut call = Box::pin(jvm.invoke_virtual::<_, ()>(&vector, "java/util/Vector", "addElement", "(Ljava/lang/Object;)V", (argument,)));
+    assert!(poll_fn(|context| Poll::Ready(call.as_mut().poll(context).is_pending())).await);
+
+    current_thread.store(0, Ordering::Relaxed);
+    assert_eq!(jvm.collect_garbage()?, 0);
+    jvm.monitor_exit(&vector).await?;
+    assert_eq!(jvm.collect_garbage()?, 0);
+    current_thread.store(1, Ordering::Relaxed);
+    call.await?;
+    {
+        let _frame = jvm.native_frame(&[]);
+        let element: Box<dyn ClassInstance> = jvm
+            .invoke_virtual(&vector, "java/util/Vector", "elementAt", "(I)Ljava/lang/Object;", (0,))
+            .await?;
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &element).await?, "pending argument");
+    }
+    assert_eq!(jvm.collect_garbage()?, 4);
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_garbage_collection() -> JvmResult<()> {
@@ -150,12 +324,17 @@ async fn substring_keeps_shared_array_alive_after_parent_collection() -> JvmResu
 async fn global_references_are_independent_garbage_collection_roots() -> JvmResult<()> {
     let jvm = test_jvm().await?;
 
+    jvm.push_native_frame();
+    jvm.resolve_class("[Ljava/lang/Object;").await?;
+    jvm.pop_frame();
     jvm.collect_garbage()?;
 
     struct Object;
 
     jvm.push_native_frame();
-    let object: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
+    let mut object: ClassInstanceRef<Array<Object>> = jvm.instantiate_array("Ljava/lang/Object;", 2).await?.into();
+    let references = [object.clone(), object.clone()];
+    jvm.store_array(&mut object, 0, references).await?;
     let first = jvm.new_global_ref(&object).unwrap();
     let second = jvm.new_global_ref(&object).unwrap();
     jvm.pop_frame();

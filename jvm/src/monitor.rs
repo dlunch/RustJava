@@ -13,6 +13,7 @@ struct MonitorState {
     depth: usize,
     next_waiter_id: u64,
     waiters: VecDeque<MonitorWaiter>,
+    active_waits: usize,
 }
 
 struct MonitorWaiter {
@@ -47,9 +48,15 @@ impl Monitor {
                 depth: 0,
                 next_waiter_id: 0,
                 waiters: VecDeque::new(),
+                active_waits: 0,
             }),
             entry_event: Event::new(),
         }
+    }
+
+    pub(crate) fn is_active(&self) -> bool {
+        let state = self.state.lock();
+        state.owner.is_some() || state.active_waits != 0
     }
 
     pub(crate) async fn enter(self: &Arc<Self>, thread_id: u64) {
@@ -113,6 +120,7 @@ impl Monitor {
                 id: waiter_id,
                 event: event.clone(),
             });
+            state.active_waits += 1;
             state.owner = None;
             state.depth = 0;
 
@@ -158,10 +166,16 @@ impl Monitor {
 }
 
 impl MonitorWait {
-    pub(crate) async fn wait(self) {
-        self.listener.await;
+    pub(crate) async fn wait(mut self) {
+        (&mut self.listener).await;
         self.monitor.enter(self.thread_id).await;
         self.monitor.state.lock().depth = self.depth;
+    }
+}
+
+impl Drop for MonitorWait {
+    fn drop(&mut self) {
+        self.monitor.state.lock().active_waits -= 1;
     }
 }
 

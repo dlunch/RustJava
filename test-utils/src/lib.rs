@@ -24,8 +24,10 @@ use jvm_bytecode::{ArrayClassDefinitionImpl, ClassDefinitionError, ClassDefiniti
 
 use rustjava_runtime::{
     File, FileDescriptorId, FileOpenOptions, FileSize, FileStat, FileType, IOError, IOResult, RT_RUSTJAR, Runtime, SpawnCallback,
-    get_bootstrap_class_loader, get_runtime_class_proto,
+    get_runtime_class_proto,
 };
+
+pub use rustjava_runtime::get_bootstrap_class_loader;
 
 struct SpawnCallbacks {
     callbacks: Mutex<VecDeque<Box<dyn SpawnCallback>>>,
@@ -416,7 +418,7 @@ where
 
     let properties = [("java.class.path", ".")].into_iter().collect();
 
-    Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties).await
+    Jvm::new(bootstrap_class_loader, move || runtime.current_task_id(), properties, None).await
 }
 
 pub async fn test_jvm() -> Result<Jvm> {
