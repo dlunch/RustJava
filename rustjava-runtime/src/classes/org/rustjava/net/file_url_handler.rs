@@ -51,6 +51,10 @@ impl FileURLHandler {
     ) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("org.rustjava.net.FileURLHandler::openConnection({this:?}, {url:?})");
 
+        if url.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "url is null").await);
+        }
+
         let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
         let file: ClassInstanceRef<String> = jvm
             .invoke_static("org/rustjava/net/URLPath", "decode", "(Ljava/lang/String;)Ljava/lang/String;", (file,))

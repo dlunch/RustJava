@@ -214,12 +214,18 @@ impl DataInputStream {
 
     async fn read_utf_from_input(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<DataInput>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.DataInputStream::readUTF({input:?})");
+        if input.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
         jvm.invoke_virtual(&input, &input.class_definition().name(), "readUTF", "()Ljava/lang/String;", ())
             .await
     }
 
     async fn read_fully(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::readFully({this:?}, {b:?})");
+        if b.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let length = jvm.array_length(&b).await?;
 
@@ -239,6 +245,9 @@ impl DataInputStream {
         len: i32,
     ) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::readFully({this:?}, {b:?}, {off}, {len})");
+        if b.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let mut read = 0;
         while read < len {
@@ -257,14 +266,23 @@ impl DataInputStream {
     async fn skip_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i32) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::skipBytes({this:?}, {n:?})");
 
-        let r#in = jvm.get_field(&this, "java/io/DataInputStream", "in", "Ljava/io/InputStream;").await?;
+        if n <= 0 {
+            return Ok(0);
+        }
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/DataInputStream", "in", "Ljava/io/InputStream;").await?;
+        if r#in.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "underlying stream is null").await);
+        }
         let skipped: i64 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (n as i64,)).await?;
 
         Ok(skipped as _)
     }
 
     async fn read_required_byte(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<u8> {
-        let r#in = jvm.get_field(this, "java/io/DataInputStream", "in", "Ljava/io/InputStream;").await?;
+        let r#in: ClassInstanceRef<InputStream> = jvm.get_field(this, "java/io/DataInputStream", "in", "Ljava/io/InputStream;").await?;
+        if r#in.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "underlying stream is null").await);
+        }
         let value: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "read", "()I", ()).await?;
         if value == -1 {
             return Err(jvm.exception("java/io/EOFException", "End of stream").await);

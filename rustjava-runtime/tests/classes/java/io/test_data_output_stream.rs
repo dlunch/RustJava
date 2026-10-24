@@ -5,6 +5,72 @@ use jvm::{Array, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn null_output_arguments_and_delegates() -> Result<()> {
+    use jvm::JavaValue;
+
+    let jvm = test_jvm().await?;
+    let output = jvm
+        .new_class("java/io/DataOutputStream", "(Ljava/io/OutputStream;)V", [JavaValue::Object(None)])
+        .await?;
+    let text = JavaLangString::from_rust_string(&jvm, "x").await?;
+    for (method, signature, args) in [
+        ("write", "(I)V", vec![1.into()]),
+        ("writeByte", "(I)V", vec![1.into()]),
+        ("writeShort", "(I)V", vec![1.into()]),
+        ("writeInt", "(I)V", vec![1.into()]),
+        ("writeLong", "(J)V", vec![1i64.into()]),
+        ("writeBytes", "(Ljava/lang/String;)V", vec![text.clone().into()]),
+        ("writeChars", "(Ljava/lang/String;)V", vec![text.clone().into()]),
+        ("writeBytes", "(Ljava/lang/String;)V", vec![JavaValue::Object(None)]),
+        ("writeChars", "(Ljava/lang/String;)V", vec![JavaValue::Object(None)]),
+        ("writeUTF", "(Ljava/lang/String;)V", vec![JavaValue::Object(None)]),
+        ("flush", "()V", vec![]),
+        ("close", "()V", vec![]),
+    ] {
+        let result: Result<JavaValue> = jvm.invoke_virtual(&output, "java/io/DataOutputStream", method, signature, args).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{method}{signature} must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"), "{method}{signature}");
+    }
+    let empty = JavaLangString::from_rust_string(&jvm, "").await?;
+    for method in ["writeBytes", "writeChars"] {
+        let _: () = jvm
+            .invoke_virtual(&output, "java/io/DataOutputStream", method, "(Ljava/lang/String;)V", (empty.clone(),))
+            .await?;
+    }
+    let filter = jvm
+        .new_class("java/io/FilterOutputStream", "(Ljava/io/OutputStream;)V", [JavaValue::Object(None)])
+        .await?;
+    let bytes = jvm.instantiate_array("B", 0).await?;
+    let _: () = jvm
+        .invoke_virtual(&filter, "java/io/FilterOutputStream", "write", "([BII)V", (bytes.clone(), 0, 0))
+        .await?;
+    for (offset, length) in [(1, 0), (-1, 0), (0, -1)] {
+        let result: Result<()> = jvm
+            .invoke_virtual(&filter, "java/io/FilterOutputStream", "write", "([BII)V", (bytes.clone(), offset, length))
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("invalid empty range must throw IndexOutOfBoundsException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
+    }
+    for (method, signature, args) in [
+        ("write", "(I)V", vec![1.into()]),
+        ("flush", "()V", vec![]),
+        ("write", "([BII)V", vec![JavaValue::Object(None), 0.into(), 0.into()]),
+        ("write", "([BII)V", vec![jvm.instantiate_array("B", 1).await?.into(), 0.into(), 1.into()]),
+    ] {
+        let result: Result<JavaValue> = jvm.invoke_virtual(&filter, "java/io/FilterOutputStream", method, signature, args).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{method}{signature} must throw NullPointerException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_data_output_stream() -> Result<()> {
     let jvm = test_jvm().await?;
 

@@ -120,6 +120,9 @@ impl BufferedOutputStream {
         length: i32,
     ) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::write({this:?}, {bytes:?}, {offset}, {length})");
+        if bytes.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let source_length = jvm.array_length(&bytes).await? as i32;
         if offset < 0 || length < 0 || offset > source_length - length {

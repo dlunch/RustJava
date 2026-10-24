@@ -46,6 +46,10 @@ impl RustJarClassLoader {
     ) -> Result<()> {
         tracing::debug!("org.rustjava.lang.RustJarClassLoader::<init>({this:?}, {class_paths:?}, {parent:?})");
 
+        if class_paths.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "classPaths").await);
+        }
+
         let _: () = jvm
             .invoke_special(&this, "java/lang/ClassLoader", "<init>", "(Ljava/lang/ClassLoader;)V", (parent,))
             .await?;
@@ -70,6 +74,10 @@ impl RustJarClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("org.rustjava.lang.RustJarClassLoader::findClass({this:?}, {name:?})");
 
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name").await);
+        }
+
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
         let class_paths = jvm
             .get_field(&this, "org/rustjava/lang/RustJarClassLoader", "classPaths", "[Ljava/lang/String;")
@@ -77,6 +85,9 @@ impl RustJarClassLoader {
         let class_paths: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_paths, 0, jvm.array_length(&class_paths).await? as usize).await?;
 
         for class_path in class_paths {
+            if class_path.is_null() {
+                return Err(jvm.exception("java/lang/NullPointerException", "classPath").await);
+            }
             let class_path = JavaLangString::to_rust_string(jvm, &class_path).await?;
             if !class_path.ends_with(".rustjar") {
                 continue;

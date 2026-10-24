@@ -47,6 +47,10 @@ impl JarURLConnection {
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("java.net.JarURLConnection::<init>({this:?}, {url:?})");
 
+        if url.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "url is null").await);
+        }
+
         let _: () = jvm
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;

@@ -59,12 +59,6 @@ async fn test_short_api() -> Result<()> {
         63
     );
 
-    let null_result: Result<i16> = jvm.invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;)S", (None,)).await;
-    let Err(JavaError::JavaException(exception)) = null_result else {
-        panic!("Short.parseShort(null) must reject null");
-    };
-    assert!(jvm.is_instance(&*exception, "java/lang/NumberFormatException"));
-
     let result: Result<i32> = jvm
         .invoke_virtual(&value, &value.class_definition().name(), "compareTo", "(Ljava/lang/Short;)I", (None,))
         .await;

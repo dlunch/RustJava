@@ -64,6 +64,9 @@ impl RandomAccessFile {
         mode: ClassInstanceRef<String>,
     ) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::<init>({this:?}, {name:?}, {mode:?})");
+        if name.is_null() || mode.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
@@ -101,6 +104,9 @@ impl RandomAccessFile {
         mode: ClassInstanceRef<String>,
     ) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::<init>({this:?}, {file:?}, {mode:?})");
+        if file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let name: ClassInstanceRef<String> = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
 
@@ -119,6 +125,9 @@ impl RandomAccessFile {
 
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?})");
+        if buf.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let length = jvm.array_length(&buf).await?;
         let read = jvm
@@ -137,6 +146,9 @@ impl RandomAccessFile {
         length: i32,
     ) -> Result<i32> {
         tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?}, {offset:?}, {length:?})");
+        if buf.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let fd = jvm.get_field(&this, "java/io/RandomAccessFile", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
@@ -153,6 +165,9 @@ impl RandomAccessFile {
 
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?})");
+        if buf.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let length = jvm.array_length(&buf).await?;
         let _: () = jvm
@@ -171,6 +186,9 @@ impl RandomAccessFile {
         length: i32,
     ) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?}, {offset:?}, {length:?})");
+        if buf.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let fd = jvm.get_field(&this, "java/io/RandomAccessFile", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;

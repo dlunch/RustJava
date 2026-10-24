@@ -42,6 +42,17 @@ async fn test_to_string() -> Result<()> {
 async fn test_stacktrace() -> Result<()> {
     let jvm = test_jvm().await?;
 
+    let throwable = jvm.new_class("java/lang/Throwable", "()V", ()).await?;
+    for descriptor in ["(Ljava/io/PrintStream;)V", "(Ljava/io/PrintWriter;)V"] {
+        let result: Result<()> = jvm
+            .invoke_virtual(&throwable, "java/lang/Throwable", "printStackTrace", descriptor, (None,))
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("printStackTrace must reject a null output");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
+
     // get exception by creating invalid url
     let url_string = JavaLangString::from_rust_string(&jvm, "invalid://invalid").await?;
     let url: Result<Box<dyn ClassInstance>> = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_string,)).await;

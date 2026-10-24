@@ -84,6 +84,9 @@ impl File {
 
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pathname: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.File::<init>({this:?}, {pathname:?})");
+        if pathname.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
+        }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

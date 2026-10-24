@@ -7,6 +7,24 @@ use rustjava_runtime::classes::java::lang::Object;
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn buffered_output_rejects_null_buffer() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let output = jvm.new_class("java/io/ByteArrayOutputStream", "()V", ()).await?;
+    let buffered = jvm
+        .new_class("java/io/BufferedOutputStream", "(Ljava/io/OutputStream;)V", (output,))
+        .await?;
+    let null: ClassInstanceRef<Array<i8>> = None.into();
+    let result: Result<()> = jvm
+        .invoke_virtual(&buffered, "java/io/BufferedOutputStream", "write", "([BII)V", (null, 0, 0))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("null buffer must throw NullPointerException even for an empty write");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    Ok(())
+}
+
+#[tokio::test]
 async fn bio_01_bio_02_bio_03_buffered_input_stream_contract() -> Result<()> {
     let jvm = test_jvm().await?;
 

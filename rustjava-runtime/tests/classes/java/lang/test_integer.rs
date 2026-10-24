@@ -4,6 +4,68 @@ use rustjava_runtime::classes::java::lang::{Integer, Object, String};
 use test_utils::test_jvm;
 
 #[tokio::test]
+async fn test_integral_wrapper_null_strings() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    for (class, parse, primitive) in [
+        ("java/lang/Byte", "parseByte", "B"),
+        ("java/lang/Short", "parseShort", "S"),
+        ("java/lang/Integer", "parseInt", "I"),
+        ("java/lang/Long", "parseLong", "J"),
+    ] {
+        for (method, descriptor, radix, exception_class) in [
+            (
+                parse,
+                format!("(Ljava/lang/String;){primitive}"),
+                false,
+                "java/lang/NumberFormatException",
+            ),
+            (
+                parse,
+                format!("(Ljava/lang/String;I){primitive}"),
+                true,
+                "java/lang/NumberFormatException",
+            ),
+            (
+                "valueOf",
+                format!("(Ljava/lang/String;)L{class};"),
+                false,
+                "java/lang/NumberFormatException",
+            ),
+            (
+                "valueOf",
+                format!("(Ljava/lang/String;I)L{class};"),
+                true,
+                "java/lang/NumberFormatException",
+            ),
+            (
+                "decode",
+                format!("(Ljava/lang/String;)L{class};"),
+                false,
+                "java/lang/NullPointerException",
+            ),
+        ] {
+            let result: Result<jvm::JavaValue> = if radix {
+                jvm.invoke_static(class, method, &descriptor, (None, 10)).await
+            } else {
+                jvm.invoke_static(class, method, &descriptor, (None,)).await
+            };
+            let Err(JavaError::JavaException(exception)) = result else {
+                panic!("{class}.{method}{descriptor} must throw {exception_class}");
+            };
+            assert!(jvm.is_instance(&*exception, exception_class), "{class}.{method}{descriptor}");
+        }
+        let result = jvm.new_class(class, "(Ljava/lang/String;)V", (None,)).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{class}(null) must throw NumberFormatException");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NumberFormatException"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_parse_int() -> Result<()> {
     let jvm = test_jvm().await?;
 

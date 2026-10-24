@@ -114,6 +114,9 @@ impl GregorianCalendar {
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .get_field(&this, "java/util/GregorianCalendar", "timeZone", "Ljava/util/TimeZone;")
             .await?;
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
         let zone_offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let Some(adjusted_time) = time.checked_add(zone_offset as i64) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);

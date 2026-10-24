@@ -9,7 +9,7 @@ use crate::{
     RuntimeClassProto, RuntimeContext,
     classes::java::{
         lang::{String, StringBuffer},
-        text::{FieldPosition, ParsePosition},
+        text::{FieldPosition, NumberFormat, ParsePosition},
         util::{Calendar, Date, Locale, TimeZone},
     },
 };
@@ -18,6 +18,17 @@ use crate::{
 enum DateToken {
     Literal(RustString),
     Field(char, usize),
+}
+
+enum DateParseError {
+    Invalid(usize),
+    NullNumberFormat,
+}
+
+impl From<usize> for DateParseError {
+    fn from(index: usize) -> Self {
+        Self::Invalid(index)
+    }
 }
 
 // public class java.text.SimpleDateFormat
@@ -123,7 +134,13 @@ impl SimpleDateFormat {
             .is_some_and(|candidate| candidate.iter().zip(value).all(|(left, right)| left.eq_ignore_ascii_case(&right)))
     }
 
-    fn parse_timestamp(tokens: &[DateToken], characters: &[char], start: usize, default_offset: i32) -> core::result::Result<(i64, usize), usize> {
+    fn parse_timestamp(
+        tokens: &[DateToken],
+        characters: &[char],
+        start: usize,
+        default_offset: i32,
+        number_format_is_null: bool,
+    ) -> core::result::Result<(i64, usize), DateParseError> {
         let months = [
             ("January", "Jan"),
             ("February", "Feb"),
@@ -169,9 +186,17 @@ impl SimpleDateFormat {
                 DateToken::Literal(literal) => {
                     let value: Vec<char> = literal.chars().collect();
                     if !characters[index..].starts_with(&value) {
-                        return Err(index);
+                        return Err(DateParseError::Invalid(index));
                     }
                     index += value.len();
+                }
+                DateToken::Field(character, count)
+                    if number_format_is_null
+                        && characters[index..].iter().any(|character| !matches!(character, ' ' | '\t'))
+                        && (matches!(character, 'y' | 'd' | 'H' | 'k' | 'h' | 'K' | 'm' | 's' | 'S' | 'D' | 'F' | 'w' | 'W')
+                            || (*character == 'M' && *count < 3)) =>
+                {
+                    return Err(DateParseError::NullNumberFormat);
                 }
                 DateToken::Field(character, count) => match character {
                     'G' => {
@@ -182,7 +207,7 @@ impl SimpleDateFormat {
                             era = 0;
                             index += 2;
                         } else {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         }
                     }
                     'y' => {
@@ -203,7 +228,7 @@ impl SimpleDateFormat {
                             }
                         }
                         let Some((value, length)) = parsed else {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         };
                         month = value;
                         month_set = true;
@@ -221,7 +246,7 @@ impl SimpleDateFormat {
                     'k' => {
                         let value = Self::parse_number(characters, &mut index, if *count > 1 { Some(*count) } else { None }).ok_or(index)?;
                         if !(1..=24).contains(&value) {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         }
                         hour = value % 24;
                     }
@@ -246,7 +271,7 @@ impl SimpleDateFormat {
                             }
                         }
                         let Some(length) = consumed else {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         };
                         index += length;
                     }
@@ -262,7 +287,7 @@ impl SimpleDateFormat {
                             am_pm = 1;
                             index += 2;
                         } else {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         }
                     }
                     'z' => {
@@ -271,7 +296,7 @@ impl SimpleDateFormat {
                         {
                             index += 3;
                         } else {
-                            return Err(index);
+                            return Err(DateParseError::Invalid(index));
                         }
                         offset = 0;
                         if index < characters.len() && matches!(characters[index], '+' | '-') {
@@ -279,17 +304,17 @@ impl SimpleDateFormat {
                             index += 1;
                             let hours = Self::parse_number(characters, &mut index, Some(2)).ok_or(index)?;
                             if index >= characters.len() || characters[index] != ':' {
-                                return Err(index);
+                                return Err(DateParseError::Invalid(index));
                             }
                             index += 1;
                             let minutes = Self::parse_number(characters, &mut index, Some(2)).ok_or(index)?;
                             if hours > 23 || minutes > 59 {
-                                return Err(index);
+                                return Err(DateParseError::Invalid(index));
                             }
                             offset = sign * (hours * 60 + minutes) * 60 * 1000;
                         }
                     }
-                    _ => return Err(index),
+                    _ => return Err(DateParseError::Invalid(index)),
                 },
             }
         }
@@ -298,7 +323,7 @@ impl SimpleDateFormat {
             hour = match kind {
                 'h' if (1..=12).contains(&value) => value % 12 + am_pm * 12,
                 'K' if (0..=11).contains(&value) => value + am_pm * 12,
-                _ => return Err(index),
+                _ => return Err(DateParseError::Invalid(index)),
             };
         }
         if era == 0 {
@@ -306,7 +331,7 @@ impl SimpleDateFormat {
         }
         if let Some(ordinal) = ordinal.filter(|_| !month_set && !day_set) {
             let Some(date) = NaiveDate::from_yo_opt(year, ordinal as u32) else {
-                return Err(index);
+                return Err(DateParseError::Invalid(index));
             };
             month = date.month() as i32;
             day = date.day() as i32;
@@ -318,20 +343,20 @@ impl SimpleDateFormat {
             || !(0..=59).contains(&second)
             || !(0..=999).contains(&millisecond)
         {
-            return Err(index);
+            return Err(DateParseError::Invalid(index));
         }
         let Some(date_time) = Utc
             .with_ymd_and_hms(year, month as u32, day as u32, hour as u32, minute as u32, second as u32)
             .single()
         else {
-            return Err(index);
+            return Err(DateParseError::Invalid(index));
         };
         let Some(timestamp) = date_time
             .timestamp_millis()
             .checked_add(i64::from(millisecond))
             .and_then(|value| value.checked_sub(i64::from(offset)))
         else {
-            return Err(index);
+            return Err(DateParseError::Invalid(index));
         };
         Ok((timestamp, index))
     }
@@ -424,6 +449,12 @@ impl SimpleDateFormat {
         if date.is_null() || buffer.is_null() || position.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "date, buffer, or position").await);
         }
+        let number_format: ClassInstanceRef<NumberFormat> = jvm
+            .get_field(&this, "java/text/DateFormat", "numberFormat", "Ljava/text/NumberFormat;")
+            .await?;
+        if number_format.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "numberFormat").await);
+        }
         let pattern: ClassInstanceRef<String> = jvm
             .get_field(&this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;")
             .await?;
@@ -435,9 +466,15 @@ impl SimpleDateFormat {
         let calendar: ClassInstanceRef<Calendar> = jvm
             .get_field(&this, "java/text/SimpleDateFormat", "calendar", "Ljava/util/Calendar;")
             .await?;
+        if calendar.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "calendar").await);
+        }
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
             .await?;
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
         let offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
         let Some(adjusted) = time.checked_add(i64::from(offset)) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "date out of range").await);
@@ -588,11 +625,20 @@ impl SimpleDateFormat {
         let calendar: ClassInstanceRef<Calendar> = jvm
             .get_field(&this, "java/text/SimpleDateFormat", "calendar", "Ljava/util/Calendar;")
             .await?;
+        if calendar.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "calendar").await);
+        }
         let time_zone: ClassInstanceRef<TimeZone> = jvm
             .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
             .await?;
+        if time_zone.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "timeZone").await);
+        }
         let offset: i32 = jvm.invoke_virtual(&time_zone, "java/util/TimeZone", "getRawOffset", "()I", ()).await?;
-        match Self::parse_timestamp(&tokens, &characters, start_index, offset) {
+        let number_format: ClassInstanceRef<NumberFormat> = jvm
+            .get_field(&this, "java/text/DateFormat", "numberFormat", "Ljava/text/NumberFormat;")
+            .await?;
+        match Self::parse_timestamp(&tokens, &characters, start_index, offset, number_format.is_null()) {
             Ok((timestamp, index)) => {
                 let _: () = jvm
                     .invoke_virtual(&position, "java/text/ParsePosition", "setIndex", "(I)V", (utf16_indices[index] as i32,))
@@ -602,7 +648,8 @@ impl SimpleDateFormat {
                     .await?;
                 Ok(jvm.new_class("java/util/Date", "(J)V", (timestamp,)).await?.into())
             }
-            Err(error_index) => {
+            Err(DateParseError::NullNumberFormat) => Err(jvm.exception("java/lang/NullPointerException", "numberFormat").await),
+            Err(DateParseError::Invalid(error_index)) => {
                 let _: () = jvm
                     .invoke_virtual(
                         &position,

@@ -48,9 +48,22 @@ impl FilterOutputStream {
     ) -> Result<()> {
         tracing::debug!(" java.io.FilterOutputStream::write({this:?}, {bytes:?}, {offset:?}, {length:?})");
 
-        let out = jvm
+        if bytes.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "buffer is null").await);
+        }
+        let array_length = jvm.array_length(&bytes).await? as i32;
+        if offset < 0 || length < 0 || offset > array_length - length {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
+        }
+        if length == 0 {
+            return Ok(());
+        }
+        let out: ClassInstanceRef<OutputStream> = jvm
             .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
             .await?;
+        if out.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "underlying stream is null").await);
+        }
         let _: () = jvm
             .invoke_virtual(&out, "java/io/OutputStream", "write", "([BII)V", (bytes, offset, length))
             .await?;
@@ -61,9 +74,12 @@ impl FilterOutputStream {
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::write({this:?}, {byte:?})");
 
-        let out = jvm
+        let out: ClassInstanceRef<OutputStream> = jvm
             .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
             .await?;
+        if out.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "underlying stream is null").await);
+        }
         let _: () = jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "(I)V", (byte,)).await?;
 
         Ok(())
@@ -71,9 +87,12 @@ impl FilterOutputStream {
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterOutputStream::flush({this:?})");
-        let out = jvm
+        let out: ClassInstanceRef<OutputStream> = jvm
             .get_field(&this, "java/io/FilterOutputStream", "out", "Ljava/io/OutputStream;")
             .await?;
+        if out.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "underlying stream is null").await);
+        }
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 

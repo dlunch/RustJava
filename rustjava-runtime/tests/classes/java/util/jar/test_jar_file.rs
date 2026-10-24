@@ -1,6 +1,7 @@
 use std::io::{Cursor, Write};
 
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use rustjava_runtime::classes::java::lang::Object;
 use rustjava_runtime::classes::java::util::{
     jar::{JarEntry, Manifest},
     zip::ZipEntry,
@@ -8,6 +9,23 @@ use rustjava_runtime::classes::java::util::{
 use zip::{ZipWriter, write::SimpleFileOptions};
 
 use test_utils::test_jvm_filesystem;
+
+#[tokio::test]
+async fn test_jar_null_constructor_arguments() -> Result<()> {
+    let jvm = test_utils::test_jvm().await?;
+    for (class, descriptor) in [
+        ("java/util/jar/JarEntry", "(Ljava/util/zip/ZipEntry;)V"),
+        ("java/util/jar/JarFile", "(Ljava/io/File;)V"),
+        ("java/util/jar/JarFile", "(Ljava/lang/String;)V"),
+    ] {
+        let result = jvm.new_class(class, descriptor, (ClassInstanceRef::<Object>::new(None),)).await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("{class}{descriptor} must reject null");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    }
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_jar_manifest() -> Result<()> {

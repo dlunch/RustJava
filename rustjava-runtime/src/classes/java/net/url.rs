@@ -124,6 +124,10 @@ impl URL {
     ) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({this:?}, {context:?}, {spec:?}, {handler:?})");
 
+        if spec.is_null() {
+            return Err(jvm.exception("java/net/MalformedURLException", "spec is null").await);
+        }
+
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let spec_str = JavaLangString::to_rust_string(jvm, &spec).await?;
@@ -183,6 +187,10 @@ impl URL {
         handler: ClassInstanceRef<URLStreamHandler>,
     ) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({this:?}, {protocol:?}, {host:?}, {port:?}, {file:?}, {handler:?})");
+
+        if protocol.is_null() || file.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "protocol or file is null").await);
+        }
 
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 

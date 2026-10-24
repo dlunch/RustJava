@@ -1,7 +1,77 @@
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
 use test_utils::test_jvm;
+
+#[tokio::test]
+async fn test_calendar_nullable_time_zone() -> Result<()> {
+    let jvm = test_jvm().await?;
+    let calendar = jvm.new_class("java/util/GregorianCalendar", "()V", ()).await?;
+    let other = jvm.new_class("java/util/GregorianCalendar", "()V", ()).await?;
+    for instance in [&calendar, &other] {
+        let _: () = jvm
+            .invoke_virtual(instance, "java/util/Calendar", "setTimeInMillis", "(J)V", (0i64,))
+            .await?;
+    }
+    let zone: ClassInstanceRef<Object> = jvm
+        .invoke_virtual(&calendar, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
+        .await?;
+    for instance in [&calendar, &other] {
+        let _: () = jvm
+            .invoke_virtual(
+                instance,
+                "java/util/Calendar",
+                "setTimeZone",
+                "(Ljava/util/TimeZone;)V",
+                (ClassInstanceRef::<Object>::new(None),),
+            )
+            .await?;
+        let missing: ClassInstanceRef<Object> = jvm
+            .invoke_virtual(instance, "java/util/Calendar", "getTimeZone", "()Ljava/util/TimeZone;", ())
+            .await?;
+        assert!(missing.is_null());
+        assert!(
+            !jvm.invoke_virtual::<_, bool>(&calendar, "java/util/Calendar", "equals", "(Ljava/lang/Object;)Z", (other.clone(),))
+                .await?
+        );
+        assert!(
+            !jvm.invoke_virtual::<_, bool>(&other, "java/util/Calendar", "equals", "(Ljava/lang/Object;)Z", (calendar.clone(),))
+                .await?
+        );
+    }
+    assert!(
+        jvm.invoke_virtual::<_, bool>(&calendar, "java/util/Calendar", "equals", "(Ljava/lang/Object;)Z", (calendar.clone(),))
+            .await?
+    );
+    let hash: Result<i32> = jvm.invoke_virtual(&calendar, "java/util/Calendar", "hashCode", "()I", ()).await;
+    let Err(JavaError::JavaException(exception)) = hash else {
+        panic!("hashCode with a null time zone must throw");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    let field: Result<i32> = jvm.invoke_virtual(&calendar, "java/util/Calendar", "get", "(I)I", (1,)).await;
+    let Err(JavaError::JavaException(exception)) = field else {
+        panic!("get with a null time zone must not return cached fields");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    let result: Result<()> = jvm
+        .invoke_virtual(&calendar, "java/util/Calendar", "setTimeInMillis", "(J)V", (1000i64,))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("field computation with a null time zone must throw");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
+    let _: () = jvm
+        .invoke_virtual(&calendar, "java/util/Calendar", "setTimeZone", "(Ljava/util/TimeZone;)V", (zone,))
+        .await?;
+    let _: () = jvm
+        .invoke_virtual(&calendar, "java/util/Calendar", "setTimeInMillis", "(J)V", (0i64,))
+        .await?;
+    assert_eq!(
+        jvm.invoke_virtual::<_, i32>(&calendar, "java/util/Calendar", "get", "(I)I", (1,)).await?,
+        1970
+    );
+    Ok(())
+}
 
 #[tokio::test]
 async fn test_gregorian_calendar() -> Result<()> {

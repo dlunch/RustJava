@@ -192,6 +192,10 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::loadClass({this:?}, {name:?})");
 
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
+
         let class: ClassInstanceRef<Class> = jvm
             .invoke_virtual(
                 &this,
@@ -284,6 +288,10 @@ impl ClassLoader {
     ) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.ClassLoader::findLoadedClass({this:?}, {name:?})");
 
+        if name.is_null() {
+            return Ok(None.into());
+        }
+
         let internal_name = JavaLangString::to_rust_string(jvm, &name).await?.replace('.', "/");
         if !jvm.has_class(&internal_name) {
             return Ok(None.into());
@@ -301,6 +309,10 @@ impl ClassLoader {
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.lang.ClassLoader::getResource({this:?})");
+
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
 
         let parent: ClassInstanceRef<Self> = jvm.get_field(&this, "java/lang/ClassLoader", "parent", "Ljava/lang/ClassLoader;").await?;
 

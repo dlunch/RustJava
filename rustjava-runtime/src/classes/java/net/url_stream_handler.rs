@@ -66,6 +66,10 @@ impl URLStreamHandler {
             &r#ref
         );
 
+        if url.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "url is null").await);
+        }
+
         let _: () = jvm
             .invoke_virtual(
                 &url,
@@ -89,6 +93,10 @@ impl URLStreamHandler {
         limit: i32,
     ) -> Result<()> {
         tracing::debug!("java.net.URLStreamHandler::parseURL({this:?}, {url:?}, {spec:?}, {start:?}, {limit:?})");
+
+        if url.is_null() || spec.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "url or spec is null").await);
+        }
 
         let spec_str = JavaLangString::to_rust_string(jvm, &spec).await?;
 

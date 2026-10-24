@@ -8,6 +8,37 @@ use zip::{ZipWriter, write::SimpleFileOptions};
 use test_utils::test_jvm_filesystem;
 
 #[tokio::test]
+async fn test_null_inputs() -> Result<()> {
+    let jvm = test_jvm_filesystem(Default::default()).await?;
+    let null_element = jvm.instantiate_array("Ljava/net/URL;", 1).await?;
+    for urls in [None, Some(null_element)] {
+        let result = jvm
+            .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+            .await;
+        let Err(jvm::JavaError::JavaException(exception)) = result else {
+            panic!("expected NullPointerException for null URL array or element");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
+
+    let urls = jvm.instantiate_array("Ljava/net/URL;", 0).await?;
+    let loader = jvm
+        .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
+        .await?;
+    for (method, descriptor) in [
+        ("findClass", "(Ljava/lang/String;)Ljava/lang/Class;"),
+        ("findResource", "(Ljava/lang/String;)Ljava/net/URL;"),
+    ] {
+        let result: Result<ClassInstanceRef<Class>> = jvm.invoke_virtual(&loader, "java/net/URLClassLoader", method, descriptor, (None,)).await;
+        let Err(jvm::JavaError::JavaException(exception)) = result else {
+            panic!("expected NullPointerException for {method}(null)");
+        };
+        assert!(jvm.is_instance(exception.as_ref(), "java/lang/NullPointerException"));
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_jar_loading() -> Result<()> {
     let entry_name = "\u{c790}\u{b8cc} +%20#.txt";
     let mut archive = ZipWriter::new(Cursor::new(Vec::new()));
