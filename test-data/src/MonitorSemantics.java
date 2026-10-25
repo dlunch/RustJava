@@ -8,6 +8,7 @@ public class MonitorSemantics {
                 synchronized (LOCK) {
                     int current = counter;
                     Thread.yield();
+                    System.gc();
                     counter = current + 1;
                 }
             }
@@ -24,6 +25,7 @@ public class MonitorSemantics {
     }
 
     private static synchronized void failWhileSynchronized() {
+        System.gc();
         throw new RuntimeException("expected");
     }
 

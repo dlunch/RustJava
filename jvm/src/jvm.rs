@@ -19,7 +19,7 @@ use parking_lot::RwLock;
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
 use crate::{
-    Result,
+    ExternalRoots, Result,
     array_class_instance::{ArrayRawBuffer, ArrayRawBufferMut},
     class_definition::ClassDefinition,
     class_instance::{AsClassInstance, ClassInstance, ClassInstanceRef},
@@ -48,6 +48,7 @@ struct JvmInner {
     monitors: RwLock<BTreeMap<usize, Arc<Monitor>>>,
     get_current_thread_id: Box<dyn Fn() -> u64 + Sync + Send>,
     bootstrap_class_loader: Box<dyn BootstrapClassLoader>,
+    external_roots: Option<Box<dyn ExternalRoots>>,
     bootstrapping: AtomicBool,
 }
 
@@ -56,8 +57,27 @@ pub struct Jvm {
     inner: Arc<JvmInner>,
 }
 
+/// Keeps local references alive for the lifetime of a native frame.
+/// Scopes must be dropped in stack order, before detaching their originating thread.
+#[must_use]
+pub struct NativeFrame {
+    jvm: Jvm,
+    thread_id: u64,
+}
+
+impl Drop for NativeFrame {
+    fn drop(&mut self) {
+        self.jvm.inner.threads.write().get_mut(&self.thread_id).unwrap().pop_frame();
+    }
+}
+
 impl Jvm {
-    pub async fn new<C, F>(bootstrap_class_loader: C, get_current_thread_id: F, properties: BTreeMap<&str, &str>) -> Result<Self>
+    pub async fn new<C, F>(
+        bootstrap_class_loader: C,
+        get_current_thread_id: F,
+        properties: BTreeMap<&str, &str>,
+        external_roots: Option<Box<dyn ExternalRoots>>,
+    ) -> Result<Self>
     where
         C: BootstrapClassLoader + 'static,
         F: Fn() -> u64 + 'static + Sync + Send,
@@ -75,6 +95,7 @@ impl Jvm {
                 monitors: RwLock::new(BTreeMap::new()),
                 get_current_thread_id: Box::new(get_current_thread_id),
                 bootstrap_class_loader: Box::new(bootstrap_class_loader),
+                external_roots,
                 bootstrapping: AtomicBool::new(true),
             }),
         };
@@ -207,7 +228,7 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        if let Some((declaring_class, field)) = self.resolve_field(&class, name, descriptor) {
+        if let Some((declaring_class, field)) = self.resolve_field(&class, name, descriptor, true) {
             if !field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
@@ -244,7 +265,7 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        if let Some((mut declaring_class, field)) = self.resolve_field(&class, name, descriptor) {
+        if let Some((mut declaring_class, field)) = self.resolve_field(&class, name, descriptor, true) {
             if !field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
@@ -268,7 +289,7 @@ impl Jvm {
         tracing::trace!("Get field {class_name}.{name}:{descriptor}");
 
         let class = self.resolve_class(class_name).await?;
-        if let Some((_, field)) = self.resolve_field(&class, name, descriptor) {
+        if let Some((_, field)) = self.resolve_field(&class, name, descriptor, false) {
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
@@ -301,7 +322,7 @@ impl Jvm {
         tracing::trace!("Put field {class_name}.{name}:{descriptor} = {value:?}");
 
         let class = self.resolve_class(class_name).await?;
-        if let Some((_, field)) = self.resolve_field(&class, name, descriptor) {
+        if let Some((_, field)) = self.resolve_field(&class, name, descriptor, false) {
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
@@ -326,7 +347,7 @@ impl Jvm {
 
         let class = self.resolve_class(class_name).await?;
 
-        if let Some((declaring_class, method)) = self.resolve_method(&class, name, descriptor) {
+        if let Some((declaring_class, method)) = self.resolve_method(&class, name, descriptor, true) {
             if !method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
@@ -354,7 +375,7 @@ impl Jvm {
         tracing::trace!("Invoke virtual {class_name}.{name}:{descriptor}({args:?})");
 
         let owner = self.resolve_class(class_name).await?;
-        let Some((resolved_class, resolved_method)) = self.resolve_method(&owner, name, descriptor) else {
+        let Some((resolved_class, resolved_method)) = self.resolve_method(&owner, name, descriptor, false) else {
             tracing::error!("No such method: {class_name}.{name}:{descriptor}");
             return Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
@@ -618,6 +639,7 @@ impl Jvm {
     }
 
     pub async fn monitor_enter(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<()> {
+        let _frame = self.push_native_frame(&[JavaValue::Object(Some(clone_box(obj.as_class_instance())))]);
         let thread_id = (self.inner.get_current_thread_id)();
         self.get_or_create_monitor(obj.as_class_instance()).enter(thread_id).await;
         Ok(())
@@ -968,7 +990,7 @@ impl Jvm {
             .collect()
     }
 
-    pub fn collect_garbage(&self) -> Result<usize> {
+    pub fn collect_garbage(&self) -> anyhow::Result<usize> {
         tracing::trace!("Collecting garbage");
 
         let garbage = {
@@ -978,7 +1000,29 @@ impl Jvm {
             let classes = self.inner.classes.read();
             let interned_strings = self.interned_strings();
 
-            determine_garbage(self, &threads, &global_references, &all_objects, &classes, &interned_strings)
+            let mut root_identities = if let Some(provider) = &self.inner.external_roots {
+                let objects = all_objects.iter().map(|object| &**object).collect::<Vec<_>>();
+                provider.roots(&objects)?.into_iter().collect::<HashSet<_>>()
+            } else {
+                HashSet::new()
+            };
+            root_identities.extend(
+                self.inner
+                    .monitors
+                    .read()
+                    .iter()
+                    .filter_map(|(identity, monitor)| monitor.is_active().then_some(*identity)),
+            );
+
+            determine_garbage(
+                self,
+                &threads,
+                &global_references,
+                &all_objects,
+                &classes,
+                &interned_strings,
+                &root_identities,
+            )?
         };
 
         let garbage_count = garbage.len();
@@ -1088,8 +1132,9 @@ impl Jvm {
     // started from java (Thread.start), or None to create one
     pub async fn attach_thread(&self, java_thread: Option<Box<dyn ClassInstance>>) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().insert(thread_id, JvmThread::new());
-        self.push_native_frame();
+        let mut thread = JvmThread::new();
+        thread.push_native_frame();
+        self.inner.threads.write().insert(thread_id, thread);
 
         let java_thread = match java_thread {
             Some(x) => x,
@@ -1135,15 +1180,38 @@ impl Jvm {
         self.inner.threads.read().len()
     }
 
-    // TODO we need safe, ergonomic api..
-    pub fn push_native_frame(&self) {
+    pub fn push_native_frame(&self, args: &[JavaValue]) -> NativeFrame {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().get_mut(&thread_id).unwrap().push_native_frame();
+        let mut threads = self.inner.threads.write();
+        let thread = threads.get_mut(&thread_id).unwrap();
+        thread.push_native_frame();
+        thread
+            .top_frame_mut()
+            .local_variables_mut()
+            .extend(args.iter().filter_map(|arg| match arg {
+                JavaValue::Object(Some(instance)) => Some(instance.clone()),
+                _ => None,
+            }));
+        NativeFrame {
+            jvm: self.clone(),
+            thread_id,
+        }
     }
 
-    pub fn pop_frame(&self) {
+    /// Releases frame-local references while preserving the result in its caller.
+    fn pop_frame_with_result(&self, result: &Result<JavaValue>) {
+        let returned_reference = match result {
+            Ok(JavaValue::Object(Some(instance))) => Some(instance.clone()),
+            Err(JavaError::JavaException(exception)) => Some(exception.clone()),
+            _ => None,
+        };
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
+        let mut threads = self.inner.threads.write();
+        let thread = threads.get_mut(&thread_id).unwrap();
+        thread.pop_frame();
+        if let Some(returned_reference) = returned_reference {
+            thread.top_frame_mut().local_variables_mut().push(returned_reference);
+        }
     }
 
     async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
@@ -1186,36 +1254,36 @@ impl Jvm {
 
     // JVMS 5.4.3.2 field resolution: search the class, then its superinterfaces, then its superclass.
     // Matching is by name and descriptor only; the caller checks static-ness afterwards.
-    fn resolve_field(&self, class: &Class, name: &str, descriptor: &str) -> Option<(Class, Box<dyn Field>)> {
+    fn resolve_field(&self, class: &Class, name: &str, descriptor: &str, expected_static: bool) -> Option<(Class, Box<dyn Field>)> {
         if let Some(field) = class
             .definition
-            .field(name, descriptor, true)
-            .or_else(|| class.definition.field(name, descriptor, false))
+            .field(name, descriptor, expected_static)
+            .or_else(|| class.definition.field(name, descriptor, !expected_static))
         {
             return Some((class.clone(), field));
         }
 
         for interface in class.definition.interface_names() {
             if let Some(interface_class) = self.get_class(&interface)
-                && let Some(found) = self.resolve_field(&interface_class, name, descriptor)
+                && let Some(found) = self.resolve_field(&interface_class, name, descriptor, expected_static)
             {
                 return Some(found);
             }
         }
 
         let super_class = self.get_class(&class.definition.super_class_name()?)?;
-        self.resolve_field(&super_class, name, descriptor)
+        self.resolve_field(&super_class, name, descriptor, expected_static)
     }
 
     // JVMS 5.4.3.3 method resolution searches the class hierarchy before inherited interface methods.
-    fn resolve_method(&self, class: &Class, name: &str, descriptor: &str) -> Option<(Class, Box<dyn Method>)> {
+    fn resolve_method(&self, class: &Class, name: &str, descriptor: &str, expected_static: bool) -> Option<(Class, Box<dyn Method>)> {
         let mut class = Some(class.clone());
         let mut interfaces = Vec::new();
         while let Some(candidate) = class {
             if let Some(method) = candidate
                 .definition
-                .method(name, descriptor, true)
-                .or_else(|| candidate.definition.method(name, descriptor, false))
+                .method(name, descriptor, expected_static)
+                .or_else(|| candidate.definition.method(name, descriptor, !expected_static))
             {
                 return Some((candidate, method));
             }
@@ -1321,10 +1389,6 @@ impl Jvm {
         } else {
             None
         };
-        if let Some(object) = &synchronized_object {
-            self.monitor_enter(object).await?;
-        }
-
         self.inner
             .threads
             .write()
@@ -1332,32 +1396,29 @@ impl Jvm {
             .unwrap()
             .push_java_frame(class, class_instance, &method_str, &args);
 
-        let result = method.run(self, args).await;
+        if let Some(object) = &synchronized_object
+            && let Err(error) = self.monitor_enter(object).await
+        {
+            let result = Err(error);
+            self.pop_frame_with_result(&result);
+            return result;
+        }
+
+        let mut result = method.run(self, args).await;
 
         tracing::trace!("Execute result: {result:?}");
-
-        let returned_reference = match &result {
-            Ok(JavaValue::Object(Some(instance))) => Some(instance.clone()),
-            Err(JavaError::JavaException(exception)) => Some(exception.clone()),
-            _ => None,
-        };
-        {
-            let mut threads = self.inner.threads.write();
-            let thread = threads.get_mut(&thread_id).unwrap();
-            thread.pop_frame();
-            if let Some(returned_reference) = returned_reference {
-                thread.top_frame_mut().local_variables_mut().push(returned_reference);
-            }
-        }
 
         if let Some(object) = &synchronized_object
             && let Err(error) = self.monitor_exit(object).await
         {
             if result.is_ok() {
-                return Err(error);
+                result = Err(error);
+            } else {
+                tracing::error!(?error, "failed to release synchronized method monitor");
             }
-            tracing::error!(?error, "failed to release synchronized method monitor");
         }
+
+        self.pop_frame_with_result(&result);
 
         result
     }

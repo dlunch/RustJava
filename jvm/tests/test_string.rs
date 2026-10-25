@@ -72,7 +72,7 @@ async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_intern_identity_survives_gc() -> Result<()> {
+async fn test_intern_identity_survives_gc() -> anyhow::Result<()> {
     let jvm = test_jvm().await?;
 
     // collect first for a clean baseline, then intern and assert the very next GC keeps it

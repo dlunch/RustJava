@@ -1,4 +1,4 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
+use alloc::{format, string::String as RustString, vec, vec::Vec};
 
 use jvm::{JavaValue, runtime::JavaLangString};
 
@@ -157,7 +157,11 @@ impl System {
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::gc()");
 
-        jvm.collect_garbage()?;
+        if let Err(error) = jvm.collect_garbage() {
+            return Err(jvm
+                .exception("java/lang/InternalError", &format!("Garbage collection failed: {error:#}"))
+                .await);
+        }
 
         Ok(())
     }

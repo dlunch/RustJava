@@ -111,6 +111,7 @@ public class ThreadInterruption {
                 WAIT_LOCK.wait();
             }
         }
+        System.gc();
         waiter.interrupt();
         synchronized (WAIT_LOCK) {
             while (!secondWaitReady) {

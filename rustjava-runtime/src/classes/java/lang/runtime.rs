@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{format, vec};
 
 use jvm::{ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
@@ -67,7 +67,11 @@ impl Runtime {
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
         tracing::debug!("java.lang.Runtime::gc({this:?})");
 
-        jvm.collect_garbage()?;
+        if let Err(error) = jvm.collect_garbage() {
+            return Err(jvm
+                .exception("java/lang/InternalError", &format!("Garbage collection failed: {error:#}"))
+                .await);
+        }
 
         Ok(())
     }
