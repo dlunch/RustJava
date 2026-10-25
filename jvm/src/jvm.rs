@@ -57,7 +57,7 @@ pub struct Jvm {
     inner: Arc<JvmInner>,
 }
 
-/// Roots host references until their result or exception has been published to the guest.
+/// Keeps local references alive for the lifetime of a native frame.
 /// Scopes must be dropped in stack order, before detaching their originating thread.
 #[must_use]
 pub struct NativeFrame {
