@@ -639,7 +639,7 @@ impl Jvm {
     }
 
     pub async fn monitor_enter(&self, obj: &(impl AsClassInstance + ?Sized)) -> Result<()> {
-        let _frame = self.native_frame(&[JavaValue::Object(Some(clone_box(obj.as_class_instance())))]);
+        let _frame = self.push_native_frame(&[JavaValue::Object(Some(clone_box(obj.as_class_instance())))]);
         let thread_id = (self.inner.get_current_thread_id)();
         self.get_or_create_monitor(obj.as_class_instance()).enter(thread_id).await;
         Ok(())
@@ -1132,8 +1132,9 @@ impl Jvm {
     // started from java (Thread.start), or None to create one
     pub async fn attach_thread(&self, java_thread: Option<Box<dyn ClassInstance>>) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().insert(thread_id, JvmThread::new());
-        self.push_native_frame();
+        let mut thread = JvmThread::new();
+        thread.push_native_frame();
+        self.inner.threads.write().insert(thread_id, thread);
 
         let java_thread = match java_thread {
             Some(x) => x,
@@ -1179,7 +1180,7 @@ impl Jvm {
         self.inner.threads.read().len()
     }
 
-    pub fn native_frame(&self, args: &[JavaValue]) -> NativeFrame {
+    pub fn push_native_frame(&self, args: &[JavaValue]) -> NativeFrame {
         let thread_id = (self.inner.get_current_thread_id)();
         let mut threads = self.inner.threads.write();
         let thread = threads.get_mut(&thread_id).unwrap();
@@ -1195,16 +1196,6 @@ impl Jvm {
             jvm: self.clone(),
             thread_id,
         }
-    }
-
-    pub fn push_native_frame(&self) {
-        let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().get_mut(&thread_id).unwrap().push_native_frame();
-    }
-
-    pub fn pop_frame(&self) {
-        let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.write().get_mut(&thread_id).unwrap().pop_frame();
     }
 
     /// Releases frame-local references while preserving the result in its caller.
