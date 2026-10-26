@@ -1306,15 +1306,40 @@ impl Jvm {
                 .and_then(|super_class| self.get_class(&super_class));
         }
 
+        let mut visited = HashSet::new();
+        let mut candidates: Vec<(Class, Box<dyn Method>)> = Vec::new();
         while let Some(interface_name) = interfaces.pop() {
-            let interface = self.get_class(&interface_name)?;
-            if let Some(method) = interface.definition.method(name, descriptor, false) {
-                return Some((interface, method));
+            if !visited.insert(interface_name.clone()) {
+                continue;
             }
+            let interface = self.get_class(&interface_name)?;
             interfaces.extend(interface.definition.interface_names());
+            if let Some(method) = interface.definition.method(name, descriptor, false)
+                && !method.access_flags().contains(MethodAccessFlags::PRIVATE)
+            {
+                if candidates
+                    .iter()
+                    .any(|(candidate, _)| self.is_inherited_from(&*candidate.definition, &interface_name))
+                {
+                    continue;
+                }
+                // Keep only declarations not overridden by a more specific interface.
+                candidates.retain(|(candidate, _)| !self.is_inherited_from(&*interface.definition, &candidate.definition.name()));
+                candidates.push((interface, method));
+            }
         }
 
-        None
+        let mut concrete = candidates
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, method))| !method.access_flags().contains(MethodAccessFlags::ABSTRACT));
+        if let Some((index, _)) = concrete.next()
+            && concrete.next().is_none()
+        {
+            return Some(candidates.swap_remove(index));
+        }
+
+        candidates.into_iter().next()
     }
 
     pub(crate) fn find_field(&self, class: &dyn ClassDefinition, name: &str, descriptor: &str) -> Result<Option<Box<dyn Field>>> {

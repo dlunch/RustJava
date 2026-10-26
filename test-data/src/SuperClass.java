@@ -1,4 +1,28 @@
 class SuperClass {
+    interface BaseDefault {
+        default int value() { return 1; }
+    }
+
+    interface SpecificDefault extends BaseDefault {
+        default int value() { return 2; }
+    }
+
+    interface PrivateDefault {
+        private int value() { return 3; }
+    }
+
+    static class DefaultParent implements SpecificDefault, BaseDefault, PrivateDefault {}
+
+    static class DefaultChild extends DefaultParent {
+        int call() { return super.value(); }
+    }
+
+    static class ReverseDefaultParent implements BaseDefault, SpecificDefault, PrivateDefault {}
+
+    static class ReverseDefaultChild extends ReverseDefaultParent {
+        int call() { return super.value(); }
+    }
+
     class InnerClass {
         int field1;
         long field2;
@@ -49,6 +73,9 @@ class SuperClass {
         InnerLeafClass leaf = new InnerLeafClass();
         leaf.test();
         leaf.testSuper();
+
+        System.out.println(new DefaultChild().call());
+        System.out.println(new ReverseDefaultChild().call());
     }
 
     public static void main(String[] args) {
