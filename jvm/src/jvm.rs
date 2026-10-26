@@ -435,9 +435,14 @@ impl Jvm {
         tracing::trace!("Invoke special {class_name}.{name}:{descriptor}({args:?})");
 
         let class = self.resolve_class(class_name).await?;
-        let method = class.definition.method(name, descriptor, false);
+        let method = if name == "<init>" {
+            // Constructors are not inherited (JVMS 6.5 invokespecial).
+            class.definition.method(name, descriptor, false).map(|method| (class, method))
+        } else {
+            self.resolve_method(&class, name, descriptor, false)
+        };
 
-        if let Some(method) = method {
+        if let Some((class, method)) = method {
             let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
                 .chain(args.into_vec())
                 .collect::<Vec<_>>();
@@ -445,6 +450,12 @@ impl Jvm {
             if method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
+                    .await);
+            }
+
+            if method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+                return Err(self
+                    .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 

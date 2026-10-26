@@ -13,6 +13,17 @@ class SuperClass {
         String field4;
     }
 
+    class InnerLeafClass extends InnerDerivedClass {
+        @Override
+        void test() {
+            System.out.println("leaf");
+        }
+
+        void testSuper() {
+            super.test();
+        }
+    }
+
     void run() {
         InnerDerivedClass derived = null;
 
@@ -34,6 +45,10 @@ class SuperClass {
         System.out.println(derived.field4);
 
         derived.test();
+
+        InnerLeafClass leaf = new InnerLeafClass();
+        leaf.test();
+        leaf.testSuper();
     }
 
     public static void main(String[] args) {
