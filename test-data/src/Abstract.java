@@ -1,10 +1,6 @@
 class Abstract {
 
     static abstract class Base {
-        Base() {}
-
-        Base(int value) {}
-
         abstract void test();
     }
 
