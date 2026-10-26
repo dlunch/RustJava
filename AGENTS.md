@@ -27,6 +27,7 @@
 ## Testing Boundaries
 - Keep `rustjava-runtime/tests/classes` limited to Java standard library class and API behavior.
 - Test JVM and interpreter semantics, including class initialization, bytecode execution, and monitor behavior, with compiled Java fixtures under `test-data/src` and expected output under `test-data`, executed by `tests/test_class.rs`.
+- Add or extend fixtures consumed by the existing `test_class` runner rather than adding Rust tests that directly invoke JVM APIs. For linkage errors that Java source cannot express directly, compile the caller against one class version and replace the target class in the fixture; keep the source variants and reproducible build instructions alongside it.
 - Do not place JVM core behavior tests in the `rustjava-runtime` standard library test tree.
 
 ## Compatibility Sources
