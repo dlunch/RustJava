@@ -1,8 +1,10 @@
 // Rebuild from the repository root with JDK 22 or newer:
 // classes=$(mktemp -d)
-// javac --release 22 -d "$classes" test-data/src/special-resolution/SpecialResolutionErrors.java
-// javac --release 22 -cp "$classes" -d "$classes" test-data/src/special-resolution/RuntimeTargets.java
-// jar --create --file test-data/SpecialResolutionErrors.jar --main-class SpecialResolutionErrors -C "$classes" .
+// javac --release 22 -d test-data test-data/src/special-resolution/SpecialResolutionErrors.java
+// javac --release 22 -d "$classes" test-data/src/special-resolution/RuntimeTargets.java
+// cp "$classes"/'SpecialResolutionErrors$ConstructorChild.class' test-data/
+// cp "$classes"/'SpecialResolutionErrors$StaticBase.class' test-data/
+// cp "$classes"/'SpecialResolutionErrors$AbstractBase.class' test-data/
 // rm -r "$classes"
 public class SpecialResolutionErrors {
     public static void main(String[] args) {
@@ -22,34 +24,33 @@ public class SpecialResolutionErrors {
             System.out.println(e.getClass().getName());
         }
     }
-}
+    static class ConstructorBase {
+        ConstructorBase() {}
+        ConstructorBase(int value) {}
+    }
 
-class ConstructorBase {
-    ConstructorBase() {}
-    ConstructorBase(int value) {}
-}
+    static class ConstructorChild extends ConstructorBase {
+        ConstructorChild(int value) { super(value); }
+    }
 
-class ConstructorChild extends ConstructorBase {
-    ConstructorChild(int value) { super(value); }
-}
+    static class StaticBase {
+        int method() { return 1; }
+    }
 
-class StaticBase {
-    int method() { return 1; }
-}
+    static class StaticParent extends StaticBase {}
 
-class StaticParent extends StaticBase {}
+    static class StaticChild extends StaticParent {
+        int call() { return super.method(); }
+    }
 
-class StaticChild extends StaticParent {
-    int call() { return super.method(); }
-}
+    static class AbstractBase {
+        int method() { return 1; }
+    }
 
-class AbstractBase {
-    int method() { return 1; }
-}
+    static class AbstractParent extends AbstractBase {}
 
-class AbstractParent extends AbstractBase {}
-
-class AbstractChild extends AbstractParent {
-    int method() { return 2; }
-    int call() { return super.method(); }
+    static class AbstractChild extends AbstractParent {
+        int method() { return 2; }
+        int call() { return super.method(); }
+    }
 }
