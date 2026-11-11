@@ -855,7 +855,7 @@ impl Formatter {
                 }
                 Self::validate_flags(jvm, specifier, if conversion == 'd' { "-+ 0,(" } else { "-#+ 0(" }).await
             }
-            'e' | 'f' | 'g' => {
+            'e'..='g' => {
                 if specifier.flags.contains(&'0') && specifier.width.is_none() {
                     let text = JavaLangString::from_rust_string(jvm, &specifier.text).await?;
                     return Err(JavaError::JavaException(
@@ -1065,7 +1065,7 @@ impl Formatter {
                 Ok(Some(Self::apply_width(jvm, text, specifier, ' ' as JavaChar).await?))
             }
             'd' | 'o' | 'x' => Self::format_integral(jvm, specifier, argument, uppercase).await.map(Some),
-            'e' | 'f' | 'g' => Self::format_floating(jvm, specifier, argument, uppercase).await.map(Some),
+            'e'..='g' => Self::format_floating(jvm, specifier, argument, uppercase).await.map(Some),
             _ => Ok(Some(Vec::new())),
         }
     }
