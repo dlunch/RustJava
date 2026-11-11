@@ -14,6 +14,7 @@
 - **Naming**: snake_case for functions/files, PascalCase for types/traits
 - **Error handling**: Use `Result<T>` (alias for `result::Result<T, JavaError>`), never panic in library code
 - **Async**: Use `#[async_trait::async_trait]` for async trait methods, `#[tokio::test]` for async tests
+- **Validation**: Do not synthesize Java exceptions for states already guaranteed by registered class prototypes or internal invariants; raise them only where the Java specification requires observable errors.
 
 ## Project Structure
 - `jvm/` - Core JVM implementation (`#![no_std]`)
