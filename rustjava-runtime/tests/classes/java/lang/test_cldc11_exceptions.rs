@@ -149,3 +149,22 @@ async fn test_runtime_api_exception_and_error_message_constructors() -> Result<(
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_index_exception_index_constructors() -> Result<()> {
+    let jvm = test_jvm().await?;
+
+    for (class_name, index, expected) in [
+        ("java/lang/ArrayIndexOutOfBoundsException", 5, "Array index out of range: 5"),
+        ("java/lang/StringIndexOutOfBoundsException", -3, "String index out of range: -3"),
+    ] {
+        let instance = jvm.new_class(class_name, "(I)V", (index,)).await?;
+        let message: ClassInstanceRef<String> = jvm
+            .invoke_virtual(&instance, class_name, "getMessage", "()Ljava/lang/String;", ())
+            .await?;
+
+        assert_eq!(JavaLangString::to_rust_string(&jvm, &message).await?, expected);
+    }
+
+    Ok(())
+}

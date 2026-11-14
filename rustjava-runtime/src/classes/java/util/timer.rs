@@ -45,6 +45,12 @@ impl Timer {
                     Self::schedule_at_fixed_rate,
                     MethodAccessFlags::PUBLIC,
                 ),
+                JavaMethodProto::new(
+                    "scheduleAtFixedRate",
+                    "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
+                    Self::schedule_date_at_fixed_rate,
+                    MethodAccessFlags::PUBLIC,
+                ),
                 JavaMethodProto::new("cancel", "()V", Self::cancel, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![JavaFieldProto::new(
@@ -200,6 +206,32 @@ impl Timer {
         let Some(time) = (context.now() as i64).checked_add(delay) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "illegal execution time").await);
         };
+        if time < 0 {
+            return Err(jvm.exception("java/lang/IllegalArgumentException", "illegal execution time").await);
+        }
+        Self::sched(jvm, this, task, time, period).await
+    }
+
+    async fn schedule_date_at_fixed_rate(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        task: ClassInstanceRef<TimerTask>,
+        date: ClassInstanceRef<Date>,
+        period: i64,
+    ) -> Result<()> {
+        tracing::debug!("java.util.Timer::scheduleAtFixedRate({this:?}, {task:?}, {date:?}, {period:?})");
+
+        if task.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "task").await);
+        }
+        if date.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "time").await);
+        }
+        if period <= 0 {
+            return Err(jvm.exception("java/lang/IllegalArgumentException", "non-positive period").await);
+        }
+        let time: i64 = jvm.invoke_virtual(&date, "java/util/Date", "getTime", "()J", ()).await?;
         if time < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "illegal execution time").await);
         }

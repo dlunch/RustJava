@@ -44,6 +44,21 @@ pub fn determine_garbage(
         find_reachable_objects(jvm, object, &mut reachable_objects)?;
     }
 
+    // java.lang.ref: a weak reference is cleared once its referent is no longer strongly reachable
+    if let Some(reference_class) = classes.get("java/lang/ref/Reference") {
+        let referent = reference_class.definition.field("referent", "Ljava/lang/Object;", false).unwrap();
+        for object in all_class_instances
+            .iter()
+            .filter(|object| reachable_objects.contains(&object.identity()) && jvm.is_instance(&***object, "java/lang/ref/Reference"))
+        {
+            if let JavaValue::Object(Some(value)) = object.get_field(&*referent)?
+                && !reachable_objects.contains(&value.identity())
+            {
+                object.clone().put_field(&*referent, JavaValue::Object(None))?;
+            }
+        }
+    }
+
     Ok(all_class_instances
         .iter()
         .filter(|object| !reachable_objects.contains(&object.identity()))
@@ -112,7 +127,11 @@ fn find_reachable_objects(jvm: &Jvm, object: &Box<dyn ClassInstance>, reachable_
 }
 
 fn find_all_fields(jvm: &Jvm, class_definition: &dyn ClassDefinition) -> Vec<Box<dyn Field>> {
-    let result = class_definition.fields();
+    let mut result = class_definition.fields();
+    if class_definition.name() == "java/lang/ref/Reference" {
+        // weak: the referent must not be kept reachable through the reference
+        result.retain(|field| field.name() != "referent");
+    }
     let super_class_name = class_definition.super_class_name();
 
     if let Some(x) = super_class_name {
