@@ -71,6 +71,8 @@ mod unsupported_operation_exception;
 mod verify_error;
 mod virtual_machine_error;
 
+pub mod r#ref;
+
 pub use self::{
     abstract_method_error::AbstractMethodError, abstract_string_builder::AbstractStringBuilder, appendable::Appendable,
     arithmetic_exception::ArithmeticException, array_index_out_of_bounds_exception::ArrayIndexOutOfBoundsException,

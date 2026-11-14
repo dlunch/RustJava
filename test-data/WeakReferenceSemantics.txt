@@ -1,0 +1,8 @@
+held: true
+held by field: true
+collected: true
+chain head: true
+chain tail: true
+empty: true
+cleared: true
+held after clear: true

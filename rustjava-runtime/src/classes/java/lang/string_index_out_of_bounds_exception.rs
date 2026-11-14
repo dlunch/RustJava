@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{format, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::JavaMethodProto;
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
@@ -18,6 +18,7 @@ impl StringIndexOutOfBoundsException {
             methods: vec![
                 JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
                 JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, MethodAccessFlags::PUBLIC),
+                JavaMethodProto::new("<init>", "(I)V", Self::init_with_index, MethodAccessFlags::PUBLIC),
             ],
             fields: vec![],
             access_flags: ClassAccessFlags::PUBLIC,
@@ -37,6 +38,23 @@ impl StringIndexOutOfBoundsException {
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.StringIndexOutOfBoundsException::<init>({this:?}, {message:?})");
 
+        let _: () = jvm
+            .invoke_special(
+                &this,
+                "java/lang/IndexOutOfBoundsException",
+                "<init>",
+                "(Ljava/lang/String;)V",
+                (message,),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn init_with_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<()> {
+        tracing::debug!("java.lang.StringIndexOutOfBoundsException::<init>({this:?}, {index:?})");
+
+        let message = JavaLangString::from_rust_string(jvm, &format!("String index out of range: {index}")).await?;
         let _: () = jvm
             .invoke_special(
                 &this,

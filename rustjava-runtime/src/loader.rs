@@ -118,6 +118,8 @@ pub fn get_runtime_class_proto(name: &str) -> Option<RuntimeClassProto> {
         crate::classes::java::lang::UnsatisfiedLinkError::as_proto(),
         crate::classes::java::lang::VerifyError::as_proto(),
         crate::classes::java::lang::VirtualMachineError::as_proto(),
+        crate::classes::java::lang::r#ref::Reference::as_proto(),
+        crate::classes::java::lang::r#ref::WeakReference::as_proto(),
         crate::classes::java::net::JarURLConnection::as_proto(),
         crate::classes::java::net::MalformedURLException::as_proto(),
         crate::classes::java::net::UnknownServiceException::as_proto(),

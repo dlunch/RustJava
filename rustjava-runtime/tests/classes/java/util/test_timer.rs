@@ -162,6 +162,7 @@ async fn timer_01_to_05_registers_jdk_shaped_api_and_state() -> Result<()> {
         ("schedule", "(Ljava/util/TimerTask;JJ)V"),
         ("schedule", "(Ljava/util/TimerTask;Ljava/util/Date;J)V"),
         ("scheduleAtFixedRate", "(Ljava/util/TimerTask;JJ)V"),
+        ("scheduleAtFixedRate", "(Ljava/util/TimerTask;Ljava/util/Date;J)V"),
         ("cancel", "()V"),
     ] {
         let method = timer
@@ -390,6 +391,22 @@ async fn timer_normalizes_long_max_period_and_rejects_first_recurrence_overflow(
         (-i64::MAX) >> 1
     );
     assert_eq!(jvm.get_field::<i64>(&fixed_rate, "TestTimerTask", "period", "J").await?, i64::MAX >> 1);
+    let dated_fixed_rate: ClassInstanceRef<TestTimerTask> = jvm.new_class("TestTimerTask", "()V", ()).await?.into();
+    let date = jvm.new_class("java/util/Date", "(J)V", (2_000i64,)).await?;
+    let _: () = jvm
+        .invoke_virtual(
+            &timer,
+            &timer.class_definition().name(),
+            "scheduleAtFixedRate",
+            "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
+            (dated_fixed_rate.clone(), date, 25i64),
+        )
+        .await?;
+    assert_eq!(
+        jvm.get_field::<i64>(&dated_fixed_rate, "TestTimerTask", "nextExecutionTime", "J").await?,
+        2_000
+    );
+    assert_eq!(jvm.get_field::<i64>(&dated_fixed_rate, "TestTimerTask", "period", "J").await?, 25);
     let _: () = jvm.invoke_virtual(&timer, &timer.class_definition().name(), "cancel", "()V", ()).await?;
     await_spawn(next_spawn(&runtime).await, "large-period timer worker").await?;
 
@@ -412,21 +429,23 @@ async fn timer_normalizes_long_max_period_and_rejects_first_recurrence_overflow(
         assert_eq!(jvm.get_field::<i32>(&task, "TestTimerTask", "state", "I").await?, 0);
         assert_eq!(jvm.get_field::<i64>(&task, "TestTimerTask", "period", "J").await?, 0);
     }
-    let date = jvm.new_class("java/util/Date", "(J)V", (i64::MAX - 50,)).await?;
-    let dated: ClassInstanceRef<TestTimerTask> = jvm.new_class("TestTimerTask", "()V", ()).await?.into();
-    assert_exception(
-        jvm.invoke_virtual::<_, ()>(
-            &timer,
-            &timer.class_definition().name(),
-            "schedule",
-            "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
-            (dated.clone(), date, 60i64),
+    for method in ["schedule", "scheduleAtFixedRate"] {
+        let date = jvm.new_class("java/util/Date", "(J)V", (i64::MAX - 50,)).await?;
+        let dated: ClassInstanceRef<TestTimerTask> = jvm.new_class("TestTimerTask", "()V", ()).await?.into();
+        assert_exception(
+            jvm.invoke_virtual::<_, ()>(
+                &timer,
+                &timer.class_definition().name(),
+                method,
+                "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
+                (dated.clone(), date, 60i64),
+            )
+            .await,
+            "java/lang/IllegalArgumentException",
         )
-        .await,
-        "java/lang/IllegalArgumentException",
-    )
-    .await;
-    assert_eq!(jvm.get_field::<i32>(&dated, "TestTimerTask", "state", "I").await?, 0);
+        .await;
+        assert_eq!(jvm.get_field::<i32>(&dated, "TestTimerTask", "state", "I").await?, 0);
+    }
     let _: () = jvm.invoke_virtual(&timer, &timer.class_definition().name(), "cancel", "()V", ()).await?;
     await_spawn(next_spawn(&runtime).await, "near-boundary validation timer worker").await?;
     Ok(())
