@@ -39,6 +39,10 @@ use crate::{
     value::JavaValue,
 };
 
+// Fixed frame budget per thread instead of probing the native stack like real JVMs do;
+// 512 keeps release builds within tokio's default 2MB worker thread stack.
+const MAX_STACK_DEPTH: usize = 512;
+
 struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
@@ -1425,12 +1429,22 @@ impl Jvm {
         } else {
             None
         };
-        self.inner
-            .threads
-            .write()
-            .get_mut(&thread_id)
-            .unwrap()
-            .push_java_frame(class, class_instance, &method_str, &args);
+        let depth = {
+            let mut threads = self.inner.threads.write();
+            let thread = threads.get_mut(&thread_id).unwrap();
+            thread.push_java_frame(class, class_instance, &method_str, &args);
+            thread.iter_frame().count()
+        };
+
+        // Only the exact limit throws: Java code can never pass it, while the error's own constructor frames run above it.
+        if depth == MAX_STACK_DEPTH {
+            let result = self
+                .new_class("java/lang/StackOverflowError", "()V", ())
+                .await
+                .and_then(|error| Err(JavaError::JavaException(error)));
+            self.pop_frame_with_result(&result);
+            return result;
+        }
 
         if let Some(object) = &synchronized_object
             && let Err(error) = self.monitor_enter(object).await
