@@ -1,7 +1,5 @@
 use alloc::vec;
 
-use bytemuck::cast_vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
@@ -124,6 +122,11 @@ impl FileInputStream {
             return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
         }
 
+        let array_length = jvm.array_length(&buf).await? as i32;
+        if offset < 0 || length < 0 || offset > array_length - length {
+            return Err(jvm.exception("java/lang/IndexOutOfBoundsException", "Invalid offset or length").await);
+        }
+
         let fd = jvm.get_field(&this, "java/io/FileInputStream", "fd", "Ljava/io/FileDescriptor;").await?;
         let mut rust_file = FileDescriptor::file(jvm, context, fd).await?;
 
@@ -135,7 +138,7 @@ impl FileInputStream {
             return Ok(-1);
         }
 
-        jvm.store_array(&mut buf, offset as _, cast_vec::<u8, i8>(rust_buf)).await?;
+        jvm.array_raw_buffer_mut(&mut buf).await?.write(offset as _, &rust_buf[..read])?;
 
         Ok(read as _)
     }
