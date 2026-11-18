@@ -191,6 +191,10 @@ pub(crate) struct ZipDataReader {
 impl Read for ZipDataReader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let count = buf.len().min(self.length.saturating_sub(self.position) as usize);
+        // Corrupt archives can point past the end; the raw buffer slices at `position` even for empty reads.
+        if count == 0 {
+            return Ok(0);
+        }
         self.buffer
             .read(self.position as usize, &mut buf[..count])
             .map_err(|_| io::Error::other("zip data read failed"))?;
