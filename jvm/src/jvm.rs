@@ -978,10 +978,15 @@ impl Jvm {
     pub async fn exception(&self, r#type: &str, message: &str) -> JavaError {
         tracing::info!("throwing java exception: {} {message}", r#type);
 
-        let message_str = JavaLangString::from_rust_string(self, message).await.unwrap();
-        let instance = self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await.unwrap();
-
-        JavaError::JavaException(instance)
+        // Construction can itself fail (e.g. StackOverflowError near the depth limit); that error replaces the requested one.
+        let message_str = match JavaLangString::from_rust_string(self, message).await {
+            Ok(message_str) => message_str,
+            Err(error) => return error,
+        };
+        match self.new_class(r#type, "(Ljava/lang/String;)V", (message_str,)).await {
+            Ok(instance) => JavaError::JavaException(instance),
+            Err(error) => error,
+        }
     }
 
     pub fn stack_trace(&self) -> Vec<String> {
