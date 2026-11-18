@@ -84,6 +84,8 @@ async fn unavailable_standard_streams_have_nonnull_descriptors() -> Result<()> {
 
 #[tokio::test]
 async fn test_file_input_stream_read_buf() -> Result<()> {
+    use jvm::JavaError;
+
     let filesystem = [("test.txt".into(), b"hello world".to_vec())];
     let jvm = test_jvm_filesystem(filesystem.into_iter().collect()).await?;
 
@@ -92,17 +94,27 @@ async fn test_file_input_stream_read_buf() -> Result<()> {
     let java_file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (file,)).await?;
     let fis = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (java_file,)).await?;
 
-    let bytes = jvm.instantiate_array("B", 11).await?;
+    let mut bytes = jvm.instantiate_array("B", 14).await?;
+    jvm.array_raw_buffer_mut(&mut bytes).await?.write(0, &[0xff; 14])?;
+
+    let result: Result<i32> = jvm
+        .invoke_virtual(&fis, "java/io/FileInputStream", "read", "([BII)I", (bytes.clone(), 4, 11))
+        .await;
+    let Err(JavaError::JavaException(exception)) = result else {
+        panic!("read must reject a range past the end of the array");
+    };
+    assert!(jvm.is_instance(&*exception, "java/lang/IndexOutOfBoundsException"));
+
     let read: i32 = jvm
-        .invoke_virtual(&fis, &fis.class_definition().name(), "read", "([B)I", (bytes.clone(),))
+        .invoke_virtual(&fis, "java/io/FileInputStream", "read", "([BII)I", (bytes.clone(), 1, 12))
         .await?;
 
-    let length = jvm.array_length(&bytes).await?;
-    let mut buf = vec![0; length];
+    let mut buf = vec![0; 14];
     jvm.array_raw_buffer(&bytes).await?.read(0, &mut buf)?;
 
+    // Only the bytes actually read are written; the rest of the array is untouched.
     assert_eq!(read, 11);
-    assert_eq!(buf, vec![104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]);
+    assert_eq!(buf, b"\xffhello world\xff\xff".to_vec());
 
     Ok(())
 }

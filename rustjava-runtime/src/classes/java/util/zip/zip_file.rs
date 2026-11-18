@@ -1,13 +1,13 @@
-use alloc::{string::ToString, vec, vec::Vec};
+use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
 use core::iter;
 
 // XXX for zip..
 extern crate std;
-use std::io::{Cursor, Read};
+use std::io::{self, Read, Seek, SeekFrom};
 
 use zip::ZipArchive;
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ArrayRawBuffer, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -50,13 +50,15 @@ impl ZipFile {
         }
     }
 
-    pub(crate) async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<Cursor<Vec<u8>>>> {
+    pub(crate) async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<ZipDataReader>> {
         let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/util/zip/ZipFile", "zipData", "[B").await?;
-        let length = jvm.array_length(&zip_data).await?;
-        let mut buf = vec![0u8; length];
-        jvm.array_raw_buffer(&zip_data).await?.read(0, &mut buf)?;
+        let reader = ZipDataReader {
+            length: jvm.array_length(&zip_data).await? as u64,
+            buffer: jvm.array_raw_buffer(&zip_data).await?,
+            position: 0,
+        };
 
-        match ZipArchive::new(Cursor::new(buf)) {
+        match ZipArchive::new(reader) {
             Ok(x) => Ok(x),
             Err(err) => Err(jvm.exception("java/util/zip/ZipException", &err.to_string()).await),
         }
@@ -175,5 +177,42 @@ impl ZipFile {
         let input_stream = jvm.new_class("java/io/ByteArrayInputStream", "([B)V", (java_buf,)).await?;
 
         Ok(input_stream.into())
+    }
+}
+
+// Reads the archive in place from the zipData array, so each lookup only touches the
+// central directory and the requested entry instead of copying the whole archive.
+pub(crate) struct ZipDataReader {
+    buffer: Box<dyn ArrayRawBuffer>,
+    length: u64,
+    position: u64,
+}
+
+impl Read for ZipDataReader {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let count = buf.len().min(self.length.saturating_sub(self.position) as usize);
+        // Corrupt archives can point past the end; the raw buffer slices at `position` even for empty reads.
+        if count == 0 {
+            return Ok(0);
+        }
+        self.buffer
+            .read(self.position as usize, &mut buf[..count])
+            .map_err(|_| io::Error::other("zip data read failed"))?;
+        self.position += count as u64;
+
+        Ok(count)
+    }
+}
+
+impl Seek for ZipDataReader {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        let position = match pos {
+            SeekFrom::Start(offset) => Some(offset),
+            SeekFrom::End(offset) => self.length.checked_add_signed(offset),
+            SeekFrom::Current(offset) => self.position.checked_add_signed(offset),
+        };
+        self.position = position.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "seek before start of zip data"))?;
+
+        Ok(self.position)
     }
 }

@@ -1,4 +1,4 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -112,8 +112,9 @@ impl ByteArrayOutputStream {
         let count: i32 = jvm.get_field(&this, "java/io/ByteArrayOutputStream", "count", "I").await?;
         Self::ensure_capacity(jvm, &mut this, (count + len) as usize).await?;
         let mut buf = jvm.get_field(&this, "java/io/ByteArrayOutputStream", "buf", "[B").await?;
-        let values: Vec<i8> = jvm.load_array(&bytes, off as usize, len as usize).await?;
-        jvm.store_array(&mut buf, count as usize, values).await?;
+        let mut values = vec![0; len as usize];
+        jvm.array_raw_buffer(&bytes).await?.read(off as usize, &mut values)?;
+        jvm.array_raw_buffer_mut(&mut buf).await?.write(count as usize, &values)?;
         jvm.put_field(&mut this, "java/io/ByteArrayOutputStream", "count", "I", count + len).await
     }
 
