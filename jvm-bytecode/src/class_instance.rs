@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, collections::BTreeMap, sync::Arc};
+use alloc::{boxed::Box, sync::Arc};
 use core::{
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
@@ -7,13 +7,14 @@ use core::{
 use parking_lot::RwLock;
 
 use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Result};
-use jvm_types::JavaType;
 
 use crate::{FieldImpl, class_definition::ClassDefinitionImpl};
 
 struct ClassInstanceInner {
-    class: Box<dyn ClassDefinition>,
-    storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
+    class: ClassDefinitionImpl,
+    // instance fields of the class hierarchy; a field's position is its slot in storage
+    fields: Arc<[FieldImpl]>,
+    storage: RwLock<Box<[JavaValue]>>,
 }
 
 #[derive(Clone)]
@@ -23,10 +24,13 @@ pub struct ClassInstanceImpl {
 
 impl ClassInstanceImpl {
     pub fn new(class: &ClassDefinitionImpl) -> Self {
+        let (fields, storage) = class.instance_layout();
+
         Self {
             inner: Arc::new(ClassInstanceInner {
-                class: Box::new(class.clone()),
-                storage: RwLock::new(BTreeMap::new()),
+                class: class.clone(),
+                fields,
+                storage: RwLock::new(storage),
             }),
         }
     }
@@ -44,13 +48,14 @@ impl ClassInstance for ClassInstanceImpl {
         Ok(Box::new(Self {
             inner: Arc::new(ClassInstanceInner {
                 class: self.inner.class.clone(),
+                fields: self.inner.fields.clone(),
                 storage: RwLock::new(self.inner.storage.read().clone()),
             }),
         }))
     }
 
     fn class_definition(&self) -> Box<dyn ClassDefinition> {
-        self.inner.class.clone()
+        Box::new(self.inner.class.clone())
     }
 
     fn equals(&self, other: &dyn ClassInstance) -> Result<bool> {
@@ -66,20 +71,16 @@ impl ClassInstance for ClassInstanceImpl {
     fn get_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.read();
-        let value = storage.get(field);
+        let slot = self.inner.fields.iter().position(|x| x == field).unwrap();
 
-        if let Some(x) = value {
-            Ok(x.clone())
-        } else {
-            Ok(JavaValue::default_of(&JavaType::parse(&field.descriptor())))
-        }
+        Ok(self.inner.storage.read()[slot].clone())
     }
 
     fn put_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.write().insert(field.clone(), value);
+        let slot = self.inner.fields.iter().position(|x| x == field).unwrap();
+        self.inner.storage.write()[slot] = value;
 
         Ok(())
     }

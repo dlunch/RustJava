@@ -65,48 +65,30 @@ impl ArrayClassInstanceImpl {
         }
     }
 
-    fn convert_values_to_primitive(&self, values: Box<[JavaValue]>) -> Vec<u8> {
+    fn write_primitive(&self, value: JavaValue, raw: &mut [u8]) {
         match self.inner.element_type {
-            JavaType::Boolean => values.into_vec().into_iter().map(|x| bool::from(x) as u8).collect::<Vec<_>>(),
-            JavaType::Byte => values.into_vec().into_iter().map(|x| i8::from(x) as u8).collect::<Vec<_>>(),
-            JavaType::Char => values.into_vec().into_iter().flat_map(|x| u16::from(x).to_le_bytes()).collect::<Vec<_>>(),
-            JavaType::Short => values.into_vec().into_iter().flat_map(|x| i16::from(x).to_le_bytes()).collect::<Vec<_>>(),
-            JavaType::Int => values.into_vec().into_iter().flat_map(|x| i32::from(x).to_le_bytes()).collect::<Vec<_>>(),
-            JavaType::Long => values.into_vec().into_iter().flat_map(|x| i64::from(x).to_le_bytes()).collect::<Vec<_>>(),
-            JavaType::Float => values.into_vec().into_iter().flat_map(|x| f32::from(x).to_le_bytes()).collect::<Vec<_>>(),
-            JavaType::Double => values.into_vec().into_iter().flat_map(|x| f64::from(x).to_le_bytes()).collect::<Vec<_>>(),
+            JavaType::Boolean => raw[0] = bool::from(value) as u8,
+            JavaType::Byte => raw[0] = i8::from(value) as u8,
+            JavaType::Char => raw.copy_from_slice(&u16::from(value).to_le_bytes()),
+            JavaType::Short => raw.copy_from_slice(&i16::from(value).to_le_bytes()),
+            JavaType::Int => raw.copy_from_slice(&i32::from(value).to_le_bytes()),
+            JavaType::Long => raw.copy_from_slice(&i64::from(value).to_le_bytes()),
+            JavaType::Float => raw.copy_from_slice(&f32::from(value).to_le_bytes()),
+            JavaType::Double => raw.copy_from_slice(&f64::from(value).to_le_bytes()),
             _ => unreachable!(),
         }
     }
 
-    fn convert_primitive_to_values(&self, values_raw: &[u8]) -> Vec<JavaValue> {
+    fn read_primitive(&self, raw: &[u8]) -> JavaValue {
         match self.inner.element_type {
-            JavaType::Boolean => values_raw.iter().map(|&x| JavaValue::Boolean(x != 0)).collect::<Vec<_>>(),
-            JavaType::Byte => values_raw.iter().map(|&x| JavaValue::Byte(x as i8)).collect::<Vec<_>>(),
-            JavaType::Char => values_raw
-                .chunks(2)
-                .map(|x| JavaValue::Char(u16::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
-            JavaType::Short => values_raw
-                .chunks(2)
-                .map(|x| JavaValue::Short(i16::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
-            JavaType::Int => values_raw
-                .chunks(4)
-                .map(|x| JavaValue::Int(i32::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
-            JavaType::Long => values_raw
-                .chunks(8)
-                .map(|x| JavaValue::Long(i64::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
-            JavaType::Float => values_raw
-                .chunks(4)
-                .map(|x| JavaValue::Float(f32::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
-            JavaType::Double => values_raw
-                .chunks(8)
-                .map(|x| JavaValue::Double(f64::from_le_bytes(x.try_into().unwrap())))
-                .collect::<Vec<_>>(),
+            JavaType::Boolean => JavaValue::Boolean(raw[0] != 0),
+            JavaType::Byte => JavaValue::Byte(raw[0] as i8),
+            JavaType::Char => JavaValue::Char(u16::from_le_bytes(raw.try_into().unwrap())),
+            JavaType::Short => JavaValue::Short(i16::from_le_bytes(raw.try_into().unwrap())),
+            JavaType::Int => JavaValue::Int(i32::from_le_bytes(raw.try_into().unwrap())),
+            JavaType::Long => JavaValue::Long(i64::from_le_bytes(raw.try_into().unwrap())),
+            JavaType::Float => JavaValue::Float(f32::from_le_bytes(raw.try_into().unwrap())),
+            JavaType::Double => JavaValue::Double(f64::from_le_bytes(raw.try_into().unwrap())),
             _ => unreachable!(),
         }
     }
@@ -167,9 +149,11 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
         match &mut *self.inner.elements.write() {
             ArrayElements::Primitive(x) => {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);
-                let values_raw = self.convert_values_to_primitive(values);
+                let raw = &mut x[offset * element_size..(offset + values.len()) * element_size];
 
-                x.splice(offset * element_size..offset * element_size + values_raw.len(), values_raw);
+                for (value, raw) in values.into_vec().into_iter().zip(raw.chunks_exact_mut(element_size)) {
+                    self.write_primitive(value, raw);
+                }
             }
             ArrayElements::NonPrimitive(x) => {
                 x.splice(offset..offset + values.len(), values.into_vec());
@@ -185,7 +169,7 @@ impl ArrayClassInstance for ArrayClassInstanceImpl {
                 let element_size = Self::primitive_element_size(&self.inner.element_type);
                 let values_raw = &x[offset * element_size..offset * element_size + length * element_size];
 
-                self.convert_primitive_to_values(values_raw)
+                values_raw.chunks_exact(element_size).map(|raw| self.read_primitive(raw)).collect()
             }
             ArrayElements::NonPrimitive(x) => x[offset..offset + length].to_vec(),
         })

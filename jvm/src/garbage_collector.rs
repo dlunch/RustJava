@@ -84,8 +84,9 @@ struct Marker<'a> {
 }
 
 impl Marker<'_> {
+    // inherited static fields belong to the superclass, which is marked on its own
     fn mark_static_fields(&mut self, class: &Class) -> anyhow::Result<()> {
-        for field in find_all_fields(self.jvm, &*class.definition) {
+        for field in class.definition.fields() {
             if field.access_flags().contains(FieldAccessFlags::STATIC)
                 && is_reference_type(&field.descriptor())
                 && let JavaValue::Object(Some(value)) = class.definition.get_static_field(&*field)?
