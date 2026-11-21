@@ -1142,6 +1142,12 @@ impl Jvm {
             }
         }
 
+        // Before the superclass (JVMS 5.5 steps 6 and 7): its initializer may already create instances of this class.
+        if let Err(err) = class.definition.prepare(self).await {
+            class.finish_initialization(InitState::Erroneous);
+            return Err(err);
+        }
+
         if let Some(super_name) = class.definition.super_class_name() {
             // resolution failure is not an initialization failure, so initialization may be retried
             let super_class = match self.resolve_class(&super_name).await {
@@ -1156,11 +1162,6 @@ impl Jvm {
                 class.finish_initialization(InitState::Erroneous);
                 return Err(err);
             }
-        }
-
-        if let Err(err) = class.definition.prepare(self).await {
-            class.finish_initialization(InitState::Erroneous);
-            return Err(err);
         }
 
         if let Some(clinit) = class.definition.method("<clinit>", "()V", true) {
