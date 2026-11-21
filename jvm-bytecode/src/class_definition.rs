@@ -1,7 +1,6 @@
 use alloc::{
     borrow::Cow,
     boxed::Box,
-    collections::BTreeMap,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
@@ -28,8 +27,13 @@ struct ClassDefinitionInner {
     methods: Vec<MethodImpl>,
     fields: Vec<FieldImpl>,
     constant_values: Vec<(FieldImpl, ConstantPoolReference)>,
-    storage: RwLock<BTreeMap<FieldImpl, JavaValue>>, // TODO we should use field offset or something
+    // one slot per declared field, in declaration order
+    storage: RwLock<Box<[JavaValue]>>,
+    // instance fields of the whole class hierarchy with their default values; needs the superclasses, so laid out at preparation
+    instance_layout: RwLock<InstanceLayout>,
 }
+
+pub(crate) type InstanceLayout = (Arc<[FieldImpl]>, Box<[JavaValue]>);
 
 #[derive(Clone)]
 pub struct ClassDefinitionImpl {
@@ -58,6 +62,11 @@ impl ClassDefinitionImpl {
         fields: Vec<FieldImpl>,
         constant_values: Vec<(FieldImpl, ConstantPoolReference)>,
     ) -> Self {
+        let storage = fields
+            .iter()
+            .map(|field| JavaValue::default_of(&JavaType::parse(&field.descriptor())))
+            .collect();
+
         Self {
             inner: Arc::new(ClassDefinitionInner {
                 name: name.to_string(),
@@ -67,7 +76,8 @@ impl ClassDefinitionImpl {
                 methods,
                 fields,
                 constant_values,
-                storage: RwLock::new(BTreeMap::new()),
+                storage: RwLock::new(storage),
+                instance_layout: RwLock::new(InstanceLayout::default()),
             }),
         }
     }
@@ -144,6 +154,10 @@ impl ClassDefinitionImpl {
     pub fn fields(&self) -> &[FieldImpl] {
         &self.inner.fields
     }
+
+    pub(crate) fn instance_layout(&self) -> InstanceLayout {
+        self.inner.instance_layout.read().clone()
+    }
 }
 
 #[async_trait::async_trait]
@@ -169,6 +183,25 @@ impl ClassDefinition for ClassDefinitionImpl {
     }
 
     async fn prepare(&self, jvm: &Jvm) -> Result<()> {
+        let mut fields = Vec::new();
+        let mut class = Some(Box::new(self.clone()) as Box<dyn ClassDefinition>);
+        while let Some(x) = class {
+            // fields of other ClassDefinition implementations cannot be stored in a ClassInstanceImpl
+            fields.extend(
+                x.fields()
+                    .iter()
+                    .filter(|field| !field.access_flags().contains(FieldAccessFlags::STATIC))
+                    .filter_map(|field| field.as_any().downcast_ref::<FieldImpl>().cloned()),
+            );
+            class = x.super_class_name().map(|name| jvm.get_class(&name).unwrap().definition);
+        }
+        let defaults = fields
+            .iter()
+            .map(|field| JavaValue::default_of(&JavaType::parse(&field.descriptor())))
+            .collect();
+
+        *self.inner.instance_layout.write() = (fields.into(), defaults);
+
         for (field, constant) in &self.inner.constant_values {
             let value = match constant {
                 ConstantPoolReference::Integer(x) => match field.descriptor().as_ref() {
@@ -185,7 +218,8 @@ impl ClassDefinition for ClassDefinitionImpl {
                 _ => continue,
             };
 
-            self.inner.storage.write().insert(field.clone(), value);
+            let slot = self.inner.fields.iter().position(|x| x == field).unwrap();
+            self.inner.storage.write()[slot] = value;
         }
 
         Ok(())
@@ -218,20 +252,16 @@ impl ClassDefinition for ClassDefinitionImpl {
     fn get_static_field(&self, field: &dyn Field) -> Result<JavaValue> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        let storage = self.inner.storage.read();
-        let value = storage.get(field);
+        let slot = self.inner.fields.iter().position(|x| x == field).unwrap();
 
-        if let Some(x) = value {
-            Ok(x.clone())
-        } else {
-            Ok(JavaValue::default_of(&JavaType::parse(&field.descriptor())))
-        }
+        Ok(self.inner.storage.read()[slot].clone())
     }
 
     fn put_static_field(&mut self, field: &dyn Field, value: JavaValue) -> Result<()> {
         let field = field.as_any().downcast_ref::<FieldImpl>().unwrap();
 
-        self.inner.storage.write().insert(field.clone(), value);
+        let slot = self.inner.fields.iter().position(|x| x == field).unwrap();
+        self.inner.storage.write()[slot] = value;
 
         Ok(())
     }

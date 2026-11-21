@@ -4,6 +4,9 @@ class Switch {
         run("3");
         run("10");
         run("100");
+        // keys below the tableswitch range, including the most negative int
+        run("0");
+        run("-2147483648");
     }
 
     static void run(String arg) {

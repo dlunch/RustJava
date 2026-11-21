@@ -79,6 +79,10 @@ impl Class {
         }
     }
 
+    pub(crate) fn is_initialized(&self) -> bool {
+        self.initialization.state.lock().status == InitState::Initialized
+    }
+
     pub(crate) fn finish_initialization(&self, status: InitState) {
         {
             let mut state = self.initialization.state.lock();

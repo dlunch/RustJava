@@ -27,12 +27,13 @@ impl Interpreter {
         }
 
         let mut next_index = 0;
-        let mut pc = 0;
         loop {
-            let result = Self::execute(jvm, code_attribute, &mut next_index, &mut pc, &mut stack_frame, return_type).await;
+            let result = Self::execute(jvm, code_attribute, &mut next_index, &mut stack_frame, return_type).await;
             match result {
                 Ok(value) => return Ok(value),
                 Err(JavaError::JavaException(e)) => {
+                    // throwing opcodes never branch, so the failed instruction is the one before next_index
+                    let pc = code_attribute.code[next_index - 1].0;
                     let exception_handler = Self::find_exception_handler(jvm, &*e, code_attribute, pc).await;
                     if let Some(x) = exception_handler {
                         stack_frame.operand_stack.clear();
@@ -51,15 +52,12 @@ impl Interpreter {
         jvm: &Jvm,
         code_attribute: &AttributeInfoCode,
         next_index: &mut usize,
-        pc: &mut u32,
         stack_frame: &mut StackFrame,
         return_type: &JavaType,
     ) -> Result<JavaValue> {
         // Keep dispatch in one future; only restart it when a Java exception is caught.
-        while let Some((current_offset, opcode)) = code_attribute.code.get(*next_index) {
-            let current_offset = *current_offset;
+        while let Some((_, opcode)) = code_attribute.code.get(*next_index) {
             *next_index += 1;
-            *pc = current_offset;
             tracing::trace!("Opcode {opcode:?}");
             match opcode {
                 Opcode::Aaload
@@ -98,39 +96,41 @@ impl Interpreter {
                     if index < 0 {
                         return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
                     }
-                    let mut array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
-                    if array.is_none() {
+                    let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                    let Some(mut array) = array else {
                         return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
-                    }
+                    };
+
+                    let Some(length) = array.as_array_instance().map(|x| x.length()) else {
+                        return Err(jvm.exception("java/lang/IllegalArgumentException", "Not an array").await);
+                    };
 
                     // JVMS: aastore reports an out-of-bounds index before any ArrayStoreException type check
-                    let length = jvm.array_length(array.as_ref().unwrap()).await?;
                     if index as usize >= length {
                         return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
                     }
 
-                    let element_type = jvm.array_element_type(array.as_ref().unwrap()).await?;
-
-                    // operand stack has only integer, so convert it to the correct type
-                    let value = match element_type {
-                        JavaType::Boolean => JavaValue::Boolean(i32::from(value) & 1 != 0),
-                        JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
-                        JavaType::Char => JavaValue::Char(i32::from(value) as _),
-                        JavaType::Short => JavaValue::Short(i32::from(value) as _),
-                        JavaType::Int => JavaValue::Int(i32::from(value)),
+                    // operand stack has only integer, so convert it to the array's element type
+                    let value = match opcode {
+                        Opcode::Bastore if jvm.array_element_type(&array).await? == JavaType::Boolean => {
+                            JavaValue::Boolean(i32::from(value) & 1 != 0)
+                        }
+                        Opcode::Bastore => JavaValue::Byte(i32::from(value) as _),
+                        Opcode::Castore => JavaValue::Char(i32::from(value) as _),
+                        Opcode::Sastore => JavaValue::Short(i32::from(value) as _),
                         _ => value,
                     };
 
                     if matches!(opcode, Opcode::Aastore) {
                         let stored: &Option<Box<dyn ClassInstance>> = (&value).into();
                         if let Some(stored) = stored
-                            && !jvm.array_store_allowed(&**array.as_ref().unwrap(), &**stored)
+                            && !jvm.array_store_allowed(&*array, &**stored)
                         {
                             return Err(jvm.exception("java/lang/ArrayStoreException", &stored.class_definition().name()).await);
                         }
                     }
 
-                    jvm.store_array(array.as_mut().unwrap(), index as usize, [value]).await?;
+                    jvm.store_array(&mut array, index as usize, [value]).await?;
                 }
                 Opcode::AconstNull => stack_frame.operand_stack.push(JavaValue::Object(None)),
                 Opcode::Aload(x) | Opcode::Dload(x) | Opcode::Fload(x) | Opcode::Iload(x) | Opcode::Lload(x) => {
@@ -165,17 +165,13 @@ impl Interpreter {
                     let return_value = stack_frame.operand_stack.pop().unwrap();
                     if matches!(opcode, Opcode::Ireturn) {
                         let value: i32 = return_value.into();
-                        if *return_type == JavaType::Boolean {
-                            return Ok(JavaValue::Boolean(value & 1 != 0));
-                        } else if *return_type == JavaType::Char {
-                            return Ok(JavaValue::Char(value as _));
-                        } else if *return_type == JavaType::Byte {
-                            return Ok(JavaValue::Byte(value as _));
-                        } else if *return_type == JavaType::Short {
-                            return Ok(JavaValue::Short(value as _));
-                        } else {
-                            return Ok(JavaValue::Int(value));
-                        }
+                        return Ok(match return_type {
+                            JavaType::Boolean => JavaValue::Boolean(value & 1 != 0),
+                            JavaType::Char => JavaValue::Char(value as _),
+                            JavaType::Byte => JavaValue::Byte(value as _),
+                            JavaType::Short => JavaValue::Short(value as _),
+                            _ => JavaValue::Int(value),
+                        });
                     }
                     return Ok(return_value);
                 }
@@ -597,10 +593,11 @@ impl Interpreter {
                     }
                 }
                 Opcode::Iinc(x, y) => {
-                    let value = stack_frame.local_variables[*x as usize].clone();
-                    let value: i32 = value.into();
+                    let JavaValue::Int(value) = &mut stack_frame.local_variables[*x as usize] else {
+                        panic!("Expected int local")
+                    };
 
-                    stack_frame.local_variables[*x as usize] = JavaValue::Int(value.wrapping_add(*y as i32));
+                    *value = value.wrapping_add(*y as i32);
                 }
                 Opcode::Imul => {
                     let value2: i32 = stack_frame.operand_stack.pop().unwrap().into();
@@ -772,8 +769,18 @@ impl Interpreter {
                     stack_frame.operand_stack.push(JavaValue::Int(value1.cmp(&value2) as _));
                 }
                 Opcode::Lconst(x) => stack_frame.operand_stack.push(JavaValue::Long(*x as i64)),
-                Opcode::Ldc(x) | Opcode::LdcW(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
-                Opcode::Ldc2W(x) => stack_frame.operand_stack.push(Self::constant_to_value(jvm, x).await?),
+                Opcode::Ldc(x) | Opcode::LdcW(x) | Opcode::Ldc2W(x) => {
+                    let value = match x {
+                        ConstantPoolReference::Integer(x) => JavaValue::Int(*x),
+                        ConstantPoolReference::Float(x) => JavaValue::Float(*x),
+                        ConstantPoolReference::Long(x) => JavaValue::Long(*x),
+                        ConstantPoolReference::Double(x) => JavaValue::Double(*x),
+                        ConstantPoolReference::String(x) => JavaValue::Object(Some(jvm.intern_string(x).await?)),
+                        ConstantPoolReference::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
+                        _ => unimplemented!(),
+                    };
+                    stack_frame.operand_stack.push(value);
+                }
                 Opcode::Ldiv => {
                     let value2: i64 = stack_frame.operand_stack.pop().unwrap().into();
                     let value1: i64 = stack_frame.operand_stack.pop().unwrap().into();
@@ -843,10 +850,17 @@ impl Interpreter {
 
                     stack_frame.operand_stack.push(JavaValue::Long(value1 ^ value2));
                 }
-                Opcode::Lookupswitch(default, pairs) | Opcode::Tableswitch(default, pairs) => {
-                    let key = stack_frame.operand_stack.pop().unwrap().into();
+                Opcode::Lookupswitch(default, pairs) => {
+                    let key: i32 = stack_frame.operand_stack.pop().unwrap().into();
 
                     *next_index = pairs.iter().find(|(k, _)| *k == key).map_or(*default, |(_, target)| *target) as usize;
+                }
+                Opcode::Tableswitch(default, pairs) => {
+                    let key: i32 = stack_frame.operand_stack.pop().unwrap().into();
+
+                    // tableswitch keys are consecutive from the first one; keys below it wrap past the end
+                    let index = key.wrapping_sub(pairs[0].0) as u32 as usize;
+                    *next_index = pairs.get(index).map_or(*default, |(_, target)| *target) as usize;
                 }
                 Opcode::Monitorenter => {
                     let object: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
@@ -1027,18 +1041,6 @@ impl Interpreter {
             JavaValue::Short(x) => JavaValue::Int(x as _),
             _ => value,
         }
-    }
-
-    async fn constant_to_value(jvm: &Jvm, constant: &ConstantPoolReference) -> Result<JavaValue> {
-        Ok(match constant {
-            ConstantPoolReference::Integer(x) => JavaValue::Int(*x),
-            ConstantPoolReference::Float(x) => JavaValue::Float(*x),
-            ConstantPoolReference::Long(x) => JavaValue::Long(*x),
-            ConstantPoolReference::Double(x) => JavaValue::Double(*x),
-            ConstantPoolReference::String(x) => JavaValue::Object(Some(jvm.intern_string(x).await?)),
-            ConstantPoolReference::Class(x) => JavaValue::Object(Some(jvm.resolve_class(x).await?.java_class())),
-            _ => unimplemented!(),
-        })
     }
 
     #[async_recursion::async_recursion]

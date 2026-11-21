@@ -16,6 +16,7 @@ mod invoke_arg;
 mod jvm;
 mod method;
 mod monitor;
+mod resolution_cache;
 mod thread;
 mod value;
 

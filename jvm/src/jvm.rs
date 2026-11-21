@@ -33,6 +33,7 @@ use crate::{
     invoke_arg::InvokeArg,
     method::Method,
     monitor::{Monitor, MonitorWait, MonitorWaitTimeout},
+    resolution_cache::{Lookup, MemberKey, ResolutionCache, ResolvedField, ResolvedMethod},
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::{JvmThread, ThreadInterruptWaiter},
     value::JavaValue,
@@ -44,6 +45,7 @@ const MAX_STACK_DEPTH: usize = 512;
 
 struct JvmInner {
     classes: RwLock<BTreeMap<String, Class>>,
+    resolution_cache: ResolutionCache,
     threads: RwLock<BTreeMap<u64, JvmThread>>,
     global_references: Arc<GlobalReferences>,
     all_objects: RwLock<HashSet<Box<dyn ClassInstance>>>,
@@ -88,6 +90,7 @@ impl Jvm {
         let jvm = Self {
             inner: Arc::new(JvmInner {
                 classes: RwLock::new(BTreeMap::new()),
+                resolution_cache: ResolutionCache::default(),
                 threads: RwLock::new(BTreeMap::new()),
                 global_references: Arc::new(GlobalReferences {
                     next_id: AtomicU64::new(0),
@@ -229,18 +232,17 @@ impl Jvm {
     {
         tracing::trace!("Get static field {class_name}.{name}:{descriptor}");
 
-        let class = self.resolve_class(class_name).await?;
-
-        if let Some((declaring_class, field)) = self.resolve_field(&class, name, descriptor, true) {
+        if let Some(resolved) = self.resolve_field_ref(class_name, name, descriptor, true).await? {
+            let (declaring_class, field) = &*resolved;
             if !field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            self.ensure_initialized(&declaring_class).await?;
+            self.ensure_initialized(declaring_class).await?;
 
-            let value = declaring_class.definition.get_static_field(&*field)?;
+            let value = declaring_class.definition.get_static_field(&**field)?;
             if let JavaValue::Object(Some(instance)) = &value {
                 let thread_id = (self.inner.get_current_thread_id)();
                 self.inner
@@ -266,18 +268,17 @@ impl Jvm {
     {
         tracing::trace!("Put static field {class_name}.{name}:{descriptor} = {value:?}");
 
-        let class = self.resolve_class(class_name).await?;
-
-        if let Some((mut declaring_class, field)) = self.resolve_field(&class, name, descriptor, true) {
+        if let Some(resolved) = self.resolve_field_ref(class_name, name, descriptor, true).await? {
+            let (declaring_class, field) = &*resolved;
             if !field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            self.ensure_initialized(&declaring_class).await?;
+            self.ensure_initialized(declaring_class).await?;
 
-            declaring_class.definition.put_static_field(&*field, value.into())
+            declaring_class.definition.clone().put_static_field(&**field, value.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
@@ -291,14 +292,14 @@ impl Jvm {
     {
         tracing::trace!("Get field {class_name}.{name}:{descriptor}");
 
-        let class = self.resolve_class(class_name).await?;
-        if let Some((_, field)) = self.resolve_field(&class, name, descriptor, false) {
+        if let Some(resolved) = self.resolve_field_ref(class_name, name, descriptor, false).await? {
+            let (_, field) = &*resolved;
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
-            let value = instance.get_field(&*field)?;
+            let value = instance.get_field(&**field)?;
             if let JavaValue::Object(Some(instance)) = &value {
                 let thread_id = (self.inner.get_current_thread_id)();
                 self.inner
@@ -324,14 +325,14 @@ impl Jvm {
     {
         tracing::trace!("Put field {class_name}.{name}:{descriptor} = {value:?}");
 
-        let class = self.resolve_class(class_name).await?;
-        if let Some((_, field)) = self.resolve_field(&class, name, descriptor, false) {
+        if let Some(resolved) = self.resolve_field_ref(class_name, name, descriptor, false).await? {
+            let (_, field) = &*resolved;
             if field.access_flags().contains(FieldAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
-            instance.put_field(&*field, value.into())
+            instance.put_field(&**field, value.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchFieldError", &format!("{class_name}.{name}:{descriptor}"))
@@ -348,18 +349,16 @@ impl Jvm {
 
         tracing::trace!("Invoke static {class_name}.{name}:{descriptor}({args:?})");
 
-        let class = self.resolve_class(class_name).await?;
-
-        if let Some((declaring_class, method)) = self.resolve_method(&class, name, descriptor, true) {
-            if !method.access_flags().contains(MethodAccessFlags::STATIC) {
+        if let Some(resolved) = self.resolve_method_ref(class_name, name, descriptor, Lookup::Static).await? {
+            if !resolved.method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            self.ensure_initialized(&declaring_class).await?;
+            self.ensure_initialized(&resolved.class).await?;
 
-            Ok(self.execute_method(&declaring_class, None, &method, args).await?.into())
+            Ok(self.execute_method(&resolved, args).await?.into())
         } else {
             tracing::error!("No such method: {class_name}.{name}:{descriptor}");
 
@@ -376,28 +375,46 @@ impl Jvm {
     {
         let args = args.into_arg();
         tracing::trace!("Invoke virtual {class_name}.{name}:{descriptor}({args:?})");
+        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+            .chain(args.into_vec())
+            .collect::<Box<[_]>>();
 
-        let owner = self.resolve_class(class_name).await?;
-        let Some((resolved_class, resolved_method)) = self.resolve_method(&owner, name, descriptor, false) else {
+        // the method selected for a receiver class (JVMS 5.4.6) is cached per receiver class
+        let receiver_definition = instance.class_definition();
+        let key = MemberKey {
+            lookup: Lookup::Instance,
+            receiver: receiver_definition.name(),
+            class: class_name.into(),
+            name: name.into(),
+            descriptor: descriptor.into(),
+        };
+        if let Some(selected) = self.inner.resolution_cache.method(&key) {
+            return Ok(self.execute_method(&selected, args).await?.into());
+        }
+
+        let Some(resolved) = self.resolve_method_ref(class_name, name, descriptor, Lookup::Instance).await? else {
             tracing::error!("No such method: {class_name}.{name}:{descriptor}");
             return Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
                 .await);
         };
 
-        if resolved_method.access_flags().contains(MethodAccessFlags::STATIC) {
+        if resolved.method.access_flags().contains(MethodAccessFlags::STATIC) {
             return Err(self
                 .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                 .await);
         }
 
-        let mut class = self.get_class(&instance.class_definition().name());
+        let mut class = self.get_class(&key.receiver);
         let mut selected = None;
         while let Some(candidate_class) = class {
             if let Some(candidate_method) = candidate_class.definition.method(name, descriptor, false)
-                && self.method_overrides(&candidate_class, &candidate_method, &resolved_class, &resolved_method)
+                && self.method_overrides(&candidate_class, &*candidate_method, &resolved.class, &*resolved.method)
             {
-                selected = Some((candidate_class, candidate_method));
+                selected = Some(ResolvedMethod {
+                    class: candidate_class,
+                    method: candidate_method,
+                });
                 break;
             }
 
@@ -407,24 +424,21 @@ impl Jvm {
                 .and_then(|super_class| self.get_class(&super_class));
         }
 
-        let Some((declaring_class, method)) = selected else {
+        let Some(selected) = selected else {
             return Err(self
                 .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
                 .await);
         };
-        if method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+        if selected.method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
             return Err(self
                 .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
                 .await);
         }
 
-        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-            .chain(args.into_vec())
-            .collect::<Vec<_>>();
-        Ok(self
-            .execute_method(&declaring_class, Some(instance.clone()), &method, args.into_boxed_slice())
-            .await?
-            .into())
+        let selected = Arc::new(selected);
+        self.inner.resolution_cache.insert_method(key, selected.clone());
+
+        Ok(self.execute_method(&selected, args).await?.into())
     }
 
     // non-virtual
@@ -436,36 +450,25 @@ impl Jvm {
     {
         let args = args.into_arg();
         tracing::trace!("Invoke special {class_name}.{name}:{descriptor}({args:?})");
+        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+            .chain(args.into_vec())
+            .collect::<Box<[_]>>();
 
-        let class = self.resolve_class(class_name).await?;
-        let method = if name == "<init>" {
-            // Constructors are not inherited (JVMS 6.5 invokespecial).
-            class.definition.method(name, descriptor, false).map(|method| (class, method))
-        } else {
-            self.resolve_method(&class, name, descriptor, false)
-        };
-
-        if let Some((class, method)) = method {
-            let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
-                .chain(args.into_vec())
-                .collect::<Vec<_>>();
-
-            if method.access_flags().contains(MethodAccessFlags::STATIC) {
+        let lookup = if name == "<init>" { Lookup::Constructor } else { Lookup::Instance };
+        if let Some(resolved) = self.resolve_method_ref(class_name, name, descriptor, lookup).await? {
+            if resolved.method.access_flags().contains(MethodAccessFlags::STATIC) {
                 return Err(self
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            if method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+            if resolved.method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
                 return Err(self
                     .exception("java/lang/AbstractMethodError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
 
-            Ok(self
-                .execute_method(&class, Some(instance.clone()), &method, args.into_boxed_slice())
-                .await?
-                .into())
+            Ok(self.execute_method(&resolved, args).await?.into())
         } else {
             Err(self
                 .exception("java/lang/NoSuchMethodError", &format!("{class_name}.{name}:{descriptor}"))
@@ -523,14 +526,17 @@ impl Jvm {
         if let Some(array) = array {
             let values = array.load(offset, count)?;
 
-            let thread_id = (self.inner.get_current_thread_id)();
-            let mut threads = self.inner.threads.write();
-            let local_variables = threads.get_mut(&thread_id).unwrap().top_frame_mut().local_variables_mut();
-            values.iter().for_each(|value| {
-                if let JavaValue::Object(Some(instance)) = value {
-                    local_variables.push(instance.clone());
-                }
-            });
+            // primitive arrays have nothing to root, so skip the thread table lock for them
+            if values.iter().any(|value| matches!(value, JavaValue::Object(Some(_)))) {
+                let thread_id = (self.inner.get_current_thread_id)();
+                let mut threads = self.inner.threads.write();
+                let local_variables = threads.get_mut(&thread_id).unwrap().top_frame_mut().local_variables_mut();
+                values.iter().for_each(|value| {
+                    if let JavaValue::Object(Some(instance)) = value {
+                        local_variables.push(instance.clone());
+                    }
+                });
+            }
 
             Ok(iter::IntoIterator::into_iter(values).map(|x| x.into()).collect::<Vec<_>>())
         } else {
@@ -815,8 +821,13 @@ impl Jvm {
         }
     }
 
-    #[async_recursion::async_recursion]
     pub async fn resolve_class(&self, class_name: &str) -> Result<Class> {
+        // a registry hit is synchronous; only a miss pays for the boxed recursive loader future
+        if let Some(class) = self.get_class(class_name) {
+            tracing::trace!("Resolving class {class_name}");
+            return Ok(class);
+        }
+
         self.resolve_class_internal(class_name, None).await
     }
 
@@ -887,7 +898,11 @@ impl Jvm {
         let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
-        Ok(thread.top_java_frame().map(|x| (x.class.clone(), x.class_instance.clone())))
+        Ok(thread.top_java_frame().map(|x| {
+            // an instance method roots its receiver first among the frame's references
+            let this = (!x.method.method.access_flags().contains(MethodAccessFlags::STATIC)).then(|| x.local_variables[0].clone());
+            (x.method.class.clone(), this)
+        }))
     }
 
     pub async fn register_class(
@@ -911,19 +926,35 @@ impl Jvm {
     }
 
     pub fn is_instance(&self, instance: &dyn ClassInstance, class_name: &str) -> bool {
-        self.is_type_assignable(
-            &JavaType::from_class_name(&instance.class_definition().name()),
-            &JavaType::from_class_name(class_name),
-        )
+        // every reference type is a subtype of Object
+        if class_name == "java/lang/Object" {
+            return true;
+        }
+
+        let class = instance.class_definition();
+        let name = class.name();
+        if name.starts_with('[') || class_name.starts_with('[') {
+            return self.is_type_assignable(&JavaType::from_class_name(&name), &JavaType::from_class_name(class_name));
+        }
+
+        self.is_inherited_from(&*class, class_name)
     }
 
     // aastore: whether value may be stored into array (JVMS 6.5 aastore)
     pub fn array_store_allowed(&self, array: &dyn ClassInstance, value: &dyn ClassInstance) -> bool {
-        let JavaType::Array(component) = JavaType::parse(&array.class_definition().name()) else {
+        let array_class = array.class_definition();
+        let array_class_name = array_class.name();
+        let Some(element_type_name) = array_class_name.strip_prefix('[') else {
             return true;
         };
 
-        self.is_type_assignable(&JavaType::from_class_name(&value.class_definition().name()), &component)
+        // class elements are named Lname; while array elements are already class names
+        let element_class_name = element_type_name
+            .strip_prefix('L')
+            .and_then(|x| x.strip_suffix(';'))
+            .unwrap_or(element_type_name);
+
+        self.is_instance(value, element_class_name)
     }
 
     // JVMS 4.10.3 subtyping, including array covariance
@@ -1000,10 +1031,16 @@ impl Jvm {
             .rev()
             .filter_map(|x| {
                 // skip exception classes
-                if self.is_inherited_from(&*x.class.definition, "java/lang/Throwable") {
+                let class = &x.method.class;
+                if self.is_inherited_from(&*class.definition, "java/lang/Throwable") {
                     None
                 } else {
-                    Some(format!("{}.{}", x.class.definition.name(), x.method))
+                    Some(format!(
+                        "{}.{}{}",
+                        class.definition.name(),
+                        x.method.method.name(),
+                        x.method.method.descriptor()
+                    ))
                 }
             })
             .collect()
@@ -1078,12 +1115,16 @@ impl Jvm {
         Ok(())
     }
 
-    #[async_recursion::async_recursion]
     pub async fn ensure_initialized(&self, class: &Class) -> Result<()> {
-        if class.definition.name().starts_with('[') {
+        if class.definition.name().starts_with('[') || class.is_initialized() {
             return Ok(());
         }
 
+        self.initialize_class(class).await
+    }
+
+    #[async_recursion::async_recursion]
+    async fn initialize_class(&self, class: &Class) -> Result<()> {
         let thread_id = (self.inner.get_current_thread_id)();
         loop {
             match class.initialization_action(thread_id) {
@@ -1099,6 +1140,12 @@ impl Jvm {
                         .await);
                 }
             }
+        }
+
+        // Before the superclass (JVMS 5.5 steps 6 and 7): its initializer may already create instances of this class.
+        if let Err(err) = class.definition.prepare(self).await {
+            class.finish_initialization(InitState::Erroneous);
+            return Err(err);
         }
 
         if let Some(super_name) = class.definition.super_class_name() {
@@ -1117,15 +1164,14 @@ impl Jvm {
             }
         }
 
-        if let Err(err) = class.definition.prepare(self).await {
-            class.finish_initialization(InitState::Erroneous);
-            return Err(err);
-        }
-
         if let Some(clinit) = class.definition.method("<clinit>", "()V", true) {
             tracing::debug!("Calling <clinit> for {}", class.definition.name());
 
-            if let Err(err) = self.execute_method(class, None, &clinit, Box::new([])).await {
+            let clinit = Arc::new(ResolvedMethod {
+                class: class.clone(),
+                method: clinit,
+            });
+            if let Err(err) = self.execute_method(&clinit, Box::new([])).await {
                 class.finish_initialization(InitState::Erroneous);
 
                 let JavaError::JavaException(exception) = &err;
@@ -1271,6 +1317,28 @@ impl Jvm {
         monitors.entry(key).or_insert_with(|| Arc::new(Monitor::new())).clone()
     }
 
+    async fn resolve_field_ref(&self, class_name: &str, name: &str, descriptor: &str, expected_static: bool) -> Result<Option<ResolvedField>> {
+        let key = MemberKey {
+            lookup: if expected_static { Lookup::Static } else { Lookup::Instance },
+            receiver: "".into(),
+            class: class_name.into(),
+            name: name.into(),
+            descriptor: descriptor.into(),
+        };
+        if let Some(resolved) = self.inner.resolution_cache.field(&key) {
+            return Ok(Some(resolved));
+        }
+
+        let class = self.resolve_class(class_name).await?;
+        let Some(resolved) = self.resolve_field(&class, name, descriptor, expected_static) else {
+            return Ok(None);
+        };
+        let resolved = Arc::new(resolved);
+        self.inner.resolution_cache.insert_field(key, resolved.clone());
+
+        Ok(Some(resolved))
+    }
+
     // JVMS 5.4.3.2 field resolution: search the class, then its superinterfaces, then its superclass.
     // Matching is by name and descriptor only; the caller checks static-ness afterwards.
     fn resolve_field(&self, class: &Class, name: &str, descriptor: &str, expected_static: bool) -> Option<(Class, Box<dyn Field>)> {
@@ -1294,24 +1362,55 @@ impl Jvm {
         self.resolve_field(&super_class, name, descriptor, expected_static)
     }
 
+    // Resolves a method symbolic reference once; later invocations reuse the result like a resolved constant pool entry (JVMS 5.4.3).
+    async fn resolve_method_ref(&self, class_name: &str, name: &str, descriptor: &str, lookup: Lookup) -> Result<Option<Arc<ResolvedMethod>>> {
+        let key = MemberKey {
+            lookup,
+            receiver: "".into(),
+            class: class_name.into(),
+            name: name.into(),
+            descriptor: descriptor.into(),
+        };
+        if let Some(resolved) = self.inner.resolution_cache.method(&key) {
+            return Ok(Some(resolved));
+        }
+
+        let class = self.resolve_class(class_name).await?;
+        let resolved = match lookup {
+            Lookup::Constructor => class.definition.method(name, descriptor, false).map(|method| (class, method)),
+            Lookup::Static | Lookup::Instance => self.resolve_method(&class, name, descriptor, lookup == Lookup::Static),
+        };
+        let Some((class, method)) = resolved else {
+            return Ok(None);
+        };
+
+        let resolved = Arc::new(ResolvedMethod { class, method });
+        self.inner.resolution_cache.insert_method(key, resolved.clone());
+
+        Ok(Some(resolved))
+    }
+
     // JVMS 5.4.3.3 method resolution searches the class hierarchy before inherited interface methods.
     fn resolve_method(&self, class: &Class, name: &str, descriptor: &str, expected_static: bool) -> Option<(Class, Box<dyn Method>)> {
-        let mut class = Some(class.clone());
-        let mut interfaces = Vec::new();
-        while let Some(candidate) = class {
-            if let Some(method) = candidate
+        let mut candidate = Some(class.clone());
+        while let Some(current) = candidate {
+            if let Some(method) = current
                 .definition
                 .method(name, descriptor, expected_static)
-                .or_else(|| candidate.definition.method(name, descriptor, !expected_static))
+                .or_else(|| current.definition.method(name, descriptor, !expected_static))
             {
-                return Some((candidate, method));
+                return Some((current, method));
             }
 
-            interfaces.extend(candidate.definition.interface_names());
-            class = candidate
-                .definition
-                .super_class_name()
-                .and_then(|super_class| self.get_class(&super_class));
+            candidate = current.definition.super_class_name().and_then(|super_class| self.get_class(&super_class));
+        }
+
+        // superinterfaces are gathered only once the class chain misses, so inherited class methods do not clone interface names
+        let mut interfaces = Vec::new();
+        let mut candidate = Some(class.clone());
+        while let Some(current) = candidate {
+            interfaces.extend(current.definition.interface_names());
+            candidate = current.definition.super_class_name().and_then(|super_class| self.get_class(&super_class));
         }
 
         let mut visited = HashSet::new();
@@ -1363,13 +1462,7 @@ impl Jvm {
         }
     }
 
-    fn method_overrides(
-        &self,
-        candidate_class: &Class,
-        candidate_method: &Box<dyn Method>,
-        resolved_class: &Class,
-        resolved_method: &Box<dyn Method>,
-    ) -> bool {
+    fn method_overrides(&self, candidate_class: &Class, candidate_method: &dyn Method, resolved_class: &Class, resolved_method: &dyn Method) -> bool {
         if candidate_class.definition.name() == resolved_class.definition.name() {
             return true;
         }
@@ -1404,8 +1497,8 @@ impl Jvm {
             if let Some(intermediate_method) = intermediate_class
                 .definition
                 .method(&resolved_method.name(), &resolved_method.descriptor(), false)
-                && self.method_overrides(candidate_class, candidate_method, &intermediate_class, &intermediate_method)
-                && self.method_overrides(&intermediate_class, &intermediate_method, resolved_class, resolved_method)
+                && self.method_overrides(candidate_class, candidate_method, &intermediate_class, &*intermediate_method)
+                && self.method_overrides(&intermediate_class, &*intermediate_method, resolved_class, resolved_method)
             {
                 return true;
             }
@@ -1418,25 +1511,21 @@ impl Jvm {
         false
     }
 
-    async fn execute_method(
-        &self,
-        class: &Class,
-        class_instance: Option<Box<dyn ClassInstance>>,
-        method: &Box<dyn Method>,
-        args: Box<[JavaValue]>,
-    ) -> Result<JavaValue> {
+    async fn execute_method(&self, resolved: &Arc<ResolvedMethod>, args: Box<[JavaValue]>) -> Result<JavaValue> {
         let thread_id = (self.inner.get_current_thread_id)();
-        let method_str = format!("{}{}", method.name(), method.descriptor());
+        let method = &resolved.method;
 
-        let synchronized_object = if method.access_flags().contains(MethodAccessFlags::SYNCHRONIZED) {
-            Some(class_instance.clone().unwrap_or_else(|| class.java_class()))
-        } else {
-            None
-        };
+        let synchronized_object = method
+            .access_flags()
+            .contains(MethodAccessFlags::SYNCHRONIZED)
+            .then(|| match args.first() {
+                Some(JavaValue::Object(Some(this))) if !method.access_flags().contains(MethodAccessFlags::STATIC) => this.clone(),
+                _ => resolved.class.java_class(),
+            });
         let depth = {
             let mut threads = self.inner.threads.write();
             let thread = threads.get_mut(&thread_id).unwrap();
-            thread.push_java_frame(class, class_instance, &method_str, &args);
+            thread.push_java_frame(resolved.clone(), &args);
             thread.iter_frame().count()
         };
 
