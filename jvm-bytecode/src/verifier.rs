@@ -1,5 +1,5 @@
 use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference, Opcode};
-use jvm::JavaType;
+use jvm_types::JavaType;
 
 use crate::ClassDefinitionError;
 

@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
-use jvm_types::modified_utf8;
+use jvm_types::{JavaType, modified_utf8};
 use nom::{
     IResult, Parser,
     bytes::complete::take,
@@ -269,6 +269,8 @@ pub struct FieldMethodref {
     pub class: Arc<String>,
     pub name: Arc<String>,
     pub descriptor: Arc<String>,
+    // the parsed descriptor: a field type for a field reference, a method type for a method reference
+    pub r#type: Arc<JavaType>,
 }
 
 impl FieldMethodref {
@@ -279,11 +281,13 @@ impl FieldMethodref {
         let (name_index, descriptor_index) = constant_pool.get(&name_and_type_index)?.name_and_type()?;
         let name = constant_pool.get(&name_index)?.utf8()?;
         let descriptor = constant_pool.get(&descriptor_index)?.utf8()?;
+        let r#type = Arc::new(JavaType::try_parse(&descriptor)?);
 
         Some(Self {
             class: class_name,
             name,
             descriptor,
+            r#type,
         })
     }
 }

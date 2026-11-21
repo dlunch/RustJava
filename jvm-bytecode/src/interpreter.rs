@@ -3,7 +3,8 @@
 use alloc::{boxed::Box, format, vec::Vec};
 
 use classfile::{AttributeInfoCode, ConstantPoolReference, Opcode};
-use jvm::{ClassInstance, JavaChar, JavaError, JavaType, JavaValue, Jvm, Result};
+use jvm::{ClassInstance, JavaChar, JavaError, JavaValue, Jvm, Result};
+use jvm_types::JavaType;
 
 use crate::stack_frame::StackFrame;
 
@@ -627,7 +628,7 @@ impl Interpreter {
                 }
                 Opcode::Invokeinterface(x, _count, _zero) => {
                     let x = x.as_interface_method_ref();
-                    let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
+                    let params = Self::extract_invoke_params(stack_frame, &x.r#type);
 
                     let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                     if instance.is_none() {
@@ -647,7 +648,7 @@ impl Interpreter {
                 }
                 Opcode::Invokespecial(x) => {
                     let x = x.as_method_ref();
-                    let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
+                    let params = Self::extract_invoke_params(stack_frame, &x.r#type);
 
                     let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                     if instance.is_none() {
@@ -664,14 +665,14 @@ impl Interpreter {
                 }
                 Opcode::Invokestatic(x) => {
                     let x = x.as_method_ref();
-                    let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
+                    let params = Self::extract_invoke_params(stack_frame, &x.r#type);
 
                     let result = jvm.invoke_static(&x.class, &x.name, &x.descriptor, params).await?;
                     Self::push_invoke_result(stack_frame, result);
                 }
                 Opcode::Invokevirtual(x) => {
                     let x = x.as_method_ref();
-                    let params = Self::extract_invoke_params(stack_frame, &x.descriptor);
+                    let params = Self::extract_invoke_params(stack_frame, &x.r#type);
 
                     let instance: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                     if instance.is_none() {
@@ -919,13 +920,13 @@ impl Interpreter {
                         return Err(jvm.exception("java/lang/NullPointerException", "null").await);
                     }
 
-                    let value = Self::to_field_type(&x.descriptor, value);
+                    let value = Self::to_field_type(&x.r#type, value);
 
                     jvm.put_field(instance.as_mut().unwrap(), &x.class, &x.name, &x.descriptor, value).await?;
                 }
                 Opcode::Putstatic(x) => {
                     let x = x.as_field_ref();
-                    let value = Self::to_field_type(&x.descriptor, stack_frame.operand_stack.pop().unwrap());
+                    let value = Self::to_field_type(&x.r#type, stack_frame.operand_stack.pop().unwrap());
 
                     jvm.put_static_field(&x.class, &x.name, &x.descriptor, value).await?
                 }
@@ -985,23 +986,13 @@ impl Interpreter {
         pred(value)
     }
 
-    fn extract_invoke_params(stack_frame: &mut StackFrame, descriptor: &str) -> Vec<JavaValue> {
-        let method_type = JavaType::parse(descriptor);
-        let (param_type, _) = method_type.as_method();
+    fn extract_invoke_params(stack_frame: &mut StackFrame, method_type: &JavaType) -> Vec<JavaValue> {
+        let (param_types, _) = method_type.as_method();
 
-        let mut values = param_type
+        let mut values = param_types
             .iter()
             .rev()
-            .map(|x| {
-                let value = stack_frame.operand_stack.pop().unwrap();
-                match x {
-                    JavaType::Boolean => JavaValue::Boolean(i32::from(value) & 1 != 0),
-                    JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
-                    JavaType::Char => JavaValue::Char(i32::from(value) as _),
-                    JavaType::Short => JavaValue::Short(i32::from(value) as _),
-                    _ => value,
-                }
-            })
+            .map(|x| Self::to_field_type(x, stack_frame.operand_stack.pop().unwrap()))
             .collect::<Vec<_>>();
 
         values.reverse();
@@ -1017,12 +1008,12 @@ impl Interpreter {
     }
 
     // operand stack has only integer for small number types, so convert it to the field type
-    fn to_field_type(descriptor: &str, value: JavaValue) -> JavaValue {
-        match descriptor {
-            "Z" => JavaValue::Boolean(i32::from(value) & 1 != 0),
-            "B" => JavaValue::Byte(i32::from(value) as i8),
-            "C" => JavaValue::Char(i32::from(value) as u16),
-            "S" => JavaValue::Short(i32::from(value) as i16),
+    fn to_field_type(r#type: &JavaType, value: JavaValue) -> JavaValue {
+        match r#type {
+            JavaType::Boolean => JavaValue::Boolean(i32::from(value) & 1 != 0),
+            JavaType::Byte => JavaValue::Byte(i32::from(value) as _),
+            JavaType::Char => JavaValue::Char(i32::from(value) as _),
+            JavaType::Short => JavaValue::Short(i32::from(value) as _),
             _ => value,
         }
     }

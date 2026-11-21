@@ -16,7 +16,7 @@ use event_listener::Event;
 use hashbrown::HashSet;
 use parking_lot::RwLock;
 
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
 
 use crate::{
     ExternalRoots, Result,
@@ -35,7 +35,6 @@ use crate::{
     monitor::{Monitor, MonitorWait, MonitorWaitTimeout},
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
     thread::{JvmThread, ThreadInterruptWaiter},
-    r#type::JavaType,
     value::JavaValue,
 };
 

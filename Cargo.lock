@@ -374,7 +374,6 @@ dependencies = [
  "event-listener",
  "hashbrown",
  "jvm-types",
- "nom",
  "parking_lot",
  "test-utils",
  "tokio",

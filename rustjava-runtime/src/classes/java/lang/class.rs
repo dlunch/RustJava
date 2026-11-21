@@ -1,11 +1,11 @@
 use alloc::vec;
 
 use jvm::{
-    ClassInstanceRef, JavaType, Jvm, Result,
+    ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,

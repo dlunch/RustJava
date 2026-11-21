@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 
-use jvm_types::MethodAccessFlags;
+use jvm_types::{JavaType, MethodAccessFlags};
 
 use crate::{AttributeInfo, ClassFileError, ClassInfo, ConstantPoolReference, constant_pool::ConstantPoolItem};
 
@@ -127,89 +127,20 @@ fn is_internal_class_name(name: &str) -> bool {
 }
 
 fn is_class_constant_name(name: &str) -> bool {
-    is_internal_class_name(name) || array_dimensions(name).is_some()
+    is_internal_class_name(name) || matches!(JavaType::try_parse(name), Some(JavaType::Array(_)))
 }
 
 fn is_field_descriptor(descriptor: &str) -> bool {
-    let mut cursor = 0;
-    parse_field_type(descriptor.as_bytes(), &mut cursor) && cursor == descriptor.len()
+    JavaType::try_parse(descriptor).is_some_and(|r#type| !matches!(r#type, JavaType::Void | JavaType::Method(_, _)))
 }
 
 fn is_method_descriptor(descriptor: &str) -> bool {
-    let bytes = descriptor.as_bytes();
-    if bytes.first() != Some(&b'(') {
-        return false;
-    }
-
-    let mut cursor = 1;
-    while bytes.get(cursor).is_some_and(|byte| *byte != b')') {
-        if !parse_field_type(bytes, &mut cursor) {
-            return false;
-        }
-    }
-    if bytes.get(cursor) != Some(&b')') {
-        return false;
-    }
-    cursor += 1;
-
-    if bytes.get(cursor) == Some(&b'V') {
-        cursor += 1;
-    } else if !parse_field_type(bytes, &mut cursor) {
-        return false;
-    }
-
-    cursor == bytes.len()
-}
-
-fn array_dimensions(descriptor: &str) -> Option<usize> {
-    let bytes = descriptor.as_bytes();
-    let dimensions = bytes.iter().take_while(|byte| **byte == b'[').count();
-    if dimensions == 0 || dimensions > u8::MAX as usize {
-        return None;
-    }
-
-    let mut cursor = 0;
-    if parse_field_type(bytes, &mut cursor) && cursor == bytes.len() {
-        Some(dimensions)
-    } else {
-        None
-    }
-}
-
-fn parse_field_type(bytes: &[u8], cursor: &mut usize) -> bool {
-    let mut dimensions = 0;
-    while bytes.get(*cursor) == Some(&b'[') {
-        dimensions += 1;
-        if dimensions > u8::MAX as usize {
-            return false;
-        }
-        *cursor += 1;
-    }
-
-    match bytes.get(*cursor) {
-        Some(b'B' | b'C' | b'D' | b'F' | b'I' | b'J' | b'S' | b'Z') => {
-            *cursor += 1;
-            true
-        }
-        Some(b'L') => {
-            let name_start = *cursor + 1;
-            let Some(relative_end) = bytes[name_start..].iter().position(|byte| *byte == b';') else {
-                return false;
-            };
-            let name_end = name_start + relative_end;
-            if name_end == name_start || bytes[name_start..name_end].iter().any(|byte| matches!(byte, b'.' | b'[' | b';')) {
-                return false;
-            }
-            *cursor = name_end + 1;
-            true
-        }
-        _ => false,
-    }
+    matches!(JavaType::try_parse(descriptor), Some(JavaType::Method(_, _)))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{array_dimensions, is_field_descriptor, is_method_descriptor};
+    use super::{is_class_constant_name, is_field_descriptor, is_method_descriptor};
 
     #[test]
     fn validates_field_and_method_descriptors() {
@@ -226,9 +157,10 @@ mod tests {
     }
 
     #[test]
-    fn counts_valid_array_dimensions() {
-        assert_eq!(array_dimensions("[[Ljava/lang/String;"), Some(2));
-        assert_eq!(array_dimensions("java/lang/String"), None);
-        assert_eq!(array_dimensions("[V"), None);
+    fn validates_class_constant_names() {
+        assert!(is_class_constant_name("java/lang/String"));
+        assert!(is_class_constant_name("[[Ljava/lang/String;"));
+        assert!(!is_class_constant_name("[V"));
+        assert!(!is_class_constant_name("java.lang.String"));
     }
 }

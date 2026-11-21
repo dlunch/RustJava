@@ -2,7 +2,10 @@
 
 extern crate alloc;
 
+mod java_type;
 pub mod modified_utf8;
+
+pub use java_type::JavaType;
 
 bitflags::bitflags! {
     #[derive(Eq, PartialEq, Default, Clone, Copy, Debug, Ord, PartialOrd)]

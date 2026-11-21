@@ -11,9 +11,9 @@ use core::{
 };
 
 use classfile::{AttributeInfo, AttributeInfoCode, MethodInfo};
-use jvm::{JavaError, JavaType, JavaValue, Jvm, JvmCallback, Method, Result};
+use jvm::{JavaError, JavaValue, Jvm, JvmCallback, Method, Result};
 use jvm_class_proto::JavaMethodProto;
-use jvm_types::MethodAccessFlags;
+use jvm_types::{JavaType, MethodAccessFlags};
 
 use crate::interpreter::Interpreter;
 

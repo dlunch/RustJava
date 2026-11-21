@@ -14,9 +14,9 @@ use core::{
 use parking_lot::RwLock;
 
 use classfile::{AttributeInfo, ClassInfo, ConstantPoolReference};
-use jvm::{ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Jvm, Method, Result};
+use jvm::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, Method, Result};
 use jvm_class_proto::JavaClassProto;
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
 
 use crate::{ClassDefinitionError, class_instance::ClassInstanceImpl, field::FieldImpl, method::MethodImpl, verifier};
 
@@ -224,7 +224,7 @@ impl ClassDefinition for ClassDefinitionImpl {
         if let Some(x) = value {
             Ok(x.clone())
         } else {
-            Ok(JavaType::parse(&field.descriptor()).default())
+            Ok(JavaValue::default_of(&JavaType::parse(&field.descriptor())))
         }
     }
 
