@@ -334,7 +334,7 @@ impl StringBuffer {
                     "append",
                     "(Z)Ljava/lang/AbstractStringBuilder;",
                     Self::append_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
                 ),
                 JavaMethodProto::new(
                     "append",
@@ -346,13 +346,13 @@ impl StringBuffer {
                     "append",
                     "(I)Ljava/lang/AbstractStringBuilder;",
                     Self::append_integer,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
                 ),
                 JavaMethodProto::new(
                     "append",
                     "(J)Ljava/lang/AbstractStringBuilder;",
                     Self::append_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
+                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
                 ),
                 JavaMethodProto::new(
                     "append",
@@ -652,18 +652,11 @@ impl StringBuffer {
         Ok(this)
     }
 
-    async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
+    async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
-        let string = JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?;
-        jvm.invoke_virtual(
-            &this,
-            "java/lang/StringBuffer",
-            "append",
-            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
-            (string,),
-        )
-        .await
+        Self::append_utf16(jvm, &mut this, (if value { "true" } else { "false" }).encode_utf16().collect()).await?;
+        Ok(this)
     }
 
     async fn append_character(
@@ -678,18 +671,11 @@ impl StringBuffer {
         Ok(this)
     }
 
-    async fn append_integer(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<ClassInstanceRef<Self>> {
+    async fn append_integer(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
-        let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(
-            &this,
-            "java/lang/StringBuffer",
-            "append",
-            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
-            (string,),
-        )
-        .await
+        Self::append_utf16(jvm, &mut this, value.to_string().encode_utf16().collect()).await?;
+        Ok(this)
     }
 
     async fn append_code_point(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, code_point: i32) -> Result<ClassInstanceRef<Self>> {
@@ -705,18 +691,11 @@ impl StringBuffer {
         Ok(this)
     }
 
-    async fn append_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<Self>> {
+    async fn append_long(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.StringBuffer::append({this:?}, {value})");
 
-        let string = JavaLangString::from_rust_string(jvm, &value.to_string()).await?;
-        jvm.invoke_virtual(
-            &this,
-            "java/lang/StringBuffer",
-            "append",
-            "(Ljava/lang/String;)Ljava/lang/StringBuffer;",
-            (string,),
-        )
-        .await
+        Self::append_utf16(jvm, &mut this, value.to_string().encode_utf16().collect()).await?;
+        Ok(this)
     }
 
     async fn append_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<ClassInstanceRef<Self>> {
@@ -1134,9 +1113,7 @@ impl StringBuffer {
         let replacement = JavaLangString::to_utf16(jvm, &string).await?;
         let replacement_length = replacement.len() as i32;
         let new_count = count + replacement_length - (end - start);
-        Self::expand_capacity(jvm, &mut this, new_count).await?;
-
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
+        let mut value = Self::expand_capacity(jvm, &mut this, new_count).await?;
         let tail: Vec<JavaChar> = jvm.load_array(&value, end as usize, (count - end) as usize).await?;
         jvm.store_array(&mut value, (start + replacement_length) as usize, tail).await?;
         jvm.store_array(&mut value, start as usize, replacement).await?;
@@ -1291,8 +1268,7 @@ impl StringBuffer {
 
         let count: i32 = jvm.get_field(&this, "java/lang/StringBuffer", "count", "I").await?;
         if new_length > count {
-            Self::expand_capacity(jvm, &mut this, new_length).await?;
-            let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuffer", "value", "[C").await?;
+            let mut value = Self::expand_capacity(jvm, &mut this, new_length).await?;
             jvm.store_array(&mut value, count as usize, vec![0 as JavaChar; (new_length - count) as usize])
                 .await?;
         }
@@ -1400,11 +1376,11 @@ impl StringBuffer {
         jvm.store_array(&mut destination, dst_begin as usize, chars).await
     }
 
-    async fn expand_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, minimum_capacity: i32) -> Result<()> {
+    async fn expand_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, minimum_capacity: i32) -> Result<ClassInstanceRef<Array<JavaChar>>> {
         let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
         let old_capacity = jvm.array_length(&value).await? as i32;
         if minimum_capacity <= old_capacity {
-            return Ok(());
+            return Ok(value);
         }
 
         let new_capacity = minimum_capacity.max(old_capacity.saturating_mul(2).saturating_add(2));
@@ -1412,15 +1388,14 @@ impl StringBuffer {
         let chars: Vec<JavaChar> = jvm.load_array(&value, 0, count as usize).await?;
         let mut new_value = jvm.instantiate_array("C", new_capacity as usize).await?;
         jvm.store_array(&mut new_value, 0, chars).await?;
-        jvm.put_field(this, "java/lang/StringBuffer", "value", "[C", new_value).await
+        jvm.put_field(this, "java/lang/StringBuffer", "value", "[C", new_value.clone()).await?;
+        Ok(new_value.into())
     }
 
     async fn append_utf16(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, chars: Vec<JavaChar>) -> Result<()> {
         let count: i32 = jvm.get_field(this, "java/lang/StringBuffer", "count", "I").await?;
         let new_count = count + chars.len() as i32;
-        Self::expand_capacity(jvm, this, new_count).await?;
-
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
+        let mut value = Self::expand_capacity(jvm, this, new_count).await?;
         jvm.store_array(&mut value, count as usize, chars).await?;
         jvm.put_field(this, "java/lang/StringBuffer", "count", "I", new_count).await
     }
@@ -1438,8 +1413,7 @@ impl StringBuffer {
 
         let inserted_length = chars.len() as i32;
         let new_count = count + inserted_length;
-        Self::expand_capacity(jvm, this, new_count).await?;
-        let mut value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(this, "java/lang/StringBuffer", "value", "[C").await?;
+        let mut value = Self::expand_capacity(jvm, this, new_count).await?;
         let tail: Vec<JavaChar> = jvm.load_array(&value, offset as usize, (count - offset) as usize).await?;
         jvm.store_array(&mut value, (offset + inserted_length) as usize, tail).await?;
         jvm.store_array(&mut value, offset as usize, chars).await?;
