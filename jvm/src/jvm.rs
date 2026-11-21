@@ -881,8 +881,6 @@ impl Jvm {
         let class = class_loader_wrapper.load_class(self, class_name).await?;
 
         if class.is_none() {
-            tracing::error!("No such class: {class_name}");
-
             return Err(self.exception("java/lang/NoClassDefFoundError", class_name).await);
         }
 
