@@ -367,9 +367,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::add({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
-
-        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
         jvm.store_array(&mut element_data, element_count as _, core::iter::once(element)).await?;
         jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count + 1)
             .await?;
@@ -395,9 +393,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::addElement({this:?}, {element:?})");
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
-
-        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
         jvm.store_array(&mut element_data, element_count as _, core::iter::once(element)).await?;
         jvm.put_field(&mut this, "java/util/Vector", "elementCount", "I", element_count + 1)
             .await?;
@@ -420,9 +416,7 @@ impl Vector {
                 .exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{index} > {element_count}"))
                 .await);
         }
-        Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
-
-        let mut element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let mut element_data = Self::ensure_capacity(jvm, &mut this, (element_count + 1) as _).await?;
 
         let num_to_move = element_count - index;
         if num_to_move > 0 {
@@ -935,8 +929,8 @@ impl Vector {
         Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }
 
-    async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, min_capacity: usize) -> Result<()> {
-        let element_data = jvm.get_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+    async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, min_capacity: usize) -> Result<ClassInstanceRef<Array<Object>>> {
+        let element_data: ClassInstanceRef<Array<Object>> = jvm.get_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if min_capacity > current_capacity {
@@ -953,11 +947,12 @@ impl Vector {
 
             let mut new_element_data = jvm.instantiate_array("Ljava/lang/Object;", new_capacity).await?;
             jvm.store_array(&mut new_element_data, 0, old_elements).await?;
-            jvm.put_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;", new_element_data)
+            jvm.put_field(this, "java/util/Vector", "elementData", "[Ljava/lang/Object;", new_element_data.clone())
                 .await?;
+            return Ok(new_element_data.into());
         }
 
-        Ok(())
+        Ok(element_data)
     }
 
     async fn object_equals(jvm: &Jvm, left: &ClassInstanceRef<Object>, right: &ClassInstanceRef<Object>) -> Result<bool> {

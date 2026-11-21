@@ -424,8 +424,8 @@ impl Integer {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Integer") {
             return Ok(false);
         }
-        let this_value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
-        let other_value: i32 = jvm.invoke_virtual(&other, "java/lang/Integer", "intValue", "()I", ()).await?;
+        let this_value: i32 = jvm.get_field(&this, "java/lang/Integer", "value", "I").await?;
+        let other_value: i32 = jvm.get_field(&other, "java/lang/Integer", "value", "I").await?;
         Ok(this_value == other_value)
     }
 
