@@ -6,9 +6,8 @@ use core::{
 
 use parking_lot::RwLock;
 
-use jvm::{
-    ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut, ClassDefinition, ClassInstance, Field, JavaType, JavaValue, Result,
-};
+use jvm::{ArrayClassDefinition, ArrayClassInstance, ArrayRawBuffer, ArrayRawBufferMut, ClassDefinition, ClassInstance, Field, JavaValue, Result};
+use jvm_types::JavaType;
 
 use crate::array_class_definition::ArrayClassDefinitionImpl;
 
@@ -35,7 +34,7 @@ impl ArrayClassInstanceImpl {
         let element_type = JavaType::parse(&class.element_type_name());
 
         let elements = if matches!(element_type, JavaType::Class(_) | JavaType::Array(_)) {
-            let default_value = element_type.default();
+            let default_value = JavaValue::default_of(&element_type);
             ArrayElements::NonPrimitive(vec![default_value; length])
         } else {
             let element_size = Self::primitive_element_size(&element_type);

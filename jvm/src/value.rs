@@ -1,5 +1,7 @@
 use alloc::boxed::Box;
 
+use jvm_types::JavaType;
+
 use crate::class_instance::ClassInstance;
 
 pub type JavaChar = u16;
@@ -16,6 +18,25 @@ pub enum JavaValue {
     Float(f32),
     Double(f64),
     Object(Option<Box<dyn ClassInstance>>),
+}
+
+impl JavaValue {
+    // the value a field or array element of this type holds until it is assigned
+    pub fn default_of(r#type: &JavaType) -> Self {
+        match r#type {
+            JavaType::Void => panic!("Cannot create default value for void"),
+            JavaType::Boolean => Self::Boolean(false),
+            JavaType::Byte => Self::Byte(0),
+            JavaType::Char => Self::Char(0),
+            JavaType::Short => Self::Short(0),
+            JavaType::Int => Self::Int(0),
+            JavaType::Long => Self::Long(0),
+            JavaType::Float => Self::Float(0.0),
+            JavaType::Double => Self::Double(0.0),
+            JavaType::Class(_) | JavaType::Array(_) => Self::Object(None),
+            JavaType::Method(_, _) => panic!("Cannot create default value for method"),
+        }
+    }
 }
 
 impl From<JavaValue> for bool {

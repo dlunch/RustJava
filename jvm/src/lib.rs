@@ -17,7 +17,6 @@ mod jvm;
 mod method;
 mod monitor;
 mod thread;
-mod r#type;
 mod value;
 
 pub mod runtime;
@@ -45,6 +44,5 @@ pub use self::{
     jvm::{Jvm, NativeFrame},
     method::Method,
     monitor::{MonitorWait, MonitorWaitTimeout},
-    r#type::JavaType,
     value::{JavaChar, JavaValue},
 };
