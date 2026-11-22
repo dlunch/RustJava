@@ -1,6 +1,6 @@
 use alloc::{format, vec};
 
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use jiff::{Timestamp, tz::Offset};
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -146,13 +146,14 @@ impl Date {
         tracing::debug!("java.util.Date::toString({this:?})");
 
         let time: i64 = jvm.get_field(&this, "java/util/Date", "value", "J").await?;
-        let text = if let Some(date_time) = DateTime::<Utc>::from_timestamp_millis(time) {
+        let text = if let Ok(timestamp) = Timestamp::from_millisecond(time) {
+            let date_time = Offset::UTC.to_datetime(timestamp);
             let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             format!(
                 "{} {} {:02} {:02}:{:02}:{:02} GMT {:04}",
-                weekdays[date_time.weekday().num_days_from_sunday() as usize],
-                months[date_time.month0() as usize],
+                weekdays[date_time.weekday().to_sunday_zero_offset() as usize],
+                months[(date_time.month() - 1) as usize],
                 date_time.day(),
                 date_time.hour(),
                 date_time.minute(),
