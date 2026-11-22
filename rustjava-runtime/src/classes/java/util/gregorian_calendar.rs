@@ -1,6 +1,6 @@
 use alloc::{vec, vec::Vec};
 
-use chrono::{DateTime, Datelike, TimeZone as ChronoTimeZone, Timelike, Utc};
+use jiff::{Timestamp, civil, tz::Offset};
 
 use jvm::{ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
@@ -85,14 +85,18 @@ impl GregorianCalendar {
         let _dst_offset = fields[16];
 
         // TODO handle more complex cases
-        let Some(date_time) = Utc
-            .with_ymd_and_hms(year, (month + 1) as _, date as _, hour_of_day as _, minute as _, second as _)
-            .single()
+        let [Ok(month), Ok(date), Ok(hour_of_day), Ok(minute), Ok(second)] = [month + 1, date, hour_of_day, minute, second].map(i8::try_from) else {
+            return Err(jvm.exception("java/lang/IllegalArgumentException", "invalid calendar fields").await);
+        };
+        let Some(timestamp) = i16::try_from(year)
+            .ok()
+            .and_then(|year| civil::DateTime::new(year, month, date, hour_of_day, minute, second, 0).ok())
+            .and_then(|date_time| Offset::UTC.to_timestamp(date_time).ok())
         else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "invalid calendar fields").await);
         };
-        let Some(calculated_time) = date_time
-            .timestamp_millis()
+        let Some(calculated_time) = timestamp
+            .as_millisecond()
             .checked_sub(zone_offset as i64)
             .and_then(|timestamp| timestamp.checked_add(millisecond as i64))
         else {
@@ -121,26 +125,27 @@ impl GregorianCalendar {
         let Some(adjusted_time) = time.checked_add(zone_offset as i64) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);
         };
-        let Some(date_time) = DateTime::<Utc>::from_timestamp_millis(adjusted_time) else {
+        let Ok(timestamp) = Timestamp::from_millisecond(adjusted_time) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "calendar time out of range").await);
         };
+        let date_time = Offset::UTC.to_datetime(timestamp);
 
         let calculated_fields = vec![
             1, // CE
-            date_time.year(),
+            date_time.year() as _,
             date_time.month() as i32 - 1,
-            date_time.iso_week().week() as _,
+            date_time.date().iso_week_date().week() as _,
             (date_time.day() / 7) as _, // TODO correctly get
             date_time.day() as _,
-            date_time.ordinal() as _,
-            date_time.weekday().number_from_sunday() as _,
+            date_time.day_of_year() as _,
+            date_time.weekday().to_sunday_one_offset() as _,
             (date_time.day() % 7) as _, // TODO correctly get
             (date_time.hour() / 12) as _,
             (date_time.hour() % 12) as _,
             date_time.hour() as _,
             date_time.minute() as _,
             date_time.second() as _,
-            (date_time.nanosecond() / 1_000_000) as _,
+            date_time.millisecond() as _,
             zone_offset,
             0,
         ];

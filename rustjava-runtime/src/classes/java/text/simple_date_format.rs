@@ -1,6 +1,6 @@
 use alloc::{format, string::String as RustString, vec, vec::Vec};
 
-use chrono::{DateTime, Datelike, NaiveDate, TimeZone as ChronoTimeZone, Timelike, Utc};
+use jiff::{Timestamp, civil, tz::Offset};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
@@ -330,7 +330,11 @@ impl SimpleDateFormat {
             year = 1 - year;
         }
         if let Some(ordinal) = ordinal.filter(|_| !month_set && !day_set) {
-            let Some(date) = NaiveDate::from_yo_opt(year, ordinal as u32) else {
+            let Some(date) = i16::try_from(year)
+                .ok()
+                .zip(i16::try_from(ordinal).ok())
+                .and_then(|(year, ordinal)| civil::Date::new(year, 1, 1).ok()?.with().day_of_year(ordinal).build().ok())
+            else {
                 return Err(DateParseError::Invalid(index));
             };
             month = date.month() as i32;
@@ -345,14 +349,16 @@ impl SimpleDateFormat {
         {
             return Err(DateParseError::Invalid(index));
         }
-        let Some(date_time) = Utc
-            .with_ymd_and_hms(year, month as u32, day as u32, hour as u32, minute as u32, second as u32)
-            .single()
+        // month through second were range-checked above, so only the year can fall outside its target type
+        let Some(timestamp) = i16::try_from(year)
+            .ok()
+            .and_then(|year| civil::DateTime::new(year, month as i8, day as i8, hour as i8, minute as i8, second as i8, 0).ok())
+            .and_then(|date_time| Offset::UTC.to_timestamp(date_time).ok())
         else {
             return Err(DateParseError::Invalid(index));
         };
-        let Some(timestamp) = date_time
-            .timestamp_millis()
+        let Some(timestamp) = timestamp
+            .as_millisecond()
             .checked_add(i64::from(millisecond))
             .and_then(|value| value.checked_sub(i64::from(offset)))
         else {
@@ -479,9 +485,10 @@ impl SimpleDateFormat {
         let Some(adjusted) = time.checked_add(i64::from(offset)) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "date out of range").await);
         };
-        let Some(date_time) = DateTime::<Utc>::from_timestamp_millis(adjusted) else {
+        let Ok(timestamp) = Timestamp::from_millisecond(adjusted) else {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "date out of range").await);
         };
+        let date_time = Offset::UTC.to_datetime(timestamp);
 
         let months = [
             "January",
@@ -519,8 +526,8 @@ impl SimpleDateFormat {
                                 formatted.push_str(&format!("{year:0count$}"));
                             }
                         }
-                        'M' if count >= 4 => formatted.push_str(months[date_time.month0() as usize]),
-                        'M' if count == 3 => formatted.push_str(short_months[date_time.month0() as usize]),
+                        'M' if count >= 4 => formatted.push_str(months[(date_time.month() - 1) as usize]),
+                        'M' if count == 3 => formatted.push_str(short_months[(date_time.month() - 1) as usize]),
                         'M' => formatted.push_str(&format!("{:0count$}", date_time.month())),
                         'd' => formatted.push_str(&format!("{:0count$}", date_time.day())),
                         'h' => {
@@ -530,12 +537,12 @@ impl SimpleDateFormat {
                         'H' => formatted.push_str(&format!("{:0count$}", date_time.hour())),
                         'm' => formatted.push_str(&format!("{:0count$}", date_time.minute())),
                         's' => formatted.push_str(&format!("{:0count$}", date_time.second())),
-                        'S' => formatted.push_str(&format!("{:0count$}", date_time.timestamp_subsec_millis())),
-                        'E' if count >= 4 => formatted.push_str(weekdays[date_time.weekday().num_days_from_sunday() as usize]),
-                        'E' => formatted.push_str(short_weekdays[date_time.weekday().num_days_from_sunday() as usize]),
-                        'D' => formatted.push_str(&format!("{:0count$}", date_time.ordinal())),
+                        'S' => formatted.push_str(&format!("{:0count$}", date_time.millisecond())),
+                        'E' if count >= 4 => formatted.push_str(weekdays[date_time.weekday().to_sunday_zero_offset() as usize]),
+                        'E' => formatted.push_str(short_weekdays[date_time.weekday().to_sunday_zero_offset() as usize]),
+                        'D' => formatted.push_str(&format!("{:0count$}", date_time.day_of_year())),
                         'F' | 'W' => formatted.push_str(&format!("{:0count$}", (date_time.day() - 1) / 7 + 1)),
-                        'w' => formatted.push_str(&format!("{:0count$}", date_time.iso_week().week())),
+                        'w' => formatted.push_str(&format!("{:0count$}", date_time.date().iso_week_date().week())),
                         'a' => formatted.push_str(if date_time.hour() < 12 { "AM" } else { "PM" }),
                         'k' => formatted.push_str(&format!("{:0count$}", if date_time.hour() == 0 { 24 } else { date_time.hour() })),
                         'K' => formatted.push_str(&format!("{:0count$}", date_time.hour() % 12)),
