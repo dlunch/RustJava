@@ -332,7 +332,10 @@ impl Class {
         let qualified_name = rust_name.replace('.', "/");
 
         match jvm.resolve_class(&qualified_name).await {
-            Ok(class) => Ok(class.java_class().into()),
+            Ok(class) => {
+                jvm.ensure_initialized(&class).await?;
+                Ok(class.java_class().into())
+            }
             Err(_) => Err(jvm.exception("java/lang/ClassNotFoundException", &rust_name).await),
         }
     }
