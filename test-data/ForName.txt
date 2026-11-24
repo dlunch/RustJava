@@ -1,2 +1,7 @@
 java.util.Vector
 cnfe
+ForName$Target
+initialized
+returned
+java.lang.ExceptionInInitializerError
+java.lang.NoClassDefFoundError

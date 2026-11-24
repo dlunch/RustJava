@@ -1283,8 +1283,10 @@ impl Jvm {
         if let Some((class, class_instance)) = calling_class {
             // called in java
 
-            if self.is_inherited_from(&*class.definition, "java/lang/ClassLoader") {
-                return Ok(class_instance.unwrap());
+            if let Some(instance) = class_instance
+                && self.is_inherited_from(&*class.definition, "java/lang/ClassLoader")
+            {
+                return Ok(instance);
             }
 
             let calling_class_class_loader = JavaLangClass::class_loader(self, &class.java_class()).await?;
