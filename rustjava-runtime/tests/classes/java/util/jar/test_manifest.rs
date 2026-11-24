@@ -32,7 +32,7 @@ async fn test_manifest_parsing() -> Result<()> {
             .await?;
 
         let key = JavaLangString::from_rust_string(&jvm, "Main-Class").await?;
-        let value = jvm
+        let value: Box<dyn ClassInstance> = jvm
             .invoke_virtual(
                 &main_attributes,
                 &main_attributes.class_definition().name(),

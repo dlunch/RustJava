@@ -65,7 +65,7 @@ async fn test_jar_file() -> Result<()> {
         .await?;
 
     let key = JavaLangString::from_rust_string(&jvm, "Main-Class").await?;
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             &attributes.class_definition().name(),

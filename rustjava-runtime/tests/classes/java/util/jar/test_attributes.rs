@@ -29,7 +29,7 @@ async fn test_attribute_get_set() -> Result<()> {
         .await?;
     assert!(old.is_null());
 
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             &attributes.class_definition().name(),
@@ -44,7 +44,7 @@ async fn test_attribute_get_set() -> Result<()> {
 
     let lowercase = JavaLangString::from_rust_string(&jvm, "name").await?;
     let replacement = JavaLangString::from_rust_string(&jvm, "Replacement").await?;
-    let old = jvm
+    let old: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/jar/Attributes",
@@ -67,11 +67,11 @@ async fn test_attribute_get_set() -> Result<()> {
         .invoke_virtual(&entry, "java/util/Map$Entry", "getKey", "()Ljava/lang/Object;", ())
         .await?;
     assert!(jvm.is_instance(&**key, "java/util/jar/Attributes$Name"));
-    let key_string = jvm
+    let key_string: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&key, "java/lang/Object", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &key_string).await?, "Name");
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/jar/Attributes",
@@ -83,7 +83,7 @@ async fn test_attribute_get_set() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &value).await?, "Replacement");
 
     let updated = JavaLangString::from_rust_string(&jvm, "Updated").await?;
-    let old = jvm
+    let old: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &entry,
             "java/util/Map$Entry",
@@ -93,7 +93,7 @@ async fn test_attribute_get_set() -> Result<()> {
         )
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &old).await?, "Replacement");
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/jar/Attributes",
@@ -160,7 +160,7 @@ async fn test_attributes_map_operations() -> Result<()> {
         .invoke_virtual(&attributes, "java/util/Map", "containsValue", "(Ljava/lang/Object;)Z", (value.clone(),))
         .await?;
     assert!(found);
-    let found = jvm
+    let found: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/Map",
@@ -196,7 +196,7 @@ async fn test_attributes_map_operations() -> Result<()> {
     let hash: i32 = jvm.invoke_virtual(&attributes, "java/lang/Object", "hashCode", "()I", ()).await?;
     let copy_hash: i32 = jvm.invoke_virtual(&copy, "java/lang/Object", "hashCode", "()I", ()).await?;
     assert_eq!(hash, copy_hash);
-    let old = jvm
+    let old: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/Map",
@@ -273,7 +273,7 @@ async fn test_attribute_name_validation() -> Result<()> {
     for spelling in ["a", "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-", &"A".repeat(70)] {
         let name = JavaLangString::from_rust_string(&jvm, spelling).await?;
         let name = jvm.new_class("java/util/jar/Attributes$Name", "(Ljava/lang/String;)V", (name,)).await?;
-        let text = jvm
+        let text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&name, "java/util/jar/Attributes$Name", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, spelling);
@@ -362,7 +362,7 @@ async fn test_attribute_name_constants() -> Result<()> {
             .await?;
         assert!(!name.is_null(), "{field}");
         assert!(jvm.is_instance(&**name, "java/util/jar/Attributes$Name"));
-        let text = jvm
+        let text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&name, "java/util/jar/Attributes$Name", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, expected);

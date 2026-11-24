@@ -126,7 +126,7 @@ async fn baos_01_write_to_and_named_encoding_use_only_logical_count_after_close(
     assert_eq!(jvm.load_array::<i8>(&copied, 0, 2).await?, [b'O' as i8, b'K' as i8]);
 
     let encoding = JavaLangString::from_rust_string(&jvm, "UTF-8").await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &stream,
             &stream.class_definition().name(),
@@ -140,7 +140,7 @@ async fn baos_01_write_to_and_named_encoding_use_only_logical_count_after_close(
     let _: () = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'!' as i32,))
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "OK!");

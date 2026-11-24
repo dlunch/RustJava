@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -89,10 +89,10 @@ impl AttributesName {
         if other.is_null() || !jvm.is_instance(&**other, "java/util/jar/Attributes$Name") {
             return Ok(false);
         }
-        let name = jvm
+        let name: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/jar/Attributes$Name", "name", "Ljava/lang/String;")
             .await?;
-        let other_name = jvm
+        let other_name: Box<dyn ClassInstance> = jvm
             .get_field(&other, "java/util/jar/Attributes$Name", "name", "Ljava/lang/String;")
             .await?;
         Ok(JavaLangString::to_rust_string(jvm, &name)
@@ -101,7 +101,7 @@ impl AttributesName {
     }
 
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let name = jvm
+        let name: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/jar/Attributes$Name", "name", "Ljava/lang/String;")
             .await?;
         let spelling = JavaLangString::to_rust_string(jvm, &name).await?;

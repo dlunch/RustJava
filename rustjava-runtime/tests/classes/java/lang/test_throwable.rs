@@ -12,7 +12,7 @@ async fn test_to_string() -> Result<()> {
     let message = JavaLangString::from_rust_string(&jvm, "test message").await?;
 
     let throwable = jvm.new_class("java/lang/Throwable", "(Ljava/lang/String;)V", (message,)).await?;
-    let to_string = jvm
+    let to_string: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&throwable, &throwable.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
 

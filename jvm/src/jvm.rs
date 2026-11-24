@@ -772,8 +772,8 @@ impl Jvm {
             .read()
             .get(&thread_id)
             .and_then(JvmThread::java_thread)
-            .expect("attached JVM thread must have a java.lang.Thread")
-            .clone();
+            .map(clone_box)
+            .expect("attached JVM thread must have a java.lang.Thread");
         // Resolve before locking so both interrupt states can be read and cleared atomically without awaiting while the lock is held.
         let field = self.find_field(&*java_thread.class_definition(), "interrupted", "Z")?.unwrap();
         let mut threads = self.inner.threads.write();
@@ -904,18 +904,17 @@ impl Jvm {
         Ok(class.unwrap())
     }
 
-    #[allow(clippy::type_complexity)]
-    fn find_calling_class(&self) -> Result<Option<(Class, Option<Box<dyn ClassInstance>>)>> {
+    fn find_calling_class(&self) -> Option<(Class, Option<Box<dyn ClassInstance>>)> {
         let thread_id = (self.inner.get_current_thread_id)();
 
         let threads = self.inner.threads.read();
         let thread = threads.get(&thread_id).unwrap();
 
-        Ok(thread.top_java_frame().map(|x| {
+        thread.top_java_frame().map(|x| {
             // an instance method roots its receiver first among the frame's references
             let this = (!x.method.method.access_flags().contains(MethodAccessFlags::STATIC)).then(|| x.local_variables[0].clone());
             (x.method.class.clone(), this)
-        }))
+        })
     }
 
     pub async fn register_class(
@@ -1243,7 +1242,7 @@ impl Jvm {
 
     pub fn current_java_thread(&self) -> Box<dyn ClassInstance> {
         let thread_id = (self.inner.get_current_thread_id)();
-        self.inner.threads.read().get(&thread_id).unwrap().java_thread().unwrap().clone()
+        clone_box(self.inner.threads.read().get(&thread_id).unwrap().java_thread().unwrap())
     }
 
     pub fn active_thread_count(&self) -> usize {
@@ -1285,7 +1284,7 @@ impl Jvm {
     }
 
     async fn current_class_loader(&self) -> Result<Box<dyn ClassInstance>> {
-        let calling_class = self.find_calling_class()?;
+        let calling_class = self.find_calling_class();
 
         if let Some((class, class_instance)) = calling_class {
             // called in java

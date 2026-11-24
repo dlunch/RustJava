@@ -65,7 +65,7 @@ impl JarURLConnection {
         let url: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "org/rustjava/net/JarURLConnection", "getJarFileURL", "()Ljava/net/URL;", ())
             .await?;
-        let protocol = jvm
+        let protocol: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&url, "java/net/URL", "getProtocol", "()Ljava/lang/String;", ())
             .await?;
         let protocol = JavaLangString::to_rust_string(jvm, &protocol).await?;

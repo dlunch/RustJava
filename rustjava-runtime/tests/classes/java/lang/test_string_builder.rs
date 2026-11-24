@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaChar, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaChar, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 use rustjava_runtime::{classes::java::lang::Object, get_runtime_class_proto};
 use test_utils::test_jvm;
@@ -178,7 +178,7 @@ async fn string_builder_mutation_queries_and_appendable_bridge_use_utf16() -> Re
         0x1f600
     );
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&builder, &builder.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(

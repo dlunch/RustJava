@@ -253,7 +253,7 @@ impl Throwable {
         let class: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "java/lang/Object", "getClass", "()Ljava/lang/Class;", ())
             .await?;
-        let class_name = jvm
+        let class_name: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&class, "java/lang/Class", "getName", "()Ljava/lang/String;", ())
             .await?;
 

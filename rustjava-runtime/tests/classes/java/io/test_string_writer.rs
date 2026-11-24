@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
 use test_utils::test_jvm;
@@ -68,7 +68,7 @@ async fn test_string_writer() -> Result<()> {
         .invoke_virtual(&string_writer, &string_writer.class_definition().name(), "close", "()V", ())
         .await?;
 
-    let string = jvm
+    let string: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string_writer,
             &string_writer.class_definition().name(),

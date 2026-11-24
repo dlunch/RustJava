@@ -107,7 +107,7 @@ impl URLClassLoader {
             return Ok(None.into());
         }
 
-        let stream = jvm
+        let stream: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&resource, "java/net/URL", "openStream", "()Ljava/io/InputStream;", ())
             .await?;
         let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await;
@@ -151,7 +151,7 @@ impl URLClassLoader {
 
         for url in urls {
             let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
-            let path = jvm
+            let path: Box<dyn ClassInstance> = jvm
                 .invoke_static(
                     "org/rustjava/net/URLPath",
                     "decode",
@@ -203,7 +203,7 @@ impl URLClassLoader {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
                 let entry = JavaLangString::from_rust_string(jvm, name_str).await?;
-                let entry = jvm
+                let entry: Box<dyn ClassInstance> = jvm
                     .invoke_static("org/rustjava/net/URLPath", "encode", "(Ljava/lang/String;)Ljava/lang/String;", (entry,))
                     .await?;
                 let entry = JavaLangString::to_rust_string(jvm, &entry).await?;

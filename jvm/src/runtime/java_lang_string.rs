@@ -1,12 +1,11 @@
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 
-use crate::{JavaChar, Result, class_instance::ClassInstance, jvm::Jvm};
+use crate::{AsClassInstance, JavaChar, Result, class_instance::ClassInstance, jvm::Jvm};
 
 pub struct JavaLangString;
 
 impl JavaLangString {
-    #[allow(clippy::borrowed_box)]
-    pub async fn to_utf16(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Vec<JavaChar>> {
+    pub async fn to_utf16(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<Vec<JavaChar>> {
         let value: Box<dyn ClassInstance> = jvm.get_field(this, "java/lang/String", "value", "[C").await?;
         let offset: i32 = jvm.get_field(this, "java/lang/String", "offset", "I").await?;
         let count: i32 = jvm.get_field(this, "java/lang/String", "count", "I").await?;
@@ -21,8 +20,7 @@ impl JavaLangString {
         jvm.load_array(&value, offset as _, count as _).await
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn to_rust_string(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<String> {
+    pub async fn to_rust_string(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<String> {
         Ok(String::from_utf16_lossy(&Self::to_utf16(jvm, this).await?))
     }
 

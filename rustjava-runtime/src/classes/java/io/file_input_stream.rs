@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -46,7 +46,7 @@ impl FileInputStream {
             return Err(jvm.exception("java/lang/NullPointerException", "argument is null").await);
         }
 
-        let path = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
+        let path: Box<dyn ClassInstance> = jvm.invoke_virtual(&file, "java/io/File", "getPath", "()Ljava/lang/String;", ()).await?;
         let path = JavaLangString::to_rust_string(jvm, &path).await?;
 
         let fd = context

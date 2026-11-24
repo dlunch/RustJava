@@ -55,7 +55,7 @@ impl JarURLConnection {
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;
 
-        let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
+        let file: Box<dyn ClassInstance> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
         let file = JavaLangString::to_rust_string(jvm, &file).await?;
         let split = file.splitn(2, "!/").collect::<Vec<_>>();
 

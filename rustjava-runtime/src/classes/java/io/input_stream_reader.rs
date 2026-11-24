@@ -188,7 +188,7 @@ impl InputStreamReader {
             let mut read_buf_data = vec![0; read_buf_size as _];
             jvm.array_raw_buffer(&read_buf).await?.read(0, &mut read_buf_data)?;
 
-            let charset_ref = jvm.get_field(&this, "java/io/InputStreamReader", "charset", "Ljava/lang/String;").await?;
+            let charset_ref: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/InputStreamReader", "charset", "Ljava/lang/String;").await?;
             let charset = JavaLangString::to_rust_string(jvm, &charset_ref).await?;
             let mut decoder = if charset == "UTF-8" {
                 UTF_8.new_decoder_without_bom_handling()

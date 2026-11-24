@@ -92,7 +92,7 @@ async fn test_thread_cldc_metadata_and_state() -> Result<()> {
         .await?;
 
     assert!(jvm.is_instance(&*thread, "java/lang/Runnable"));
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "worker");
@@ -113,7 +113,7 @@ async fn test_thread_cldc_metadata_and_state() -> Result<()> {
             .await?,
         7
     );
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "Thread[worker,7]");
@@ -168,7 +168,7 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
         assert_eq!(flags, expected, "wrong flags for Thread.{name}{descriptor}");
     }
 
-    let original_name = jvm
+    let original_name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
     let result: Result<()> = jvm
@@ -184,7 +184,7 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
         panic!("setName(null) must throw NullPointerException");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    let unchanged_name = jvm
+    let unchanged_name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(
@@ -196,7 +196,7 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
     let _: () = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "setName", "(Ljava/lang/String;)V", (renamed,))
         .await?;
-    let actual_name = jvm
+    let actual_name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&thread, &thread.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &actual_name).await?, "renamed");

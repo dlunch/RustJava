@@ -7,7 +7,7 @@ use std::io::{self, Read, Seek, SeekFrom};
 
 use zip::ZipArchive;
 
-use jvm::{Array, ArrayRawBuffer, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ArrayRawBuffer, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -158,7 +158,7 @@ impl ZipFile {
             return Err(jvm.exception("java/lang/NullPointerException", "entry is null").await);
         }
 
-        let entry_name = jvm
+        let entry_name: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&entry, "java/util/zip/ZipEntry", "getName", "()Ljava/lang/String;", ())
             .await?;
         let entry_name = JavaLangString::to_rust_string(jvm, &entry_name).await?;

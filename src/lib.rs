@@ -35,7 +35,7 @@ where
             .await
             .unwrap();
 
-        let trace = jvm
+        let trace: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&string_writer, "java/io/StringWriter", "toString", "()Ljava/lang/String;", [])
             .await
             .unwrap();

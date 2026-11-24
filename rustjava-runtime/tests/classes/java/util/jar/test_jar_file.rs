@@ -62,7 +62,7 @@ async fn test_jar_manifest() -> Result<()> {
                 )
                 .await?;
             let key = JavaLangString::from_rust_string(&jvm, "Main-Class").await?;
-            let value = jvm
+            let value: Box<dyn ClassInstance> = jvm
                 .invoke_virtual(
                     &attributes,
                     "java/util/jar/Attributes",
@@ -123,7 +123,7 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/");
@@ -135,7 +135,7 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "META-INF/MANIFEST.MF");
@@ -148,7 +148,7 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "JarTest.class");
@@ -161,7 +161,7 @@ async fn test_entries() -> Result<()> {
     let next_element: ClassInstanceRef<JarEntry> = jvm
         .invoke_virtual(&entries, &entries.class_definition().name(), "nextElement", "()Ljava/lang/Object;", ())
         .await?;
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .get_field(&next_element, "java/util/jar/JarEntry", "name", "Ljava/lang/String;")
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &name).await?, "test.txt");
