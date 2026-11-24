@@ -1,4 +1,4 @@
-use jvm::{Result, runtime::JavaLangString};
+use jvm::{ClassInstance, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -9,14 +9,14 @@ async fn test_file_url() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "file:test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let protocol = jvm
+    let protocol: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "getProtocol", "()Ljava/lang/String;", ())
         .await?;
-    let host = jvm
+    let host: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "getHost", "()Ljava/lang/String;", ())
         .await?;
     let port: i32 = jvm.invoke_virtual(&url, &url.class_definition().name(), "getPort", "()I", ()).await?;
-    let file = jvm
+    let file: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "getFile", "()Ljava/lang/String;", ())
         .await?;
 

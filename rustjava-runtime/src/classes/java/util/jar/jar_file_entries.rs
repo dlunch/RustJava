@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -55,7 +55,7 @@ impl JarFileEntries {
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.jar.JarFile$Entries::hasMoreElements({this:?})");
 
-        let entries = jvm
+        let entries: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/jar/JarFile$Entries", "entries", "Ljava/util/zip/ZipFile$Entries;")
             .await?;
 
@@ -66,7 +66,7 @@ impl JarFileEntries {
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.jar.JarFile$Entries::nextElement({this:?})");
 
-        let entries = jvm
+        let entries: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/jar/JarFile$Entries", "entries", "Ljava/util/zip/ZipFile$Entries;")
             .await?;
 

@@ -1,4 +1,4 @@
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 use rustjava_runtime::{
     classes::java::{
@@ -448,7 +448,7 @@ async fn test_string_concat() -> Result<()> {
     let string1 = JavaLangString::from_rust_string(&jvm, "test1").await?;
     let string2 = JavaLangString::from_rust_string(&jvm, "test2").await?;
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string1,
             &string1.class_definition().name(),
@@ -781,7 +781,7 @@ async fn test_to_lower_case() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let string = JavaLangString::from_rust_string(&jvm, "HELLO 테스트").await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&string, &string.class_definition().name(), "toLowerCase", "()Ljava/lang/String;", ())
         .await?;
     let result_string = JavaLangString::to_rust_string(&jvm, &result).await?;
@@ -795,7 +795,7 @@ async fn test_replace() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let string = JavaLangString::from_rust_string(&jvm, "a.b.c.d").await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string,
             &string.class_definition().name(),
@@ -881,10 +881,10 @@ async fn test_last_index_of_from() -> Result<()> {
 async fn test_value_of_overloads() -> Result<()> {
     let jvm = test_jvm().await?;
 
-    let result = jvm.invoke_static("java/lang/String", "valueOf", "(Z)Ljava/lang/String;", (true,)).await?;
+    let result: Box<dyn ClassInstance> = jvm.invoke_static("java/lang/String", "valueOf", "(Z)Ljava/lang/String;", (true,)).await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "true");
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/String", "valueOf", "(J)Ljava/lang/String;", (12345i64,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "12345");
@@ -892,17 +892,17 @@ async fn test_value_of_overloads() -> Result<()> {
     let chars = jvm.instantiate_array("C", 3).await?;
     jvm.store_array(&mut chars.clone(), 0, vec![b'a' as u16, b'b' as u16, b'c' as u16])
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/String", "valueOf", "([C)Ljava/lang/String;", (chars,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "abc");
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/String", "valueOf", "(F)Ljava/lang/String;", (1.5f32,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "1.5");
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/String", "valueOf", "(D)Ljava/lang/String;", (3.15f64,))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "3.15");
@@ -910,7 +910,7 @@ async fn test_value_of_overloads() -> Result<()> {
     let mut chars = jvm.instantiate_array("C", 5).await?;
     jvm.store_array(&mut chars, 0, vec![b'h' as u16, b'e' as u16, b'l' as u16, b'l' as u16, b'o' as u16])
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/String", "valueOf", "([CII)Ljava/lang/String;", (chars, 1i32, 3i32))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "ell");
@@ -1004,7 +1004,7 @@ async fn test_get_bytes_unmappable_charset() -> Result<()> {
     let string = JavaLangString::from_rust_string(&jvm, "a한b").await?;
     let charset = JavaLangString::from_rust_string(&jvm, "ISO-8859-1").await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string,
             &string.class_definition().name(),
@@ -1052,7 +1052,7 @@ async fn test_get_bytes_ascii_replaces_non_ascii() -> Result<()> {
     let string = JavaLangString::from_rust_string(&jvm, "aé한").await?;
     let charset = JavaLangString::from_rust_string(&jvm, "US-ASCII").await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string,
             &string.class_definition().name(),

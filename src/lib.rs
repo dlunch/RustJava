@@ -35,7 +35,7 @@ where
             .await
             .unwrap();
 
-        let trace = jvm
+        let trace: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&string_writer, "java/io/StringWriter", "toString", "()Ljava/lang/String;", [])
             .await
             .unwrap();
@@ -115,7 +115,7 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
     let Some(manifest) = manifest else {
         return Err(jvm.exception("java/io/IOException", "JAR has no manifest").await);
     };
-    let attributes = jvm
+    let attributes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &manifest,
             "java/util/jar/Manifest",

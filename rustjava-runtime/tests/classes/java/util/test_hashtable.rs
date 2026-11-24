@@ -1,6 +1,6 @@
 use alloc::{vec, vec::Vec};
 
-use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
 use test_utils::test_jvm;
@@ -196,7 +196,7 @@ async fn test_hashtable_map_views_and_legacy_operations() -> Result<()> {
         .await?;
     assert!(!is_empty);
 
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &hashtable,
             &hashtable.class_definition().name(),
@@ -211,7 +211,7 @@ async fn test_hashtable_map_views_and_legacy_operations() -> Result<()> {
 
     let test_key_second = JavaLangString::from_rust_string(&jvm, "testKey").await?;
 
-    let value = jvm
+    let value: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &hashtable,
             &hashtable.class_definition().name(),

@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
 use test_utils::{TestRuntime, create_test_jvm, test_jvm_filesystem};
@@ -37,7 +37,7 @@ async fn test_zip_entry() -> Result<()> {
     }
 
     let entry_name = JavaLangString::from_rust_string(&jvm, "test.txt").await?;
-    let entry = jvm
+    let entry: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &zip,
             &zip.class_definition().name(),
@@ -49,7 +49,7 @@ async fn test_zip_entry() -> Result<()> {
 
     let size: i64 = jvm.invoke_virtual(&entry, &entry.class_definition().name(), "getSize", "()J", ()).await?;
 
-    let is = jvm
+    let is: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &zip,
             &zip.class_definition().name(),

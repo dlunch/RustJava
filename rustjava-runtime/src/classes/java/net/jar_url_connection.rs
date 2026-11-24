@@ -1,6 +1,6 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -55,7 +55,7 @@ impl JarURLConnection {
             .invoke_special(&this, "java/net/URLConnection", "<init>", "(Ljava/net/URL;)V", (url.clone(),))
             .await?;
 
-        let file = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
+        let file: Box<dyn ClassInstance> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
         let file = JavaLangString::to_rust_string(jvm, &file).await?;
         let split = file.splitn(2, "!/").collect::<Vec<_>>();
 
@@ -93,7 +93,7 @@ impl JarURLConnection {
     async fn get_jar_entry(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.JarURLConnection::getJarEntry({this:?})");
 
-        let jar_file = jvm
+        let jar_file: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "java/net/JarURLConnection", "getJarFile", "()Ljava/util/jar/JarFile;", ())
             .await?;
         let entry_name: ClassInstanceRef<String> = jvm
@@ -116,10 +116,10 @@ impl JarURLConnection {
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
         tracing::debug!("java.net.JarURLConnection::getMainAttributes({this:?})");
 
-        let jar_file = jvm
+        let jar_file: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "java/net/JarURLConnection", "getJarFile", "()Ljava/util/jar/JarFile;", ())
             .await?;
-        let manifest = jvm
+        let manifest: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&jar_file, "java/util/jar/JarFile", "getManifest", "()Ljava/util/jar/Manifest;", ())
             .await?;
         let main_attributes = jvm

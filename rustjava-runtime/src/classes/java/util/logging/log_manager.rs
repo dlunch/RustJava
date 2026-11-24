@@ -1,6 +1,6 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -318,7 +318,7 @@ impl LogManager {
         let names: ClassInstanceRef<Object> = jvm
             .invoke_virtual(loggers, "java/util/Hashtable", "keys", "()Ljava/util/Enumeration;", ())
             .await?;
-        let mut keys = Vec::new();
+        let mut keys: Vec<Box<dyn ClassInstance>> = Vec::new();
         while jvm
             .invoke_virtual::<_, bool>(&names, &names.class_definition().name(), "hasMoreElements", "()Z", ())
             .await?

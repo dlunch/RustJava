@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
 use test_utils::test_jvm;
@@ -78,7 +78,7 @@ async fn test_gregorian_calendar() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let timestamp = 0i64;
-    let calendar = jvm
+    let calendar: Box<dyn ClassInstance> = jvm
         .invoke_static("java/util/Calendar", "getInstance", "()Ljava/util/Calendar;", ())
         .await?;
     let date = jvm.new_class("java/util/Date", "(J)V", (timestamp,)).await?;
@@ -141,7 +141,7 @@ async fn test_gregorian_calendar() -> Result<()> {
     let _: () = jvm
         .invoke_virtual(&calendar, &calendar.class_definition().name(), "set", "(II)V", (1, 1999))
         .await?;
-    let date = jvm
+    let date: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&calendar, &calendar.class_definition().name(), "getTime", "()Ljava/util/Date;", ())
         .await?;
     let timestamp: i64 = jvm.invoke_virtual(&date, &date.class_definition().name(), "getTime", "()J", ()).await?;

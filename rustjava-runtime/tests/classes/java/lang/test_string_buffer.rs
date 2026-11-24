@@ -1,4 +1,4 @@
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 use rustjava_runtime::{
     classes::java::lang::{CharSequence, String as JavaString, StringBuffer},
@@ -106,7 +106,7 @@ async fn test_string_buffer() -> Result<()> {
         .await?;
     assert_eq!(char, '4' as JavaChar);
 
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string_buffer,
             &string_buffer.class_definition().name(),
@@ -128,7 +128,7 @@ async fn test_string_buffer() -> Result<()> {
             (5, 7),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string_buffer,
             &string_buffer.class_definition().name(),
@@ -321,7 +321,7 @@ async fn test_sb_03_length_char_access_and_synchronized_flags() -> Result<()> {
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
     }
 
-    let before_text = jvm
+    let before_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     let before_text = JavaLangString::to_rust_string(&jvm, &before_text).await?;
@@ -332,7 +332,7 @@ async fn test_sb_03_length_char_access_and_synchronized_flags() -> Result<()> {
         panic!("setLength must reject a negative length");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, before_text);
@@ -426,7 +426,7 @@ async fn test_sb_05_append_float_double_and_char_array() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "append", "([C)Ljava/lang/StringBuffer;", (chars,))
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1.0-0.0xy");
@@ -460,7 +460,7 @@ async fn test_sb_05_append_float_double_and_char_array() -> Result<()> {
             (null_object,),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "1.0-0.0xynullnull");
@@ -530,7 +530,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             (length, chars),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abC");
@@ -560,7 +560,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             (length, sequence),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abCstringbuffer");
@@ -576,7 +576,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             (length, sequence),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "SOtrue!12341.02.0abCstringbuffernull");
@@ -591,7 +591,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             (0, null_string),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (0, 4))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "null");
@@ -606,12 +606,12 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             (4, null_object),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (0, 8))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "nullnull");
 
-    let before_text = jvm
+    let before_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     let before_text = JavaLangString::to_rust_string(&jvm, &before_text).await?;
@@ -631,7 +631,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             panic!("insert must reject offset {offset}");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-        let after_text = jvm
+        let after_text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -677,7 +677,7 @@ async fn test_sb_06_insert_overloads_and_boundaries() -> Result<()> {
             panic!("insert(char[]) must validate invalid offset {offset} before null");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-        let after_text = jvm
+        let after_text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -729,7 +729,7 @@ async fn test_sb_08_delete_and_delete_char_at_ranges() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "deleteCharAt", "(I)Ljava/lang/StringBuffer;", (1,))
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "a");
@@ -739,7 +739,7 @@ async fn test_sb_08_delete_and_delete_char_at_ranges() -> Result<()> {
         initial_capacity
     );
 
-    let before_text = jvm
+    let before_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     let before_text = JavaLangString::to_rust_string(&jvm, &before_text).await?;
@@ -752,7 +752,7 @@ async fn test_sb_08_delete_and_delete_char_at_ranges() -> Result<()> {
             panic!("delete must reject ({start}, {end})");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-        let after_text = jvm
+        let after_text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -776,7 +776,7 @@ async fn test_sb_08_delete_and_delete_char_at_ranges() -> Result<()> {
             panic!("deleteCharAt must reject {index}");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-        let after_text = jvm
+        let after_text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -801,10 +801,10 @@ async fn test_sb_09_substring_uses_logical_count() -> Result<()> {
     let source = JavaLangString::from_rust_string(&jvm, "abcdef").await?;
     let buffer = jvm.new_class("java/lang/StringBuffer", "(Ljava/lang/String;)V", (source,)).await?;
 
-    let tail = jvm
+    let tail: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "substring", "(I)Ljava/lang/String;", (2,))
         .await?;
-    let middle = jvm
+    let middle: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "substring", "(II)Ljava/lang/String;", (1, 4))
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &tail).await?, "cdef");
@@ -839,12 +839,12 @@ async fn test_sb_10_replace_clamps_end_and_checks_ranges() -> Result<()> {
             (2, 100, replacement),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "abXY");
 
-    let before_text = jvm
+    let before_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     let before_text = JavaLangString::to_rust_string(&jvm, &before_text).await?;
@@ -865,7 +865,7 @@ async fn test_sb_10_replace_clamps_end_and_checks_ranges() -> Result<()> {
             panic!("replace must reject ({start}, {end})");
         };
         assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-        let after_text = jvm
+        let after_text: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
             .await?;
         assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -895,7 +895,7 @@ async fn test_sb_10_replace_clamps_end_and_checks_ranges() -> Result<()> {
         panic!("replace must reject null");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/NullPointerException"));
-    let after_text = jvm
+    let after_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -924,7 +924,7 @@ async fn test_sb_10_replace_clamps_end_and_checks_ranges() -> Result<()> {
         panic!("replace must validate its range before dereferencing the replacement");
     };
     assert!(jvm.is_instance(&*exception, "java/lang/StringIndexOutOfBoundsException"));
-    let after_text = jvm
+    let after_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &after_text).await?, before_text);
@@ -983,7 +983,7 @@ async fn test_sb_11_string_arguments_backed_by_shared_substring() -> Result<()> 
             (hello.clone(),),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "HelloHello");
@@ -997,7 +997,7 @@ async fn test_sb_11_string_arguments_backed_by_shared_substring() -> Result<()> 
             (0, world.clone()),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "WorldHelloHello");
@@ -1011,7 +1011,7 @@ async fn test_sb_11_string_arguments_backed_by_shared_substring() -> Result<()> 
             (5, 10, world),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "WorldWorldHello");
@@ -1035,7 +1035,7 @@ async fn test_sb_12_to_string_snapshot_is_exact_size_and_immutable() -> Result<(
         )
         .await?;
 
-    let string = jvm
+    let string: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &string).await?, "Hello");
@@ -1095,7 +1095,7 @@ async fn test_sb_13_insert_substring_then_reverse_and_delete() -> Result<()> {
             (1, sub.clone()),
         )
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "aHellob");
@@ -1103,7 +1103,7 @@ async fn test_sb_13_insert_substring_then_reverse_and_delete() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "reverse", "()Ljava/lang/StringBuffer;", ())
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "bolleHa");
@@ -1111,7 +1111,7 @@ async fn test_sb_13_insert_substring_then_reverse_and_delete() -> Result<()> {
     let _: ClassInstanceRef<StringBuffer> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "delete", "(II)Ljava/lang/StringBuffer;", (1, 5))
         .await?;
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&buffer, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "bHa");

@@ -1,14 +1,13 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
 use bytemuck::cast_vec;
 
-use crate::{Result, class_instance::ClassInstance, jvm::Jvm};
+use crate::{AsClassInstance, Result, jvm::Jvm};
 
 pub struct JavaIoInputStream;
 
 impl JavaIoInputStream {
-    #[allow(clippy::borrowed_box)]
-    pub async fn read_until_end(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Vec<u8>> {
+    pub async fn read_until_end(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<Vec<u8>> {
         let mut buffer = Vec::new();
 
         let java_buffer = jvm.instantiate_array("B", 1024).await?;

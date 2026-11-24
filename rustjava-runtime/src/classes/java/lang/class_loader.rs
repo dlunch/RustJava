@@ -1,6 +1,6 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -118,7 +118,7 @@ impl ClassLoader {
                 for path in class_path.split(path_separator.as_str()) {
                     let path = JavaLangString::from_rust_string(jvm, path).await?;
                     class_paths.push(path.clone());
-                    let path = jvm
+                    let path: Box<dyn ClassInstance> = jvm
                         .invoke_static("org/rustjava/net/URLPath", "encode", "(Ljava/lang/String;)Ljava/lang/String;", (path,))
                         .await?;
                     let path = JavaLangString::to_rust_string(jvm, &path).await?;

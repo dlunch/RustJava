@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{Array, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -111,7 +111,7 @@ async fn test_data_output_stream() -> Result<()> {
         )
         .await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "toByteArray", "()[B", ())
         .await?;
 
@@ -150,7 +150,7 @@ async fn test_data_output_stream_utf() -> Result<()> {
         )
         .await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "toByteArray", "()[B", ())
         .await?;
 

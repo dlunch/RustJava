@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::{Byte, String};
 
 use test_utils::test_jvm;
@@ -45,7 +45,7 @@ async fn test_byte_api() -> Result<()> {
     let min = jvm.get_static_field::<i8>("java/lang/Byte", "MIN_VALUE", "B").await?;
     let max = jvm.get_static_field::<i8>("java/lang/Byte", "MAX_VALUE", "B").await?;
     assert_eq!((min, max), (i8::MIN, i8::MAX));
-    let typ = jvm.get_static_field("java/lang/Byte", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Byte", "TYPE", "Ljava/lang/Class;").await?;
     let name: jvm::ClassInstanceRef<rustjava_runtime::classes::java::lang::String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
@@ -56,7 +56,7 @@ async fn test_byte_api() -> Result<()> {
     );
 
     let string = JavaLangString::from_rust_string(&jvm, "0x7f").await?;
-    let decoded = jvm
+    let decoded: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/Byte", "decode", "(Ljava/lang/String;)Ljava/lang/Byte;", (string,))
         .await?;
     assert_eq!(
@@ -155,7 +155,7 @@ async fn test_byte_api() -> Result<()> {
         );
     }
 
-    let typ = jvm.get_static_field("java/lang/Byte", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Byte", "TYPE", "Ljava/lang/Class;").await?;
     let name: ClassInstanceRef<String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;

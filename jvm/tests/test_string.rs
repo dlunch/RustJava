@@ -38,7 +38,7 @@ async fn test_to_utf16_on_substring_preserves_unpaired_surrogate() -> Result<()>
     jvm.store_array(&mut chars, 0, [0x61 as JavaChar, 0xd800, 0x62]).await?;
 
     let string = jvm.new_class("java/lang/String", "([C)V", (chars,)).await?;
-    let sub = jvm
+    let sub: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&string, &string.class_definition().name(), "substring", "(II)Ljava/lang/String;", (1, 3))
         .await?;
 
@@ -52,7 +52,7 @@ async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
-    let sub = jvm
+    let sub: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (2, 7))
         .await?;
 

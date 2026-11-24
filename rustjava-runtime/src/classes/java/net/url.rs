@@ -1,6 +1,6 @@
-use alloc::{format, vec};
+use alloc::{boxed::Box, format, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -243,7 +243,7 @@ impl URL {
     async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("java.net.URL::openConnection({this:?})");
 
-        let handler = jvm.get_field(&this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;").await?;
+        let handler: Box<dyn ClassInstance> = jvm.get_field(&this, "java/net/URL", "handler", "Ljava/net/URLStreamHandler;").await?;
         let connection = jvm
             .invoke_virtual(
                 &handler,
@@ -260,7 +260,7 @@ impl URL {
     async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URL::openStream({this:?})");
 
-        let connection = jvm
+        let connection: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "java/net/URL", "openConnection", "()Ljava/net/URLConnection;", ())
             .await?;
 

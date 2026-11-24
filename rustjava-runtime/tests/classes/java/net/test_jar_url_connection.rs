@@ -1,4 +1,4 @@
-use jvm::{Result, runtime::JavaLangString};
+use jvm::{ClassInstance, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -11,7 +11,7 @@ async fn test_jar_filename() -> Result<()> {
 
     let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 
-    let jar_file_url = jvm
+    let jar_file_url: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),
@@ -20,7 +20,7 @@ async fn test_jar_filename() -> Result<()> {
             (),
         )
         .await?;
-    let file = jvm
+    let file: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &jar_file_url,
             &jar_file_url.class_definition().name(),
@@ -29,7 +29,7 @@ async fn test_jar_filename() -> Result<()> {
             (),
         )
         .await?;
-    let protocol = jvm
+    let protocol: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &jar_file_url,
             &jar_file_url.class_definition().name(),
@@ -42,7 +42,7 @@ async fn test_jar_filename() -> Result<()> {
     assert_eq!(JavaLangString::to_rust_string(&jvm, &file).await?, "path/to/%ED%95%9C%EA%B8%80.jar");
     assert_eq!(JavaLangString::to_rust_string(&jvm, &protocol).await?, "file");
 
-    let entry_name = jvm
+    let entry_name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),

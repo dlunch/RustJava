@@ -1,6 +1,6 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -150,7 +150,7 @@ impl OutputStreamWriter {
         let mut java_bytes = jvm.instantiate_array("B", bytes.len()).await?;
         jvm.store_array(&mut java_bytes, 0, bytes.into_iter().map(|value| value as i8)).await?;
 
-        let out = jvm
+        let out: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
             .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (java_bytes,)).await
@@ -158,7 +158,7 @@ impl OutputStreamWriter {
 
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::flush({this:?})");
-        let out = jvm
+        let out: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
             .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
@@ -178,7 +178,7 @@ impl OutputStreamWriter {
                 .await?;
         }
 
-        let out = jvm
+        let out: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/io/OutputStreamWriter", "out", "Ljava/io/OutputStream;")
             .await?;
         jvm.invoke_virtual(&out, "java/io/OutputStream", "close", "()V", ()).await

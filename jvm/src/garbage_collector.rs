@@ -1,6 +1,7 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec, vec::Vec};
 use jvm_types::FieldAccessFlags;
 
+use dyn_clone::clone_box;
 use hashbrown::{HashMap, HashSet};
 
 use crate::{ClassDefinition, ClassInstance, Field, JavaValue, class_loader::Class, thread::JvmThread};
@@ -21,7 +22,7 @@ pub fn determine_garbage(
     };
 
     for class in classes.values() {
-        marker.mark(&class.java_class())?;
+        marker.mark(class.java_class().as_ref())?;
         marker.mark_static_fields(class)?;
     }
 
@@ -29,7 +30,7 @@ pub fn determine_garbage(
         .values()
         .flat_map(|thread| thread.iter_frame().flat_map(|stack| stack.local_variables()))
     {
-        marker.mark(object)?;
+        marker.mark(object.as_ref())?;
     }
 
     for object in threads.values().filter_map(|thread| thread.java_thread()) {
@@ -37,15 +38,15 @@ pub fn determine_garbage(
     }
 
     for object in global_references.values() {
-        marker.mark(object)?;
+        marker.mark(object.as_ref())?;
     }
 
     for object in interned_strings {
-        marker.mark(object)?;
+        marker.mark(object.as_ref())?;
     }
 
     for object in all_class_instances.iter().filter(|object| root_identities.contains(&object.identity())) {
-        marker.mark(object)?;
+        marker.mark(object.as_ref())?;
     }
 
     // java.lang.ref: a weak reference is cleared once its referent is no longer strongly reachable
@@ -90,20 +91,19 @@ impl Marker<'_> {
                 && is_reference_type(&field.descriptor())
                 && let JavaValue::Object(Some(value)) = class.definition.get_static_field(&*field)?
             {
-                self.mark(&value)?;
+                self.mark(value.as_ref())?;
             }
         }
         Ok(())
     }
 
-    #[allow(clippy::borrowed_box)]
-    fn mark(&mut self, root: &Box<dyn ClassInstance>) -> anyhow::Result<()> {
+    fn mark(&mut self, root: &dyn ClassInstance) -> anyhow::Result<()> {
         if !self.reachable_objects.insert(root.identity()) {
             return Ok(());
         }
 
         // An explicit stack, since a chain of references can be longer than the native stack is deep
-        let mut pending = vec![root.clone()];
+        let mut pending = vec![clone_box(root)];
         while let Some(object) = pending.pop() {
             let mut mark_value = |value| {
                 if let JavaValue::Object(Some(value)) = value

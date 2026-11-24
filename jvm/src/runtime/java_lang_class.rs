@@ -2,7 +2,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 use bytemuck::cast_vec;
 
-use crate::{Array, ClassInstanceRef, Result, class_definition::ClassDefinition, class_instance::ClassInstance, jvm::Jvm};
+use crate::{Array, AsClassInstance, ClassInstanceRef, Result, class_definition::ClassDefinition, class_instance::ClassInstance, jvm::Jvm};
 
 pub struct JavaLangClass;
 
@@ -17,8 +17,7 @@ impl JavaLangClass {
         Ok(java_class)
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn name(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<String> {
+    pub async fn name(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<String> {
         let name_bytes: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/lang/Class", "nameBytes", "[B").await?;
         let len = jvm.array_length(&name_bytes).await?;
         let name_bytes_vec: Vec<i8> = jvm.load_array(&name_bytes, 0, len).await?;
@@ -28,8 +27,7 @@ impl JavaLangClass {
         }
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn to_rust_class(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Box<dyn ClassDefinition>> {
+    pub async fn to_rust_class(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<Box<dyn ClassDefinition>> {
         let class_name = Self::name(jvm, this).await?;
         if let Some(class) = jvm.get_class(&class_name) {
             Ok(class.definition)
@@ -57,8 +55,7 @@ impl JavaLangClass {
         Ok(java_class)
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn class_loader(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Option<Box<dyn ClassInstance>>> {
+    pub async fn class_loader(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized)) -> Result<Option<Box<dyn ClassInstance>>> {
         jvm.get_field(this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await
     }
 }

@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::{Boolean, Object, String};
 
 use test_utils::test_jvm;
@@ -92,7 +92,7 @@ async fn test_boolean_string_constants_and_type() -> Result<()> {
     assert!(!jvm.is_instance(&**true_constant, "java/lang/Comparable"));
     assert!(jvm.is_instance(&**true_constant, "java/io/Serializable"));
 
-    let typ = jvm.get_static_field("java/lang/Boolean", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Boolean", "TYPE", "Ljava/lang/Class;").await?;
     let name: ClassInstanceRef<String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;

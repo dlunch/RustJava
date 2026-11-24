@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -223,7 +223,7 @@ impl ByteArrayOutputStream {
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, capacity: usize) -> Result<()> {
-        let old_buf = jvm.get_field(this, "java/io/ByteArrayOutputStream", "buf", "[B").await?;
+        let old_buf: Box<dyn ClassInstance> = jvm.get_field(this, "java/io/ByteArrayOutputStream", "buf", "[B").await?;
         let current_capacity = jvm.array_length(&old_buf).await?;
 
         if current_capacity < capacity {

@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -56,7 +56,7 @@ impl StringWriter {
     ) -> Result<()> {
         tracing::debug!("java.io.StringWriter::write({this:?}, {chars:?}, {off:?}, {len:?})");
 
-        let buf = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
+        let buf: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
 
         let _: ClassInstanceRef<StringBuffer> = jvm
             .invoke_virtual(
@@ -84,7 +84,7 @@ impl StringWriter {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.StringWriter::toString({this:?})");
 
-        let buf = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
+        let buf: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/StringWriter", "buf", "Ljava/lang/StringBuffer;").await?;
 
         let string = jvm
             .invoke_virtual(&buf, "java/lang/StringBuffer", "toString", "()Ljava/lang/String;", ())

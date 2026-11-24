@@ -1,7 +1,7 @@
-use alloc::{format, vec};
+use alloc::{boxed::Box, format, vec};
 
 use jvm::{
-    ClassInstanceRef, Jvm, Result,
+    ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -166,7 +166,7 @@ impl Short {
     }
 
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
-        let integer = jvm
+        let integer: Box<dyn ClassInstance> = jvm
             .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (value,))
             .await?;
         let value: i32 = jvm.invoke_virtual(&integer, "java/lang/Integer", "intValue", "()I", ()).await?;

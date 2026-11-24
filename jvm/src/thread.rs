@@ -59,9 +59,8 @@ impl JvmThread {
         }
     }
 
-    #[allow(clippy::borrowed_box)] // same as jvm.rs; callers pass it to &Box-taking apis
-    pub fn java_thread(&self) -> Option<&Box<dyn ClassInstance>> {
-        self.java_thread.as_ref()
+    pub fn java_thread(&self) -> Option<&dyn ClassInstance> {
+        self.java_thread.as_deref()
     }
 
     pub fn set_java_thread(&mut self, java_thread: Box<dyn ClassInstance>) {

@@ -1,6 +1,6 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -79,7 +79,7 @@ impl RustJarClassLoader {
         }
 
         let name = JavaLangString::to_rust_string(jvm, &name).await?;
-        let class_paths = jvm
+        let class_paths: Box<dyn ClassInstance> = jvm
             .get_field(&this, "org/rustjava/lang/RustJarClassLoader", "classPaths", "[Ljava/lang/String;")
             .await?;
         let class_paths: Vec<ClassInstanceRef<String>> = jvm.load_array(&class_paths, 0, jvm.array_length(&class_paths).await? as usize).await?;

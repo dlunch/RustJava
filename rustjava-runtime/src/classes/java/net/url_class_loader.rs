@@ -1,7 +1,7 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use jvm::{
-    Array, ClassInstanceRef, Jvm, Result,
+    Array, ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -107,7 +107,7 @@ impl URLClassLoader {
             return Ok(None.into());
         }
 
-        let stream = jvm
+        let stream: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&resource, "java/net/URL", "openStream", "()Ljava/io/InputStream;", ())
             .await?;
         let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await;
@@ -146,12 +146,12 @@ impl URLClassLoader {
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let urls = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
+        let urls: Box<dyn ClassInstance> = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
 
         for url in urls {
             let file: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
-            let path = jvm
+            let path: Box<dyn ClassInstance> = jvm
                 .invoke_static(
                     "org/rustjava/net/URLPath",
                     "decode",
@@ -203,7 +203,7 @@ impl URLClassLoader {
                 // treat as jar
                 let name_str = name_str.trim_start_matches('/');
                 let entry = JavaLangString::from_rust_string(jvm, name_str).await?;
-                let entry = jvm
+                let entry: Box<dyn ClassInstance> = jvm
                     .invoke_static("org/rustjava/net/URLPath", "encode", "(Ljava/lang/String;)Ljava/lang/String;", (entry,))
                     .await?;
                 let entry = JavaLangString::to_rust_string(jvm, &entry).await?;

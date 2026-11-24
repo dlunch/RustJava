@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
@@ -32,7 +32,7 @@ impl HashMapValueIterator {
     }
 
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
-        let entry = jvm
+        let entry: Box<dyn ClassInstance> = jvm
             .invoke_special(&this, "java/util/HashMap$HashIterator", "next", "()Ljava/lang/Object;", ())
             .await?;
         jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await

@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, format, vec};
 use core::time::Duration;
 
-use jvm::{ClassInstanceRef, GlobalRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, GlobalRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{FieldAccessFlags, MethodAccessFlags};
 
@@ -288,7 +288,7 @@ impl Thread {
                                 (print_writer,),
                             )
                             .await?;
-                        let trace = self
+                        let trace: Box<dyn ClassInstance> = self
                             .jvm
                             .invoke_virtual(&string_writer, "java/io/StringWriter", "toString", "()Ljava/lang/String;", [])
                             .await?;

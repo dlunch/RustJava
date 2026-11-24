@@ -1,6 +1,6 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -216,7 +216,7 @@ impl Hashtable {
         tracing::debug!("java.util.Hashtable::containsKey({this:?}, {key:?})");
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let table = jvm
+        let table: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
             .await?;
         let table_len = jvm.array_length(&table).await? as i32;
@@ -274,7 +274,7 @@ impl Hashtable {
         tracing::debug!("java.util.Hashtable::get({this:?}, {key:?})");
 
         let key_hash = Self::key_hash(jvm, &key).await?;
-        let table = jvm
+        let table: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
             .await?;
         let table_len = jvm.array_length(&table).await? as i32;
@@ -569,7 +569,7 @@ impl Hashtable {
     }
 
     async fn rehash_table(jvm: &Jvm, this: &mut ClassInstanceRef<Self>) -> Result<()> {
-        let old_table = jvm
+        let old_table: Box<dyn ClassInstance> = jvm
             .get_field(this, "java/util/Hashtable", "table", "[Ljava/util/Hashtable$Entry;")
             .await?;
         let old_capacity = jvm.array_length(&old_table).await?;

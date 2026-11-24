@@ -1,6 +1,6 @@
-use alloc::{format, string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, format, string::String as RustString, vec, vec::Vec};
 
-use jvm::{ClassInstanceRef, JavaValue, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaValue, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
 
@@ -214,7 +214,7 @@ impl System {
             return Err(jvm.exception("java/lang/NullPointerException", "key").await);
         }
 
-        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        let props: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm
             .invoke_virtual(
                 &props,
@@ -240,7 +240,7 @@ impl System {
             return Err(jvm.exception("java/lang/NullPointerException", "key").await);
         }
 
-        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        let props: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         jvm.invoke_virtual(
             &props,
             "java/util/Properties",
@@ -293,7 +293,7 @@ impl System {
     ) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.System::setProperty({key:?}, {value:?})");
 
-        let props = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
+        let props: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await?;
         let value = jvm
             .invoke_virtual(
                 &props,

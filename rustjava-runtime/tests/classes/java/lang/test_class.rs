@@ -1,5 +1,5 @@
 use jvm::{
-    Array, ClassInstanceRef, JavaError, Jvm, Result,
+    Array, ClassInstance, ClassInstanceRef, JavaError, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
 use jvm_types::MethodAccessFlags;
@@ -371,7 +371,7 @@ async fn test_wrapper_type_fields_survive_gc() -> Result<()> {
         ("java/lang/Float", "float"),
         ("java/lang/Double", "double"),
     ] {
-        let typ = jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await?;
+        let typ: Box<dyn ClassInstance> = jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await?;
         let name: ClassInstanceRef<String> = jvm
             .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
             .await?;
@@ -394,7 +394,7 @@ async fn test_wrapper_type_fields_survive_gc() -> Result<()> {
         "java/lang/Float",
         "java/lang/Double",
     ] {
-        let typ = jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await?;
+        let typ: Box<dyn ClassInstance> = jvm.get_static_field(wrapper, "TYPE", "Ljava/lang/Class;").await?;
         assert!(
             jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
                 .await?

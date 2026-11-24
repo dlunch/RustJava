@@ -1,6 +1,6 @@
-use alloc::{format, string::ToString, vec, vec::Vec};
+use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use regex::{Regex, RegexBuilder};
@@ -250,7 +250,7 @@ impl Pattern {
         let input_length: i32 = jvm.invoke_virtual(&input, &input.class_definition().name(), "length", "()I", ()).await?;
         let match_limited = limit > 0;
         let mut index = 0;
-        let mut parts = Vec::new();
+        let mut parts: Vec<Box<dyn ClassInstance>> = Vec::new();
 
         while jvm
             .invoke_virtual::<_, bool>(&matcher, "java/util/regex/Matcher", "find", "()Z", ())

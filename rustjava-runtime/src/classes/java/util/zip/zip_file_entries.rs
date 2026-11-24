@@ -1,6 +1,6 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -81,7 +81,7 @@ impl ZipFileEntries {
             .await?;
         let name: Vec<ClassInstanceRef<String>> = jvm.load_array(&names, i as _, 1).await?;
 
-        let zip_file = jvm
+        let zip_file: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/zip/ZipFile$Entries", "zipFile", "Ljava/util/zip/ZipFile;")
             .await?;
         let entry = jvm

@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use crate::{Result, class_instance::ClassInstance, jvm::Jvm};
+use crate::{AsClassInstance, Result, class_instance::ClassInstance, jvm::Jvm};
 
 use super::JavaLangString;
 
@@ -15,8 +15,7 @@ impl JavaLangClassLoader {
         Ok(system_class_loader)
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn load_class(jvm: &Jvm, this: &Box<dyn ClassInstance>, class_name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
+    pub async fn load_class(jvm: &Jvm, this: &(impl AsClassInstance + Sync + ?Sized), class_name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
         let binary_name = class_name.replace('/', ".");
         let java_class_name = JavaLangString::from_rust_string(jvm, &binary_name).await?;
 
@@ -33,8 +32,11 @@ impl JavaLangClassLoader {
         Ok(java_class)
     }
 
-    #[allow(clippy::borrowed_box)]
-    pub async fn get_resource_as_stream(jvm: &Jvm, this: &Box<dyn ClassInstance>, name: &str) -> Result<Option<Box<dyn ClassInstance>>> {
+    pub async fn get_resource_as_stream(
+        jvm: &Jvm,
+        this: &(impl AsClassInstance + Sync + ?Sized),
+        name: &str,
+    ) -> Result<Option<Box<dyn ClassInstance>>> {
         let java_name = JavaLangString::from_rust_string(jvm, name).await?;
 
         let java_resource: Option<Box<dyn ClassInstance>> = jvm

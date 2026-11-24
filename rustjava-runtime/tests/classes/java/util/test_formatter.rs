@@ -1,4 +1,4 @@
-use jvm::{Array, ClassInstanceRef, JavaError, JavaValue, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, JavaValue, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use rustjava_runtime::{
     classes::java::{
@@ -659,7 +659,7 @@ async fn formatter_big_decimal_layout_form_has_java_5_enum_identity_and_order() 
             "Ljava/util/Formatter$BigDecimalLayoutForm;",
         )
         .await?;
-    let name = jvm
+    let name: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &scientific,
             "java/util/Formatter$BigDecimalLayoutForm",
@@ -727,7 +727,7 @@ async fn formatter_formats_common_java_5_conversions() -> Result<()> {
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "ok     0007 12.50 % \n");
@@ -754,7 +754,7 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "two|26|1a|26");
@@ -771,7 +771,7 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "null|false");
@@ -787,7 +787,7 @@ async fn formatter_tracks_explicit_previous_and_ordinary_arguments_independently
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "null|false|null");
@@ -815,7 +815,7 @@ async fn formatter_uppercase_preserves_unpaired_utf16_surrogates() -> Result<()>
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(
@@ -850,7 +850,7 @@ async fn print_stream_and_print_writer_use_formatter_for_varargs_output() -> Res
         )
         .await?;
     assert_eq!(returned.identity(), stream.identity());
-    let stream_text = jvm
+    let stream_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&bytes, &bytes.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &stream_text).await?, "n=007");
@@ -869,7 +869,7 @@ async fn print_stream_and_print_writer_use_formatter_for_varargs_output() -> Res
         )
         .await?;
     assert_eq!(returned.identity(), writer.identity());
-    let writer_text = jvm
+    let writer_text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string_writer,
             &string_writer.class_definition().name(),
@@ -1047,7 +1047,7 @@ async fn formatter_handles_numeric_radix_grouping_and_uppercase_conversions() ->
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(
@@ -1091,7 +1091,7 @@ async fn formatter_matches_java_5_radix_and_non_finite_number_rules() -> Result<
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &result).await?, "00|0x00f|1.e+00|NaN|  Infinity");
@@ -1162,7 +1162,7 @@ async fn formatter_rounds_fixed_scientific_and_general_values_like_java_5() -> R
             (format, arguments),
         )
         .await?;
-    let result = jvm
+    let result: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(
@@ -1246,7 +1246,7 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
         panic!("the trailing unknown conversion must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/UnknownFormatConversionException"));
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "");
@@ -1269,7 +1269,7 @@ async fn formatter_validates_all_syntax_before_writing_but_preserves_runtime_par
         panic!("the incompatible runtime argument must fail");
     };
     assert!(jvm.is_instance(&*exception, "java/util/IllegalFormatConversionException"));
-    let text = jvm
+    let text: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&formatter, &formatter.class_definition().name(), "toString", "()Ljava/lang/String;", ())
         .await?;
     assert_eq!(JavaLangString::to_rust_string(&jvm, &text).await?, "before ");
