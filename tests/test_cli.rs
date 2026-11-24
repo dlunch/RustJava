@@ -40,11 +40,11 @@ fn cli_classpath_options_load_classes_from_directories_and_jars() {
         .env_remove("CLASSPATH")
         .arg("-cp")
         .arg(class_path)
-        .arg("Hello")
+        .arg("launcher.PackagedMain")
         .output()
         .unwrap();
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "Hello, world!\n");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "launcher.PackagedMain\n");
 
     let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
         .env_remove("CLASSPATH")
@@ -132,4 +132,11 @@ fn cli_reports_missing_classpath_value() {
         .unwrap();
     assert!(!output.status.success());
     assert!(String::from_utf8(output.stderr).unwrap().contains("Missing class path after -cp"));
+}
+
+#[test]
+fn cli_reports_an_empty_main_class_name() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rust_java")).arg("").output().unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8(output.stderr).unwrap().contains("java.lang.ClassNotFoundException"));
 }
