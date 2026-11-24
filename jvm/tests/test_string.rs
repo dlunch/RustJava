@@ -59,7 +59,7 @@ async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
     let interned: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&sub, &sub.class_definition().name(), "intern", "()Ljava/lang/String;", ())
         .await?;
-    let pooled = jvm.intern_string("Hello").await?;
+    let pooled = jvm.intern_string(&"Hello".encode_utf16().collect::<Vec<_>>()).await?;
     assert!(interned == pooled);
 
     let independent = JavaLangString::from_rust_string(&jvm, "Hello").await?;
@@ -78,8 +78,9 @@ async fn test_intern_identity_survives_gc() -> anyhow::Result<()> {
     // collect first for a clean baseline, then intern and assert the very next GC keeps it
     jvm.collect_garbage()?;
 
-    let a = jvm.intern_string("interned").await?;
-    let b = jvm.intern_string("interned").await?;
+    let units = "interned".encode_utf16().collect::<Vec<_>>();
+    let a = jvm.intern_string(&units).await?;
+    let b = jvm.intern_string(&units).await?;
     assert!(a == b);
 
     // the interned string is held by no frame, but the string pool roots it (and its [C),
@@ -87,7 +88,7 @@ async fn test_intern_identity_survives_gc() -> anyhow::Result<()> {
     let garbage_count = jvm.collect_garbage()?;
     assert_eq!(garbage_count, 0);
 
-    let c = jvm.intern_string("interned").await?;
+    let c = jvm.intern_string(&units).await?;
     assert!(a == c);
 
     Ok(())

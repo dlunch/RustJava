@@ -5,3 +5,9 @@ a
 42
 1234567890123
 hello
+55296
+57343
+true
+false
+false
+true

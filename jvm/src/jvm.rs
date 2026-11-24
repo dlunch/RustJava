@@ -618,15 +618,13 @@ impl Jvm {
     }
 
     // JVMS 5.1 string interning: equal string literals (and String.intern results) share one instance
-    pub async fn intern_string(&self, value: &str) -> Result<Box<dyn ClassInstance>> {
-        let key = value.encode_utf16().collect::<Vec<_>>();
-        if let Some(interned) = self.inner.string_pool.read().get(&key) {
+    pub async fn intern_string(&self, value: &[u16]) -> Result<Box<dyn ClassInstance>> {
+        if let Some(interned) = self.inner.string_pool.read().get(value) {
             return Ok(clone_box(&**interned));
         }
 
-        let instance = JavaLangString::from_rust_string(self, value).await?;
-
-        Ok(self.intern_or_get(key, instance))
+        let instance = JavaLangString::from_utf16(self, value.to_vec()).await?;
+        Ok(self.intern_or_get(value.to_vec(), instance))
     }
 
     // String.intern(): the receiver itself is pooled and returned when it is the first with its value (JVMS String spec)

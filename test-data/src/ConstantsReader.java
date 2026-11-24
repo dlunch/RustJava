@@ -9,5 +9,13 @@ public class ConstantsReader {
         System.out.println(Constants.I);
         System.out.println(Constants.L);
         System.out.println(Constants.STR);
+        String high = Constants.UNPAIRED;
+        String low = "\uDFFF";
+        System.out.println((int) high.charAt(0));
+        System.out.println((int) low.charAt(0));
+        System.out.println(high == "\uD800");
+        System.out.println(high == low);
+        System.out.println(high == "\uFFFD");
+        System.out.println(high == new String(new char[] { '\uD800' }).intern());
     }
 }
