@@ -1068,15 +1068,7 @@ impl Jvm {
                     .filter_map(|(identity, monitor)| monitor.is_active().then_some(*identity)),
             );
 
-            determine_garbage(
-                self,
-                &threads,
-                &global_references,
-                &all_objects,
-                &classes,
-                &interned_strings,
-                &root_identities,
-            )?
+            determine_garbage(&threads, &global_references, &all_objects, &classes, &interned_strings, &root_identities)?
         };
 
         let garbage_count = garbage.len();

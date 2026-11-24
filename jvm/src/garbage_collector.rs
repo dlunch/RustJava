@@ -3,10 +3,9 @@ use jvm_types::FieldAccessFlags;
 
 use hashbrown::{HashMap, HashSet};
 
-use crate::{ClassDefinition, ClassInstance, Field, JavaValue, Jvm, class_loader::Class, thread::JvmThread};
+use crate::{ClassDefinition, ClassInstance, Field, JavaValue, class_loader::Class, thread::JvmThread};
 
 pub fn determine_garbage(
-    jvm: &Jvm,
     threads: &BTreeMap<u64, JvmThread>,
     global_references: &BTreeMap<u64, Box<dyn ClassInstance>>,
     all_class_instances: &HashSet<Box<dyn ClassInstance>>,
@@ -15,7 +14,7 @@ pub fn determine_garbage(
     root_identities: &HashSet<usize>,
 ) -> anyhow::Result<Vec<Box<dyn ClassInstance>>> {
     let mut marker = Marker {
-        jvm,
+        registry: classes,
         reachable_objects: HashSet::new(),
         classes: HashMap::new(),
         references: Vec::new(),
@@ -76,7 +75,7 @@ struct MarkedClass {
 }
 
 struct Marker<'a> {
-    jvm: &'a Jvm,
+    registry: &'a BTreeMap<String, Class>,
     reachable_objects: HashSet<usize>,
     classes: HashMap<String, MarkedClass>,
     // reachable java.lang.ref.Reference instances
@@ -125,16 +124,8 @@ impl Marker<'_> {
             }
 
             if !self.classes.contains_key(&*name) {
-                let mut reference_fields = find_all_fields(self.jvm, &*class_definition);
-                reference_fields.retain(|field| !field.access_flags().contains(FieldAccessFlags::STATIC) && is_reference_type(&field.descriptor()));
-                let is_reference = self.jvm.is_instance(&*object, "java/lang/ref/Reference");
-                self.classes.insert(
-                    name.clone().into_owned(),
-                    MarkedClass {
-                        reference_fields,
-                        is_reference,
-                    },
-                );
+                let class = MarkedClass::new(&*class_definition, self.registry);
+                self.classes.insert(name.clone().into_owned(), class);
             }
             let class = &self.classes[&*name];
             if class.is_reference {
@@ -152,19 +143,26 @@ fn is_reference_type(descriptor: &str) -> bool {
     (descriptor.starts_with('L') && descriptor.ends_with(';')) || descriptor.starts_with('[')
 }
 
-fn find_all_fields(jvm: &Jvm, class_definition: &dyn ClassDefinition) -> Vec<Box<dyn Field>> {
-    let mut result = class_definition.fields();
-    if class_definition.name() == "java/lang/ref/Reference" {
-        // weak: the referent must not be kept reachable through the reference
-        result.retain(|field| field.name() != "referent");
-    }
-    let super_class_name = class_definition.super_class_name();
-
-    if let Some(x) = super_class_name {
-        let super_class = jvm.get_class(&x).unwrap();
-        let super_fields = find_all_fields(jvm, &*super_class.definition);
-        result.into_iter().chain(super_fields).collect()
-    } else {
-        result
+impl MarkedClass {
+    fn new(definition: &dyn ClassDefinition, registry: &BTreeMap<String, Class>) -> Self {
+        let mut reference_fields = Vec::new();
+        let mut is_reference = false;
+        let mut class = definition;
+        loop {
+            let declares_referent = class.name() == "java/lang/ref/Reference";
+            is_reference |= declares_referent;
+            reference_fields.extend(class.fields().into_iter().filter(|field| {
+                !field.access_flags().contains(FieldAccessFlags::STATIC)
+                    && is_reference_type(&field.descriptor())
+                    && !(declares_referent && field.name() == "referent")
+            }));
+            let Some(parent) = class.super_class_name() else { break };
+            // GC holds the registry read lock. Reacquiring it can deadlock if a class loader is waiting to write.
+            class = &*registry[&parent].definition;
+        }
+        Self {
+            reference_fields,
+            is_reference,
+        }
     }
 }
