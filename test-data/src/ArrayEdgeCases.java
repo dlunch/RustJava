@@ -18,6 +18,17 @@ class ArrayEdgeCases {
 
         // Negative index should throw ArrayIndexOutOfBoundsException
         System.out.println("negative index:");
+        int[] missing = null;
+        try {
+            System.out.println(missing[-1]);
+        } catch (NullPointerException e) {
+            System.out.println("null read");
+        }
+        try {
+            missing[-1] = 42;
+        } catch (NullPointerException e) {
+            System.out.println("null write");
+        }
         try {
             int[] a = new int[5];
             a[-1] = 42;

@@ -70,15 +70,15 @@ impl Interpreter {
                 | Opcode::Saload => {
                     // TODO type checking
                     let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
+                    let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
+                    let Some(array) = array else {
+                        return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
+                    };
                     if index < 0 {
                         return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
                     }
-                    let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
-                    if array.is_none() {
-                        return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);
-                    }
 
-                    let value = jvm.load_array(&array.unwrap(), index as usize, 1).await?.pop().unwrap();
+                    let value = jvm.load_array(&array, index as usize, 1).await?.pop().unwrap();
 
                     stack_frame.operand_stack.push(Self::to_stack_frame_type(value));
                 }
@@ -93,9 +93,6 @@ impl Interpreter {
                     // TODO type checking
                     let value = stack_frame.operand_stack.pop().unwrap();
                     let index: i32 = stack_frame.operand_stack.pop().unwrap().into();
-                    if index < 0 {
-                        return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", &format!("{}", index)).await);
-                    }
                     let array: Option<Box<dyn ClassInstance>> = stack_frame.operand_stack.pop().unwrap().into();
                     let Some(mut array) = array else {
                         return Err(jvm.exception("java/lang/NullPointerException", "Array is null").await);

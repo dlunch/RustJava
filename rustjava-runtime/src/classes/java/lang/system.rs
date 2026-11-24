@@ -1,10 +1,8 @@
 use alloc::{format, string::String as RustString, vec, vec::Vec};
 
-use jvm::{JavaValue, runtime::JavaLangString};
-
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstanceRef, JavaValue, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
 
 use crate::{
     RuntimeClassProto, RuntimeContext,
@@ -169,9 +167,9 @@ impl System {
     async fn arraycopy(
         jvm: &Jvm,
         _: &mut RuntimeContext,
-        src: ClassInstanceRef<Array<()>>, // Any Array
+        src: ClassInstanceRef<Object>,
         src_pos: i32,
-        mut dest: ClassInstanceRef<Array<()>>,
+        mut dest: ClassInstanceRef<Object>,
         dest_pos: i32,
         length: i32,
     ) -> Result<()> {
@@ -181,11 +179,32 @@ impl System {
             return Err(jvm.exception("java/lang/NullPointerException", "array is null").await);
         }
 
-        // TODO i think we can make it faster
-        let src: Vec<JavaValue> = jvm.load_array(&src, src_pos as _, length as _).await?;
-        jvm.store_array(&mut dest, dest_pos as _, src).await?;
+        let (Some(source), Some(destination)) = (src.as_array_instance(), dest.as_array_instance()) else {
+            return Err(jvm.exception("java/lang/ArrayStoreException", "expected array arguments").await);
+        };
+        let src_type = jvm.array_element_type(&src).await?;
+        let dest_type = jvm.array_element_type(&dest).await?;
+        let check_elements = match (&src_type, &dest_type) {
+            (a, b) if a == b => false,
+            (JavaType::Array(_) | JavaType::Class(_), JavaType::Array(_) | JavaType::Class(_)) => !jvm.is_type_assignable(&src_type, &dest_type),
+            _ => return Err(jvm.exception("java/lang/ArrayStoreException", "incompatible array types").await),
+        };
 
-        Ok(())
+        let count = length as usize;
+        if (src_pos as usize).saturating_add(count) > source.length() || (dest_pos as usize).saturating_add(count) > destination.length() {
+            return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "arraycopy range").await);
+        }
+        // Snapshot the source so overlapping ranges work in either direction.
+        let values: Vec<JavaValue> = jvm.load_array(&src, src_pos as usize, count).await?;
+        if check_elements
+            && let Some(index) = values
+                .iter()
+                .position(|value| matches!(value, JavaValue::Object(Some(object)) if !jvm.array_store_allowed(&**dest, &**object)))
+        {
+            jvm.store_array(&mut dest, dest_pos as usize, values.into_iter().take(index)).await?;
+            return Err(jvm.exception("java/lang/ArrayStoreException", "incompatible array element").await);
+        }
+        jvm.store_array(&mut dest, dest_pos as usize, values).await
     }
 
     async fn get_property(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {

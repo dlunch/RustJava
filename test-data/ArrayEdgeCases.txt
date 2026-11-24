@@ -2,6 +2,8 @@ negative size:
 caught
 caught
 negative index:
+null read
+null write
 caught
 caught
 2d array:
