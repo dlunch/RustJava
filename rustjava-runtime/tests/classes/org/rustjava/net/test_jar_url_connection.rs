@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::util::jar::JarFile;
 
 use test_utils::test_jvm_filesystem;
@@ -14,11 +14,11 @@ async fn test_jar_entry() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm
+    let connection: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
         .await?;
 
-    let stream = jvm
+    let stream: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),
@@ -50,11 +50,11 @@ async fn test_jar_file() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm
+    let connection: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
         .await?;
 
-    let attributes = jvm
+    let attributes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),
@@ -89,11 +89,11 @@ async fn test_jar_cache() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "jar:file:test.jar!/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let connection = jvm
+    let connection: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "openConnection", "()Ljava/net/URLConnection;", ())
         .await?;
 
-    let jar_file = jvm
+    let jar_file: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),

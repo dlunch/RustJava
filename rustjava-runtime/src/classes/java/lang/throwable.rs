@@ -250,7 +250,7 @@ impl Throwable {
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::toString({this:?})");
 
-        let class = jvm
+        let class: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "java/lang/Object", "getClass", "()Ljava/lang/Class;", ())
             .await?;
         let class_name = jvm

@@ -2,7 +2,7 @@ use alloc::{vec, vec::Vec};
 
 use bytemuck::cast_vec;
 
-use jvm::{Array, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 use rustjava_runtime::classes::java::io::{ByteArrayOutputStream, OutputStream};
 
@@ -59,7 +59,7 @@ async fn test_byte_array_output_stream() -> Result<()> {
         .invoke_virtual(&stream, &stream.class_definition().name(), "write", "(I)V", (b'o' as i32,))
         .await?;
 
-    let buf = jvm
+    let buf: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&stream, &stream.class_definition().name(), "toByteArray", "()[B", ())
         .await?;
 

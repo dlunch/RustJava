@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -155,7 +155,7 @@ impl ByteArrayInputStream {
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayInputStream::readByte({this:?})");
 
-        let buf = jvm.get_field(&this, "java/io/ByteArrayInputStream", "buf", "[B").await?;
+        let buf: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/ByteArrayInputStream", "buf", "[B").await?;
         let count: i32 = jvm.get_field(&this, "java/io/ByteArrayInputStream", "count", "I").await?;
         let pos: i32 = jvm.get_field(&this, "java/io/ByteArrayInputStream", "pos", "I").await?;
 

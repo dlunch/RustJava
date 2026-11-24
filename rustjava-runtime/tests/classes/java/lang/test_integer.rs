@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::{Integer, Object, String};
 
 use test_utils::test_jvm;
@@ -220,7 +220,7 @@ async fn test_integer_strict_api() -> Result<()> {
     let min = jvm.get_static_field::<i32>("java/lang/Integer", "MIN_VALUE", "I").await?;
     let max = jvm.get_static_field::<i32>("java/lang/Integer", "MAX_VALUE", "I").await?;
     assert_eq!((min, max), (i32::MIN, i32::MAX));
-    let typ = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
     let name: ClassInstanceRef<String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;
@@ -230,7 +230,7 @@ async fn test_integer_strict_api() -> Result<()> {
             .await?
     );
     let _: () = jvm.invoke_static("java/lang/System", "gc", "()V", ()).await?;
-    let typ = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Integer", "TYPE", "Ljava/lang/Class;").await?;
     assert!(
         jvm.invoke_virtual::<_, bool>(&typ, &typ.class_definition().name(), "isPrimitive", "()Z", ())
             .await?

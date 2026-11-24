@@ -1,4 +1,4 @@
-use jvm::{JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, JavaError, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -21,7 +21,7 @@ async fn test_manifest_parsing() -> Result<()> {
             .new_class("java/util/jar/Manifest", "(Ljava/io/InputStream;)V", (byte_array_stream,))
             .await?;
 
-        let main_attributes = jvm
+        let main_attributes: Box<dyn ClassInstance> = jvm
             .invoke_virtual(
                 &manifest,
                 &manifest.class_definition().name(),

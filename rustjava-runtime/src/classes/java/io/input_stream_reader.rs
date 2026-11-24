@@ -1,11 +1,11 @@
 use core::cmp::min;
 
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
 use bytemuck::{cast_slice, cast_vec};
 use encoding_rs::{EUC_KR, UTF_8};
 
-use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -126,7 +126,7 @@ impl InputStreamReader {
             return Ok(0);
         }
 
-        let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
+        let r#in: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
         let mut write_buf: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/io/InputStreamReader", "writeBuf", "[C").await?;
         let mut copied = 0;
 
@@ -257,7 +257,7 @@ impl InputStreamReader {
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStreamReader::close({this:?})");
 
-        let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
+        let r#in: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
         let _: () = jvm.invoke_virtual(&r#in, "java/io/InputStream", "close", "()V", ()).await?;
 
         Ok(())
@@ -271,7 +271,7 @@ impl InputStreamReader {
             return Ok(true);
         }
 
-        let r#in = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
+        let r#in: Box<dyn ClassInstance> = jvm.get_field(&this, "java/io/InputStreamReader", "in", "Ljava/io/InputStream;").await?;
         let available: i32 = jvm.invoke_virtual(&r#in, "java/io/InputStream", "available", "()I", ()).await?;
         Ok(available > 0)
     }

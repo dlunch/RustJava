@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -62,7 +62,7 @@ impl JarURLConnection {
     async fn get_jar_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<JarFile>> {
         tracing::debug!("org.rustjava.net.JarURLConnection::getJarFile({this:?})");
 
-        let url = jvm
+        let url: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "org/rustjava/net/JarURLConnection", "getJarFileURL", "()Ljava/net/URL;", ())
             .await?;
         let protocol = jvm
@@ -73,7 +73,7 @@ impl JarURLConnection {
         if protocol == "file" {
             let name: ClassInstanceRef<String> = jvm.invoke_virtual(&url, "java/net/URL", "getFile", "()Ljava/lang/String;", ()).await?;
 
-            let opened_files = jvm
+            let opened_files: Box<dyn ClassInstance> = jvm
                 .get_static_field("org/rustjava/net/JarURLConnection", "openedFiles", "Ljava/util/Hashtable;")
                 .await?;
             let cache: ClassInstanceRef<JarFile> = jvm
@@ -123,7 +123,7 @@ impl JarURLConnection {
         let entry: ClassInstanceRef<String> = jvm
             .invoke_virtual(&this, "org/rustjava/net/JarURLConnection", "getEntryName", "()Ljava/lang/String;", ())
             .await?;
-        let jar_file = jvm
+        let jar_file: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&this, "org/rustjava/net/JarURLConnection", "getJarFile", "()Ljava/util/jar/JarFile;", ())
             .await?;
 

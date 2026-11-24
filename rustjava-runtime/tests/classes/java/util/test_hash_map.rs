@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec};
 
-use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_bytecode::ClassDefinitionImpl;
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
@@ -293,7 +293,7 @@ async fn assert_view_iterator_removal(jvm: &Jvm, map: &ClassInstanceRef<Object>,
     }
 
     let entries: ClassInstanceRef<Object> = jvm.invoke_virtual(map, "java/util/HashMap", "entrySet", "()Ljava/util/Set;", ()).await?;
-    let entry_iterator = jvm
+    let entry_iterator: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&entries, "java/util/Set", "iterator", "()Ljava/util/Iterator;", ())
         .await?;
     let iterator = jvm
@@ -301,7 +301,7 @@ async fn assert_view_iterator_removal(jvm: &Jvm, map: &ClassInstanceRef<Object>,
         .await?;
     assert_remove_throws_illegal_state(jvm, &iterator).await?;
     for remaining in (0..3).rev() {
-        let entry = jvm
+        let entry: Box<dyn ClassInstance> = jvm
             .invoke_virtual(&entry_iterator, "java/util/Iterator", "next", "()Ljava/lang/Object;", ())
             .await?;
         let key: ClassInstanceRef<Object> = jvm

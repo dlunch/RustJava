@@ -1,11 +1,12 @@
 use alloc::{
+    boxed::Box,
     format,
     string::{String as RustString, ToString},
     vec,
     vec::Vec,
 };
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -319,7 +320,7 @@ impl Vector {
     }
 
     async fn capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&element_data).await? as i32)
     }
 
@@ -336,7 +337,7 @@ impl Vector {
         }
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as usize).await?;
         jvm.store_array(&mut destination, 0, elements).await
     }
@@ -441,7 +442,7 @@ impl Vector {
                 .await);
         }
 
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as _, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -590,7 +591,7 @@ impl Vector {
         }
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         for i in index..element_count {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, i as _, 1).await?.into_iter().next().unwrap();
@@ -656,7 +657,7 @@ impl Vector {
                 .await);
         }
 
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
 
         for i in (0..=index).rev() {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, i as _, 1).await?.into_iter().next().unwrap();
@@ -686,7 +687,7 @@ impl Vector {
             return Err(jvm.exception("java/util/NoSuchElementException", "Vector is empty").await);
         }
 
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, 0, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -700,7 +701,7 @@ impl Vector {
             return Err(jvm.exception("java/util/NoSuchElementException", "Vector is empty").await);
         }
 
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         Ok(jvm
             .load_array::<ClassInstanceRef<Object>>(&element_data, (element_count - 1) as usize, 1)
             .await?
@@ -887,7 +888,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::trimToSize({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if (element_count as usize) < current_capacity {
@@ -905,7 +906,7 @@ impl Vector {
         tracing::debug!("java.util.Vector::toString({this:?})");
 
         let element_count: i32 = jvm.get_field(&this, "java/util/Vector", "elementCount", "I").await?;
-        let element_data = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Vector", "elementData", "[Ljava/lang/Object;").await?;
         let elements: Vec<ClassInstanceRef<Object>> = jvm.load_array(&element_data, 0, element_count as usize).await?;
         let mut result = RustString::from("[");
         for (index, element) in elements.into_iter().enumerate() {

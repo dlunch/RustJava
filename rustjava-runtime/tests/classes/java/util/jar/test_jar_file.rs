@@ -1,6 +1,6 @@
 use std::io::{Cursor, Write};
 
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 use rustjava_runtime::classes::java::util::{
     jar::{JarEntry, Manifest},
@@ -52,7 +52,7 @@ async fn test_jar_manifest() -> Result<()> {
             .await?;
 
         if let Some(expected) = expected {
-            let attributes = jvm
+            let attributes: Box<dyn ClassInstance> = jvm
                 .invoke_virtual(
                     &manifest,
                     "java/util/jar/Manifest",
@@ -111,7 +111,7 @@ async fn test_entries() -> Result<()> {
     let name = JavaLangString::from_rust_string(&jvm, "test.jar").await?;
     let jar = jvm.new_class("java/util/jar/JarFile", "(Ljava/lang/String;)V", (name,)).await?;
 
-    let entries = jvm
+    let entries: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&jar, &jar.class_definition().name(), "entries", "()Ljava/util/Enumeration;", ())
         .await?;
 

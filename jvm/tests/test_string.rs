@@ -52,7 +52,7 @@ async fn test_intern_on_substring_uses_logical_slice() -> Result<()> {
     let jvm = test_jvm().await?;
 
     let parent = JavaLangString::from_rust_string(&jvm, "xxHelloyy").await?;
-    let sub = jvm
+    let sub: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&parent, &parent.class_definition().name(), "substring", "(II)Ljava/lang/String;", (2, 7))
         .await?;
 

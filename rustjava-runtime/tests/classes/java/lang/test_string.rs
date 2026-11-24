@@ -1,4 +1,4 @@
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 use rustjava_runtime::{
     classes::java::{
@@ -1004,7 +1004,7 @@ async fn test_get_bytes_unmappable_charset() -> Result<()> {
     let string = JavaLangString::from_rust_string(&jvm, "a한b").await?;
     let charset = JavaLangString::from_rust_string(&jvm, "ISO-8859-1").await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string,
             &string.class_definition().name(),
@@ -1052,7 +1052,7 @@ async fn test_get_bytes_ascii_replaces_non_ascii() -> Result<()> {
     let string = JavaLangString::from_rust_string(&jvm, "aé한").await?;
     let charset = JavaLangString::from_rust_string(&jvm, "US-ASCII").await?;
 
-    let bytes = jvm
+    let bytes: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &string,
             &string.class_definition().name(),

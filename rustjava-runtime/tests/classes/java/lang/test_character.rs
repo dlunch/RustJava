@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaChar, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::{Character, String};
 
 use test_utils::test_jvm;
@@ -61,7 +61,7 @@ async fn test_character_value_constants_and_type() -> Result<()> {
         assert_eq!(jvm.get_static_field::<i8>("java/lang/Character", name, "B").await?, expected);
     }
 
-    let typ = jvm.get_static_field("java/lang/Character", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Character", "TYPE", "Ljava/lang/Class;").await?;
     let name: ClassInstanceRef<String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;

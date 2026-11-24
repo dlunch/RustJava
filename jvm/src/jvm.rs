@@ -1,6 +1,3 @@
-#![allow(clippy::borrowed_box)] // We have get parameter by Box<T> to make ergonomic interface
-#![allow(clippy::double_must_use)] // temporary until https://github.com/rust-lang/rust-clippy/issues/17529 fix lands
-
 use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use core::{
     fmt::Debug,
@@ -286,7 +283,7 @@ impl Jvm {
         }
     }
 
-    pub async fn get_field<T>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str) -> Result<T>
+    pub async fn get_field<T>(&self, instance: &(impl AsClassInstance + Sync + ?Sized), class_name: &str, name: &str, descriptor: &str) -> Result<T>
     where
         T: From<JavaValue>,
     {
@@ -299,7 +296,7 @@ impl Jvm {
                     .exception("java/lang/IncompatibleClassChangeError", &format!("{class_name}.{name}:{descriptor}"))
                     .await);
             }
-            let value = instance.get_field(&**field)?;
+            let value = instance.as_class_instance().get_field(&**field)?;
             if let JavaValue::Object(Some(instance)) = &value {
                 let thread_id = (self.inner.get_current_thread_id)();
                 self.inner
@@ -368,14 +365,22 @@ impl Jvm {
         }
     }
 
-    pub async fn invoke_virtual<T, U>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str, args: T) -> Result<U>
+    pub async fn invoke_virtual<T, U>(
+        &self,
+        instance: &(impl AsClassInstance + Sync + ?Sized),
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: T,
+    ) -> Result<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
     {
         let args = args.into_arg();
         tracing::trace!("Invoke virtual {class_name}.{name}:{descriptor}({args:?})");
-        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+        let instance = instance.as_class_instance();
+        let args = iter::once(JavaValue::Object(Some(clone_box(instance))))
             .chain(args.into_vec())
             .collect::<Box<[_]>>();
 
@@ -443,14 +448,22 @@ impl Jvm {
 
     // non-virtual
     #[async_recursion::async_recursion]
-    pub async fn invoke_special<T, U>(&self, instance: &Box<dyn ClassInstance>, class_name: &str, name: &str, descriptor: &str, args: T) -> Result<U>
+    pub async fn invoke_special<T, U>(
+        &self,
+        instance: &(impl AsClassInstance + Sync + ?Sized),
+        class_name: &str,
+        name: &str,
+        descriptor: &str,
+        args: T,
+    ) -> Result<U>
     where
         T: InvokeArg,
         U: From<JavaValue>,
     {
         let args = args.into_arg();
         tracing::trace!("Invoke special {class_name}.{name}:{descriptor}({args:?})");
-        let args = iter::once(JavaValue::Object(Some(clone_box(&**instance))))
+        let instance = instance.as_class_instance();
+        let args = iter::once(JavaValue::Object(Some(clone_box(instance))))
             .chain(args.into_vec())
             .collect::<Box<[_]>>();
 
@@ -506,10 +519,11 @@ impl Jvm {
         }
     }
 
-    pub async fn load_array<T>(&self, array: &Box<dyn ClassInstance>, offset: usize, count: usize) -> Result<Vec<T>>
+    pub async fn load_array<T>(&self, array: &(impl AsClassInstance + Sync + ?Sized), offset: usize, count: usize) -> Result<Vec<T>>
     where
         T: From<JavaValue>,
     {
+        let array = array.as_class_instance();
         tracing::trace!("Load array {} at offset {offset}", array.class_definition().name());
 
         let array_size = self.array_length(array).await?;
@@ -544,8 +558,8 @@ impl Jvm {
         }
     }
 
-    pub async fn array_raw_buffer(&self, array: &Box<dyn ClassInstance>) -> Result<Box<dyn ArrayRawBuffer>> {
-        let array = array.as_array_instance();
+    pub async fn array_raw_buffer(&self, array: &(impl AsClassInstance + Sync + ?Sized)) -> Result<Box<dyn ArrayRawBuffer>> {
+        let array = array.as_class_instance().as_array_instance();
 
         if let Some(array) = array {
             array.raw_buffer()
@@ -564,7 +578,8 @@ impl Jvm {
         }
     }
 
-    pub async fn array_length(&self, array: &Box<dyn ClassInstance>) -> Result<usize> {
+    pub async fn array_length(&self, array: &(impl AsClassInstance + Sync + ?Sized)) -> Result<usize> {
+        let array = array.as_class_instance();
         tracing::trace!("Get array length {}", array.class_definition().name());
 
         let array = array.as_array_instance();
@@ -576,7 +591,8 @@ impl Jvm {
         }
     }
 
-    pub async fn array_element_type(&self, array: &Box<dyn ClassInstance>) -> Result<JavaType> {
+    pub async fn array_element_type(&self, array: &(impl AsClassInstance + Sync + ?Sized)) -> Result<JavaType> {
+        let array = array.as_class_instance();
         tracing::trace!("Get array element type {}", array.class_definition().name());
 
         let array = array.as_array_instance();
@@ -602,8 +618,8 @@ impl Jvm {
         Ok(())
     }
 
-    pub fn shallow_clone(&self, instance: &Box<dyn ClassInstance>) -> Result<Box<dyn ClassInstance>> {
-        let cloned = instance.shallow_clone()?;
+    pub fn shallow_clone(&self, instance: &(impl AsClassInstance + ?Sized)) -> Result<Box<dyn ClassInstance>> {
+        let cloned = instance.as_class_instance().shallow_clone()?;
         let thread_id = (self.inner.get_current_thread_id)();
         self.inner
             .threads
@@ -734,7 +750,8 @@ impl Jvm {
         Ok(())
     }
 
-    pub async fn is_java_thread_interrupted(&self, thread: &Box<dyn ClassInstance>) -> Result<bool> {
+    pub async fn is_java_thread_interrupted(&self, thread: &(impl AsClassInstance + Sync + ?Sized)) -> Result<bool> {
+        let thread = thread.as_class_instance();
         // The Thread prototype guarantees this field, so avoid the async field API's impossible NoSuchFieldError path.
         let field = self.find_field(&*thread.class_definition(), "interrupted", "Z")?.unwrap();
         let identity = thread.identity();

@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::{Object, String};
 
 use test_utils::test_jvm;
@@ -9,7 +9,7 @@ async fn test_attribute_get_set() -> Result<()> {
 
     let attributes = jvm.new_class("java/util/jar/Attributes", "()V", ()).await?;
     assert!(jvm.is_instance(&*attributes, "java/util/Map"));
-    let entries = jvm
+    let entries: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&attributes, "java/util/Map", "entrySet", "()Ljava/util/Set;", ())
         .await?;
     let size: i32 = jvm.invoke_virtual(&entries, "java/util/Set", "size", "()I", ()).await?;
@@ -57,10 +57,10 @@ async fn test_attribute_get_set() -> Result<()> {
     let size: i32 = jvm.invoke_virtual(&entries, "java/util/Set", "size", "()I", ()).await?;
     assert_eq!(size, 1);
 
-    let iterator = jvm
+    let iterator: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&entries, "java/util/Set", "iterator", "()Ljava/util/Iterator;", ())
         .await?;
-    let entry = jvm
+    let entry: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&iterator, "java/util/Iterator", "next", "()Ljava/lang/Object;", ())
         .await?;
     let key: ClassInstanceRef<Object> = jvm
@@ -127,10 +127,10 @@ async fn test_attributes_map_operations() -> Result<()> {
     let attributes = jvm.new_class("java/util/jar/Attributes", "()V", ()).await?;
     let empty: bool = jvm.invoke_virtual(&attributes, "java/util/Map", "isEmpty", "()Z", ()).await?;
     assert!(empty);
-    let keys = jvm
+    let keys: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&attributes, "java/util/Map", "keySet", "()Ljava/util/Set;", ())
         .await?;
-    let values = jvm
+    let values: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&attributes, "java/util/Map", "values", "()Ljava/util/Collection;", ())
         .await?;
     let spelling = JavaLangString::from_rust_string(&jvm, "Name").await?;

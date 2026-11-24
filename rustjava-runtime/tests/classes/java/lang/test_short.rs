@@ -1,4 +1,4 @@
-use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::String;
 
 use test_utils::test_jvm;
@@ -50,7 +50,7 @@ async fn test_short_api() -> Result<()> {
     let max = jvm.get_static_field::<i16>("java/lang/Short", "MAX_VALUE", "S").await?;
     assert_eq!((min, max), (i16::MIN, i16::MAX));
     let name = JavaLangString::from_rust_string(&jvm, "077").await?;
-    let decoded = jvm
+    let decoded: Box<dyn ClassInstance> = jvm
         .invoke_static("java/lang/Short", "decode", "(Ljava/lang/String;)Ljava/lang/Short;", (name,))
         .await?;
     assert_eq!(
@@ -131,7 +131,7 @@ async fn test_short_api() -> Result<()> {
 
     for (text, expected) in [("#7fff", i16::MAX), ("077777", i16::MAX)] {
         let text = JavaLangString::from_rust_string(&jvm, text).await?;
-        let decoded = jvm
+        let decoded: Box<dyn ClassInstance> = jvm
             .invoke_static("java/lang/Short", "decode", "(Ljava/lang/String;)Ljava/lang/Short;", (text,))
             .await?;
         assert_eq!(
@@ -141,7 +141,7 @@ async fn test_short_api() -> Result<()> {
         );
     }
 
-    let typ = jvm.get_static_field("java/lang/Short", "TYPE", "Ljava/lang/Class;").await?;
+    let typ: Box<dyn ClassInstance> = jvm.get_static_field("java/lang/Short", "TYPE", "Ljava/lang/Class;").await?;
     let type_name: ClassInstanceRef<String> = jvm
         .invoke_virtual(&typ, &typ.class_definition().name(), "getName", "()Ljava/lang/String;", ())
         .await?;

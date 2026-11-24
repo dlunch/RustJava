@@ -1,6 +1,6 @@
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -295,7 +295,7 @@ impl Calendar {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "calendar field").await);
         }
 
-        let fields = jvm.get_field(&this, "java/util/Calendar", "fields", "[I").await?;
+        let fields: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/Calendar", "fields", "[I").await?;
         let value = jvm.load_array(&fields, field as usize, 1).await?[0];
 
         Ok(value)

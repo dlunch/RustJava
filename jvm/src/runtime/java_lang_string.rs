@@ -7,7 +7,7 @@ pub struct JavaLangString;
 impl JavaLangString {
     #[allow(clippy::borrowed_box)]
     pub async fn to_utf16(jvm: &Jvm, this: &Box<dyn ClassInstance>) -> Result<Vec<JavaChar>> {
-        let value = jvm.get_field(this, "java/lang/String", "value", "[C").await?;
+        let value: Box<dyn ClassInstance> = jvm.get_field(this, "java/lang/String", "value", "[C").await?;
         let offset: i32 = jvm.get_field(this, "java/lang/String", "offset", "I").await?;
         let count: i32 = jvm.get_field(this, "java/lang/String", "count", "I").await?;
 

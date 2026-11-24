@@ -1,6 +1,6 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -157,7 +157,7 @@ impl ArrayList {
             return Err(Self::index_out_of_bounds(jvm, index, size).await);
         }
 
-        let element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let element: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
 
         Ok(element)
@@ -254,7 +254,7 @@ impl ArrayList {
         tracing::debug!("java.util.ArrayList::indexOf({this:?}, {element:?})");
 
         let size: i32 = jvm.get_field(&this, "java/util/ArrayList", "size", "I").await?;
-        let element_data = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
 
         for index in 0..size {
             let item: ClassInstanceRef<Object> = jvm.load_array(&element_data, index as usize, 1).await?.into_iter().next().unwrap();
@@ -311,7 +311,7 @@ impl ArrayList {
     }
 
     async fn ensure_capacity(jvm: &Jvm, this: &mut ClassInstanceRef<Self>, min_capacity: usize) -> Result<()> {
-        let element_data = jvm.get_field(this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
+        let element_data: Box<dyn ClassInstance> = jvm.get_field(this, "java/util/ArrayList", "elementData", "[Ljava/lang/Object;").await?;
         let current_capacity = jvm.array_length(&element_data).await?;
 
         if min_capacity <= current_capacity {

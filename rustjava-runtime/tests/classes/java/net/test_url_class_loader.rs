@@ -1,7 +1,7 @@
 use alloc::vec;
 use std::io::{Cursor, Write};
 
-use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::{lang::Class, net::URL};
 use zip::{ZipWriter, write::SimpleFileOptions};
 
@@ -70,7 +70,7 @@ async fn test_jar_loading() -> Result<()> {
         .await?;
     assert!(!resource.is_null());
 
-    let stream = jvm
+    let stream: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &resource,
             &resource.class_definition().name(),
@@ -109,7 +109,7 @@ async fn test_jar_loading_with_slash() -> Result<()> {
         .await?;
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "/test.txt").await?;
-    let stream = jvm
+    let stream: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &class_loader,
             &class_loader.class_definition().name(),
@@ -169,7 +169,7 @@ async fn test_load_from_dir() -> Result<()> {
     assert_eq!(runtime.open_file_count(), 0);
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "\u{c790}\u{b8cc} +%20#.txt").await?;
-    let resource = jvm
+    let resource: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &class_loader,
             &class_loader.class_definition().name(),
@@ -179,7 +179,7 @@ async fn test_load_from_dir() -> Result<()> {
         )
         .await?;
 
-    let stream = jvm
+    let stream: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &resource,
             &resource.class_definition().name(),

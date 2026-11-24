@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{Result, runtime::JavaLangString};
+use jvm::{ClassInstance, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm_filesystem;
 
@@ -27,7 +27,7 @@ async fn test_file_url() -> Result<()> {
     let url_spec = JavaLangString::from_rust_string(&jvm, "file:test.txt").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_spec,)).await?;
 
-    let stream = jvm
+    let stream: Box<dyn ClassInstance> = jvm
         .invoke_virtual(&url, &url.class_definition().name(), "openStream", "()Ljava/io/InputStream;", ())
         .await?;
 

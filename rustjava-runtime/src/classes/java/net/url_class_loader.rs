@@ -1,7 +1,7 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use jvm::{
-    Array, ClassInstanceRef, Jvm, Result,
+    Array, ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
 };
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
@@ -146,7 +146,7 @@ impl URLClassLoader {
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
 
-        let urls = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
+        let urls: Box<dyn ClassInstance> = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
 
         for url in urls {

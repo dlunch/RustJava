@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, collections::BTreeMap, vec};
 
-use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
 use jvm_bytecode::ClassDefinitionImpl;
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
@@ -229,7 +229,7 @@ async fn test_thread_jdk12_metadata_name_interrupt_and_daemon_state() -> Result<
             .await?
     );
 
-    let current = jvm.invoke_static("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", ()).await?;
+    let current: Box<dyn ClassInstance> = jvm.invoke_static("java/lang/Thread", "currentThread", "()Ljava/lang/Thread;", ()).await?;
     let _: () = jvm
         .invoke_virtual(&current, &current.class_definition().name(), "interrupt", "()V", ())
         .await?;

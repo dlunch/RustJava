@@ -1,6 +1,6 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
-use jvm::{Array, ClassInstanceRef, Jvm, Result};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -110,7 +110,7 @@ impl HashMapHashIterator {
         if entry.is_null() {
             return Err(jvm.exception("java/lang/IllegalStateException", "No entry to remove").await);
         }
-        let map = jvm
+        let map: Box<dyn ClassInstance> = jvm
             .get_field(&this, "java/util/HashMap$HashIterator", "map", "Ljava/util/HashMap;")
             .await?;
         let key: ClassInstanceRef<Object> = jvm.get_field(&entry, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?;

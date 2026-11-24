@@ -1,8 +1,8 @@
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
 use jiff::{Timestamp, civil, tz::Offset};
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
@@ -62,7 +62,7 @@ impl GregorianCalendar {
 
         // fields -> time
 
-        let fields = jvm.get_field(&this, "java/util/GregorianCalendar", "fields", "[I").await?;
+        let fields: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/GregorianCalendar", "fields", "[I").await?;
 
         // TODO constant
         let fields: Vec<i32> = jvm.load_array(&fields, 0, 17).await?;

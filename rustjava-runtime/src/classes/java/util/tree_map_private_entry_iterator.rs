@@ -1,6 +1,6 @@
 use alloc::vec;
 
-use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm::{AsClassInstance, ClassInstanceRef, Jvm, Result};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -132,21 +132,36 @@ impl TreeMapPrivateEntryIterator {
 
     pub(super) async fn next_entry<T>(jvm: &Jvm, mut this: ClassInstanceRef<T>) -> Result<ClassInstanceRef<TreeMapEntry>> {
         let next: ClassInstanceRef<TreeMapEntry> = jvm
-            .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "next", "Ljava/util/TreeMap$Entry;")
+            .get_field(
+                this.as_class_instance(),
+                "java/util/TreeMap$PrivateEntryIterator",
+                "next",
+                "Ljava/util/TreeMap$Entry;",
+            )
             .await?;
         if next.is_null() {
             return Err(jvm.exception("java/util/NoSuchElementException", "TreeMap iterator exhausted").await);
         }
         if !jvm
-            .get_field::<bool>(&this, "java/util/TreeMap$PrivateEntryIterator", "toEnd", "Z")
+            .get_field::<bool>(this.as_class_instance(), "java/util/TreeMap$PrivateEntryIterator", "toEnd", "Z")
             .await?
         {
             let map: ClassInstanceRef<TreeMap> = jvm
-                .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "map", "Ljava/util/TreeMap;")
+                .get_field(
+                    this.as_class_instance(),
+                    "java/util/TreeMap$PrivateEntryIterator",
+                    "map",
+                    "Ljava/util/TreeMap;",
+                )
                 .await?;
             let key: ClassInstanceRef<Object> = jvm.get_field(&next, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
             let upper: ClassInstanceRef<Object> = jvm
-                .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "upper", "Ljava/lang/Object;")
+                .get_field(
+                    this.as_class_instance(),
+                    "java/util/TreeMap$PrivateEntryIterator",
+                    "upper",
+                    "Ljava/lang/Object;",
+                )
                 .await?;
             if TreeMap::compare(jvm, &map, &key, &upper).await? >= 0 {
                 return Err(jvm.exception("java/util/NoSuchElementException", "TreeMap iterator exhausted").await);

@@ -1,7 +1,7 @@
 use alloc::vec;
 use core::cmp::Ordering;
 
-use jvm::{Array, ClassInstanceRef, JavaChar, JavaValue, Jvm, Result};
+use jvm::{Array, AsClassInstance, ClassInstanceRef, JavaChar, JavaValue, Jvm, Result};
 use jvm_class_proto::JavaMethodProto;
 use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 
@@ -370,7 +370,7 @@ impl Arrays {
         if from_index > to_index {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "fromIndex > toIndex").await);
         }
-        let length = jvm.array_length(array).await?;
+        let length = jvm.array_length(array.as_class_instance()).await?;
         if from_index < 0 || to_index < 0 || to_index as usize > length {
             return Err(jvm.exception("java/lang/ArrayIndexOutOfBoundsException", "array range").await);
         }
@@ -382,7 +382,7 @@ impl Arrays {
         T: From<JavaValue> + Into<JavaValue> + Send,
         F: FnMut(&T, &T) -> Ordering + Send,
     {
-        let mut values = jvm.load_array::<T>(&array, from_index, to_index - from_index).await?;
+        let mut values = jvm.load_array::<T>(array.as_class_instance(), from_index, to_index - from_index).await?;
         values.sort_by(|left, right| compare(left, right));
         if !values.is_empty() {
             jvm.store_array(&mut array, from_index, values).await?;

@@ -1,4 +1,4 @@
-use jvm::{Result, runtime::JavaLangString};
+use jvm::{ClassInstance, Result, runtime::JavaLangString};
 
 use test_utils::test_jvm;
 
@@ -11,7 +11,7 @@ async fn test_jar_filename() -> Result<()> {
 
     let connection = jvm.new_class("org/rustjava/net/JarURLConnection", "(Ljava/net/URL;)V", (url,)).await?;
 
-    let jar_file_url = jvm
+    let jar_file_url: Box<dyn ClassInstance> = jvm
         .invoke_virtual(
             &connection,
             &connection.class_definition().name(),
