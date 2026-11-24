@@ -34,6 +34,51 @@ async fn test_arraycopy_rejects_null_arrays() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_arraycopy_checks_types_and_preserves_the_copied_prefix() -> Result<()> {
+    let jvm = create_test_jvm(TestRuntime::new(BTreeMap::new())).await?;
+    let descriptor = "(Ljava/lang/Object;ILjava/lang/Object;II)V";
+    let bytes = jvm.instantiate_array("B", 1).await?;
+    let ints = jvm.instantiate_array("I", 1).await?;
+    let object = jvm.new_class("java/lang/Object", "()V", ()).await?;
+    for source in [bytes, object.clone()] {
+        let result: Result<()> = jvm
+            .invoke_static("java/lang/System", "arraycopy", descriptor, (source, -1, ints.clone(), 0, 0))
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("an incompatible source must fail even for an empty range");
+        };
+        assert!(jvm.is_instance(&*exception, "java/lang/ArrayStoreException"));
+    }
+
+    let string = JavaLangString::from_rust_string(&jvm, "copied").await?;
+    let mut source = jvm.instantiate_array("Ljava/lang/Object;", 3).await?;
+    jvm.store_array(&mut source, 0, [string.clone(), object, string.clone()]).await?;
+    let destination = jvm.instantiate_array("Ljava/lang/String;", 3).await?;
+    for (offset, expected) in [(1, "java/lang/ArrayIndexOutOfBoundsException"), (0, "java/lang/ArrayStoreException")] {
+        let result: Result<()> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "arraycopy",
+                descriptor,
+                (source.clone(), 0, destination.clone(), offset, 3),
+            )
+            .await;
+        let Err(JavaError::JavaException(exception)) = result else {
+            panic!("copy must throw {expected}");
+        };
+        assert!(jvm.is_instance(&*exception, expected));
+        let values: Vec<ClassInstanceRef<String>> = jvm.load_array(&destination, 0, 3).await?;
+        if offset == 0 {
+            assert_eq!(values[0].identity(), string.identity());
+        } else {
+            assert!(values[0].is_null());
+        }
+        assert!(values[1].is_null() && values[2].is_null());
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_system_time_yield_and_exit_runtime_contract() -> Result<()> {
     let runtime = TestRuntime::new(BTreeMap::new());
     let jvm = create_test_jvm(runtime.clone()).await?;
