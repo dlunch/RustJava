@@ -4,7 +4,7 @@ mod runtime;
 
 use std::{env, io::Write, path::Path};
 
-use jvm::{JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
+use jvm::{ClassInstance, JavaError, JavaValue, Jvm, Result, runtime::JavaLangString};
 use rustjava_runtime::{Runtime, get_bootstrap_class_loader};
 
 use runtime::RuntimeImpl;
@@ -109,9 +109,12 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (filename,)).await?;
     let jar_file = jvm.new_class("java/util/jar/JarFile", "(Ljava/io/File;)V", (file,)).await?;
 
-    let manifest = jvm
+    let manifest: Option<Box<dyn ClassInstance>> = jvm
         .invoke_virtual(&jar_file, "java/util/jar/JarFile", "getManifest", "()Ljava/util/jar/Manifest;", ())
         .await?;
+    let Some(manifest) = manifest else {
+        return Err(jvm.exception("java/io/IOException", "JAR has no manifest").await);
+    };
     let attributes = jvm
         .invoke_virtual(
             &manifest,
@@ -122,7 +125,7 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
         )
         .await?;
 
-    let main_class = jvm
+    let main_class: Option<Box<dyn ClassInstance>> = jvm
         .invoke_virtual(
             &attributes,
             "java/util/jar/Attributes",
@@ -132,7 +135,11 @@ async fn get_jar_main_class(jvm: &Jvm, jar_path: &Path) -> Result<String> {
         )
         .await?;
 
-    JavaLangString::to_rust_string(jvm, &main_class).await
+    let Some(main_class) = main_class else {
+        return Err(jvm.exception("java/io/IOException", "JAR has no Main-Class attribute").await);
+    };
+    let name = JavaLangString::to_rust_string(jvm, &main_class).await?;
+    Ok(name.trim_matches(|ch| ch <= ' ').to_owned())
 }
 
 #[cfg(test)]
