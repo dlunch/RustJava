@@ -5,7 +5,7 @@ use jvm::{ClassInstanceRef, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::{lang::Class, net::URL};
 use zip::{ZipWriter, write::SimpleFileOptions};
 
-use test_utils::test_jvm_filesystem;
+use test_utils::{TestRuntime, create_test_jvm, test_jvm_filesystem};
 
 #[tokio::test]
 async fn test_null_inputs() -> Result<()> {
@@ -134,10 +134,17 @@ async fn test_jar_loading_with_slash() -> Result<()> {
 
 #[tokio::test]
 async fn test_load_from_dir() -> Result<()> {
-    let filesystem = [("\u{d55c}\u{ae00} +%20#/\u{c790}\u{b8cc} +%20#.txt".into(), b"test content\n".to_vec())]
-        .into_iter()
-        .collect();
-    let jvm = test_jvm_filesystem(filesystem).await?;
+    let filesystem = [
+        ("\u{d55c}\u{ae00} +%20#/\u{c790}\u{b8cc} +%20#.txt".into(), b"test content\n".to_vec()),
+        (
+            "\u{d55c}\u{ae00} +%20#/Hello.class".into(),
+            include_bytes!("../../../../../test-data/Hello.class").to_vec(),
+        ),
+    ]
+    .into_iter()
+    .collect();
+    let runtime = TestRuntime::new(filesystem);
+    let jvm = create_test_jvm(runtime.clone()).await?;
 
     let url_str = JavaLangString::from_rust_string(&jvm, "file:%ED%95%9C%EA%B8%80%20+%2520%23/").await?;
     let url = jvm.new_class("java/net/URL", "(Ljava/lang/String;)V", (url_str,)).await?;
@@ -147,6 +154,19 @@ async fn test_load_from_dir() -> Result<()> {
     let class_loader = jvm
         .new_class("java/net/URLClassLoader", "([Ljava/net/URL;Ljava/lang/ClassLoader;)V", (urls, None))
         .await?;
+
+    let name = JavaLangString::from_rust_string(&jvm, "Hello").await?;
+    let class: ClassInstanceRef<Class> = jvm
+        .invoke_virtual(
+            &class_loader,
+            "java/net/URLClassLoader",
+            "findClass",
+            "(Ljava/lang/String;)Ljava/lang/Class;",
+            (name,),
+        )
+        .await?;
+    assert!(!class.is_null());
+    assert_eq!(runtime.open_file_count(), 0);
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "\u{c790}\u{b8cc} +%20#.txt").await?;
     let resource = jvm
