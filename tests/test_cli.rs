@@ -124,6 +124,18 @@ fn cli_defaults_classpath_to_current_directory() {
 }
 
 #[test]
+fn cli_reports_missing_jar_launch_attributes() {
+    for (jar, error) in [
+        ("test-data/jar/no-manifest.jar", "JAR has no manifest"),
+        ("test-data/jar/no-main-class.jar", "JAR has no Main-Class attribute"),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_rust_java")).args(["-jar", jar]).output().unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(String::from_utf8(output.stderr).unwrap().contains(error));
+    }
+}
+
+#[test]
 fn cli_reports_missing_classpath_value() {
     let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
         .env_remove("CLASSPATH")

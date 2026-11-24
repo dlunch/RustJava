@@ -1,6 +1,10 @@
-use alloc::{vec, vec::Vec};
+use alloc::{borrow::Cow, string::String as RustString, vec};
+use core::iter;
 
-use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
+use jvm::{
+    ClassInstanceRef, JavaError, Jvm, Result,
+    runtime::{JavaIoInputStream, JavaLangString},
+};
 use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
 use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
 
@@ -48,31 +52,26 @@ impl Manifest {
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.util.jar.Manifest::read({this:?}, {is:?})");
 
-        // TODO we currently support only main attribute
-
         let main_attributes = jvm.new_class("java/util/jar/Attributes", "()V", ()).await?;
-
-        let reader = jvm.new_class("java/io/InputStreamReader", "(Ljava/io/InputStream;)V", (is,)).await?;
-        let buffered_reader = jvm.new_class("java/io/BufferedReader", "(Ljava/io/Reader;)V", (reader,)).await?;
-
-        loop {
-            let line: ClassInstanceRef<String> = jvm
-                .invoke_virtual(&buffered_reader, "java/io/BufferedReader", "readLine", "()Ljava/lang/String;", ())
-                .await?;
-            if line.is_null() {
+        if is.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "input stream is null").await);
+        }
+        let bytes = JavaIoInputStream::read_until_end(jvm, &is).await?;
+        let mut lines = manifest_lines(&bytes).peekable();
+        while let Some(line) = lines.next() {
+            if line.is_empty() {
                 break;
             }
-
-            let line = JavaLangString::to_rust_string(jvm, &line).await?;
-
-            if line.trim().is_empty() {
-                continue;
+            let Some(separator) = line.windows(2).position(|pair| pair == b": ") else {
+                return Err(jvm.exception("java/io/IOException", "invalid manifest header").await);
+            };
+            let key = JavaLangString::from_rust_string(jvm, &RustString::from_utf8_lossy(&line[..separator])).await?;
+            let mut value = Cow::Borrowed(&line[separator + 2..]);
+            // A continuation can split a UTF-8 character across physical lines.
+            while let Some(continuation) = lines.next_if(|line| line.starts_with(b" ")) {
+                value.to_mut().extend_from_slice(&continuation[1..]);
             }
-
-            let parts = line.splitn(2, ':').collect::<Vec<_>>();
-
-            let key = JavaLangString::from_rust_string(jvm, parts[0].trim()).await?;
-            let value = JavaLangString::from_rust_string(jvm, parts[1].trim()).await?;
+            let value = JavaLangString::from_rust_string(jvm, &RustString::from_utf8_lossy(&value)).await?;
 
             let result: Result<ClassInstanceRef<String>> = jvm
                 .invoke_virtual(
@@ -111,4 +110,19 @@ impl Manifest {
         jvm.get_field(&this, "java/util/jar/Manifest", "attrs", "Ljava/util/jar/Attributes;")
             .await
     }
+}
+
+fn manifest_lines(mut bytes: &[u8]) -> impl Iterator<Item = &[u8]> {
+    iter::from_fn(move || {
+        if bytes.is_empty() {
+            return None;
+        }
+        let end = bytes.iter().position(|b| matches!(b, b'\r' | b'\n')).unwrap_or(bytes.len());
+        let (line, rest) = bytes.split_at(end);
+        bytes = match rest {
+            [b'\r', b'\n', rest @ ..] | [_, rest @ ..] => rest,
+            [] => &[],
+        };
+        Some(line)
+    })
 }
