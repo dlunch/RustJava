@@ -133,3 +133,10 @@ fn cli_reports_missing_classpath_value() {
     assert!(!output.status.success());
     assert!(String::from_utf8(output.stderr).unwrap().contains("Missing class path after -cp"));
 }
+
+#[test]
+fn cli_reports_an_empty_main_class_name() {
+    let output = Command::new(env!("CARGO_BIN_EXE_rust_java")).arg("").output().unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8(output.stderr).unwrap().contains("java.lang.ClassNotFoundException"));
+}
