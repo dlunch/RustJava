@@ -46,7 +46,7 @@ fn test_hello() {
         assert!(matches!(&x.code[0],
             (0, Opcode::Getstatic(ConstantPoolReference::Field(x))) if x.class == "java/lang/System".to_string().into() && x.name == "out".to_string().into() && x.descriptor == "Ljava/io/PrintStream;".to_string().into()));
         assert!(matches!(&x.code[1],
-            (3, Opcode::Ldc(x)) if matches!(x, ConstantPoolReference::String(y) if *y == "Hello, world!".to_string().into())));
+            (3, Opcode::Ldc(ConstantPoolReference::String(units))) if units.iter().copied().eq("Hello, world!".encode_utf16())));
         assert!(matches!(&x.code[2],
             (5, Opcode::Invokevirtual(ConstantPoolReference::Method(x))) if x.class == "java/io/PrintStream".to_string().into() && x.name == "println".to_string().into() && x.descriptor == "(Ljava/lang/String;)V".to_string().into()));
         assert!(matches!(&x.code[3], (8, Opcode::Return)));

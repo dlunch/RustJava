@@ -9,10 +9,14 @@ use nom::{
     number::complete::{be_f32, be_f64, be_i32, be_i64, be_u16, u8},
 };
 
-fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
+fn parse_utf8(data: &[u8]) -> IResult<&[u8], ConstantPoolItem> {
     let (data, length) = be_u16(data)?;
     map_opt(take(length as usize), |utf8: &[u8]| {
-        modified_utf8::decode(utf8).map(|units| Arc::new(String::from_utf16_lossy(&units)))
+        let units = modified_utf8::decode(utf8)?;
+        Some(match String::from_utf16(&units) {
+            Ok(text) => ConstantPoolItem::Utf8(Arc::new(text)),
+            Err(_) => ConstantPoolItem::Utf8WithUnpairedSurrogates(units.into()),
+        })
     })
     .parse(data)
 }
@@ -20,6 +24,7 @@ fn parse_utf8(data: &[u8]) -> IResult<&[u8], Arc<String>> {
 #[derive(Debug)]
 pub enum ConstantPoolItem {
     Utf8(Arc<String>),
+    Utf8WithUnpairedSurrogates(Arc<[u16]>),
     Integer(i32),
     Float(f32),
     Long(i64),
@@ -35,10 +40,7 @@ pub enum ConstantPoolItem {
 impl ConstantPoolItem {
     fn parse_tagged(data: &[u8], tag: u8) -> IResult<&[u8], Self> {
         match tag {
-            1 => {
-                let (data, utf8) = parse_utf8(data)?;
-                Ok((data, Self::Utf8(utf8)))
-            }
+            1 => parse_utf8(data),
             3 => {
                 let (data, value) = be_i32(data)?;
                 Ok((data, Self::Integer(value)))
@@ -157,7 +159,11 @@ impl ConstantPoolItem {
     }
 
     pub fn utf8(&self) -> Option<Arc<String>> {
-        if let ConstantPoolItem::Utf8(x) = self { Some(x.clone()) } else { None }
+        match self {
+            Self::Utf8(text) => Some(text.clone()),
+            Self::Utf8WithUnpairedSurrogates(units) => Some(Arc::new(String::from_utf16_lossy(units))),
+            _ => None,
+        }
     }
 
     pub fn class_name_index(&self) -> Option<u16> {
@@ -187,7 +193,7 @@ pub enum ConstantPoolReference {
     Float(f32),
     Long(i64),
     Double(f64),
-    String(Arc<String>),
+    String(Arc<[u16]>),
     Class(Arc<String>),
     Method(FieldMethodref),
     InterfaceMethodref(FieldMethodref),
@@ -201,7 +207,11 @@ impl ConstantPoolReference {
             ConstantPoolItem::Float(x) => Some(Self::Float(*x)),
             ConstantPoolItem::Long(x) => Some(Self::Long(*x)),
             ConstantPoolItem::Double(x) => Some(Self::Double(*x)),
-            ConstantPoolItem::String { string_index } => Some(Self::String(constant_pool.get(string_index)?.utf8()?)),
+            ConstantPoolItem::String { string_index } => match constant_pool.get(string_index)? {
+                ConstantPoolItem::Utf8(text) => Some(Self::String(text.encode_utf16().collect())),
+                ConstantPoolItem::Utf8WithUnpairedSurrogates(units) => Some(Self::String(units.clone())),
+                _ => None,
+            },
             ConstantPoolItem::Class { name_index } => Some(Self::Class(constant_pool.get(name_index)?.utf8()?)),
             ConstantPoolItem::Methodref {
                 class_index,
@@ -313,7 +323,7 @@ mod tests {
     fn utf8_constant_decodes_length_delimited_modified_utf8() {
         let (remaining, value) = parse_utf8(b"\x00\x0b\xc0\x80\xed\xa0\xbd\xed\xb0\x8d\xed\xa0\xbd\xff").unwrap();
 
-        assert_eq!(value.as_str(), "\0\u{1f40d}\u{fffd}");
+        assert!(matches!(value, ConstantPoolItem::Utf8WithUnpairedSurrogates(units) if *units == [0, 0xd83d, 0xdc0d, 0xd83d]));
         assert_eq!(remaining, b"\xff");
         assert!(parse_utf8(b"\x00\x04\xf0\x9f\x90\x8d").is_err());
     }

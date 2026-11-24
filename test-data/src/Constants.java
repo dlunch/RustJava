@@ -8,6 +8,7 @@ public class Constants {
     static final float F = 1.5f;
     static final double D = 2.5;
     static final String STR = "hello";
+    static final String UNPAIRED = "\uD800";
 
     public static void main(String[] args) {
         System.out.println(FLAG);

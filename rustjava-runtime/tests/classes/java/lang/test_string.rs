@@ -2355,7 +2355,7 @@ async fn test_empty_substring_behaves_like_empty_string() -> Result<()> {
     let interned: ClassInstanceRef<JavaString> = jvm
         .invoke_virtual(&mid_empty, "java/lang/String", "intern", "()Ljava/lang/String;", ())
         .await?;
-    let pooled = jvm.intern_string("").await?;
+    let pooled = jvm.intern_string(&[]).await?;
     assert_eq!(interned.identity(), ClassInstanceRef::<JavaString>::from(pooled).identity());
 
     Ok(())
