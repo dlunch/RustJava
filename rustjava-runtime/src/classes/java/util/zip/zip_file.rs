@@ -74,10 +74,18 @@ impl ZipFile {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
 
         let length: i64 = jvm.invoke_virtual(&file, "java/io/File", "length", "()J", ()).await?;
-        let is = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
-
         let buf = jvm.instantiate_array("B", length as _).await?;
-        let _: i32 = jvm.invoke_virtual(&is, "java/io/InputStream", "read", "([B)I", (buf.clone(),)).await?;
+        let is = jvm.new_class("java/io/FileInputStream", "(Ljava/io/File;)V", (file,)).await?;
+        let read: Result<()> = async {
+            let input = jvm
+                .new_class("java/io/DataInputStream", "(Ljava/io/InputStream;)V", (is.clone(),))
+                .await?;
+            jvm.invoke_virtual(&input, "java/io/DataInputStream", "readFully", "([B)V", (buf.clone(),))
+                .await
+        }
+        .await;
+        let closed: Result<()> = jvm.invoke_virtual(&is, "java/io/InputStream", "close", "()V", ()).await;
+        read.and(closed)?;
 
         jvm.put_field(&mut this, "java/util/zip/ZipFile", "zipData", "[B", buf).await?;
 

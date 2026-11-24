@@ -180,6 +180,10 @@ impl TestRuntime {
         (status != i64::MIN).then_some(status as i32)
     }
 
+    pub fn open_file_count(&self) -> usize {
+        self.file_table.lock().unwrap().len()
+    }
+
     fn register_file(&self, file: Box<dyn File>) -> FileDescriptorId {
         let fd = self.next_fd.fetch_add(1, Ordering::SeqCst);
         self.file_table.lock().unwrap().insert(fd, file);

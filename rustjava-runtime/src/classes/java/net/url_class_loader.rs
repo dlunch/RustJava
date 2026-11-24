@@ -110,7 +110,10 @@ impl URLClassLoader {
         let stream = jvm
             .invoke_virtual(&resource, "java/net/URL", "openStream", "()Ljava/io/InputStream;", ())
             .await?;
-        let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await?;
+        let bytes = JavaIoInputStream::read_until_end(jvm, &stream).await;
+        let closed: Result<()> = jvm.invoke_virtual(&stream, "java/io/InputStream", "close", "()V", ()).await;
+        let bytes = bytes?;
+        closed?;
 
         let length = bytes.len() as i32;
         let mut bytes_java = jvm.instantiate_array("B", bytes.len()).await?;

@@ -3,17 +3,19 @@ use alloc::vec;
 use jvm::{ClassInstanceRef, JavaError, Result, runtime::JavaLangString};
 use rustjava_runtime::classes::java::lang::Object;
 
-use test_utils::test_jvm_filesystem;
+use test_utils::{TestRuntime, create_test_jvm, test_jvm_filesystem};
 
 #[tokio::test]
 async fn test_zip_entry() -> Result<()> {
     let jar = include_bytes!("../../../../../../test-data/test.jar");
     let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
-    let jvm = test_jvm_filesystem(filesystem).await?;
+    let runtime = TestRuntime::new(filesystem);
+    let jvm = create_test_jvm(runtime.clone()).await?;
 
     let name = JavaLangString::from_rust_string(&jvm, "test.jar").await?;
     let file = jvm.new_class("java/io/File", "(Ljava/lang/String;)V", (name,)).await?;
     let zip = jvm.new_class("java/util/zip/ZipFile", "(Ljava/io/File;)V", (file,)).await?;
+    assert_eq!(runtime.open_file_count(), 0);
 
     for (method, descriptor) in [
         ("getEntry", "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;"),
