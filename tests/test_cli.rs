@@ -40,11 +40,11 @@ fn cli_classpath_options_load_classes_from_directories_and_jars() {
         .env_remove("CLASSPATH")
         .arg("-cp")
         .arg(class_path)
-        .arg("Hello")
+        .arg("launcher.PackagedMain")
         .output()
         .unwrap();
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "Hello, world!\n");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "launcher.PackagedMain\n");
 
     let output = Command::new(env!("CARGO_BIN_EXE_rust_java"))
         .env_remove("CLASSPATH")

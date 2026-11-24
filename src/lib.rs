@@ -81,7 +81,12 @@ where
 {
     let main_class_name = match start_type {
         StartType::Jar(x) => &get_jar_main_class(jvm, x).await?,
-        StartType::Class(x) => x.file_stem().unwrap().to_str().unwrap(),
+        StartType::Class(path) => {
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                return Err(jvm.exception("java/lang/ClassNotFoundException", &path.to_string_lossy()).await);
+            };
+            name.strip_suffix(".class").unwrap_or(name)
+        }
     };
 
     let mut java_args = Vec::with_capacity(args.len());
