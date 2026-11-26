@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Hashtable$Entry
-#[java_class(name = "java/util/Hashtable$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"))]
+#[java_class(name = "java/util/Hashtable$Entry", implements("java/util/Map$Entry"))]
 pub struct HashtableEntry {
     #[field(final)]
     hash: i32,

@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // abstract class java.io.InputStream
-#[java_class(name = "java/io/InputStream", extends = "java/lang/Object", abstract)]
+#[java_class(name = "java/io/InputStream", abstract)]
 pub struct InputStream;
 
 #[java_methods]

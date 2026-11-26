@@ -6,7 +6,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::util::TimerTask};
 
 // class java.util.Timer$TaskQueue
-#[java_class(name = "java/util/Timer$TaskQueue", extends = "java/lang/Object")]
+#[java_class(name = "java/util/Timer$TaskQueue")]
 pub struct TimerTaskQueue {
     #[field(private)]
     queue: ClassInstanceRef<Array<TimerTask>>,

@@ -9,12 +9,7 @@ use crate::{
 use super::Level;
 
 // public class java.util.logging.LogRecord
-#[java_class(
-    name = "java/util/logging/LogRecord",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable"),
-    public
-)]
+#[java_class(name = "java/util/logging/LogRecord", implements("java/io/Serializable"), public)]
 pub struct LogRecord {
     #[field(private, static)]
     nextSequenceNumber: i64,

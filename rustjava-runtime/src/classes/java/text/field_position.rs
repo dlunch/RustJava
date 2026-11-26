@@ -9,7 +9,7 @@ use crate::{
 };
 
 // public class java.text.FieldPosition
-#[java_class(name = "java/text/FieldPosition", extends = "java/lang/Object", public)]
+#[java_class(name = "java/text/FieldPosition", public)]
 pub struct FieldPosition {
     #[field(private)]
     field: i32,

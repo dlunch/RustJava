@@ -9,7 +9,7 @@ use crate::{
 };
 
 // class java.util.jar.Attributes$Name
-#[java_class(name = "java/util/jar/Attributes$Name", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/jar/Attributes$Name", public)]
 pub struct AttributesName {
     #[field(private, final)]
     name: ClassInstanceRef<String>,

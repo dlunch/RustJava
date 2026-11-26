@@ -14,7 +14,7 @@ use crate::{
 };
 
 // abstract class java.net.URLStreamHandler
-#[java_class(name = "java/net/URLStreamHandler", extends = "java/lang/Object", abstract)]
+#[java_class(name = "java/net/URLStreamHandler", abstract)]
 pub struct URLStreamHandler;
 
 #[java_methods]

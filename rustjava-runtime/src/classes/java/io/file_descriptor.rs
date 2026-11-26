@@ -6,7 +6,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // class java.io.FileDescriptor
-#[java_class(name = "java/io/FileDescriptor", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/io/FileDescriptor", public, final)]
 pub struct FileDescriptor {
     #[field(private)]
     fd: i32,

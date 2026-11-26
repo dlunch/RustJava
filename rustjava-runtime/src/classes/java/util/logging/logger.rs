@@ -15,7 +15,7 @@ use crate::{
 };
 
 // public class java.util.logging.Logger
-#[java_class(name = "java/util/logging/Logger", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/logging/Logger", public)]
 pub struct Logger {
     #[field(public, static, final)]
     global: ClassInstanceRef<Self>,

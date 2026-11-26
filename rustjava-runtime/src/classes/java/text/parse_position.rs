@@ -9,7 +9,7 @@ use crate::{
 };
 
 // public class java.text.ParsePosition
-#[java_class(name = "java/text/ParsePosition", extends = "java/lang/Object", public)]
+#[java_class(name = "java/text/ParsePosition", public)]
 pub struct ParsePosition {
     #[field(private)]
     index: i32,

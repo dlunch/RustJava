@@ -18,7 +18,7 @@ enum MatchMode {
 }
 
 // public final class java.util.regex.Matcher
-#[java_class(name = "java/util/regex/Matcher", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/util/regex/Matcher", public, final)]
 pub struct Matcher {
     #[field(private, final)]
     parentPattern: ClassInstanceRef<Pattern>,

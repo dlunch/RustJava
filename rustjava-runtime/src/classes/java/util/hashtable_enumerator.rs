@@ -4,11 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Hashtable$Enumerator
-#[java_class(
-    name = "java/util/Hashtable$Enumerator",
-    extends = "java/lang/Object",
-    implements("java/util/Enumeration", "java/util/Iterator")
-)]
+#[java_class(name = "java/util/Hashtable$Enumerator", implements("java/util/Enumeration", "java/util/Iterator"))]
 pub struct HashtableEnumerator {
     #[field(private)]
     elements: ClassInstanceRef<Array<Object>>,

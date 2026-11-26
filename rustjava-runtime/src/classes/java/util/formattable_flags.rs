@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // public class java.util.FormattableFlags
-#[java_class(name = "java/util/FormattableFlags", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/FormattableFlags", public)]
 pub struct FormattableFlags {
     #[field(public, static, final)]
     LEFT_JUSTIFY: i32,

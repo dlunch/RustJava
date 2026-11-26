@@ -7,12 +7,7 @@ use crate::{
 };
 
 // public class java.util.logging.Level
-#[java_class(
-    name = "java/util/logging/Level",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable"),
-    public
-)]
+#[java_class(name = "java/util/logging/Level", implements("java/io/Serializable"), public)]
 pub struct Level {
     #[field(public, static, final)]
     OFF: ClassInstanceRef<Self>,

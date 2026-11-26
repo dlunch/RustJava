@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.lang.ref.Reference
-#[java_class(name = "java/lang/ref/Reference", extends = "java/lang/Object", public, abstract)]
+#[java_class(name = "java/lang/ref/Reference", public, abstract)]
 pub struct Reference {
     // the garbage collector does not trace this field and clears it once the referent is otherwise unreachable
     #[field(private)]

@@ -11,13 +11,7 @@ use crate::{
 };
 
 // class java.util.Locale
-#[java_class(
-    name = "java/util/Locale",
-    extends = "java/lang/Object",
-    implements("java/lang/Cloneable", "java/io/Serializable"),
-    public,
-    final
-)]
+#[java_class(name = "java/util/Locale", implements("java/lang/Cloneable", "java/io/Serializable"), public, final)]
 pub struct Locale {
     #[field(public, static, final)]
     ENGLISH: ClassInstanceRef<Self>,

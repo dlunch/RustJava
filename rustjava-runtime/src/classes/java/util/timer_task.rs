@@ -4,13 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.util.TimerTask
-#[java_class(
-    name = "java/util/TimerTask",
-    extends = "java/lang/Object",
-    implements("java/lang/Runnable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/util/TimerTask", implements("java/lang/Runnable"), public, abstract)]
 pub struct TimerTask {
     #[field(final)]
     lock: ClassInstanceRef<Object>,

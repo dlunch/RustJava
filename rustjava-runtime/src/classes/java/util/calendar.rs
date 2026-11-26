@@ -12,13 +12,7 @@ use crate::{
 };
 
 // abstract class java.util.Calendar
-#[java_class(
-    name = "java/util/Calendar",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable", "java/lang/Cloneable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/util/Calendar", implements("java/io/Serializable", "java/lang/Cloneable"), public, abstract)]
 pub struct Calendar {
     #[field(protected)]
     time: i64,

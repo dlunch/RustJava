@@ -7,7 +7,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // public final class java.util.Arrays
-#[java_class(name = "java/util/Arrays", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/util/Arrays", public, final)]
 pub struct Arrays;
 
 #[java_methods]

@@ -10,13 +10,7 @@ use crate::{
 };
 
 // public abstract class java.lang.Enum
-#[java_class(
-    name = "java/lang/Enum",
-    extends = "java/lang/Object",
-    implements("java/lang/Comparable", "java/io/Serializable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/lang/Enum", implements("java/lang/Comparable", "java/io/Serializable"), public, abstract)]
 pub struct Enum {
     #[field(private, final)]
     name: ClassInstanceRef<String>,

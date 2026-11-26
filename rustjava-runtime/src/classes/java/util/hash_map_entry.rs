@@ -6,7 +6,7 @@ use crate::{RuntimeContext, classes::java::lang::Object};
 use super::HashMap;
 
 // class java.util.HashMap$Entry
-#[java_class(name = "java/util/HashMap$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"))]
+#[java_class(name = "java/util/HashMap$Entry", implements("java/util/Map$Entry"))]
 pub struct HashMapEntry {
     #[field(final)]
     hash: i32,

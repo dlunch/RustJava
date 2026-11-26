@@ -7,7 +7,7 @@ use crate::{
 };
 
 // class java.util.Timer
-#[java_class(name = "java/util/Timer", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/Timer", public)]
 pub struct Timer {
     #[field(private, final)]
     thread: ClassInstanceRef<TimerThread>,

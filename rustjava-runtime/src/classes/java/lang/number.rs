@@ -4,13 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // abstract class java.lang.Number
-#[java_class(
-    name = "java/lang/Number",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/lang/Number", implements("java/io/Serializable"), public, abstract)]
 pub struct Number;
 
 #[java_methods]

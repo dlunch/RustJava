@@ -12,7 +12,7 @@ use crate::{
 use super::{Filter, Formatter, Level, LogRecord};
 
 // public abstract class java.util.logging.Handler
-#[java_class(name = "java/util/logging/Handler", extends = "java/lang/Object", public, abstract)]
+#[java_class(name = "java/util/logging/Handler", public, abstract)]
 pub struct Handler {
     #[field(private)]
     level: ClassInstanceRef<Level>,

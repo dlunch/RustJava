@@ -11,7 +11,7 @@ use crate::{
 use super::LogRecord;
 
 // public abstract class java.util.logging.Formatter
-#[java_class(name = "java/util/logging/Formatter", extends = "java/lang/Object", public, abstract)]
+#[java_class(name = "java/util/logging/Formatter", public, abstract)]
 pub struct Formatter;
 
 #[java_methods]

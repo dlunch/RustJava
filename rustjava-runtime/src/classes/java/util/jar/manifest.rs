@@ -13,7 +13,7 @@ use crate::{
 };
 
 // class java.util.jar.Manifest
-#[java_class(name = "java/util/jar/Manifest", extends = "java/lang/Object", implements("java/lang/Cloneable"), public)]
+#[java_class(name = "java/util/jar/Manifest", implements("java/lang/Cloneable"), public)]
 pub struct Manifest {
     #[field(private)]
     attrs: ClassInstanceRef<Attributes>,

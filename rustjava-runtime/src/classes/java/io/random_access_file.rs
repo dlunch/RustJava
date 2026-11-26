@@ -14,12 +14,7 @@ use crate::{
 };
 
 // class java.io.RandomAccessFile
-#[java_class(
-    name = "java/io/RandomAccessFile",
-    extends = "java/lang/Object",
-    implements("java/io/DataInput", "java/io/DataOutput"),
-    public
-)]
+#[java_class(name = "java/io/RandomAccessFile", implements("java/io/DataInput", "java/io/DataOutput"), public)]
 pub struct RandomAccessFile {
     #[field(private, final)]
     fd: ClassInstanceRef<FileDescriptor>,

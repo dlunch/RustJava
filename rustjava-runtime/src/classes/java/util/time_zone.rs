@@ -10,13 +10,7 @@ use crate::{
 };
 
 // abstract class java.util.TimeZone
-#[java_class(
-    name = "java/util/TimeZone",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable", "java/lang/Cloneable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/util/TimeZone", implements("java/io/Serializable", "java/lang/Cloneable"), public, abstract)]
 pub struct TimeZone {
     #[field(private)]
     ID: ClassInstanceRef<String>,

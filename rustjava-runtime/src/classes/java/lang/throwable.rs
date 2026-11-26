@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.lang.Throwable
-#[java_class(name = "java/lang/Throwable", extends = "java/lang/Object", implements("java/io/Serializable"), public)]
+#[java_class(name = "java/lang/Throwable", implements("java/io/Serializable"), public)]
 pub struct Throwable {
     #[field(private)]
     detailMessage: ClassInstanceRef<String>,

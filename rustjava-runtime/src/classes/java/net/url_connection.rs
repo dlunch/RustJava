@@ -7,7 +7,7 @@ use crate::{
 };
 
 // class java.net.URLConnection
-#[java_class(name = "java/net/URLConnection", extends = "java/lang/Object", public, abstract)]
+#[java_class(name = "java/net/URLConnection", public, abstract)]
 pub struct URLConnection {
     #[field(protected)]
     url: ClassInstanceRef<URL>,

@@ -6,7 +6,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // class java.lang.Runtime
-#[java_class(name = "java/lang/Runtime", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/lang/Runtime", public, final)]
 pub struct Runtime;
 
 #[java_methods]

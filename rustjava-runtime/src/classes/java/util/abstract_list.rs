@@ -235,7 +235,7 @@ impl AbstractList {
 }
 
 // class java.util.AbstractList$Itr
-#[java_class(name = "java/util/AbstractList$Itr", extends = "java/lang/Object", implements("java/util/Iterator"))]
+#[java_class(name = "java/util/AbstractList$Itr", implements("java/util/Iterator"))]
 pub struct AbstractListItr {
     #[field(private)]
     list: ClassInstanceRef<List>,

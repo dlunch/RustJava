@@ -20,7 +20,7 @@ use crate::{
 };
 
 // class java.util.zip.ZipFile
-#[java_class(name = "java/util/zip/ZipFile", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/zip/ZipFile", public)]
 pub struct ZipFile {
     #[field(private)]
     zipData: ClassInstanceRef<Array<i8>>,

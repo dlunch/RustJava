@@ -7,11 +7,7 @@ use crate::{
 };
 
 // class java.util.Collections$UnmodifiableMap$UnmodifiableEntrySet$1
-#[java_class(
-    name = "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$1",
-    extends = "java/lang/Object",
-    implements("java/util/Iterator")
-)]
+#[java_class(name = "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$1", implements("java/util/Iterator"))]
 pub struct CollectionsUnmodifiableMapEntrySetIterator {
     #[field(private, final)]
     i: ClassInstanceRef<Iterator>,

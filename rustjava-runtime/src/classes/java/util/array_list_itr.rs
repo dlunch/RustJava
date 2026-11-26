@@ -7,7 +7,7 @@ use crate::{
 };
 
 // class java.util.ArrayList$Itr
-#[java_class(name = "java/util/ArrayList$Itr", extends = "java/lang/Object", implements("java/util/Iterator"))]
+#[java_class(name = "java/util/ArrayList$Itr", implements("java/util/Iterator"))]
 pub struct ArrayListItr {
     #[field(private)]
     list: ClassInstanceRef<List>,

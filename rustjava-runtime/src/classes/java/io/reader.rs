@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.io.Reader
-#[java_class(name = "java/io/Reader", extends = "java/lang/Object", abstract)]
+#[java_class(name = "java/io/Reader", abstract)]
 pub struct Reader {
     #[field(protected)]
     lock: ClassInstanceRef<Object>,

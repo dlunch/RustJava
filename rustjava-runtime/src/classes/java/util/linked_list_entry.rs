@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.LinkedList$Entry
-#[java_class(name = "java/util/LinkedList$Entry", extends = "java/lang/Object")]
+#[java_class(name = "java/util/LinkedList$Entry")]
 pub struct LinkedListEntry {
     element: ClassInstanceRef<Object>,
     next: ClassInstanceRef<Self>,

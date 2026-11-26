@@ -16,7 +16,7 @@ use crate::{
 };
 
 // class java.lang.Class
-#[java_class(name = "java/lang/Class", extends = "java/lang/Object", implements("java/io/Serializable"), public, final)]
+#[java_class(name = "java/lang/Class", implements("java/io/Serializable"), public, final)]
 pub struct Class {
     // Stored as raw bytes instead of java/lang/String to avoid circular dependency:
     // from_rust_class -> JavaLangString::from_rust_string -> new_class("java/lang/String") -> from_rust_class -> stack overflow

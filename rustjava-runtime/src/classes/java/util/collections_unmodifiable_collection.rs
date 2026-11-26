@@ -9,7 +9,6 @@ use crate::{
 // class java.util.Collections$UnmodifiableCollection
 #[java_class(
     name = "java/util/Collections$UnmodifiableCollection",
-    extends = "java/lang/Object",
     implements("java/util/Collection", "java/io/Serializable")
 )]
 pub struct CollectionsUnmodifiableCollection {

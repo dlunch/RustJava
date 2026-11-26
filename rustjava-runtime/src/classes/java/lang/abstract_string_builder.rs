@@ -11,7 +11,6 @@ use crate::{
 // abstract class java.lang.AbstractStringBuilder
 #[java_class(
     name = "java/lang/AbstractStringBuilder",
-    extends = "java/lang/Object",
     implements("java/lang/Appendable", "java/lang/CharSequence"),
     abstract
 )]

@@ -4,13 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.util.AbstractMap
-#[java_class(
-    name = "java/util/AbstractMap",
-    extends = "java/lang/Object",
-    implements("java/util/Map"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/util/AbstractMap", implements("java/util/Map"), public, abstract)]
 pub struct AbstractMap;
 
 #[java_methods]

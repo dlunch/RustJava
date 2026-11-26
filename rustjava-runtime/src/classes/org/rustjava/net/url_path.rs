@@ -6,7 +6,7 @@ use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_enco
 
 use crate::{RuntimeContext, classes::java::lang::String};
 
-#[java_class(name = "org/rustjava/net/URLPath", extends = "java/lang/Object", public, final)]
+#[java_class(name = "org/rustjava/net/URLPath", public, final)]
 pub struct URLPath;
 
 #[java_methods]

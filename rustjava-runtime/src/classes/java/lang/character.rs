@@ -9,13 +9,7 @@ use crate::{
 };
 
 // public final class java.lang.Character
-#[java_class(
-    name = "java/lang/Character",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable", "java/lang/Comparable"),
-    public,
-    final
-)]
+#[java_class(name = "java/lang/Character", implements("java/io/Serializable", "java/lang/Comparable"), public, final)]
 pub struct Character {
     #[field(public, static, final)]
     MIN_VALUE: JavaChar,

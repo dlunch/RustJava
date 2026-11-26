@@ -7,7 +7,7 @@ use crate::{
 };
 
 // class java.util.LinkedList$ListItr
-#[java_class(name = "java/util/LinkedList$ListItr", extends = "java/lang/Object", implements("java/util/ListIterator"))]
+#[java_class(name = "java/util/LinkedList$ListItr", implements("java/util/ListIterator"))]
 pub struct LinkedListItr {
     #[field(private)]
     list: ClassInstanceRef<LinkedList>,

@@ -12,12 +12,7 @@ use crate::{
 };
 
 // class java.util.jar.Attributes
-#[java_class(
-    name = "java/util/jar/Attributes",
-    extends = "java/lang/Object",
-    implements("java/lang/Cloneable", "java/util/Map"),
-    public
-)]
+#[java_class(name = "java/util/jar/Attributes", implements("java/lang/Cloneable", "java/util/Map"), public)]
 pub struct Attributes {
     #[field(protected)]
     map: ClassInstanceRef<Map>,

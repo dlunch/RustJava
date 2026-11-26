@@ -10,7 +10,7 @@ use crate::{
 };
 
 // class java.lang.Thread
-#[java_class(name = "java/lang/Thread", extends = "java/lang/Object", implements("java/lang/Runnable"), public)]
+#[java_class(name = "java/lang/Thread", implements("java/lang/Runnable"), public)]
 pub struct Thread {
     #[field(public, static, final)]
     MIN_PRIORITY: i32,

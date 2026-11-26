@@ -9,7 +9,6 @@ use crate::{
 // abstract class java.io.Writer
 #[java_class(
     name = "java/io/Writer",
-    extends = "java/lang/Object",
     implements("java/lang/Appendable", "java/io/Closeable", "java/io/Flushable"),
     public,
     abstract

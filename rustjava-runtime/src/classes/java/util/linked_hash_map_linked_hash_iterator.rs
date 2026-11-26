@@ -6,12 +6,7 @@ use crate::{RuntimeContext, classes::java::lang::Object};
 use super::{LinkedHashMap, LinkedHashMapEntry};
 
 // abstract class java.util.LinkedHashMap$LinkedHashIterator
-#[java_class(
-    name = "java/util/LinkedHashMap$LinkedHashIterator",
-    extends = "java/lang/Object",
-    implements("java/util/Iterator"),
-    abstract
-)]
+#[java_class(name = "java/util/LinkedHashMap$LinkedHashIterator", implements("java/util/Iterator"), abstract)]
 pub struct LinkedHashMapLinkedHashIterator {
     #[field(private)]
     map: ClassInstanceRef<LinkedHashMap>,

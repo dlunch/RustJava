@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // abstract class java.util.Dictionary
-#[java_class(name = "java/util/Dictionary", extends = "java/lang/Object", abstract)]
+#[java_class(name = "java/util/Dictionary", abstract)]
 pub struct Dictionary;
 
 #[java_methods]

@@ -6,12 +6,7 @@ use crate::{RuntimeContext, classes::java::lang::Object};
 use super::{TreeMap, TreeMapEntry};
 
 // abstract class java.util.TreeMap$PrivateEntryIterator
-#[java_class(
-    name = "java/util/TreeMap$PrivateEntryIterator",
-    extends = "java/lang/Object",
-    implements("java/util/Iterator"),
-    abstract
-)]
+#[java_class(name = "java/util/TreeMap$PrivateEntryIterator", implements("java/util/Iterator"), abstract)]
 pub struct TreeMapPrivateEntryIterator {
     #[field(private)]
     map: ClassInstanceRef<TreeMap>,

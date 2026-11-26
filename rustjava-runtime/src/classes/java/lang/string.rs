@@ -25,7 +25,6 @@ use super::{CharSequence, StringBuffer};
 // class java.lang.String
 #[java_class(
     name = "java/lang/String",
-    extends = "java/lang/Object",
     implements("java/io/Serializable", "java/lang/Comparable", "java/lang/CharSequence"),
     public,
     final

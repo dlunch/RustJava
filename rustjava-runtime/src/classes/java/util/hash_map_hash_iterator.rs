@@ -8,12 +8,7 @@ use crate::{RuntimeContext, classes::java::lang::Object};
 use super::{HashMap, HashMapEntry};
 
 // abstract class java.util.HashMap$HashIterator
-#[java_class(
-    name = "java/util/HashMap$HashIterator",
-    extends = "java/lang/Object",
-    implements("java/util/Iterator"),
-    abstract
-)]
+#[java_class(name = "java/util/HashMap$HashIterator", implements("java/util/Iterator"), abstract)]
 pub struct HashMapHashIterator {
     #[field(private)]
     map: ClassInstanceRef<HashMap>,

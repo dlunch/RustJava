@@ -10,11 +10,7 @@ use crate::{
 };
 
 // class java.util.Collections$UnmodifiableMap
-#[java_class(
-    name = "java/util/Collections$UnmodifiableMap",
-    extends = "java/lang/Object",
-    implements("java/util/Map", "java/io/Serializable")
-)]
+#[java_class(name = "java/util/Collections$UnmodifiableMap", implements("java/util/Map", "java/io/Serializable"))]
 pub struct CollectionsUnmodifiableMap {
     #[field(private, final)]
     m: ClassInstanceRef<Map>,

@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.util.zip.ZipFile$Entries
-#[java_class(name = "java/util/zip/ZipFile$Entries", extends = "java/lang/Object", implements("java/util/Enumeration"))]
+#[java_class(name = "java/util/zip/ZipFile$Entries", implements("java/util/Enumeration"))]
 pub struct ZipFileEntries {
     #[field(private)]
     zipFile: ClassInstanceRef<ZipFile>,

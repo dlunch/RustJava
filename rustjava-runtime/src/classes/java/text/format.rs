@@ -10,13 +10,7 @@ use crate::{
 };
 
 // public abstract class java.text.Format
-#[java_class(
-    name = "java/text/Format",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable", "java/lang/Cloneable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/text/Format", implements("java/io/Serializable", "java/lang/Cloneable"), public, abstract)]
 pub struct Format;
 
 #[java_methods]

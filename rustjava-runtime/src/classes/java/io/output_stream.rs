@@ -6,13 +6,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // abstract class java.io.OutputStream
-#[java_class(
-    name = "java/io/OutputStream",
-    extends = "java/lang/Object",
-    implements("java/io/Closeable", "java/io/Flushable"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/io/OutputStream", implements("java/io/Closeable", "java/io/Flushable"), public, abstract)]
 pub struct OutputStream;
 
 #[java_methods]

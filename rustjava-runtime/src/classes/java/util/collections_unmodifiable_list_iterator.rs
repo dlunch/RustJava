@@ -7,11 +7,7 @@ use crate::{
 };
 
 // class java.util.Collections$UnmodifiableList$1
-#[java_class(
-    name = "java/util/Collections$UnmodifiableList$1",
-    extends = "java/lang/Object",
-    implements("java/util/ListIterator")
-)]
+#[java_class(name = "java/util/Collections$UnmodifiableList$1", implements("java/util/ListIterator"))]
 pub struct CollectionsUnmodifiableListIterator {
     #[field(private, final)]
     i: ClassInstanceRef<ListIterator>,

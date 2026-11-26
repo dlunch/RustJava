@@ -10,7 +10,7 @@ use crate::{
 };
 
 // class java.util.Collections
-#[java_class(name = "java/util/Collections", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/Collections", public)]
 pub struct Collections {
     #[field(public, static, final)]
     EMPTY_LIST: ClassInstanceRef<List>,

@@ -12,13 +12,7 @@ use crate::{
 use super::Matcher;
 
 // public final class java.util.regex.Pattern
-#[java_class(
-    name = "java/util/regex/Pattern",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable"),
-    public,
-    final
-)]
+#[java_class(name = "java/util/regex/Pattern", implements("java/io/Serializable"), public, final)]
 pub struct Pattern {
     #[field(public, static, final)]
     UNIX_LINES: i32,

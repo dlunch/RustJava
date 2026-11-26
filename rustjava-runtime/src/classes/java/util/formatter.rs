@@ -30,13 +30,7 @@ enum NumericKind {
 }
 
 // public final class java.util.Formatter
-#[java_class(
-    name = "java/util/Formatter",
-    extends = "java/lang/Object",
-    implements("java/io/Closeable", "java/io/Flushable"),
-    public,
-    final
-)]
+#[java_class(name = "java/util/Formatter", implements("java/io/Closeable", "java/io/Flushable"), public, final)]
 pub struct Formatter {
     #[field(private)]
     a: ClassInstanceRef<Appendable>,

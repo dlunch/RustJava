@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::RuntimeContext;
 
 // class java.util.Random
-#[java_class(name = "java/util/Random", extends = "java/lang/Object", implements("java/io/Serializable"), public)]
+#[java_class(name = "java/util/Random", implements("java/io/Serializable"), public)]
 pub struct Random {
     #[field(private)]
     seed: i64,

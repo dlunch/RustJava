@@ -10,13 +10,7 @@ use crate::{
 };
 
 // public final class java.lang.Boolean
-#[java_class(
-    name = "java/lang/Boolean",
-    extends = "java/lang/Object",
-    implements("java/io/Serializable"),
-    public,
-    final
-)]
+#[java_class(name = "java/lang/Boolean", implements("java/io/Serializable"), public, final)]
 pub struct Boolean {
     #[field(public, static, final)]
     TRUE: ClassInstanceRef<Self>,

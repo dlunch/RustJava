@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::util::Random};
 
 // public final class java.lang.Math
-#[java_class(name = "java/lang/Math", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/lang/Math", public, final)]
 pub struct Math {
     #[field(public, static, final)]
     E: f64,

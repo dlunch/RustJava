@@ -14,7 +14,7 @@ use crate::{
 };
 
 // class java.lang.System
-#[java_class(name = "java/lang/System", extends = "java/lang/Object", public, final)]
+#[java_class(name = "java/lang/System", public, final)]
 pub struct System {
     #[field(public, static, final)]
     r#in: ClassInstanceRef<InputStream>,

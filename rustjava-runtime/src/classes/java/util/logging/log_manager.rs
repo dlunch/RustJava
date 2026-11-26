@@ -15,7 +15,7 @@ use crate::{
 };
 
 // public class java.util.logging.LogManager
-#[java_class(name = "java/util/logging/LogManager", extends = "java/lang/Object", public)]
+#[java_class(name = "java/util/logging/LogManager", public)]
 pub struct LogManager {
     #[field(private, static)]
     manager: ClassInstanceRef<Self>,

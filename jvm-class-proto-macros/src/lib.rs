@@ -7,11 +7,12 @@ use syn::{
 
 /// Declares a Java class from a struct, which becomes the unit marker type of the class.
 ///
-/// Class metadata comes from the attribute arguments, with bare arguments being access flags written as in Java. Each struct field declares a
-/// Java field of the same name whose descriptor is derived from the field type unless `#[field(descriptor = "..")]` is given.
+/// Class metadata comes from the attribute arguments, with bare arguments being access flags written as in Java. A class extends
+/// `java/lang/Object` unless `extends = ".."` names another superclass. Each struct field declares a Java field of the same name whose
+/// descriptor is derived from the field type unless `#[field(descriptor = "..")]` is given.
 ///
 /// ```ignore
-/// #[java_class(name = "java/lang/Boolean", extends = "java/lang/Object", implements("java/io/Serializable"), public, final)]
+/// #[java_class(name = "java/lang/Boolean", implements("java/io/Serializable"), public, final)]
 /// pub struct Boolean {
 ///     #[field(public, static, final)]
 ///     TRUE: ClassInstanceRef<Self>,
@@ -170,9 +171,13 @@ fn expand_class(class: Class, item: ItemStruct) -> Result<proc_macro2::TokenStre
     }
 
     let descriptor = format!("L{};", class_name.value());
+    // Only `java/lang/Object` and interfaces have no superclass in a prototype.
     let parent_class = match class.extends {
         Some(extends) => quote!(::core::option::Option::Some(#extends)),
-        None => quote!(::core::option::Option::None),
+        None if class_name.value() == "java/lang/Object" || class.flags.iter().any(|flag| flag == "INTERFACE") => {
+            quote!(::core::option::Option::None)
+        }
+        None => quote!(::core::option::Option::Some("java/lang/Object")),
     };
     let interfaces = class.implements;
     let flags = class.flags;

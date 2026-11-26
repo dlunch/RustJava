@@ -13,7 +13,7 @@ use crate::{
 };
 
 // class java.net.URL
-#[java_class(name = "java/net/URL", extends = "java/lang/Object", implements("java/io/Serializable"), public, final)]
+#[java_class(name = "java/net/URL", implements("java/io/Serializable"), public, final)]
 pub struct URL {
     #[field(private)]
     protocol: ClassInstanceRef<String>,

@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::String};
 
 // class java.util.zip.ZipEntry
-#[java_class(name = "java/util/zip/ZipEntry", extends = "java/lang/Object", implements("java/lang/Cloneable"), public)]
+#[java_class(name = "java/util/zip/ZipEntry", implements("java/lang/Cloneable"), public)]
 pub struct ZipEntry {
     name: ClassInstanceRef<String>,
     size: i64,

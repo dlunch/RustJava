@@ -12,7 +12,7 @@ use crate::{
 };
 
 // class java.lang.ClassLoader
-#[java_class(name = "java/lang/ClassLoader", extends = "java/lang/Object", public, abstract)]
+#[java_class(name = "java/lang/ClassLoader", public, abstract)]
 pub struct ClassLoader {
     #[field(static)]
     systemClassLoader: ClassInstanceRef<Self>,

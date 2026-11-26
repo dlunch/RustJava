@@ -4,7 +4,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{RuntimeContext, classes::java::lang::Object};
 
 // final class java.util.TreeMap$Entry
-#[java_class(name = "java/util/TreeMap$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"), final)]
+#[java_class(name = "java/util/TreeMap$Entry", implements("java/util/Map$Entry"), final)]
 pub struct TreeMapEntry {
     #[field(private)]
     key: ClassInstanceRef<Object>,

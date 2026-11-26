@@ -7,7 +7,7 @@ use crate::{
 };
 
 // class java.util.Vector$Itr
-#[java_class(name = "java/util/Vector$Itr", extends = "java/lang/Object", implements("java/util/Iterator"))]
+#[java_class(name = "java/util/Vector$Itr", implements("java/util/Iterator"))]
 pub struct VectorItr {
     #[field(private)]
     list: ClassInstanceRef<Vector>,

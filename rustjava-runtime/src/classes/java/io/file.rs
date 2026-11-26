@@ -6,7 +6,7 @@ use jvm_class_proto::{java_class, java_methods};
 use crate::{FileType, RuntimeContext, classes::java::lang::String};
 
 // class java.io.File
-#[java_class(name = "java/io/File", extends = "java/lang/Object", implements("java/io/Serializable"), public)]
+#[java_class(name = "java/io/File", implements("java/io/Serializable"), public)]
 pub struct File {
     #[field(public, static, final)]
     separatorChar: JavaChar,

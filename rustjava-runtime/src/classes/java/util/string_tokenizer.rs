@@ -7,12 +7,7 @@ use crate::{
 };
 
 // class java.util.StringTokenizer
-#[java_class(
-    name = "java/util/StringTokenizer",
-    extends = "java/lang/Object",
-    implements("java/util/Enumeration"),
-    public
-)]
+#[java_class(name = "java/util/StringTokenizer", implements("java/util/Enumeration"), public)]
 pub struct StringTokenizer {
     #[field(private)]
     str: ClassInstanceRef<String>,

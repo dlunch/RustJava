@@ -13,7 +13,6 @@ use crate::{
 // class java.util.Date
 #[java_class(
     name = "java/util/Date",
-    extends = "java/lang/Object",
     implements("java/io/Serializable", "java/lang/Cloneable", "java/lang/Comparable"),
     public
 )]

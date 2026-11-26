@@ -9,13 +9,7 @@ use crate::{
 };
 
 // abstract class java.util.AbstractCollection
-#[java_class(
-    name = "java/util/AbstractCollection",
-    extends = "java/lang/Object",
-    implements("java/util/Collection"),
-    public,
-    abstract
-)]
+#[java_class(name = "java/util/AbstractCollection", implements("java/util/Collection"), public, abstract)]
 pub struct AbstractCollection;
 
 #[java_methods]
