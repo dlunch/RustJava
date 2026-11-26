@@ -421,7 +421,17 @@ dependencies = [
  "async-trait",
  "dyn-clone",
  "jvm",
+ "jvm-class-proto-macros",
  "jvm-types",
+]
+
+[[package]]
+name = "jvm-class-proto-macros"
+version = "0.5.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.10",
 ]
 
 [[package]]

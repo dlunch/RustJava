@@ -1,21 +1,8 @@
-use alloc::vec;
-
-use jvm_types::ClassAccessFlags;
-
-use crate::RuntimeClassProto;
+use jvm_class_proto::{java_class, java_methods};
 
 // interface java.lang.Cloneable
+#[java_class(name = "java/lang/Cloneable", interface)]
 pub struct Cloneable;
 
-impl Cloneable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Cloneable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![],
-            fields: vec![],
-            access_flags: ClassAccessFlags::INTERFACE,
-        }
-    }
-}
+#[java_methods]
+impl Cloneable {}

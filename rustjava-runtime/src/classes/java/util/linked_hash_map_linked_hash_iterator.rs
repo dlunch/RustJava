@@ -1,43 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{LinkedHashMap, LinkedHashMapEntry};
 
 // abstract class java.util.LinkedHashMap$LinkedHashIterator
-pub struct LinkedHashMapLinkedHashIterator;
+#[java_class(name = "java/util/LinkedHashMap$LinkedHashIterator", implements("java/util/Iterator"), abstract)]
+pub struct LinkedHashMapLinkedHashIterator {
+    #[field(private)]
+    map: ClassInstanceRef<LinkedHashMap>,
+    #[field(private)]
+    nextEntry: ClassInstanceRef<LinkedHashMapEntry>,
+    #[field(private)]
+    lastReturned: ClassInstanceRef<LinkedHashMapEntry>,
+    expectedModCount: i32,
+}
 
+#[java_methods]
 impl LinkedHashMapLinkedHashIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedHashMap$LinkedHashIterator",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Iterator"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/LinkedHashMap;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "nextEntry",
-                    "()Ljava/util/LinkedHashMap$Entry;",
-                    Self::next_entry,
-                    MethodAccessFlags::empty(),
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("map", "Ljava/util/LinkedHashMap;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nextEntry", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lastReturned", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("expectedModCount", "I", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<LinkedHashMap>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
@@ -82,6 +64,7 @@ impl LinkedHashMapLinkedHashIterator {
         .await
     }
 
+    #[method(public)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let map: ClassInstanceRef<LinkedHashMap> = jvm
             .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "map", "Ljava/util/LinkedHashMap;")
@@ -101,6 +84,7 @@ impl LinkedHashMapLinkedHashIterator {
         Ok(next.identity() != header.identity())
     }
 
+    #[method]
     async fn next_entry(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<LinkedHashMapEntry>> {
         let map: ClassInstanceRef<LinkedHashMap> = jvm
             .get_field(&this, "java/util/LinkedHashMap$LinkedHashIterator", "map", "Ljava/util/LinkedHashMap;")
@@ -154,6 +138,7 @@ impl LinkedHashMapLinkedHashIterator {
         Ok(next)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let last_returned: ClassInstanceRef<LinkedHashMapEntry> = jvm
             .get_field(

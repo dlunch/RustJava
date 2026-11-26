@@ -1,46 +1,20 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMap;
 
 // class java.util.HashMap$EntrySet
-pub struct HashMapEntrySet;
+#[java_class(name = "java/util/HashMap$EntrySet", extends = "java/util/AbstractSet", final)]
+pub struct HashMapEntrySet {
+    #[field(private)]
+    map: ClassInstanceRef<HashMap>,
+}
 
+#[java_methods]
 impl HashMapEntrySet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap$EntrySet",
-            parent_class: Some("java/util/AbstractSet"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/HashMap;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "contains",
-                    "(Ljava/lang/Object;)Z",
-                    Self::contains,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "iterator",
-                    "()Ljava/util/Iterator;",
-                    Self::iterator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<HashMap>) -> Result<()> {
         tracing::debug!("java.util.HashMap$EntrySet::<init>({this:?}, {map:?})");
 
@@ -51,6 +25,7 @@ impl HashMapEntrySet {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.HashMap$EntrySet::size({this:?})");
 
@@ -59,6 +34,7 @@ impl HashMapEntrySet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$EntrySet::isEmpty({this:?})");
 
@@ -67,6 +43,7 @@ impl HashMapEntrySet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "isEmpty", "()Z", ()).await
     }
 
+    #[method(public, final)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$EntrySet::contains({this:?}, {candidate:?})");
 
@@ -97,6 +74,7 @@ impl HashMapEntrySet {
         Self::object_equals(jvm, &entry_value, &candidate_value).await
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$EntrySet::remove({this:?}, {candidate:?})");
 
@@ -139,6 +117,7 @@ impl HashMapEntrySet {
         Ok(true)
     }
 
+    #[method(public, final)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap$EntrySet::clear({this:?})");
 
@@ -147,6 +126,7 @@ impl HashMapEntrySet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "clear", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public, final)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$EntrySet::iterator({this:?})");
 

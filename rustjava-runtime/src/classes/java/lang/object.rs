@@ -3,16 +3,16 @@ use core::{
     time::Duration,
 };
 
-use alloc::{boxed::Box, format, vec};
+use alloc::{boxed::Box, format};
 
 use dyn_clone::clone_box;
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, MonitorWaitTimeout, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{Runtime, RuntimeClassProto, RuntimeContext, SpawnCallback, classes::java::lang::String};
+use crate::{Runtime, RuntimeContext, SpawnCallback, classes::java::lang::String};
 
 // class java.lang.Object
+#[java_class(name = "java/lang/Object", public)]
 pub struct Object;
 
 const FNV_OFFSET_BASIS_64: u64 = 0xcbf29ce484222325;
@@ -36,6 +36,7 @@ impl Hasher for IdentityHasher {
     }
 }
 
+#[java_methods]
 impl Object {
     pub(crate) fn identity_hash_code<T>(object: &ClassInstanceRef<T>) -> i32 {
         let mut hasher = IdentityHasher::default();
@@ -43,46 +44,14 @@ impl Object {
         hasher.finish() as i32
     }
 
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Object",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getClass",
-                    "()Ljava/lang/Class;",
-                    Self::get_class,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "clone",
-                    "()Ljava/lang/Object;",
-                    Self::clone,
-                    MethodAccessFlags::PROTECTED | MethodAccessFlags::NATIVE,
-                ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("notify", "()V", Self::notify, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("notifyAll", "()V", Self::notify_all, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("wait", "(J)V", Self::wait_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("wait", "(JI)V", Self::wait_long_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("wait", "()V", Self::wait, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("finalize", "()V", Self::finalize, MethodAccessFlags::PROTECTED),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::<init>({this:?})");
 
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/lang/Class;", public, final)]
     async fn get_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Object::getClass({this:?})");
 
@@ -93,12 +62,14 @@ impl Object {
         Ok(class.into())
     }
 
+    #[method(public)]
     async fn hash_code(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.Object::hashCode({this:?})");
 
         Ok(Self::identity_hash_code(&this))
     }
 
+    #[method(public)]
     async fn equals(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Object::equals({this:?}, {other:?})");
 
@@ -112,6 +83,7 @@ impl Object {
         rust_this.equals(&*rust_other)
     }
 
+    #[method(protected, native)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Object::clone({this:?})");
 
@@ -122,6 +94,7 @@ impl Object {
         Ok(jvm.shallow_clone(&this)?.into())
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Object::toString({this:?})");
 
@@ -140,6 +113,7 @@ impl Object {
         Ok(JavaLangString::from_rust_string(jvm, &result).await?.into())
     }
 
+    #[method(public, final)]
     async fn notify(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notify({this:?})");
 
@@ -148,6 +122,7 @@ impl Object {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn notify_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::notifyAll({this:?})");
 
@@ -156,6 +131,7 @@ impl Object {
         Ok(())
     }
 
+    #[method(name = "wait", public, final)]
     async fn wait_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?}, {millis:?})");
 
@@ -164,6 +140,7 @@ impl Object {
         Ok(())
     }
 
+    #[method(name = "wait", public, final)]
     async fn wait_long_int(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64, nanos: i32) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?}, {millis:?}, {nanos:?})");
 
@@ -204,6 +181,7 @@ impl Object {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn wait(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Object::wait({this:?})");
 
@@ -212,6 +190,7 @@ impl Object {
         Ok(())
     }
 
+    #[method(protected)]
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("stub java.lang.Object::finalize({this:?})");
 

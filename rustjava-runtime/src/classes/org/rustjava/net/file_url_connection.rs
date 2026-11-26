@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, InputStream},
         net::URL,
@@ -13,28 +10,15 @@ use crate::{
 };
 
 // class rustjava.net.FileURLConnection
-pub struct FileURLConnection;
+#[java_class(name = "org/rustjava/net/FileURLConnection", extends = "java/net/URLConnection")]
+pub struct FileURLConnection {
+    #[field(private)]
+    file: ClassInstanceRef<File>,
+}
 
+#[java_methods]
 impl FileURLConnection {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "org/rustjava/net/FileURLConnection",
-            parent_class: Some("java/net/URLConnection"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;Ljava/io/File;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "getInputStream",
-                    "()Ljava/io/InputStream;",
-                    Self::get_input_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("file", "Ljava/io/File;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -54,6 +38,7 @@ impl FileURLConnection {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("org.rustjava.net.FileURLConnection::getInputStream({this:?})");
 

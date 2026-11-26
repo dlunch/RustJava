@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, FileDescriptor},
         lang::String,
@@ -13,29 +10,12 @@ use crate::{
 };
 
 // class java.io.FileReader
+#[java_class(name = "java/io/FileReader", extends = "java/io/InputStreamReader", public)]
 pub struct FileReader;
 
+#[java_methods]
 impl FileReader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FileReader",
-            parent_class: Some("java/io/InputStreamReader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_path, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init_with_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/FileDescriptor;)V",
-                    Self::init_with_file_descriptor,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init_with_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, path: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.FileReader::<init>({this:?}, {path:?})");
 
@@ -47,6 +27,7 @@ impl FileReader {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileReader::<init>({this:?}, {file:?})");
 
@@ -58,6 +39,7 @@ impl FileReader {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_descriptor(
         jvm: &Jvm,
         _: &mut RuntimeContext,

@@ -1,72 +1,34 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::SortedMap},
+};
 
 // public class java.util.TreeSet
-pub struct TreeSet;
+#[java_class(
+    name = "java/util/TreeSet",
+    extends = "java/util/AbstractSet",
+    implements("java/util/SortedSet", "java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct TreeSet {
+    #[field(private, transient)]
+    m: ClassInstanceRef<SortedMap>,
+    #[field(private, static, final)]
+    PRESENT: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl TreeSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TreeSet",
-            parent_class: Some("java/util/AbstractSet"),
-            interfaces: vec!["java/util/SortedSet", "java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Comparator;)V", Self::init_comparator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init_collection, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedSet;)V", Self::init_sorted_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init_sorted_map, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("first", "()Ljava/lang/Object;", Self::first, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("last", "()Ljava/lang/Object;", Self::last, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "subSet",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::sub_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "headSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::head_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "tailSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::tail_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("m", "Ljava/util/SortedMap;", FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new(
-                    "PRESENT",
-                    "Ljava/lang/Object;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         let present: ClassInstanceRef<Object> = jvm.new_class("java/lang/Object", "()V", ()).await?.into();
         jvm.put_static_field("java/util/TreeSet", "PRESENT", "Ljava/lang/Object;", present).await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
         let map: ClassInstanceRef<Object> = jvm.new_class("java/util/TreeMap", "()V", ()).await?.into();
@@ -74,6 +36,7 @@ impl TreeSet {
         jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Comparator;)V", public)]
     async fn init_comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, comparator: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
         let map: ClassInstanceRef<Object> = jvm
@@ -84,6 +47,7 @@ impl TreeSet {
         jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Collection;)V", public)]
     async fn init_collection(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<()> {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
@@ -95,6 +59,7 @@ impl TreeSet {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/SortedSet;)V", public)]
     async fn init_sorted_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, set: ClassInstanceRef<Object>) -> Result<()> {
         if set.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "set").await);
@@ -111,6 +76,7 @@ impl TreeSet {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/SortedMap;)V", private)]
     async fn init_sorted_map(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
@@ -119,17 +85,20 @@ impl TreeSet {
         jvm.put_field(&mut this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;", map).await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "containsKey", "(Ljava/lang/Object;)Z", (element,))
             .await
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let present: ClassInstanceRef<Object> = jvm.get_static_field("java/util/TreeSet", "PRESENT", "Ljava/lang/Object;").await?;
@@ -145,6 +114,7 @@ impl TreeSet {
         Ok(old.is_null())
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         if !jvm
@@ -171,11 +141,13 @@ impl TreeSet {
         Ok(true)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         let keys: ClassInstanceRef<Object> = jvm
@@ -185,24 +157,28 @@ impl TreeSet {
             .await
     }
 
+    #[method(descriptor = "()Ljava/util/Comparator;", public)]
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "comparator", "()Ljava/util/Comparator;", ())
             .await
     }
 
+    #[method(public)]
     async fn first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "firstKey", "()Ljava/lang/Object;", ())
             .await
     }
 
+    #[method(public)]
     async fn last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeSet", "m", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "lastKey", "()Ljava/lang/Object;", ())
             .await
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn sub_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -223,6 +199,7 @@ impl TreeSet {
         Ok(jvm.new_class("java/util/TreeSet", "(Ljava/util/SortedMap;)V", (range,)).await?.into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn head_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -242,6 +219,7 @@ impl TreeSet {
         Ok(jvm.new_class("java/util/TreeSet", "(Ljava/util/SortedMap;)V", (range,)).await?.into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn tail_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,

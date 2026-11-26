@@ -1,63 +1,27 @@
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.ArrayList
-pub struct ArrayList;
+#[java_class(
+    name = "java/util/ArrayList",
+    extends = "java/util/AbstractList",
+    implements("java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct ArrayList {
+    #[field(transient)]
+    elementData: ClassInstanceRef<Array<Object>>,
+    #[field(private)]
+    size: i32,
+}
 
+#[java_methods]
 impl ArrayList {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/ArrayList",
-            parent_class: Some("java/util/AbstractList"),
-            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/Collection;)V",
-                    Self::init_from_collection,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "()Ljava/util/ListIterator;",
-                    Self::list_iterator,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "(I)Ljava/util/ListIterator;",
-                    Self::list_iterator_at,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("elementData", "[Ljava/lang/Object;", FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.ArrayList::<init>({this:?})");
 
@@ -66,6 +30,7 @@ impl ArrayList {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.ArrayList::<init>({this:?}, {capacity:?})");
 
@@ -85,6 +50,7 @@ impl ArrayList {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Collection;)V", public)]
     async fn init_from_collection(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -107,6 +73,7 @@ impl ArrayList {
         Ok(())
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::add({this:?}, {element:?})");
 
@@ -120,6 +87,7 @@ impl ArrayList {
         Ok(true)
     }
 
+    #[method(name = "add", public)]
     async fn add_at(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -149,6 +117,7 @@ impl ArrayList {
         Ok(())
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::get({this:?}, {index:?})");
 
@@ -163,6 +132,7 @@ impl ArrayList {
         Ok(element)
     }
 
+    #[method(public)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -184,6 +154,7 @@ impl ArrayList {
         Ok(old_element)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::remove({this:?}, {index:?})");
 
@@ -209,6 +180,7 @@ impl ArrayList {
         Ok(removed)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::remove({this:?}, {element:?})");
 
@@ -226,12 +198,14 @@ impl ArrayList {
         Ok(true)
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.ArrayList::size({this:?})");
 
         jvm.get_field(&this, "java/util/ArrayList", "size", "I").await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::isEmpty({this:?})");
 
@@ -240,6 +214,7 @@ impl ArrayList {
         Ok(size == 0)
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.ArrayList::contains({this:?}, {element:?})");
 
@@ -250,6 +225,7 @@ impl ArrayList {
         Ok(index >= 0)
     }
 
+    #[method(public)]
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.util.ArrayList::indexOf({this:?}, {element:?})");
 
@@ -266,6 +242,7 @@ impl ArrayList {
         Ok(-1)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.ArrayList::clear({this:?})");
 
@@ -281,6 +258,7 @@ impl ArrayList {
         Ok(())
     }
 
+    #[method(public)]
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.ArrayList::toArray({this:?})");
 
@@ -290,6 +268,7 @@ impl ArrayList {
         Self::copy_to_array(jvm, &element_data, size).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.ArrayList::iterator({this:?})");
 
@@ -298,11 +277,13 @@ impl ArrayList {
         Ok(iterator.into())
     }
 
+    #[method(descriptor = "()Ljava/util/ListIterator;", public)]
     async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm.new_class("java/util/ArrayList$ListItr", "(Ljava/util/List;I)V", (this, 0)).await?;
         Ok(iterator.into())
     }
 
+    #[method(name = "listIterator", descriptor = "(I)Ljava/util/ListIterator;", public)]
     async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm
             .new_class("java/util/ArrayList$ListItr", "(Ljava/util/List;I)V", (this, index))

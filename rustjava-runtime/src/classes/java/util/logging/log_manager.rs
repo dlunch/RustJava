@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String},
         util::{
@@ -16,64 +15,19 @@ use crate::{
 };
 
 // public class java.util.logging.LogManager
-pub struct LogManager;
+#[java_class(name = "java/util/logging/LogManager", public)]
+pub struct LogManager {
+    #[field(private, static)]
+    manager: ClassInstanceRef<Self>,
+    #[field(private)]
+    loggers: ClassInstanceRef<Hashtable>,
+    #[field(private)]
+    root: ClassInstanceRef<Logger>,
+}
 
+#[java_methods]
 impl LogManager {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/LogManager",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "getLogManager",
-                    "()Ljava/util/logging/LogManager;",
-                    Self::get_log_manager,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("addLogger", "(Ljava/util/logging/Logger;)Z", Self::add_logger, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "registerLogger",
-                    "(Ljava/lang/String;Ljava/util/logging/Logger;)Z",
-                    Self::register_logger,
-                    MethodAccessFlags::PRIVATE | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "getLogger",
-                    "(Ljava/lang/String;)Ljava/util/logging/Logger;",
-                    Self::get_logger,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "getLoggerNames",
-                    "()Ljava/util/Enumeration;",
-                    Self::get_logger_names,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "snapshotLoggers",
-                    "()[Ljava/util/logging/Logger;",
-                    Self::snapshot_loggers,
-                    MethodAccessFlags::PRIVATE | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("checkAccess", "()V", Self::check_access, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "manager",
-                    "Ljava/util/logging/LogManager;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC,
-                ),
-                JavaFieldProto::new("loggers", "Ljava/util/Hashtable;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("root", "Ljava/util/logging/Logger;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.util.logging.LogManager::<clinit>()");
         let manager = jvm.new_class("java/util/logging/LogManager", "()V", ()).await?;
@@ -81,6 +35,7 @@ impl LogManager {
             .await
     }
 
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.LogManager::<init>({this:?})");
 
@@ -160,12 +115,14 @@ impl LogManager {
         Ok(())
     }
 
+    #[method(public, static)]
     async fn get_log_manager(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.logging.LogManager::getLogManager()");
         jvm.get_static_field("java/util/logging/LogManager", "manager", "Ljava/util/logging/LogManager;")
             .await
     }
 
+    #[method(public)]
     async fn add_logger(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, logger: ClassInstanceRef<Logger>) -> Result<bool> {
         tracing::debug!("java.util.logging.LogManager::addLogger({this:?}, {logger:?})");
         if logger.is_null() {
@@ -188,6 +145,7 @@ impl LogManager {
         .await
     }
 
+    #[method(private, synchronized)]
     async fn register_logger(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -223,6 +181,7 @@ impl LogManager {
         Ok(true)
     }
 
+    #[method(public, synchronized)]
     async fn get_logger(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -240,6 +199,7 @@ impl LogManager {
             .await
     }
 
+    #[method(descriptor = "()Ljava/util/Enumeration;", public, synchronized)]
     async fn get_logger_names(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.logging.LogManager::getLoggerNames({this:?})");
         let loggers: ClassInstanceRef<Hashtable> = jvm
@@ -249,6 +209,7 @@ impl LogManager {
             .await
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.LogManager::reset({this:?})");
         let loggers: ClassInstanceRef<Array<Logger>> = jvm
@@ -284,6 +245,7 @@ impl LogManager {
         Ok(())
     }
 
+    #[method(private, synchronized)]
     async fn snapshot_loggers(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Logger>>> {
         let loggers: ClassInstanceRef<Hashtable> = jvm
             .get_field(&this, "java/util/logging/LogManager", "loggers", "Ljava/util/Hashtable;")
@@ -309,6 +271,7 @@ impl LogManager {
         Ok(result)
     }
 
+    #[method(public)]
     async fn check_access(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.LogManager::checkAccess({this:?})");
         Ok(())

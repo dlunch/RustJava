@@ -1,43 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Collections$CopiesList
-pub struct CollectionsCopiesList;
+#[java_class(
+    name = "java/util/Collections$CopiesList",
+    extends = "java/util/AbstractList",
+    implements("java/io/Serializable"),
+    final
+)]
+pub struct CollectionsCopiesList {
+    #[field(final)]
+    n: i32,
+    #[field(final)]
+    element: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl CollectionsCopiesList {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$CopiesList",
-            parent_class: Some("java/util/AbstractList"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(ILjava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("n", "I", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("element", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, count: i32, element: ClassInstanceRef<Object>) -> Result<()> {
         if count < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "List length = negative").await);
@@ -48,10 +30,12 @@ impl CollectionsCopiesList {
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/util/Collections$CopiesList", "n", "I").await
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
         if jvm.get_field::<i32>(&this, "java/util/Collections$CopiesList", "n", "I").await? == 0 {
             return Ok(false);
@@ -69,6 +53,7 @@ impl CollectionsCopiesList {
             .await
     }
 
+    #[method(public)]
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<i32> {
         if jvm.get_field::<i32>(&this, "java/util/Collections$CopiesList", "n", "I").await? == 0 {
             return Ok(-1);
@@ -87,6 +72,7 @@ impl CollectionsCopiesList {
         Ok(if equal { 0 } else { -1 })
     }
 
+    #[method(public)]
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<i32> {
         let count: i32 = jvm.get_field(&this, "java/util/Collections$CopiesList", "n", "I").await?;
         if count == 0 {
@@ -106,6 +92,7 @@ impl CollectionsCopiesList {
         Ok(if equal { count - 1 } else { -1 })
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let count: i32 = jvm.get_field(&this, "java/util/Collections$CopiesList", "n", "I").await?;
         if index < 0 || index >= count {
@@ -115,6 +102,7 @@ impl CollectionsCopiesList {
             .await
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         if jvm.get_field::<i32>(&this, "java/util/Collections$CopiesList", "n", "I").await? == 0 {
             return Ok(());
@@ -122,6 +110,7 @@ impl CollectionsCopiesList {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "copies list").await)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
         let count: i32 = jvm.get_field(&this, "java/util/Collections$CopiesList", "n", "I").await?;
         if count == 0 {
@@ -144,10 +133,12 @@ impl CollectionsCopiesList {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "copies list").await)
     }
 
+    #[method(name = "add", public)]
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: i32, _: ClassInstanceRef<Object>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "copies list").await)
     }
 
+    #[method(public)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -158,10 +149,12 @@ impl CollectionsCopiesList {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "copies list").await)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_at(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: i32) -> Result<ClassInstanceRef<Object>> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "copies list").await)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() {
             return Ok(false);
@@ -209,6 +202,7 @@ impl CollectionsCopiesList {
         Ok(true)
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let count: i32 = jvm.get_field(&this, "java/util/Collections$CopiesList", "n", "I").await?;
         let element: ClassInstanceRef<Object> = jvm

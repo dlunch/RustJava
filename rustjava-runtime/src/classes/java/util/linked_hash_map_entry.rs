@@ -1,40 +1,20 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{HashMap, HashMapEntry, LinkedHashMap};
 
 // class java.util.LinkedHashMap$Entry
-pub struct LinkedHashMapEntry;
+#[java_class(name = "java/util/LinkedHashMap$Entry", extends = "java/util/HashMap$Entry")]
+pub struct LinkedHashMapEntry {
+    before: ClassInstanceRef<Self>,
+    after: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl LinkedHashMapEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedHashMap$Entry",
-            parent_class: Some("java/util/HashMap$Entry"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("onAccess", "(Ljava/util/HashMap;)V", Self::on_access, MethodAccessFlags::empty()),
-                JavaMethodProto::new("onRemoval", "(Ljava/util/HashMap;)V", Self::on_removal, MethodAccessFlags::empty()),
-            ],
-            fields: vec![
-                JavaFieldProto::new("before", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::empty()),
-                JavaFieldProto::new("after", "Ljava/util/LinkedHashMap$Entry;", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -54,6 +34,7 @@ impl LinkedHashMapEntry {
         .await
     }
 
+    #[method]
     async fn on_access(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<HashMap>) -> Result<()> {
         let mut map: ClassInstanceRef<LinkedHashMap> = ClassInstanceRef::new(map.instance);
         if !jvm.get_field::<bool>(&map, "java/util/LinkedHashMap", "accessOrder", "Z").await? {
@@ -131,6 +112,7 @@ impl LinkedHashMapEntry {
             .await
     }
 
+    #[method]
     async fn on_removal(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
         let mut before: ClassInstanceRef<Self> = jvm
             .get_field(&this, "java/util/LinkedHashMap$Entry", "before", "Ljava/util/LinkedHashMap$Entry;")

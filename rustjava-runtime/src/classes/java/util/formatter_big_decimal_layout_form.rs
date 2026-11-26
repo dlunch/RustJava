@@ -1,60 +1,27 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Enum, String},
 };
 
 // public enum java.util.Formatter.BigDecimalLayoutForm
-pub struct FormatterBigDecimalLayoutForm;
+#[java_class(name = "java/util/Formatter$BigDecimalLayoutForm", extends = "java/lang/Enum", public, final, enum)]
+pub struct FormatterBigDecimalLayoutForm {
+    #[field(public, static, final, enum)]
+    SCIENTIFIC: ClassInstanceRef<Self>,
+    #[field(public, static, final, enum)]
+    DECIMAL_FLOAT: ClassInstanceRef<Self>,
+    #[field(name = "$VALUES", private, static, final, synthetic)]
+    VALUES: ClassInstanceRef<Array<Self>>,
+}
 
+#[java_methods]
 impl FormatterBigDecimalLayoutForm {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Formatter$BigDecimalLayoutForm",
-            parent_class: Some("java/lang/Enum"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;I)V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new(
-                    "values",
-                    "()[Ljava/util/Formatter$BigDecimalLayoutForm;",
-                    Self::values,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/util/Formatter$BigDecimalLayoutForm;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "SCIENTIFIC",
-                    "Ljava/util/Formatter$BigDecimalLayoutForm;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL | FieldAccessFlags::ENUM,
-                ),
-                JavaFieldProto::new(
-                    "DECIMAL_FLOAT",
-                    "Ljava/util/Formatter$BigDecimalLayoutForm;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL | FieldAccessFlags::ENUM,
-                ),
-                JavaFieldProto::new(
-                    "$VALUES",
-                    "[Ljava/util/Formatter$BigDecimalLayoutForm;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL | FieldAccessFlags::SYNTHETIC,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL | ClassAccessFlags::ENUM,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         let scientific_name = JavaLangString::from_rust_string(jvm, "SCIENTIFIC").await?;
         let scientific = jvm
@@ -93,11 +60,13 @@ impl FormatterBigDecimalLayoutForm {
         .await
     }
 
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>, ordinal: i32) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Enum", "<init>", "(Ljava/lang/String;I)V", (name, ordinal))
             .await
     }
 
+    #[method(public, static)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<Self>>> {
         let values: ClassInstanceRef<Array<Self>> = jvm
             .get_static_field(
@@ -113,6 +82,7 @@ impl FormatterBigDecimalLayoutForm {
         Ok(copy.into())
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let class = jvm.resolve_class("java/util/Formatter$BigDecimalLayoutForm").await?.java_class();
         let value: ClassInstanceRef<Enum> = jvm

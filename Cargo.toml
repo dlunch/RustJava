@@ -1,5 +1,5 @@
 [workspace]
-members = ["classfile", "jvm", "jvm-bytecode", "jvm-class-proto", "jvm-types", "rustjava-runtime"]
+members = ["classfile", "jvm", "jvm-bytecode", "jvm-class-proto", "jvm-class-proto-macros", "jvm-types", "rustjava-runtime"]
 
 [workspace.package]
 version = "0.5.1"
@@ -25,6 +25,7 @@ classfile = { path = "classfile", version = "0.5.1" }
 jvm = { path = "jvm", version = "0.5.1" }
 jvm-bytecode = { path = "jvm-bytecode", version = "0.5.1" }
 jvm-class-proto = { path = "jvm-class-proto", version = "0.5.1" }
+jvm-class-proto-macros = { path = "jvm-class-proto-macros", version = "0.5.1" }
 jvm-types = { path = "jvm-types", version = "0.5.1" }
 rustjava-runtime = { path = "rustjava-runtime", version = "0.5.1" }
 test-utils = { path = "test-utils" }

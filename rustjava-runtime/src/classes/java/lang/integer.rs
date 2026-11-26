@@ -1,146 +1,38 @@
-use alloc::{format, string::String as RustString, vec};
+use alloc::{format, string::String as RustString};
 
 use jvm::{
     ClassInstanceRef, JavaChar, JavaError, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Character, Object, String},
+    RuntimeContext,
+    classes::java::lang::{Character, Class, Object, String},
 };
 
 // public final class java.lang.Integer
-pub struct Integer;
+#[java_class(
+    name = "java/lang/Integer",
+    extends = "java/lang/Number",
+    implements("java/lang/Comparable"),
+    public,
+    final
+)]
+pub struct Integer {
+    #[field(public, static, final)]
+    MIN_VALUE: i32,
+    #[field(public, static, final)]
+    MAX_VALUE: i32,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(private, final)]
+    value: i32,
+}
 
+#[java_methods]
 impl Integer {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Integer",
-            parent_class: Some("java/lang/Number"),
-            interfaces: vec!["java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "parseInt",
-                    "(Ljava/lang/String;)I",
-                    Self::parse_int,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "parseInt",
-                    "(Ljava/lang/String;I)I",
-                    Self::parse_int_radix,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(I)Ljava/lang/Integer;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
-                    Self::value_of_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;I)Ljava/lang/Integer;",
-                    Self::value_of_string_radix,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "decode",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
-                    Self::decode,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;)Ljava/lang/Integer;",
-                    Self::get_integer,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;I)Ljava/lang/Integer;",
-                    Self::get_integer_value_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getInteger",
-                    "(Ljava/lang/String;Ljava/lang/Integer;)Ljava/lang/Integer;",
-                    Self::get_integer_object_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("longValue", "()J", Self::long_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("floatValue", "()F", Self::float_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("doubleValue", "()D", Self::double_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "(I)Ljava/lang/String;",
-                    Self::to_string_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toString",
-                    "(II)Ljava/lang/String;",
-                    Self::to_string_radix_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toBinaryString",
-                    "(I)Ljava/lang/String;",
-                    Self::to_binary_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toOctalString",
-                    "(I)Ljava/lang/String;",
-                    Self::to_octal_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toHexString",
-                    "(I)Ljava/lang/String;",
-                    Self::to_hex_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Integer;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "MIN_VALUE",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MAX_VALUE",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Integer", "MIN_VALUE", "I", i32::MIN).await?;
         jvm.put_static_field("java/lang/Integer", "MAX_VALUE", "I", i32::MAX).await?;
@@ -153,11 +45,13 @@ impl Integer {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Integer", "value", "I", value).await
     }
 
+    #[method(constructor, public)]
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -214,6 +108,7 @@ impl Integer {
         }
     }
 
+    #[method(public, static)]
     async fn parse_int(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i32> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -222,6 +117,7 @@ impl Integer {
         Self::parse_value(jvm, &value, 10).await
     }
 
+    #[method(name = "parseInt", public, static)]
     async fn parse_int_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<i32> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -230,10 +126,12 @@ impl Integer {
         Self::parse_value(jvm, &value, radix as u32).await
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -243,6 +141,7 @@ impl Integer {
         Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NumberFormatException", "null").await);
@@ -252,6 +151,7 @@ impl Integer {
         Ok(jvm.new_class("java/lang/Integer", "(I)V", (value,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -284,6 +184,7 @@ impl Integer {
         Ok(jvm.new_class("java/lang/Integer", "(I)V", (parsed,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn get_integer(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let default: ClassInstanceRef<Self> = None.into();
         jvm.invoke_static(
@@ -295,6 +196,7 @@ impl Integer {
         .await
     }
 
+    #[method(name = "getInteger", public, static)]
     async fn get_integer_value_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -311,6 +213,7 @@ impl Integer {
         .await
     }
 
+    #[method(name = "getInteger", public, static)]
     async fn get_integer_object_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -336,20 +239,24 @@ impl Integer {
         }
     }
 
+    #[method(public)]
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/lang/Integer", "value", "I").await
     }
 
+    #[method(public)]
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as i64)
     }
 
+    #[method(public)]
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as f32)
     }
 
+    #[method(public)]
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(value as f64)
@@ -374,21 +281,25 @@ impl Integer {
         result.chars().rev().collect()
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Integer", "intValue", "()I", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, 10)).await?.into())
     }
 
+    #[method(name = "toString", public, static)]
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, 10)).await?.into())
     }
 
+    #[method(name = "toString", public, static)]
     async fn to_string_radix_static(jvm: &Jvm, _: &mut RuntimeContext, value: i32, radix: i32) -> Result<ClassInstanceRef<String>> {
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value as i64, radix as u32))
             .await?
             .into())
     }
 
+    #[method(public, static)]
     async fn to_binary_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
             format!("{:032b}", value as u32)
@@ -398,6 +309,7 @@ impl Integer {
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
 
+    #[method(public, static)]
     async fn to_octal_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
             format!("{:011o}", value as u32)
@@ -407,6 +319,7 @@ impl Integer {
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
 
+    #[method(public, static)]
     async fn to_hex_string(jvm: &Jvm, _: &mut RuntimeContext, value: i32) -> Result<ClassInstanceRef<String>> {
         let text = if value < 0 {
             format!("{:08x}", value as u32)
@@ -416,10 +329,12 @@ impl Integer {
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/lang/Integer", "value", "I").await
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Integer") {
             return Ok(false);
@@ -429,6 +344,7 @@ impl Integer {
         Ok(this_value == other_value)
     }
 
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -438,6 +354,7 @@ impl Integer {
         Ok(this_value.cmp(&other_value) as i32)
     }
 
+    #[method(name = "compareTo", public)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);

@@ -1,11 +1,10 @@
-use alloc::{format, string::ToString, vec};
+use alloc::{format, string::ToString};
 
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String, StringBuffer},
         text::{FieldPosition, NumberFormat, ParseException, ParsePosition},
@@ -14,247 +13,63 @@ use crate::{
 };
 
 // public abstract class java.text.DateFormat
-pub struct DateFormat;
+#[java_class(name = "java/text/DateFormat", extends = "java/text/Format", public, abstract)]
+pub struct DateFormat {
+    #[field(protected)]
+    calendar: ClassInstanceRef<Calendar>,
+    #[field(protected)]
+    numberFormat: ClassInstanceRef<NumberFormat>,
+    #[field(public, static, final)]
+    ERA_FIELD: i32,
+    #[field(public, static, final)]
+    YEAR_FIELD: i32,
+    #[field(public, static, final)]
+    MONTH_FIELD: i32,
+    #[field(public, static, final)]
+    DATE_FIELD: i32,
+    #[field(public, static, final)]
+    HOUR_OF_DAY1_FIELD: i32,
+    #[field(public, static, final)]
+    HOUR_OF_DAY0_FIELD: i32,
+    #[field(public, static, final)]
+    MINUTE_FIELD: i32,
+    #[field(public, static, final)]
+    SECOND_FIELD: i32,
+    #[field(public, static, final)]
+    MILLISECOND_FIELD: i32,
+    #[field(public, static, final)]
+    DAY_OF_WEEK_FIELD: i32,
+    #[field(public, static, final)]
+    DAY_OF_YEAR_FIELD: i32,
+    #[field(public, static, final)]
+    DAY_OF_WEEK_IN_MONTH_FIELD: i32,
+    #[field(public, static, final)]
+    WEEK_OF_YEAR_FIELD: i32,
+    #[field(public, static, final)]
+    WEEK_OF_MONTH_FIELD: i32,
+    #[field(public, static, final)]
+    AM_PM_FIELD: i32,
+    #[field(public, static, final)]
+    HOUR1_FIELD: i32,
+    #[field(public, static, final)]
+    HOUR0_FIELD: i32,
+    #[field(public, static, final)]
+    TIMEZONE_FIELD: i32,
+    #[field(public, static, final)]
+    FULL: i32,
+    #[field(public, static, final)]
+    LONG: i32,
+    #[field(public, static, final)]
+    MEDIUM: i32,
+    #[field(public, static, final)]
+    SHORT: i32,
+    #[field(public, static, final)]
+    DEFAULT: i32,
+}
 
+#[java_methods]
 impl DateFormat {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/DateFormat",
-            parent_class: Some("java/text/Format"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/lang/Object;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    Self::format_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/util/Date;)Ljava/lang/String;",
-                    Self::format_date,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new_abstract(
-                    "format",
-                    "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new("parse", "(Ljava/lang/String;)Ljava/util/Date;", Self::parse, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract(
-                    "parse",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new(
-                    "parseObject",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Object;",
-                    Self::parse_object,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getInstance",
-                    "()Ljava/text/DateFormat;",
-                    Self::get_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getTimeInstance",
-                    "()Ljava/text/DateFormat;",
-                    Self::get_time_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getTimeInstance",
-                    "(I)Ljava/text/DateFormat;",
-                    Self::get_time_instance_with_style,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getTimeInstance",
-                    "(ILjava/util/Locale;)Ljava/text/DateFormat;",
-                    Self::get_time_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getDateInstance",
-                    "()Ljava/text/DateFormat;",
-                    Self::get_date_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDateInstance",
-                    "(I)Ljava/text/DateFormat;",
-                    Self::get_date_instance_with_style,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDateInstance",
-                    "(ILjava/util/Locale;)Ljava/text/DateFormat;",
-                    Self::get_date_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getDateTimeInstance",
-                    "()Ljava/text/DateFormat;",
-                    Self::get_date_time_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDateTimeInstance",
-                    "(II)Ljava/text/DateFormat;",
-                    Self::get_date_time_instance_with_styles,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDateTimeInstance",
-                    "(IILjava/util/Locale;)Ljava/text/DateFormat;",
-                    Self::get_date_time_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getAvailableLocales",
-                    "()[Ljava/util/Locale;",
-                    Self::get_available_locales,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("getCalendar", "()Ljava/util/Calendar;", Self::get_calendar, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setCalendar", "(Ljava/util/Calendar;)V", Self::set_calendar, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getNumberFormat",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_number_format,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setNumberFormat",
-                    "(Ljava/text/NumberFormat;)V",
-                    Self::set_number_format,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getTimeZone", "()Ljava/util/TimeZone;", Self::get_time_zone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setTimeZone", "(Ljava/util/TimeZone;)V", Self::set_time_zone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isLenient", "()Z", Self::is_lenient, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setLenient", "(Z)V", Self::set_lenient, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("calendar", "Ljava/util/Calendar;", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("numberFormat", "Ljava/text/NumberFormat;", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new(
-                    "ERA_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "YEAR_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MONTH_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DATE_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "HOUR_OF_DAY1_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "HOUR_OF_DAY0_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MINUTE_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SECOND_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MILLISECOND_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DAY_OF_WEEK_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DAY_OF_YEAR_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DAY_OF_WEEK_IN_MONTH_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "WEEK_OF_YEAR_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "WEEK_OF_MONTH_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "AM_PM_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "HOUR1_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "HOUR0_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TIMEZONE_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("FULL", "I", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("LONG", "I", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "MEDIUM",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SHORT",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DEFAULT",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         for (name, value) in [
             ("ERA_FIELD", 0),
@@ -286,6 +101,7 @@ impl DateFormat {
         Ok(())
     }
 
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/text/Format", "<init>", "()V", ()).await?;
         let calendar: ClassInstanceRef<Calendar> = jvm
@@ -306,6 +122,7 @@ impl DateFormat {
         .await
     }
 
+    #[method(name = "format", public, final)]
     async fn format_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -330,6 +147,7 @@ impl DateFormat {
         .await
     }
 
+    #[method(name = "format", public, final)]
     async fn format_date(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -354,6 +172,17 @@ impl DateFormat {
             .await
     }
 
+    #[method(public)]
+    async fn format(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        date: ClassInstanceRef<Date>,
+        buffer: ClassInstanceRef<StringBuffer>,
+        position: ClassInstanceRef<FieldPosition>,
+    ) -> Result<ClassInstanceRef<StringBuffer>>;
+
+    #[method(public)]
     async fn parse(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -388,6 +217,16 @@ impl DateFormat {
         Ok(date)
     }
 
+    #[method(name = "parse", public)]
+    async fn parse_with_position(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        source: ClassInstanceRef<String>,
+        position: ClassInstanceRef<ParsePosition>,
+    ) -> Result<ClassInstanceRef<Date>>;
+
+    #[method(public)]
     async fn parse_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -453,21 +292,25 @@ impl DateFormat {
             .into())
     }
 
+    #[method(public, static, final)]
     async fn get_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, Some(3), Some(3), locale).await
     }
 
+    #[method(public, static, final)]
     async fn get_time_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, None, Some(2), locale).await
     }
 
+    #[method(name = "getTimeInstance", public, static, final)]
     async fn get_time_instance_with_style(jvm: &Jvm, _: &mut RuntimeContext, style: i32) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, None, Some(style), locale).await
     }
 
+    #[method(name = "getTimeInstance", public, static)]
     async fn get_time_instance_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -477,16 +320,19 @@ impl DateFormat {
         Self::new_formatter(jvm, None, Some(style), locale).await
     }
 
+    #[method(public, static, final)]
     async fn get_date_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, Some(2), None, locale).await
     }
 
+    #[method(name = "getDateInstance", public, static, final)]
     async fn get_date_instance_with_style(jvm: &Jvm, _: &mut RuntimeContext, style: i32) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, Some(style), None, locale).await
     }
 
+    #[method(name = "getDateInstance", public, static)]
     async fn get_date_instance_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -496,11 +342,13 @@ impl DateFormat {
         Self::new_formatter(jvm, Some(style), None, locale).await
     }
 
+    #[method(public, static, final)]
     async fn get_date_time_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         Self::new_formatter(jvm, Some(2), Some(2), locale).await
     }
 
+    #[method(name = "getDateTimeInstance", public, static, final)]
     async fn get_date_time_instance_with_styles(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -511,6 +359,7 @@ impl DateFormat {
         Self::new_formatter(jvm, Some(date_style), Some(time_style), locale).await
     }
 
+    #[method(name = "getDateTimeInstance", public, static)]
     async fn get_date_time_instance_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -521,25 +370,30 @@ impl DateFormat {
         Self::new_formatter(jvm, Some(date_style), Some(time_style), locale).await
     }
 
+    #[method(public, static)]
     async fn get_available_locales(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<Locale>>> {
         jvm.invoke_static("java/util/Locale", "getAvailableLocales", "()[Ljava/util/Locale;", ())
             .await
     }
 
+    #[method(public)]
     async fn get_calendar(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Calendar>> {
         jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await
     }
 
+    #[method(public)]
     async fn set_calendar(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, calendar: ClassInstanceRef<Calendar>) -> Result<()> {
         jvm.put_field(&mut this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;", calendar)
             .await
     }
 
+    #[method(public)]
     async fn get_number_format(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<NumberFormat>> {
         jvm.get_field(&this, "java/text/DateFormat", "numberFormat", "Ljava/text/NumberFormat;")
             .await
     }
 
+    #[method(public)]
     async fn set_number_format(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -556,6 +410,7 @@ impl DateFormat {
         .await
     }
 
+    #[method(public)]
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TimeZone>> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         if calendar.is_null() {
@@ -565,6 +420,7 @@ impl DateFormat {
             .await
     }
 
+    #[method(public)]
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         if calendar.is_null() {
@@ -574,6 +430,7 @@ impl DateFormat {
             .await
     }
 
+    #[method(public)]
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         if calendar.is_null() {
@@ -582,6 +439,7 @@ impl DateFormat {
         jvm.invoke_virtual(&calendar, "java/util/Calendar", "isLenient", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         if calendar.is_null() {
@@ -591,6 +449,7 @@ impl DateFormat {
             .await
     }
 
+    #[method(public)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let calendar: ClassInstanceRef<Calendar> = jvm.get_field(&this, "java/text/DateFormat", "calendar", "Ljava/util/Calendar;").await?;
         let number_format: ClassInstanceRef<NumberFormat> = jvm

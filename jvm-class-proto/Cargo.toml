@@ -10,5 +10,6 @@ repository.workspace = true
 async-trait = { workspace = true }
 dyn-clone = { workspace = true }
 
+jvm-class-proto-macros = { workspace = true }
 jvm-types = { workspace = true }
 jvm = { workspace = true }

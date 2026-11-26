@@ -1,97 +1,28 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use bytemuck::cast_vec;
 
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags, modified_utf8};
+use jvm_class_proto::{java_class, java_methods};
+use jvm_types::modified_utf8;
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{io::OutputStream, lang::String},
 };
 
 // class java.io.DataOutputStream
+#[java_class(
+    name = "java/io/DataOutputStream",
+    extends = "java/io/FilterOutputStream",
+    implements("java/io/DataOutput"),
+    public
+)]
 pub struct DataOutputStream;
 
+#[java_methods]
 impl DataOutputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/DataOutputStream",
-            parent_class: Some("java/io/FilterOutputStream"),
-            interfaces: vec!["java/io/DataOutput"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "writeByte",
-                    "(I)V",
-                    Self::write_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeBoolean",
-                    "(Z)V",
-                    Self::write_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("writeInt", "(I)V", Self::write_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "writeShort",
-                    "(I)V",
-                    Self::write_short,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeChar",
-                    "(I)V",
-                    Self::write_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeLong",
-                    "(J)V",
-                    Self::write_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeFloat",
-                    "(F)V",
-                    Self::write_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeDouble",
-                    "(D)V",
-                    Self::write_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeBytes",
-                    "(Ljava/lang/String;)V",
-                    Self::write_bytes,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeChars",
-                    "(Ljava/lang/String;)V",
-                    Self::write_chars,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "writeUTF",
-                    "(Ljava/lang/String;)V",
-                    Self::write_utf,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::<init>({this:?}, {out:?})");
 
@@ -102,6 +33,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::write({this:?}, {b:?})");
 
@@ -114,6 +46,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, v: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeByte({this:?}, {v:?})");
 
@@ -126,6 +59,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, v: bool) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeBoolean({this:?}, {v:?})");
 
@@ -136,6 +70,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeShort({this:?}, {s:?})");
 
@@ -152,12 +87,14 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeChar({this:?}, {value:?})");
         jvm.invoke_virtual(&this, "java/io/DataOutputStream", "writeShort", "(I)V", (value & 0xffff,))
             .await
     }
 
+    #[method(public, final)]
     async fn write_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, i: i32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeInt({this:?}, {i:?})");
 
@@ -174,6 +111,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, l: i64) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeLong({this:?}, {l:?})");
 
@@ -190,18 +128,21 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn write_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeFloat({this:?}, {value:?})");
         jvm.invoke_virtual(&this, "java/io/DataOutputStream", "writeInt", "(I)V", (value.to_bits() as i32,))
             .await
     }
 
+    #[method(public, final)]
     async fn write_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeDouble({this:?}, {value:?})");
         jvm.invoke_virtual(&this, "java/io/DataOutputStream", "writeLong", "(J)V", (value.to_bits() as i64,))
             .await
     }
 
+    #[method(public, final)]
     async fn write_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeBytes({this:?}, {s:?})");
         if s.is_null() {
@@ -224,6 +165,7 @@ impl DataOutputStream {
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (bytes,)).await
     }
 
+    #[method(public, final)]
     async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeChars({this:?}, {s:?})");
         if s.is_null() {
@@ -252,6 +194,7 @@ impl DataOutputStream {
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (bytes,)).await
     }
 
+    #[method(name = "writeUTF", public, final)]
     async fn write_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, s: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::writeUTF({this:?}, {s:?})");
         if s.is_null() {
@@ -281,6 +224,7 @@ impl DataOutputStream {
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (bytes,)).await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::close({this:?})");
 
@@ -293,6 +237,7 @@ impl DataOutputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.DataOutputStream::flush({this:?})");
 

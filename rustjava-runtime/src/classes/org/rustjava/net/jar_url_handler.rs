@@ -1,37 +1,18 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::net::{URL, URLConnection},
 };
 
 // class rustjava.net.JarURLHandler
+#[java_class(name = "org/rustjava/net/JarURLHandler", extends = "java/net/URLStreamHandler")]
 pub struct JarURLHandler;
 
+#[java_methods]
 impl JarURLHandler {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "org/rustjava/net/JarURLHandler",
-            parent_class: Some("java/net/URLStreamHandler"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "openConnection",
-                    "(Ljava/net/URL;)Ljava/net/URLConnection;",
-                    Self::open_connection,
-                    MethodAccessFlags::PROTECTED,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("org.rustjava.net.JarURLHandler::<init>({this:?})");
 
@@ -40,6 +21,7 @@ impl JarURLHandler {
         Ok(())
     }
 
+    #[method(protected)]
     async fn open_connection(
         jvm: &Jvm,
         _: &mut RuntimeContext,

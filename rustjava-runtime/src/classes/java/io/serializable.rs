@@ -1,21 +1,8 @@
-use alloc::vec;
-
-use jvm_types::ClassAccessFlags;
-
-use crate::RuntimeClassProto;
+use jvm_class_proto::{java_class, java_methods};
 
 // interface java.io.Serializable
+#[java_class(name = "java/io/Serializable", interface)]
 pub struct Serializable;
 
-impl Serializable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/Serializable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![],
-            fields: vec![],
-            access_flags: ClassAccessFlags::INTERFACE,
-        }
-    }
-}
+#[java_methods]
+impl Serializable {}

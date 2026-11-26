@@ -1,48 +1,35 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Collections$SingletonSet
-pub struct CollectionsSingletonSet;
+#[java_class(
+    name = "java/util/Collections$SingletonSet",
+    extends = "java/util/AbstractSet",
+    implements("java/io/Serializable"),
+    final
+)]
+pub struct CollectionsSingletonSet {
+    #[field(private, final)]
+    element: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl CollectionsSingletonSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$SingletonSet",
-            parent_class: Some("java/util/AbstractSet"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "element",
-                "Ljava/lang/Object;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractSet", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;", element)
             .await
     }
 
+    #[method(public)]
     async fn size(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<i32> {
         Ok(1)
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
         let element: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
@@ -57,6 +44,7 @@ impl CollectionsSingletonSet {
             .await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let element: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
@@ -68,6 +56,7 @@ impl CollectionsSingletonSet {
             .await
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Object>) -> Result<bool> {
         let element: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")
@@ -86,6 +75,7 @@ impl CollectionsSingletonSet {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "singleton set").await)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() {
             return Ok(false);
@@ -120,6 +110,7 @@ impl CollectionsSingletonSet {
             .await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let element: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$SingletonSet", "element", "Ljava/lang/Object;")

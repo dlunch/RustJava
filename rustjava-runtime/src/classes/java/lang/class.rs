@@ -1,14 +1,14 @@
 use alloc::vec;
 
 use jvm::{
-    ClassInstanceRef, Jvm, Result,
+    Array, ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
+use jvm_types::{ClassAccessFlags, JavaType};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::{ClassLoader, Object, String},
@@ -16,70 +16,19 @@ use crate::{
 };
 
 // class java.lang.Class
-pub struct Class;
+#[java_class(name = "java/lang/Class", implements("java/io/Serializable"), public, final)]
+pub struct Class {
+    // Stored as raw bytes instead of java/lang/String to avoid circular dependency:
+    // from_rust_class -> JavaLangString::from_rust_string -> new_class("java/lang/String") -> from_rust_class -> stack overflow
+    #[field(private, final)]
+    nameBytes: ClassInstanceRef<Array<i8>>,
+    #[field(private, final)]
+    classLoader: ClassInstanceRef<ClassLoader>,
+}
 
+#[java_methods]
 impl Class {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Class",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isPrimitive", "()Z", Self::is_primitive, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isArray", "()Z", Self::is_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isInterface", "()Z", Self::is_interface, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isInstance", "(Ljava/lang/Object;)Z", Self::is_instance, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isAssignableFrom",
-                    "(Ljava/lang/Class;)Z",
-                    Self::is_assignable_from,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
-                ),
-                JavaMethodProto::new("newInstance", "()Ljava/lang/Object;", Self::new_instance, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getSuperclass", "()Ljava/lang/Class;", Self::get_superclass, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getClassLoader",
-                    "()Ljava/lang/ClassLoader;",
-                    Self::get_class_loader,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getComponentType",
-                    "()Ljava/lang/Class;",
-                    Self::get_component_type,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getInterfaces", "()[Ljava/lang/Class;", Self::get_interfaces, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getResourceAsStream",
-                    "(Ljava/lang/String;)Ljava/io/InputStream;",
-                    Self::get_resource_as_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "forName",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::for_name,
-                    MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![
-                // Stored as raw bytes instead of java/lang/String to avoid circular dependency:
-                // from_rust_class -> JavaLangString::from_rust_string -> new_class("java/lang/String") -> from_rust_class -> stack overflow
-                JavaFieldProto::new("nameBytes", "[B", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "classLoader",
-                    "Ljava/lang/ClassLoader;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Class::<init>({this:?})");
 
@@ -88,6 +37,7 @@ impl Class {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Class::getName({this:?})");
 
@@ -97,6 +47,7 @@ impl Class {
         Ok(result.into())
     }
 
+    #[method(public)]
     async fn is_primitive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let name = JavaLangClass::name(jvm, &this).await?;
         Ok(matches!(
@@ -105,11 +56,13 @@ impl Class {
         ))
     }
 
+    #[method(public)]
     async fn is_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let name = JavaLangClass::name(jvm, &this).await?;
         Ok(name.starts_with('['))
     }
 
+    #[method(public)]
     async fn is_interface(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let name = JavaLangClass::name(jvm, &this).await?;
         if name.starts_with('[') || matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
@@ -120,6 +73,7 @@ impl Class {
         Ok(class.access_flags().contains(ClassAccessFlags::INTERFACE))
     }
 
+    #[method(public)]
     async fn is_instance(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, object: ClassInstanceRef<Object>) -> Result<bool> {
         if object.is_null() {
             return Ok(false);
@@ -133,6 +87,7 @@ impl Class {
         Ok(jvm.is_instance(&**object, &name))
     }
 
+    #[method(public)]
     async fn new_instance(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let name = JavaLangClass::name(jvm, &this).await?;
         if name.starts_with('[') || matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
@@ -154,6 +109,7 @@ impl Class {
         Ok(instance.into())
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let name = JavaLangClass::name(jvm, &this).await?;
         let text = if matches!(name.as_str(), "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double") {
@@ -171,6 +127,7 @@ impl Class {
         Ok(JavaLangString::from_rust_string(jvm, &text).await?.into())
     }
 
+    #[method(public, native)]
     async fn is_assignable_from(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Class::isAssignableFrom({this:?}, {other:?})");
 
@@ -196,6 +153,7 @@ impl Class {
         Ok(jvm.is_type_assignable(&JavaType::from_class_name(&other_name), &JavaType::from_class_name(&class_name)))
     }
 
+    #[method(public)]
     async fn get_superclass(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Class::getSuperclass({this:?})");
 
@@ -221,12 +179,14 @@ impl Class {
         }
     }
 
+    #[method(public)]
     async fn get_class_loader(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<ClassLoader>> {
         tracing::debug!("java.lang.Class::getClassLoader({this:?})");
 
         jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await
     }
 
+    #[method(public)]
     async fn get_component_type(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Class::getComponentType({this:?})");
 
@@ -272,6 +232,7 @@ impl Class {
         .await
     }
 
+    #[method(public)]
     async fn get_interfaces(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<jvm::Array<Self>>> {
         tracing::debug!("java.lang.Class::getInterfaces({this:?})");
 
@@ -294,6 +255,7 @@ impl Class {
         Ok(interfaces.into())
     }
 
+    #[method(public)]
     async fn get_resource_as_stream(
         jvm: &Jvm,
         _context: &mut RuntimeContext,
@@ -321,6 +283,7 @@ impl Class {
         .await
     }
 
+    #[method(static)]
     async fn for_name(jvm: &Jvm, _context: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Class>> {
         tracing::debug!("java.lang.Class::forName({name:?})");
 

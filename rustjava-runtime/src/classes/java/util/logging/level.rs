@@ -1,96 +1,41 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 // public class java.util.logging.Level
-pub struct Level;
+#[java_class(name = "java/util/logging/Level", implements("java/io/Serializable"), public)]
+pub struct Level {
+    #[field(public, static, final)]
+    OFF: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    SEVERE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    WARNING: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    INFO: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    CONFIG: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FINE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FINER: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FINEST: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    ALL: ClassInstanceRef<Self>,
+    #[field(private, final)]
+    name: ClassInstanceRef<String>,
+    #[field(private, final)]
+    value: i32,
+}
 
+#[java_methods]
 impl Level {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/Level",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;I)V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "parse",
-                    "(Ljava/lang/String;)Ljava/util/logging/Level;",
-                    Self::parse,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("getName", "()Ljava/lang/String;", Self::get_name, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "()Ljava/lang/String;",
-                    Self::to_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "OFF",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SEVERE",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "WARNING",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "INFO",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CONFIG",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FINE",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FINER",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FINEST",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "ALL",
-                    "Ljava/util/logging/Level;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("name", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("value", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.util.logging.Level::<clinit>()");
 
@@ -194,6 +139,7 @@ impl Level {
             .await
     }
 
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>, value: i32) -> Result<()> {
         tracing::debug!("java.util.logging.Level::<init>({this:?}, {name:?}, {value})");
 
@@ -207,6 +153,7 @@ impl Level {
         jvm.put_field(&mut this, "java/util/logging/Level", "value", "I", value).await
     }
 
+    #[method(public, static)]
     async fn parse(jvm: &Jvm, _: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.logging.Level::parse({name:?})");
 
@@ -260,18 +207,21 @@ impl Level {
             .into())
     }
 
+    #[method(public)]
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Level::getName({this:?})");
 
         jvm.get_field(&this, "java/util/logging/Level", "name", "Ljava/lang/String;").await
     }
 
+    #[method(public, final)]
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.logging.Level::intValue({this:?})");
 
         jvm.get_field(&this, "java/util/logging/Level", "value", "I").await
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.logging.Level::equals({this:?}, {other:?})");
 
@@ -285,12 +235,14 @@ impl Level {
         Ok(value == other_value)
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.logging.Level::hashCode({this:?})");
 
         jvm.get_field(&this, "java/util/logging/Level", "value", "I").await
     }
 
+    #[method(public, final)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Level::toString({this:?})");
 

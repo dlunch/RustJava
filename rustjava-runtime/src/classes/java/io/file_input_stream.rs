@@ -1,45 +1,23 @@
 use alloc::{boxed::Box, vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    FileOpenOptions, RuntimeClassProto, RuntimeContext,
+    FileOpenOptions, RuntimeContext,
     classes::java::io::{File, FileDescriptor},
 };
 
 // class java.io.FileInputStream
-pub struct FileInputStream;
+#[java_class(name = "java/io/FileInputStream", extends = "java/io/InputStream", public)]
+pub struct FileInputStream {
+    #[field(private, final)]
+    fd: ClassInstanceRef<FileDescriptor>,
+}
 
+#[java_methods]
 impl FileInputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FileInputStream",
-            parent_class: Some("java/io/InputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/FileDescriptor;)V",
-                    Self::init_with_file_descriptor,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("read", "()I", Self::read_byte, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([BII)I", Self::read_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("available", "()I", Self::available, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "fd",
-                "Ljava/io/FileDescriptor;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileInputStream::<init>({this:?}, {file:?})");
         if file.is_null() {
@@ -71,6 +49,7 @@ impl FileInputStream {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_descriptor(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -90,6 +69,7 @@ impl FileInputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn available(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FileInputStream::available({this:?})");
 
@@ -109,6 +89,7 @@ impl FileInputStream {
         Ok(available as _)
     }
 
+    #[method(name = "read", public)]
     async fn read_array(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -143,6 +124,7 @@ impl FileInputStream {
         Ok(read as _)
     }
 
+    #[method(name = "read", public)]
     async fn read_byte(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FileInputStream::read({this:?})");
 
@@ -160,6 +142,7 @@ impl FileInputStream {
         Ok(buf[0] as i32)
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FileInputStream::close({this:?})");
 

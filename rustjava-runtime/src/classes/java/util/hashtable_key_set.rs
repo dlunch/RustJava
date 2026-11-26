@@ -1,36 +1,20 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::Hashtable;
 
 // class java.util.Hashtable$KeySet
-pub struct HashtableKeySet;
+#[java_class(name = "java/util/Hashtable$KeySet", extends = "java/util/AbstractSet")]
+pub struct HashtableKeySet {
+    #[field(private)]
+    map: ClassInstanceRef<Hashtable>,
+}
 
+#[java_methods]
 impl HashtableKeySet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Hashtable$KeySet",
-            parent_class: Some("java/util/AbstractSet"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Hashtable;)V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/Hashtable;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Hashtable>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$KeySet::<init>({this:?}, {map:?})");
 
@@ -41,6 +25,7 @@ impl HashtableKeySet {
         Ok(())
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable$KeySet::size({this:?})");
 
@@ -49,6 +34,7 @@ impl HashtableKeySet {
         jvm.invoke_virtual(&map, "java/util/Hashtable", "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$KeySet::isEmpty({this:?})");
 
@@ -57,6 +43,7 @@ impl HashtableKeySet {
         jvm.invoke_virtual(&map, "java/util/Hashtable", "isEmpty", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$KeySet::contains({this:?}, {key:?})");
 
@@ -66,6 +53,7 @@ impl HashtableKeySet {
             .await
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$KeySet::remove({this:?}, {key:?})");
 
@@ -84,6 +72,7 @@ impl HashtableKeySet {
         Ok(true)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$KeySet::clear({this:?})");
 
@@ -92,6 +81,7 @@ impl HashtableKeySet {
         jvm.invoke_virtual(&map, "java/util/Hashtable", "clear", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$KeySet::iterator({this:?})");
 

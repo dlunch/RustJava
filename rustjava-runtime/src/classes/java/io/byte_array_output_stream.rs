@@ -1,69 +1,25 @@
 use alloc::{boxed::Box, vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{io::OutputStream, lang::String},
 };
 
 // class java.io.ByteArrayOutputStream
-pub struct ByteArrayOutputStream;
+#[java_class(name = "java/io/ByteArrayOutputStream", extends = "java/io/OutputStream", public)]
+pub struct ByteArrayOutputStream {
+    #[field(protected)]
+    buf: ClassInstanceRef<Array<i8>>,
+    #[field(protected)]
+    count: i32,
+}
 
+#[java_methods]
 impl ByteArrayOutputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/ByteArrayOutputStream",
-            parent_class: Some("java/io/OutputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "write",
-                    "([BII)V",
-                    Self::write_bytes,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "writeTo",
-                    "(Ljava/io/OutputStream;)V",
-                    Self::write_to,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "toByteArray",
-                    "()[B",
-                    Self::to_byte_array,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "toString",
-                    "()Ljava/lang/String;",
-                    Self::to_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "toString",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::to_string_with_encoding,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[B", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::<init>({this:?})");
 
@@ -74,6 +30,7 @@ impl ByteArrayOutputStream {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i32) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::<init>({this:?}, {size:?})");
 
@@ -91,6 +48,7 @@ impl ByteArrayOutputStream {
         Ok(())
     }
 
+    #[method(name = "write", public, synchronized)]
     async fn write_bytes(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -118,6 +76,7 @@ impl ByteArrayOutputStream {
         jvm.put_field(&mut this, "java/io/ByteArrayOutputStream", "count", "I", count + len).await
     }
 
+    #[method(public, synchronized)]
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, b: i32) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::write({this:?}, {b:?})");
 
@@ -132,6 +91,7 @@ impl ByteArrayOutputStream {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn write_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::writeTo({this:?}, {out:?})");
 
@@ -145,6 +105,7 @@ impl ByteArrayOutputStream {
             .await
     }
 
+    #[method(public, synchronized)]
     async fn to_byte_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<i8>>> {
         tracing::debug!("java.io.ByteArrayOutputStream::to_byte_array({this:?})");
 
@@ -164,6 +125,7 @@ impl ByteArrayOutputStream {
         Ok(dest.into())
     }
 
+    #[method(public, synchronized)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayOutputStream::size({this:?})");
 
@@ -172,6 +134,7 @@ impl ByteArrayOutputStream {
         Ok(count)
     }
 
+    #[method(public, synchronized)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.ByteArrayOutputStream::toString({this:?})");
         let buf: ClassInstanceRef<Array<i8>> = jvm.get_field(&this, "java/io/ByteArrayOutputStream", "buf", "[B").await?;
@@ -188,6 +151,7 @@ impl ByteArrayOutputStream {
         Ok(jvm.new_class("java/lang/String", "([B)V", (bytes,)).await?.into())
     }
 
+    #[method(name = "toString", public, synchronized)]
     async fn to_string_with_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -208,6 +172,7 @@ impl ByteArrayOutputStream {
             .into())
     }
 
+    #[method(public, synchronized)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::reset({this:?})");
 
@@ -216,6 +181,7 @@ impl ByteArrayOutputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayOutputStream::close({this:?})");
 

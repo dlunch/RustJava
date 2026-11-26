@@ -1,163 +1,112 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::Random};
+use crate::{RuntimeContext, classes::java::util::Random};
 
 // public final class java.lang.Math
-pub struct Math;
+#[java_class(name = "java/lang/Math", public, final)]
+pub struct Math {
+    #[field(public, static, final)]
+    E: f64,
+    #[field(public, static, final)]
+    PI: f64,
+    #[field(private, static)]
+    randomNumberGenerator: ClassInstanceRef<Random>,
+}
 
+#[java_methods]
 impl Math {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Math",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("abs", "(I)I", Self::abs, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("abs", "(J)J", Self::abs_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("abs", "(F)F", Self::abs_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("abs", "(D)D", Self::abs_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("ceil", "(D)D", Self::ceil, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("floor", "(D)D", Self::floor, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("sqrt", "(D)D", Self::sqrt, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("sin", "(D)D", Self::sin, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("cos", "(D)D", Self::cos, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("tan", "(D)D", Self::tan, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "toDegrees",
-                    "(D)D",
-                    Self::to_degrees,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toRadians",
-                    "(D)D",
-                    Self::to_radians,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("max", "(II)I", Self::max, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("max", "(JJ)J", Self::max_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("max", "(FF)F", Self::max_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("max", "(DD)D", Self::max_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("min", "(II)I", Self::min, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("min", "(JJ)J", Self::min_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("min", "(FF)F", Self::min_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("min", "(DD)D", Self::min_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("acos", "(D)D", Self::acos, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("asin", "(D)D", Self::asin, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("atan", "(D)D", Self::atan, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("atan2", "(DD)D", Self::atan2, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("exp", "(D)D", Self::exp, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("log", "(D)D", Self::log, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("pow", "(DD)D", Self::pow, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("rint", "(D)D", Self::rint, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "IEEEremainder",
-                    "(DD)D",
-                    Self::ieee_remainder,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("round", "(F)I", Self::round_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new("round", "(D)J", Self::round_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "random",
-                    "()D",
-                    Self::random,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("E", "D", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("PI", "D", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "randomNumberGenerator",
-                    "Ljava/util/Random;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Math", "E", "D", core::f64::consts::E).await?;
         jvm.put_static_field("java/lang/Math", "PI", "D", core::f64::consts::PI).await
     }
 
+    #[method(public, static)]
     async fn abs(_: &Jvm, _: &mut RuntimeContext, x: i32) -> Result<i32> {
         tracing::debug!("java.lang.Math::abs({x:?})");
         Ok(x.wrapping_abs())
     }
 
+    #[method(name = "abs", public, static)]
     async fn abs_long(_: &Jvm, _: &mut RuntimeContext, x: i64) -> Result<i64> {
         tracing::debug!("java.lang.Math::abs({x:?})");
         Ok(x.wrapping_abs())
     }
 
+    #[method(name = "abs", public, static)]
     async fn abs_float(_: &Jvm, _: &mut RuntimeContext, x: f32) -> Result<f32> {
         tracing::debug!("java.lang.Math::abs({x:?})");
         Ok(libm::fabsf(x))
     }
 
+    #[method(name = "abs", public, static)]
     async fn abs_double(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::abs({x:?})");
         Ok(libm::fabs(x))
     }
 
+    #[method(public, static)]
     async fn ceil(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::ceil({x:?})");
         Ok(libm::ceil(x))
     }
 
+    #[method(public, static)]
     async fn floor(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::floor({x:?})");
         Ok(libm::floor(x))
     }
 
+    #[method(public, static)]
     async fn sqrt(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::sqrt({x:?})");
         Ok(libm::sqrt(x))
     }
 
+    #[method(public, static)]
     async fn sin(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::sin({x:?})");
         Ok(libm::sin(x))
     }
 
+    #[method(public, static)]
     async fn cos(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::cos({x:?})");
         Ok(libm::cos(x))
     }
 
+    #[method(public, static)]
     async fn tan(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::tan({x:?})");
         Ok(libm::tan(x))
     }
 
+    #[method(public, static)]
     async fn to_degrees(_: &Jvm, _: &mut RuntimeContext, radians: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::toDegrees({radians:?})");
         Ok(radians * 180.0 / core::f64::consts::PI)
     }
 
+    #[method(public, static)]
     async fn to_radians(_: &Jvm, _: &mut RuntimeContext, degrees: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::toRadians({degrees:?})");
         Ok(degrees / 180.0 * core::f64::consts::PI)
     }
 
+    #[method(public, static)]
     async fn max(_: &Jvm, _: &mut RuntimeContext, x: i32, y: i32) -> Result<i32> {
         tracing::debug!("java.lang.Math::max({x:?}, {y:?})");
         Ok(x.max(y))
     }
 
+    #[method(name = "max", public, static)]
     async fn max_long(_: &Jvm, _: &mut RuntimeContext, x: i64, y: i64) -> Result<i64> {
         tracing::debug!("java.lang.Math::max({x:?}, {y:?})");
         Ok(x.max(y))
     }
 
+    #[method(name = "max", public, static)]
     async fn max_float(_: &Jvm, _: &mut RuntimeContext, x: f32, y: f32) -> Result<f32> {
         tracing::debug!("java.lang.Math::max({x:?}, {y:?})");
 
@@ -173,6 +122,7 @@ impl Math {
         Ok(if x >= y { x } else { y })
     }
 
+    #[method(name = "max", public, static)]
     async fn max_double(_: &Jvm, _: &mut RuntimeContext, x: f64, y: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::max({x:?}, {y:?})");
 
@@ -188,16 +138,19 @@ impl Math {
         Ok(if x >= y { x } else { y })
     }
 
+    #[method(public, static)]
     async fn min(_: &Jvm, _: &mut RuntimeContext, x: i32, y: i32) -> Result<i32> {
         tracing::debug!("java.lang.Math::min({x:?}, {y:?})");
         Ok(x.min(y))
     }
 
+    #[method(name = "min", public, static)]
     async fn min_long(_: &Jvm, _: &mut RuntimeContext, x: i64, y: i64) -> Result<i64> {
         tracing::debug!("java.lang.Math::min({x:?}, {y:?})");
         Ok(x.min(y))
     }
 
+    #[method(name = "min", public, static)]
     async fn min_float(_: &Jvm, _: &mut RuntimeContext, x: f32, y: f32) -> Result<f32> {
         tracing::debug!("java.lang.Math::min({x:?}, {y:?})");
 
@@ -213,6 +166,7 @@ impl Math {
         Ok(if x <= y { x } else { y })
     }
 
+    #[method(name = "min", public, static)]
     async fn min_double(_: &Jvm, _: &mut RuntimeContext, x: f64, y: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::min({x:?}, {y:?})");
 
@@ -228,36 +182,43 @@ impl Math {
         Ok(if x <= y { x } else { y })
     }
 
+    #[method(public, static)]
     async fn acos(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::acos({x:?})");
         Ok(libm::acos(x))
     }
 
+    #[method(public, static)]
     async fn asin(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::asin({x:?})");
         Ok(libm::asin(x))
     }
 
+    #[method(public, static)]
     async fn atan(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::atan({x:?})");
         Ok(libm::atan(x))
     }
 
+    #[method(public, static)]
     async fn atan2(_: &Jvm, _: &mut RuntimeContext, y: f64, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::atan2({y:?}, {x:?})");
         Ok(libm::atan2(y, x))
     }
 
+    #[method(public, static)]
     async fn exp(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::exp({x:?})");
         Ok(libm::exp(x))
     }
 
+    #[method(public, static)]
     async fn log(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::log({x:?})");
         Ok(libm::log(x))
     }
 
+    #[method(public, static)]
     async fn pow(_: &Jvm, _: &mut RuntimeContext, x: f64, y: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::pow({x:?}, {y:?})");
 
@@ -273,16 +234,19 @@ impl Math {
         Ok(libm::pow(x, y))
     }
 
+    #[method(public, static)]
     async fn rint(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::rint({x:?})");
         Ok(libm::rint(x))
     }
 
+    #[method(name = "IEEEremainder", public, static)]
     async fn ieee_remainder(_: &Jvm, _: &mut RuntimeContext, x: f64, y: f64) -> Result<f64> {
         tracing::debug!("java.lang.Math::IEEEremainder({x:?}, {y:?})");
         Ok(libm::remainder(x, y))
     }
 
+    #[method(name = "round", public, static)]
     async fn round_float(_: &Jvm, _: &mut RuntimeContext, x: f32) -> Result<i32> {
         tracing::debug!("java.lang.Math::round({x:?})");
 
@@ -298,6 +262,7 @@ impl Math {
         Ok(libm::floorf(x + 0.5) as i32)
     }
 
+    #[method(name = "round", public, static)]
     async fn round_double(_: &Jvm, _: &mut RuntimeContext, x: f64) -> Result<i64> {
         tracing::debug!("java.lang.Math::round({x:?})");
 
@@ -313,6 +278,7 @@ impl Math {
         Ok(libm::floor(x + 0.5) as i64)
     }
 
+    #[method(public, static, synchronized)]
     async fn random(jvm: &Jvm, _: &mut RuntimeContext) -> Result<f64> {
         tracing::debug!("java.lang.Math::random()");
 

@@ -1,51 +1,29 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // public class java.util.FormattableFlags
-pub struct FormattableFlags;
+#[java_class(name = "java/util/FormattableFlags", public)]
+pub struct FormattableFlags {
+    #[field(public, static, final)]
+    LEFT_JUSTIFY: i32,
+    #[field(public, static, final)]
+    UPPERCASE: i32,
+    #[field(public, static, final)]
+    ALTERNATE: i32,
+}
 
+#[java_methods]
 impl FormattableFlags {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/FormattableFlags",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "LEFT_JUSTIFY",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "UPPERCASE",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "ALTERNATE",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/util/FormattableFlags", "LEFT_JUSTIFY", "I", 1).await?;
         jvm.put_static_field("java/util/FormattableFlags", "UPPERCASE", "I", 2).await?;
         jvm.put_static_field("java/util/FormattableFlags", "ALTERNATE", "I", 4).await
     }
 
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }

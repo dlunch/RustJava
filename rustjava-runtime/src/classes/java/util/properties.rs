@@ -1,11 +1,10 @@
-use alloc::{format, string::String as RustString, vec, vec::Vec};
+use alloc::{format, string::String as RustString, vec::Vec};
 
 use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{InputStream, OutputStream},
         lang::{Object, String},
@@ -15,59 +14,15 @@ use crate::{
 use super::Hashtable;
 
 // class java.util.Properties
-pub struct Properties;
+#[java_class(name = "java/util/Properties", extends = "java/util/Hashtable", public)]
+pub struct Properties {
+    #[field(protected)]
+    defaults: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl Properties {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Properties",
-            parent_class: Some("java/util/Hashtable"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Properties;)V", Self::init_with_defaults, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getProperty",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::get_property,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getProperty",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-                    Self::get_property_with_default,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setProperty",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
-                    Self::set_property,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "load",
-                    "(Ljava/io/InputStream;)V",
-                    Self::load,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "store",
-                    "(Ljava/io/OutputStream;Ljava/lang/String;)V",
-                    Self::store,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "propertyNames",
-                    "()Ljava/util/Enumeration;",
-                    Self::property_names,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("defaults", "Ljava/util/Properties;", FieldAccessFlags::PROTECTED)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Properties::<init>({this:?})");
 
@@ -76,6 +31,7 @@ impl Properties {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_defaults(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, defaults: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Properties::<init>({this:?}, {defaults:?})");
 
@@ -84,6 +40,7 @@ impl Properties {
             .await
     }
 
+    #[method(public)]
     async fn get_property(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -120,6 +77,7 @@ impl Properties {
         }
     }
 
+    #[method(name = "getProperty", public)]
     async fn get_property_with_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -141,6 +99,7 @@ impl Properties {
         if value.is_null() { Ok(default_value) } else { Ok(value) }
     }
 
+    #[method(public, synchronized)]
     async fn set_property(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -160,6 +119,7 @@ impl Properties {
         .await
     }
 
+    #[method(public, synchronized)]
     async fn load(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, input: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.util.Properties::load({this:?}, {input:?})");
 
@@ -289,6 +249,7 @@ impl Properties {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn store(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -376,6 +337,7 @@ impl Properties {
         jvm.invoke_virtual(&output, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Enumeration;", public, synchronized)]
     async fn property_names(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Properties::propertyNames({this:?})");
 

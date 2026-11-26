@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::Object,
         util::zip::{ZipEntry, ZipFileEntries},
@@ -13,28 +12,15 @@ use crate::{
 };
 
 // class java.util.jar.JarFile$Entries
-pub struct JarFileEntries;
+#[java_class(name = "java/util/jar/JarFile$Entries", implements("java/util/Enumeration"))]
+pub struct JarFileEntries {
+    #[field(private)]
+    entries: ClassInstanceRef<ZipFileEntries>,
+}
 
+#[java_methods]
 impl JarFileEntries {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/jar/JarFile$Entries",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Enumeration"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/zip/ZipFile$Entries;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "entries",
-                "Ljava/util/zip/ZipFile$Entries;",
-                FieldAccessFlags::PRIVATE,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, entries: ClassInstanceRef<ZipFileEntries>) -> Result<()> {
         tracing::debug!("java.util.jar.JarFile$Entries::<init>({this:?}, {entries:?})");
 
@@ -52,6 +38,7 @@ impl JarFileEntries {
         Ok(())
     }
 
+    #[method(public)]
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.jar.JarFile$Entries::hasMoreElements({this:?})");
 
@@ -63,6 +50,7 @@ impl JarFileEntries {
             .await
     }
 
+    #[method(public)]
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.jar.JarFile$Entries::nextElement({this:?})");
 

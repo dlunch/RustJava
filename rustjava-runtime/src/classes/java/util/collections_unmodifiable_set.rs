@@ -1,30 +1,19 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Collections$UnmodifiableSet
+#[java_class(
+    name = "java/util/Collections$UnmodifiableSet",
+    extends = "java/util/Collections$UnmodifiableCollection",
+    implements("java/util/Set", "java/io/Serializable")
+)]
 pub struct CollectionsUnmodifiableSet;
 
+#[java_methods]
 impl CollectionsUnmodifiableSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableSet",
-            parent_class: Some("java/util/Collections$UnmodifiableCollection"),
-            interfaces: vec!["java/util/Set", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Set;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Set;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, set: ClassInstanceRef<Object>) -> Result<()> {
         jvm.invoke_special(
             &this,
@@ -36,6 +25,7 @@ impl CollectionsUnmodifiableSet {
         .await
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if !other.is_null() && this.identity() == other.identity() {
             return Ok(true);
@@ -47,6 +37,7 @@ impl CollectionsUnmodifiableSet {
             .await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSet", "c", "Ljava/util/Collection;")

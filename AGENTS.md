@@ -22,6 +22,7 @@
 - `rustjava-runtime/` - Java standard library implementations
 - `classfile/` - Class file parser
 - `jvm-class-proto/` - Java class prototypes
+- `jvm-class-proto-macros/` - Attribute macros that generate Java class prototypes
 - `jvm-types/` - Shared JVM metadata types
 - `test-utils/` - Shared test utilities
 

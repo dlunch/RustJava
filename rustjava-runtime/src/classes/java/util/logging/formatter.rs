@@ -1,62 +1,37 @@
-use alloc::{string::String as RustString, vec, vec::Vec};
+use alloc::{string::String as RustString, vec::Vec};
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 use super::LogRecord;
 
 // public abstract class java.util.logging.Formatter
+#[java_class(name = "java/util/logging/Formatter", public, abstract)]
 pub struct Formatter;
 
+#[java_methods]
 impl Formatter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/Formatter",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract(
-                    "format",
-                    "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new(
-                    "formatMessage",
-                    "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
-                    Self::format_message,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getHead",
-                    "(Ljava/util/logging/Handler;)Ljava/lang/String;",
-                    Self::get_head,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getTail",
-                    "(Ljava/util/logging/Handler;)Ljava/lang/String;",
-                    Self::get_tail,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.Formatter::<init>({this:?})");
 
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }
 
+    #[method(public)]
+    async fn format(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        record: ClassInstanceRef<LogRecord>,
+    ) -> Result<ClassInstanceRef<String>>;
+
+    #[method(public)]
     async fn format_message(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -137,6 +112,7 @@ impl Formatter {
         Ok(JavaLangString::from_rust_string(jvm, &formatted).await?.into())
     }
 
+    #[method(public)]
     async fn get_head(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -148,6 +124,7 @@ impl Formatter {
         Ok(JavaLangString::from_rust_string(jvm, "").await?.into())
     }
 
+    #[method(public)]
     async fn get_tail(
         jvm: &Jvm,
         _: &mut RuntimeContext,

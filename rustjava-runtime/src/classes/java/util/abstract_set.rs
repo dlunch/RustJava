@@ -1,30 +1,21 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, JavaError, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.util.AbstractSet
+#[java_class(
+    name = "java/util/AbstractSet",
+    extends = "java/util/AbstractCollection",
+    implements("java/util/Set"),
+    public,
+    abstract
+)]
 pub struct AbstractSet;
 
+#[java_methods]
 impl AbstractSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/AbstractSet",
-            parent_class: Some("java/util/AbstractCollection"),
-            interfaces: vec!["java/util/Set"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.AbstractSet::<init>({this:?})");
 
@@ -33,6 +24,7 @@ impl AbstractSet {
         Ok(())
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() {
             return Ok(false);
@@ -65,6 +57,7 @@ impl AbstractSet {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&this, "java/util/AbstractSet", "iterator", "()Ljava/util/Iterator;", ())

@@ -1,14 +1,13 @@
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 
 use jvm::{
     Array, ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    FileType, RuntimeClassProto, RuntimeContext,
+    FileType, RuntimeContext,
     classes::java::{
         lang::{Class, ClassLoader, String},
         net::{JarURLConnection, URL},
@@ -17,39 +16,19 @@ use crate::{
 };
 
 // class java.net.URLClassLoader
-pub struct URLClassLoader;
+#[java_class(
+    name = "java/net/URLClassLoader",
+    extends = "java/lang/ClassLoader", // TODO java.security.SecureClassLoader
+    public
+)]
+pub struct URLClassLoader {
+    #[field(private)]
+    urls: ClassInstanceRef<Array<URL>>,
+}
 
+#[java_methods]
 impl URLClassLoader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/net/URLClassLoader",
-            parent_class: Some("java/lang/ClassLoader"), // TODO java.security.SecureClassLoader
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "([Ljava/net/URL;Ljava/lang/ClassLoader;)V",
-                    Self::init,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "findClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::find_class,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new(
-                    "findResource",
-                    "(Ljava/lang/String;)Ljava/net/URL;",
-                    Self::find_resource,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("urls", "[Ljava/net/URL;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -77,6 +56,7 @@ impl URLClassLoader {
         Ok(())
     }
 
+    #[method(protected)]
     async fn find_class(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -132,6 +112,7 @@ impl URLClassLoader {
         Ok(class)
     }
 
+    #[method(public)]
     async fn find_resource(
         jvm: &Jvm,
         runtime: &mut RuntimeContext,

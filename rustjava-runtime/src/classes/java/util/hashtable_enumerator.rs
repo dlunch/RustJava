@@ -1,36 +1,19 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Hashtable$Enumerator
-pub struct HashtableEnumerator;
+#[java_class(name = "java/util/Hashtable$Enumerator", implements("java/util/Enumeration", "java/util/Iterator"))]
+pub struct HashtableEnumerator {
+    #[field(private)]
+    elements: ClassInstanceRef<Array<Object>>,
+    index: i32,
+}
 
+#[java_methods]
 impl HashtableEnumerator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Hashtable$Enumerator",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Enumeration", "java/util/Iterator"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("index", "I", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, elements: ClassInstanceRef<Array<Object>>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$Enumerator::<init>({this:?}, {elements:?})");
 
@@ -43,14 +26,17 @@ impl HashtableEnumerator {
         Ok(())
     }
 
+    #[method(public)]
     async fn has_more_elements(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         Self::has_next(jvm, context, this).await
     }
 
+    #[method(public)]
     async fn next_element(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Self::next(jvm, context, this).await
     }
 
+    #[method(public)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable$Enumerator::hasNext({this:?})");
 
@@ -65,6 +51,7 @@ impl HashtableEnumerator {
         Ok((index as usize) < jvm.array_length(&elements).await?)
     }
 
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Enumerator::next({this:?})");
 
@@ -86,6 +73,7 @@ impl HashtableEnumerator {
         Ok(element)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable$Enumerator::remove({this:?})");
 

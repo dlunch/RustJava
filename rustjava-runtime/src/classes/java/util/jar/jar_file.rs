@@ -1,11 +1,10 @@
-use alloc::{string::ToString, vec};
+use alloc::string::ToString;
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, InputStream},
         lang::String,
@@ -18,31 +17,12 @@ use crate::{
 };
 
 // class java.util.jar.JarFile
+#[java_class(name = "java/util/jar/JarFile", extends = "java/util/zip/ZipFile", public)]
 pub struct JarFile;
 
+#[java_methods]
 impl JarFile {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/jar/JarFile",
-            parent_class: Some("java/util/zip/ZipFile"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getJarEntry",
-                    "(Ljava/lang/String;)Ljava/util/jar/JarEntry;",
-                    Self::get_jar_entry,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getManifest", "()Ljava/util/jar/Manifest;", Self::get_manifest, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.util.jar.JarFile::<init>({this:?}, {file:?})");
 
@@ -53,6 +33,7 @@ impl JarFile {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.jar.JarFile::<init>({this:?}, {name:?})");
 
@@ -65,6 +46,7 @@ impl JarFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_jar_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -94,6 +76,7 @@ impl JarFile {
         Ok(jar_entry.into())
     }
 
+    #[method(public)]
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
         tracing::debug!("java.util.jar.JarFile::entries({this:?})");
 
@@ -108,6 +91,7 @@ impl JarFile {
         Ok(entries.into())
     }
 
+    #[method(public)]
     async fn get_manifest(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Manifest>> {
         tracing::debug!("java.util.jar.JarFile::getManifest({this:?})");
 

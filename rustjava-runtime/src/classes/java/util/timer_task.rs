@@ -1,42 +1,27 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.util.TimerTask
-pub struct TimerTask;
+#[java_class(name = "java/util/TimerTask", implements("java/lang/Runnable"), public, abstract)]
+pub struct TimerTask {
+    #[field(final)]
+    lock: ClassInstanceRef<Object>,
+    state: i32,
+    nextExecutionTime: i64,
+    period: i64,
+    lastScheduledExecutionTime: i64,
+}
 
+#[java_methods]
 impl TimerTask {
     pub(crate) const VIRGIN: i32 = 0;
     pub(crate) const SCHEDULED: i32 = 1;
     pub(crate) const EXECUTED: i32 = 2;
     pub(crate) const CANCELLED: i32 = 3;
 
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TimerTask",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Runnable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("run", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("cancel", "()Z", Self::cancel, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("scheduledExecutionTime", "()J", Self::scheduled_execution_time, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("lock", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("state", "I", FieldAccessFlags::empty()),
-                JavaFieldProto::new("nextExecutionTime", "J", FieldAccessFlags::empty()),
-                JavaFieldProto::new("period", "J", FieldAccessFlags::empty()),
-                JavaFieldProto::new("lastScheduledExecutionTime", "J", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.TimerTask::<init>({this:?})");
 
@@ -49,6 +34,10 @@ impl TimerTask {
         Ok(())
     }
 
+    #[method(public)]
+    async fn run(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
+
+    #[method(public)]
     async fn cancel(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.TimerTask::cancel({this:?})");
 
@@ -73,6 +62,7 @@ impl TimerTask {
         }
     }
 
+    #[method(public)]
     async fn scheduled_execution_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.TimerTask::scheduledExecutionTime({this:?})");
 

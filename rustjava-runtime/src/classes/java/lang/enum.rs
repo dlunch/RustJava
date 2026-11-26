@@ -1,113 +1,66 @@
-use alloc::{format, vec};
+use alloc::format;
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangClass};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
+use jvm_types::FieldAccessFlags;
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Class, Object, String},
 };
 
 // public abstract class java.lang.Enum
-pub struct Enum;
+#[java_class(name = "java/lang/Enum", implements("java/lang/Comparable", "java/io/Serializable"), public, abstract)]
+pub struct Enum {
+    #[field(private, final)]
+    name: ClassInstanceRef<String>,
+    #[field(private, final)]
+    ordinal: i32,
+}
 
+#[java_methods]
 impl Enum {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Enum",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Comparable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;I)V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "name",
-                    "()Ljava/lang/String;",
-                    Self::name,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("ordinal", "()I", Self::ordinal, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "equals",
-                    "(Ljava/lang/Object;)Z",
-                    Self::equals,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "clone",
-                    "()Ljava/lang/Object;",
-                    Self::clone,
-                    MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "compareTo",
-                    "(Ljava/lang/Enum;)I",
-                    Self::compare_to,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "compareTo",
-                    "(Ljava/lang/Object;)I",
-                    Self::compare_to_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "getDeclaringClass",
-                    "()Ljava/lang/Class;",
-                    Self::get_declaring_class,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("finalize", "()V", Self::finalize, MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL),
-            ],
-            fields: vec![
-                JavaFieldProto::new("name", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("ordinal", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>, ordinal: i32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Enum", "name", "Ljava/lang/String;", name).await?;
         jvm.put_field(&mut this, "java/lang/Enum", "ordinal", "I", ordinal).await
     }
 
+    #[method(public, final)]
     async fn name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/lang/Enum", "name", "Ljava/lang/String;").await
     }
 
+    #[method(public, final)]
     async fn ordinal(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/lang/Enum", "ordinal", "I").await
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/lang/Enum", "name", "Ljava/lang/String;").await
     }
 
+    #[method(public, final)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         jvm.invoke_special(&this, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other,))
             .await
     }
 
+    #[method(public, final)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.invoke_special(&this, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
+    #[method(protected, final)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Err(jvm
             .exception("java/lang/CloneNotSupportedException", "enum types may not be cloned")
             .await)
     }
 
+    #[method(public, final)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -130,11 +83,13 @@ impl Enum {
         Ok(this_ordinal - other_ordinal)
     }
 
+    #[method(name = "compareTo", public, bridge, synthetic)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         jvm.invoke_virtual(&this, "java/lang/Enum", "compareTo", "(Ljava/lang/Enum;)I", (other,))
             .await
     }
 
+    #[method(public, final)]
     async fn get_declaring_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Class>> {
         let class = this.class_definition();
         let declaring_class = match class.super_class_name() {
@@ -144,6 +99,7 @@ impl Enum {
         Ok(jvm.resolve_class(&declaring_class).await?.java_class().into())
     }
 
+    #[method(public, static)]
     async fn value_of(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -175,6 +131,7 @@ impl Enum {
             .await)
     }
 
+    #[method(protected, final)]
     async fn finalize(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Ok(())
     }

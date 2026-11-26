@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Number, Object, String, StringBuffer},
         text::{FieldPosition, ParseException, ParsePosition},
@@ -14,205 +11,35 @@ use crate::{
 };
 
 // public abstract class java.text.NumberFormat
-pub struct NumberFormat;
+#[java_class(name = "java/text/NumberFormat", extends = "java/text/Format", public, abstract)]
+pub struct NumberFormat {
+    #[field(public, static, final)]
+    INTEGER_FIELD: i32,
+    #[field(public, static, final)]
+    FRACTION_FIELD: i32,
+    #[field(private)]
+    groupingUsed: bool,
+    #[field(private)]
+    parseIntegerOnly: bool,
+    #[field(private)]
+    maximumIntegerDigits: i32,
+    #[field(private)]
+    minimumIntegerDigits: i32,
+    #[field(private)]
+    maximumFractionDigits: i32,
+    #[field(private)]
+    minimumFractionDigits: i32,
+}
 
+#[java_methods]
 impl NumberFormat {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/NumberFormat",
-            parent_class: Some("java/text/Format"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/lang/Object;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    Self::format_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(D)Ljava/lang/String;",
-                    Self::format_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(J)Ljava/lang/String;",
-                    Self::format_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new_abstract(
-                    "format",
-                    "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "format",
-                    "(JLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new("parse", "(Ljava/lang/String;)Ljava/lang/Number;", Self::parse, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract(
-                    "parse",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new(
-                    "parseObject",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Object;",
-                    Self::parse_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getInstance",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getInstance",
-                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
-                    Self::get_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getNumberInstance",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_number_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getNumberInstance",
-                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
-                    Self::get_number_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getIntegerInstance",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_integer_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getIntegerInstance",
-                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
-                    Self::get_integer_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getCurrencyInstance",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_currency_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getCurrencyInstance",
-                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
-                    Self::get_currency_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getPercentInstance",
-                    "()Ljava/text/NumberFormat;",
-                    Self::get_percent_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getPercentInstance",
-                    "(Ljava/util/Locale;)Ljava/text/NumberFormat;",
-                    Self::get_percent_instance_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getAvailableLocales",
-                    "()[Ljava/util/Locale;",
-                    Self::get_available_locales,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isGroupingUsed", "()Z", Self::is_grouping_used, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setGroupingUsed", "(Z)V", Self::set_grouping_used, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isParseIntegerOnly", "()Z", Self::is_parse_integer_only, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setParseIntegerOnly", "(Z)V", Self::set_parse_integer_only, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getMaximumIntegerDigits",
-                    "()I",
-                    Self::get_maximum_integer_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setMaximumIntegerDigits",
-                    "(I)V",
-                    Self::set_maximum_integer_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getMinimumIntegerDigits",
-                    "()I",
-                    Self::get_minimum_integer_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setMinimumIntegerDigits",
-                    "(I)V",
-                    Self::set_minimum_integer_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getMaximumFractionDigits",
-                    "()I",
-                    Self::get_maximum_fraction_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setMaximumFractionDigits",
-                    "(I)V",
-                    Self::set_maximum_fraction_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getMinimumFractionDigits",
-                    "()I",
-                    Self::get_minimum_fraction_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "setMinimumFractionDigits",
-                    "(I)V",
-                    Self::set_minimum_fraction_digits,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "INTEGER_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FRACTION_FIELD",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("groupingUsed", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("parseIntegerOnly", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("maximumIntegerDigits", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("minimumIntegerDigits", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("maximumFractionDigits", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("minimumFractionDigits", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/text/NumberFormat", "INTEGER_FIELD", "I", 0).await?;
         jvm.put_static_field("java/text/NumberFormat", "FRACTION_FIELD", "I", 1).await
     }
 
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/text/Format", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/text/NumberFormat", "groupingUsed", "Z", true).await?;
@@ -225,6 +52,7 @@ impl NumberFormat {
         jvm.put_field(&mut this, "java/text/NumberFormat", "minimumFractionDigits", "I", 0).await
     }
 
+    #[method(name = "format", public, final)]
     async fn format_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -270,6 +98,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(name = "format", public, final)]
     async fn format_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<ClassInstanceRef<String>> {
         let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let position: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (0,)).await?.into();
@@ -286,6 +115,7 @@ impl NumberFormat {
             .await
     }
 
+    #[method(name = "format", public, final)]
     async fn format_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<String>> {
         let buffer: ClassInstanceRef<StringBuffer> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let position: ClassInstanceRef<FieldPosition> = jvm.new_class("java/text/FieldPosition", "(I)V", (0,)).await?.into();
@@ -302,6 +132,27 @@ impl NumberFormat {
             .await
     }
 
+    #[method(name = "format", public)]
+    async fn format_double_to_buffer(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        value: f64,
+        buffer: ClassInstanceRef<StringBuffer>,
+        position: ClassInstanceRef<FieldPosition>,
+    ) -> Result<ClassInstanceRef<StringBuffer>>;
+
+    #[method(name = "format", public)]
+    async fn format_long_to_buffer(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        value: i64,
+        buffer: ClassInstanceRef<StringBuffer>,
+        position: ClassInstanceRef<FieldPosition>,
+    ) -> Result<ClassInstanceRef<StringBuffer>>;
+
+    #[method(public)]
     async fn parse(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -336,6 +187,16 @@ impl NumberFormat {
         Ok(result)
     }
 
+    #[method(name = "parse", public)]
+    async fn parse_with_position(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        source: ClassInstanceRef<String>,
+        position: ClassInstanceRef<ParsePosition>,
+    ) -> Result<ClassInstanceRef<Number>>;
+
+    #[method(public, final)]
     async fn parse_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -355,11 +216,13 @@ impl NumberFormat {
         Ok(ClassInstanceRef::new(number.instance))
     }
 
+    #[method(public, static, final)]
     async fn get_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         jvm.invoke_static("java/text/NumberFormat", "getNumberInstance", "()Ljava/text/NumberFormat;", ())
             .await
     }
 
+    #[method(name = "getInstance", public, static)]
     async fn get_instance_with_locale(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Locale>) -> Result<ClassInstanceRef<Self>> {
         jvm.invoke_static(
             "java/text/NumberFormat",
@@ -370,6 +233,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(public, static, final)]
     async fn get_number_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_static(
@@ -381,6 +245,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(name = "getNumberInstance", public, static)]
     async fn get_number_instance_with_locale(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Locale>) -> Result<ClassInstanceRef<Self>> {
         if locale.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "locale").await);
@@ -392,6 +257,7 @@ impl NumberFormat {
             .into())
     }
 
+    #[method(public, static, final)]
     async fn get_integer_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_static(
@@ -403,6 +269,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(name = "getIntegerInstance", public, static)]
     async fn get_integer_instance_with_locale(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Locale>) -> Result<ClassInstanceRef<Self>> {
         if locale.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "locale").await);
@@ -418,6 +285,7 @@ impl NumberFormat {
         Ok(format)
     }
 
+    #[method(public, static, final)]
     async fn get_currency_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_static(
@@ -429,6 +297,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(name = "getCurrencyInstance", public, static)]
     async fn get_currency_instance_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -444,6 +313,7 @@ impl NumberFormat {
             .into())
     }
 
+    #[method(public, static, final)]
     async fn get_percent_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_static(
@@ -455,6 +325,7 @@ impl NumberFormat {
         .await
     }
 
+    #[method(name = "getPercentInstance", public, static)]
     async fn get_percent_instance_with_locale(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Locale>) -> Result<ClassInstanceRef<Self>> {
         if locale.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "locale").await);
@@ -466,31 +337,38 @@ impl NumberFormat {
             .into())
     }
 
+    #[method(public, static)]
     async fn get_available_locales(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<Locale>>> {
         jvm.invoke_static("java/util/Locale", "getAvailableLocales", "()[Ljava/util/Locale;", ())
             .await
     }
 
+    #[method(public)]
     async fn is_grouping_used(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         jvm.get_field(&this, "java/text/NumberFormat", "groupingUsed", "Z").await
     }
 
+    #[method(public)]
     async fn set_grouping_used(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         jvm.put_field(&mut this, "java/text/NumberFormat", "groupingUsed", "Z", value).await
     }
 
+    #[method(public)]
     async fn is_parse_integer_only(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         jvm.get_field(&this, "java/text/NumberFormat", "parseIntegerOnly", "Z").await
     }
 
+    #[method(public)]
     async fn set_parse_integer_only(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         jvm.put_field(&mut this, "java/text/NumberFormat", "parseIntegerOnly", "Z", value).await
     }
 
+    #[method(public)]
     async fn get_maximum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/NumberFormat", "maximumIntegerDigits", "I").await
     }
 
+    #[method(public)]
     async fn set_maximum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
         jvm.put_field(&mut this, "java/text/NumberFormat", "maximumIntegerDigits", "I", value)
@@ -503,10 +381,12 @@ impl NumberFormat {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_minimum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/NumberFormat", "minimumIntegerDigits", "I").await
     }
 
+    #[method(public)]
     async fn set_minimum_integer_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
         jvm.put_field(&mut this, "java/text/NumberFormat", "minimumIntegerDigits", "I", value)
@@ -519,10 +399,12 @@ impl NumberFormat {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_maximum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/NumberFormat", "maximumFractionDigits", "I").await
     }
 
+    #[method(public)]
     async fn set_maximum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
         jvm.put_field(&mut this, "java/text/NumberFormat", "maximumFractionDigits", "I", value)
@@ -535,10 +417,12 @@ impl NumberFormat {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_minimum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/NumberFormat", "minimumFractionDigits", "I").await
     }
 
+    #[method(public)]
     async fn set_minimum_fraction_digits(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let value = value.max(0);
         jvm.put_field(&mut this, "java/text/NumberFormat", "minimumFractionDigits", "I", value)
@@ -551,6 +435,7 @@ impl NumberFormat {
         Ok(())
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/text/NumberFormat") {
             return Ok(false);
@@ -581,6 +466,7 @@ impl NumberFormat {
         Ok(true)
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let maximum_integer_digits: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumIntegerDigits", "I").await?;
         let maximum_fraction_digits: i32 = jvm.get_field(&this, "java/text/NumberFormat", "maximumFractionDigits", "I").await?;

@@ -1,147 +1,46 @@
-use alloc::{boxed::Box, format, vec};
+use alloc::{boxed::Box, format};
 use core::time::Duration;
 
 use jvm::{ClassInstance, ClassInstanceRef, GlobalRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext, SpawnCallback,
+    RuntimeContext, SpawnCallback,
     classes::java::lang::{Runnable, String},
 };
 
 // class java.lang.Thread
-pub struct Thread;
+#[java_class(name = "java/lang/Thread", implements("java/lang/Runnable"), public)]
+pub struct Thread {
+    #[field(public, static, final)]
+    MIN_PRIORITY: i32,
+    #[field(public, static, final)]
+    NORM_PRIORITY: i32,
+    #[field(public, static, final)]
+    MAX_PRIORITY: i32,
+    #[field(private, static)]
+    threadInitNumber: i32,
+    #[field(private)]
+    id: i64,
+    #[field(private)]
+    target: ClassInstanceRef<Runnable>,
+    #[field(private)]
+    name: ClassInstanceRef<String>,
+    #[field(private)]
+    priority: i32,
+    #[field(private)]
+    interrupted: bool,
+    #[field(private)]
+    started: bool,
+    #[field(private)]
+    alive: bool,
+    #[field(private)]
+    daemon: bool,
+}
 
+#[java_methods]
 impl Thread {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Thread",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Runnable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Runnable;)V", Self::init_with_runnable, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_name, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/Runnable;Ljava/lang/String;)V",
-                    Self::init_with_runnable_and_name,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("start", "()V", Self::start, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "join",
-                    "()V",
-                    Self::join,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "join",
-                    "(J)V",
-                    Self::join_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isAlive", "()Z", Self::is_alive, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "getName",
-                    "()Ljava/lang/String;",
-                    Self::get_name,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "setName",
-                    "(Ljava/lang/String;)V",
-                    Self::set_name,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getPriority",
-                    "()I",
-                    Self::get_priority,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("interrupt", "()V", Self::interrupt, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isInterrupted", "()Z", Self::is_interrupted, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "interrupted",
-                    "()Z",
-                    Self::interrupted,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "activeCount",
-                    "()I",
-                    Self::active_count,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "sleep",
-                    "(J)V",
-                    Self::sleep,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "yield",
-                    "()V",
-                    Self::r#yield,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setPriority",
-                    "(I)V",
-                    Self::set_priority,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "setDaemon",
-                    "(Z)V",
-                    Self::set_daemon,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("isDaemon", "()Z", Self::is_daemon, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "currentThread",
-                    "()Ljava/lang/Thread;",
-                    Self::current_thread,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
-                ),
-                // rustjava internal
-                JavaMethodProto::new("<init>", "(Z)V", Self::init_internal, MethodAccessFlags::PRIVATE),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "MIN_PRIORITY",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "NORM_PRIORITY",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MAX_PRIORITY",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("threadInitNumber", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC),
-                JavaFieldProto::new("id", "J", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("target", "Ljava/lang/Runnable;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("name", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("priority", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("interrupted", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("started", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("alive", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("daemon", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: jvm_types::ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Thread", "MIN_PRIORITY", "I", 1i32).await?;
         jvm.put_static_field("java/lang/Thread", "NORM_PRIORITY", "I", 5i32).await?;
@@ -149,6 +48,7 @@ impl Thread {
         jvm.put_static_field("java/lang/Thread", "threadInitNumber", "I", 0i32).await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::<init>({this:?})");
 
@@ -169,6 +69,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_runnable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, target: ClassInstanceRef<Runnable>) -> Result<()> {
         tracing::debug!("java.lang.Thread::<init>({this:?}, {target:?})");
 
@@ -188,6 +89,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.Thread::<init>({this:?}, {name:?})");
 
@@ -205,6 +107,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_runnable_and_name(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -233,6 +136,8 @@ impl Thread {
         Ok(())
     }
 
+    // rustjava internal
+    #[method(constructor, private)]
     async fn init_internal(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, internal: bool) -> Result<()> {
         tracing::debug!("java.lang.Thread::<init>({this:?}, {internal:?})");
 
@@ -247,6 +152,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn start(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::start({this:?})");
 
@@ -345,6 +251,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(public)]
     async fn run(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::run({this:?})");
 
@@ -356,6 +263,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(public, final, synchronized)]
     async fn join(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::join({this:?})");
 
@@ -364,6 +272,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(name = "join", public, final, synchronized)]
     async fn join_long(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, millis: i64) -> Result<()> {
         tracing::debug!("java.lang.Thread::join({this:?}, {millis:?})");
 
@@ -392,12 +301,14 @@ impl Thread {
         }
     }
 
+    #[method(public, final)]
     async fn is_alive(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Thread::isAlive({this:?})");
         let alive: bool = jvm.get_field(&this, "java/lang/Thread", "alive", "Z").await?;
         Ok(alive)
     }
 
+    #[method(public, final)]
     async fn get_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Thread::getName({this:?})");
 
@@ -409,6 +320,7 @@ impl Thread {
         Ok(name)
     }
 
+    #[method(public, final)]
     async fn set_name(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, name: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.Thread::setName({this:?}, {name:?})");
 
@@ -419,30 +331,36 @@ impl Thread {
         jvm.put_field(&mut this, "java/lang/Thread", "name", "Ljava/lang/String;", name).await
     }
 
+    #[method(public, final)]
     async fn get_priority(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.lang.Thread::getPriority({this:?})");
         jvm.get_field(&this, "java/lang/Thread", "priority", "I").await
     }
 
+    #[method(public)]
     async fn interrupt(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Thread::interrupt({this:?})");
         jvm.interrupt_java_thread(&mut this).await
     }
 
+    #[method(public)]
     async fn is_interrupted(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.lang.Thread::isInterrupted({this:?})");
         jvm.is_java_thread_interrupted(&this).await
     }
 
+    #[method(public, static)]
     async fn interrupted(jvm: &Jvm, _: &mut RuntimeContext) -> Result<bool> {
         tracing::debug!("java.lang.Thread::interrupted()");
         jvm.current_java_thread_interrupted().await
     }
 
+    #[method(public, static)]
     async fn active_count(jvm: &Jvm, _: &mut RuntimeContext) -> Result<i32> {
         Ok(jvm.active_thread_count() as i32)
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Thread::toString({this:?})");
 
@@ -454,6 +372,7 @@ impl Thread {
         Ok(JavaLangString::from_rust_string(jvm, &format!("Thread[{name},{priority}]")).await?.into())
     }
 
+    #[method(public, native, static)]
     async fn sleep(jvm: &Jvm, context: &mut RuntimeContext, duration: i64) -> Result<()> {
         tracing::debug!("java.lang.Thread::sleep({duration:?})");
 
@@ -464,6 +383,7 @@ impl Thread {
         jvm.sleep_interruptibly(context.sleep(Duration::from_millis(duration as _))).await
     }
 
+    #[method(public, native, static)]
     async fn r#yield(_: &Jvm, context: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.Thread::yield()");
         context.r#yield().await;
@@ -471,6 +391,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn set_priority(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Thread>, new_priority: i32) -> Result<()> {
         tracing::debug!("java.lang.Thread::setPriority({this:?}, {new_priority:?})");
 
@@ -483,6 +404,7 @@ impl Thread {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn set_daemon(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Thread>, daemon: bool) -> Result<()> {
         tracing::debug!("java.lang.Thread::setDaemon({this:?}, {daemon:?})");
 
@@ -494,11 +416,13 @@ impl Thread {
         jvm.put_field(&mut this, "java/lang/Thread", "daemon", "Z", daemon).await
     }
 
+    #[method(public, final)]
     async fn is_daemon(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Thread>) -> Result<bool> {
         tracing::debug!("java.lang.Thread::isDaemon({this:?})");
         jvm.get_field(&this, "java/lang/Thread", "daemon", "Z").await
     }
 
+    #[method(public, native, static)]
     async fn current_thread(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Thread::currentThread()");
 

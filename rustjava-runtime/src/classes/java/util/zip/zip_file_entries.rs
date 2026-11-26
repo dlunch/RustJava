@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String},
         util::zip::ZipFile,
@@ -13,33 +12,19 @@ use crate::{
 };
 
 // class java.util.zip.ZipFile$Entries
-pub struct ZipFileEntries;
+#[java_class(name = "java/util/zip/ZipFile$Entries", implements("java/util/Enumeration"))]
+pub struct ZipFileEntries {
+    #[field(private)]
+    zipFile: ClassInstanceRef<ZipFile>,
+    #[field(private)]
+    names: ClassInstanceRef<Array<String>>,
+    #[field(private)]
+    i: i32,
+}
 
+#[java_methods]
 impl ZipFileEntries {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/zip/ZipFile$Entries",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Enumeration"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/zip/ZipFile;[Ljava/lang/String;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("zipFile", "Ljava/util/zip/ZipFile;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("names", "[Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("i", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -60,6 +45,7 @@ impl ZipFileEntries {
         Ok(())
     }
 
+    #[method(public)]
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.zip.ZipFile$Entries::hasMoreElements({this:?})");
 
@@ -72,6 +58,7 @@ impl ZipFileEntries {
         Ok(i < names_length as i32)
     }
 
+    #[method(public)]
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.zip.ZipFile$Entries::nextElement({this:?})");
 

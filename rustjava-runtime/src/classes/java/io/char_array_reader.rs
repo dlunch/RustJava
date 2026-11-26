@@ -1,44 +1,26 @@
 use core::future::Future;
 
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.io.CharArrayReader
-pub struct CharArrayReader;
+#[java_class(name = "java/io/CharArrayReader", extends = "java/io/Reader", public)]
+pub struct CharArrayReader {
+    #[field(protected)]
+    buf: ClassInstanceRef<Array<JavaChar>>,
+    #[field(protected)]
+    pos: i32,
+    #[field(protected)]
+    markedPos: i32,
+    #[field(protected)]
+    count: i32,
+}
 
+#[java_methods]
 impl CharArrayReader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/CharArrayReader",
-            parent_class: Some("java/io/Reader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "([C)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "([CII)V", Self::init_with_range, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "()I", Self::read_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([CII)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[C", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("pos", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("markedPos", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buffer: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         tracing::debug!("java.io.CharArrayReader::<init>({this:?}, {buffer:?})");
 
@@ -50,6 +32,7 @@ impl CharArrayReader {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -96,6 +79,7 @@ impl CharArrayReader {
         }
     }
 
+    #[method(name = "read", public)]
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
@@ -118,6 +102,7 @@ impl CharArrayReader {
         Ok(value as i32)
     }
 
+    #[method(public)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -171,6 +156,7 @@ impl CharArrayReader {
         Ok(copied)
     }
 
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, amount)).await
@@ -194,6 +180,7 @@ impl CharArrayReader {
         Ok(skipped)
     }
 
+    #[method(public)]
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
@@ -211,11 +198,13 @@ impl CharArrayReader {
         Ok(count - position > 0)
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.CharArrayReader::markSupported({this:?})");
         Ok(true)
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::mark_locked(jvm, this, read_ahead_limit)).await
@@ -232,6 +221,7 @@ impl CharArrayReader {
         jvm.put_field(&mut this, "java/io/CharArrayReader", "markedPos", "I", position).await
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
@@ -248,6 +238,7 @@ impl CharArrayReader {
         jvm.put_field(&mut this, "java/io/CharArrayReader", "pos", "I", marked_position).await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await

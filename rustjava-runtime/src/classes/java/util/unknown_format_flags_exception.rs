@@ -1,30 +1,18 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
+use crate::{RuntimeContext, classes::java::lang::String};
 
 // public class java.util.UnknownFormatFlagsException
-pub struct UnknownFormatFlagsException;
+#[java_class(name = "java/util/UnknownFormatFlagsException", extends = "java/util/IllegalFormatException", public)]
+pub struct UnknownFormatFlagsException {
+    #[field(private)]
+    flags: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl UnknownFormatFlagsException {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/UnknownFormatFlagsException",
-            parent_class: Some("java/util/IllegalFormatException"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getFlags", "()Ljava/lang/String;", Self::get_flags, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("flags", "Ljava/lang/String;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, flags: ClassInstanceRef<String>) -> Result<()> {
         if flags.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "flags is null").await);
@@ -34,11 +22,13 @@ impl UnknownFormatFlagsException {
             .await
     }
 
+    #[method(public)]
     async fn get_flags(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/util/UnknownFormatFlagsException", "flags", "Ljava/lang/String;")
             .await
     }
 
+    #[method(public)]
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let flags: ClassInstanceRef<String> = jvm
             .get_field(&this, "java/util/UnknownFormatFlagsException", "flags", "Ljava/lang/String;")

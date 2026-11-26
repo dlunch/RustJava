@@ -1,42 +1,22 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::OutputStream};
+use crate::{RuntimeContext, classes::java::io::OutputStream};
 
 const DEFAULT_BUFFER_SIZE: i32 = 8192;
 
 // class java.io.BufferedOutputStream
-pub struct BufferedOutputStream;
+#[java_class(name = "java/io/BufferedOutputStream", extends = "java/io/FilterOutputStream", public)]
+pub struct BufferedOutputStream {
+    #[field(protected)]
+    buf: ClassInstanceRef<Array<i8>>,
+    #[field(protected)]
+    count: i32,
+}
 
+#[java_methods]
 impl BufferedOutputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/BufferedOutputStream",
-            parent_class: Some("java/io/FilterOutputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "write",
-                    "([BII)V",
-                    Self::write_bytes,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[B", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::<init>({this:?}, {out:?})");
         jvm.invoke_special(
@@ -49,6 +29,7 @@ impl BufferedOutputStream {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -91,6 +72,7 @@ impl BufferedOutputStream {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::write({this:?}, {value})");
 
@@ -111,6 +93,7 @@ impl BufferedOutputStream {
         jvm.put_field(&mut this, "java/io/BufferedOutputStream", "count", "I", count + 1).await
     }
 
+    #[method(name = "write", public, synchronized)]
     async fn write_bytes(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -165,6 +148,7 @@ impl BufferedOutputStream {
             .await
     }
 
+    #[method(public, synchronized)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedOutputStream::flush({this:?})");
 

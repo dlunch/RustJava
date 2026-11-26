@@ -2,11 +2,10 @@ use alloc::{format, string::String as RustString, string::ToString, vec, vec::Ve
 use core::fmt::Write;
 
 use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, IOException, OutputStream, OutputStreamWriter, PrintStream, Writer},
         lang::{Appendable, CharSequence, Object, String},
@@ -31,107 +30,19 @@ enum NumericKind {
 }
 
 // public final class java.util.Formatter
-pub struct Formatter;
+#[java_class(name = "java/util/Formatter", implements("java/io/Closeable", "java/io/Flushable"), public, final)]
+pub struct Formatter {
+    #[field(private)]
+    a: ClassInstanceRef<Appendable>,
+    #[field(private, final)]
+    l: ClassInstanceRef<Locale>,
+    #[field(private)]
+    lastException: ClassInstanceRef<IOException>,
+}
 
+#[java_methods]
 impl Formatter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Formatter",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Closeable", "java/io/Flushable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/Appendable;)V",
-                    Self::init_with_appendable,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/util/Locale;)V", Self::init_with_locale, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/Appendable;Ljava/util/Locale;)V",
-                    Self::init_with_appendable_locale,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_path, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init_with_path_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Locale;)V",
-                    Self::init_with_path_encoding_locale,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init_with_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/File;Ljava/lang/String;)V",
-                    Self::init_with_file_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/File;Ljava/lang/String;Ljava/util/Locale;)V",
-                    Self::init_with_file_encoding_locale,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/PrintStream;)V",
-                    Self::init_with_print_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;)V",
-                    Self::init_with_output_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;Ljava/lang/String;)V",
-                    Self::init_with_output_stream_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;Ljava/lang/String;Ljava/util/Locale;)V",
-                    Self::init_with_output_stream_encoding_locale,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("locale", "()Ljava/util/Locale;", Self::locale, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("out", "()Ljava/lang/Appendable;", Self::out, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ioException", "()Ljava/io/IOException;", Self::io_exception, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
-                    Self::format,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/util/Formatter;",
-                    Self::format_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("a", "Ljava/lang/Appendable;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("l", "Ljava/util/Locale;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("lastException", "Ljava/io/IOException;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_special(
@@ -144,6 +55,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_appendable(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -161,6 +73,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_locale(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, locale: ClassInstanceRef<Locale>) -> Result<()> {
         jvm.invoke_special(
             &this,
@@ -172,6 +85,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_appendable_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -198,6 +112,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, path: ClassInstanceRef<String>) -> Result<()> {
         if path.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "file name is null").await);
@@ -207,6 +122,7 @@ impl Formatter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_path_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -225,6 +141,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_path_encoding_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -248,6 +165,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         if file.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "file is null").await);
@@ -269,6 +187,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -287,6 +206,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_encoding_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -319,6 +239,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_print_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -333,6 +254,7 @@ impl Formatter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_output_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -351,6 +273,7 @@ impl Formatter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_output_stream_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -369,6 +292,7 @@ impl Formatter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_output_stream_encoding_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -399,6 +323,7 @@ impl Formatter {
         .await
     }
 
+    #[method(public)]
     async fn locale(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Locale>> {
         let _: ClassInstanceRef<Appendable> = jvm
             .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
@@ -406,6 +331,7 @@ impl Formatter {
         jvm.get_field(&this, "java/util/Formatter", "l", "Ljava/util/Locale;").await
     }
 
+    #[method(public)]
     async fn out(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Appendable>> {
         let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "java/util/Formatter", "a", "Ljava/lang/Appendable;").await?;
         if appendable.is_null() {
@@ -416,6 +342,7 @@ impl Formatter {
         Ok(appendable)
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let appendable: ClassInstanceRef<Appendable> = jvm
             .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
@@ -424,6 +351,7 @@ impl Formatter {
             .await
     }
 
+    #[method(public)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let appendable: ClassInstanceRef<Appendable> = jvm
             .invoke_virtual(&this, "java/util/Formatter", "out", "()Ljava/lang/Appendable;", ())
@@ -450,6 +378,7 @@ impl Formatter {
         }
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let appendable: ClassInstanceRef<Appendable> = jvm.get_field(&this, "java/util/Formatter", "a", "Ljava/lang/Appendable;").await?;
         if appendable.is_null() {
@@ -485,6 +414,7 @@ impl Formatter {
         }
     }
 
+    #[method(public)]
     async fn io_exception(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<IOException>> {
         jvm.get_field(&this, "java/util/Formatter", "lastException", "Ljava/io/IOException;")
             .await
@@ -523,6 +453,7 @@ impl Formatter {
         }
     }
 
+    #[method(public, varargs)]
     async fn format(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -541,6 +472,7 @@ impl Formatter {
         .await
     }
 
+    #[method(name = "format", public, varargs)]
     async fn format_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,

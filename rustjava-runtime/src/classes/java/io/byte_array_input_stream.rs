@@ -1,52 +1,26 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // class java.io.ByteArrayInputStream
-pub struct ByteArrayInputStream;
+#[java_class(name = "java/io/ByteArrayInputStream", extends = "java/io/InputStream", public)]
+pub struct ByteArrayInputStream {
+    #[field(protected)]
+    buf: ClassInstanceRef<Array<i8>>,
+    #[field(protected)]
+    pos: i32,
+    #[field(protected)]
+    count: i32,
+    #[field(protected)]
+    mark: i32,
+}
 
+#[java_methods]
 impl ByteArrayInputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/ByteArrayInputStream",
-            parent_class: Some("java/io/InputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "([B)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "([BII)V", Self::init_with_offset_length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "available",
-                    "()I",
-                    Self::available,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("read", "([BII)I", Self::read, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "read",
-                    "()I",
-                    Self::read_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[B", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("pos", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("mark", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, data: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::<init>({this:?}, {data:?})");
 
@@ -62,6 +36,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_offset_length(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -97,6 +72,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayInputStream::available({this:?})");
 
@@ -106,6 +82,7 @@ impl ByteArrayInputStream {
         Ok((count - pos) as _)
     }
 
+    #[method(public, synchronized)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -152,6 +129,7 @@ impl ByteArrayInputStream {
         Ok(len_to_read)
     }
 
+    #[method(name = "read", public, synchronized)]
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.ByteArrayInputStream::readByte({this:?})");
 
@@ -170,12 +148,14 @@ impl ByteArrayInputStream {
         Ok(result as u8 as _)
     }
 
+    #[method(public)]
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<ByteArrayInputStream>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::close({this:?})");
 
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.ByteArrayInputStream::skip({this:?}, {n:?})");
 
@@ -191,6 +171,7 @@ impl ByteArrayInputStream {
         Ok(len_to_skip)
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::mark({this:?}, {readlimit:?})");
 
@@ -200,6 +181,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.ByteArrayInputStream::reset({this:?})");
 
@@ -209,6 +191,7 @@ impl ByteArrayInputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.ByteArrayInputStream::markSupported({this:?})");
         Ok(true)

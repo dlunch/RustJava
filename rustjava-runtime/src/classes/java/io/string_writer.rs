@@ -1,39 +1,23 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{String, StringBuffer},
 };
 
 // class java.io.StringWriter
-pub struct StringWriter;
+#[java_class(name = "java/io/StringWriter", extends = "java/io/Writer", public)]
+pub struct StringWriter {
+    #[field(private, final)]
+    buf: ClassInstanceRef<StringBuffer>,
+}
 
+#[java_methods]
 impl StringWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/StringWriter",
-            parent_class: Some("java/io/Writer"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "buf",
-                "Ljava/lang/StringBuffer;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.StringWriter::<init>({this:?})");
 
@@ -46,6 +30,7 @@ impl StringWriter {
         Ok(())
     }
 
+    #[method(public)]
     async fn write(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -71,16 +56,19 @@ impl StringWriter {
         Ok(())
     }
 
+    #[method(public)]
     async fn flush(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.StringWriter::flush({this:?})");
         Ok(())
     }
 
+    #[method(public)]
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.StringWriter::close({this:?})");
         Ok(())
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.StringWriter::toString({this:?})");
 

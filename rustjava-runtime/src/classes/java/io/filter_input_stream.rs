@@ -1,37 +1,18 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
+use crate::{RuntimeContext, classes::java::io::InputStream};
 
 // class java.io.FilterInputStream
-pub struct FilterInputStream;
+#[java_class(name = "java/io/FilterInputStream", extends = "java/io/InputStream", public)]
+pub struct FilterInputStream {
+    #[field(protected)]
+    r#in: ClassInstanceRef<InputStream>,
+}
 
+#[java_methods]
 impl FilterInputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FilterInputStream",
-            parent_class: Some("java/io/InputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("available", "()I", Self::available, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "()I", Self::read_byte_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([B)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([BII)I", Self::read_with_offset_length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("in", "Ljava/io/InputStream;", FieldAccessFlags::PROTECTED)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::<init>({this:?}, {:?})", &r#in);
 
@@ -43,6 +24,7 @@ impl FilterInputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::available({this:?})");
 
@@ -55,6 +37,7 @@ impl FilterInputStream {
         Ok(available)
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::close({this:?})");
 
@@ -67,6 +50,7 @@ impl FilterInputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::reset({this:?})");
 
@@ -79,6 +63,7 @@ impl FilterInputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.FilterInputStream::skip({this:?}, {n})");
         let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
@@ -88,6 +73,7 @@ impl FilterInputStream {
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "skip", "(J)J", (n,)).await
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
         tracing::debug!("java.io.FilterInputStream::mark({this:?}, {readlimit})");
         let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
@@ -97,6 +83,7 @@ impl FilterInputStream {
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "mark", "(I)V", (readlimit,)).await
     }
 
+    #[method(public)]
     async fn mark_supported(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.FilterInputStream::markSupported({this:?})");
         let r#in: ClassInstanceRef<InputStream> = jvm.get_field(&this, "java/io/FilterInputStream", "in", "Ljava/io/InputStream;").await?;
@@ -106,6 +93,7 @@ impl FilterInputStream {
         jvm.invoke_virtual(&r#in, "java/io/InputStream", "markSupported", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::read({this:?}, {b:?})");
 
@@ -118,6 +106,7 @@ impl FilterInputStream {
         Ok(result)
     }
 
+    #[method(name = "read", public)]
     async fn read_with_offset_length(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -137,6 +126,7 @@ impl FilterInputStream {
         Ok(result)
     }
 
+    #[method(name = "read", public)]
     async fn read_byte_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.FilterInputStream::read({this:?})");
 

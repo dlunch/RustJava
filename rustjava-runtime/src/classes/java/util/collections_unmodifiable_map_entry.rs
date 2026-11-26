@@ -1,43 +1,24 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::MapEntry},
+};
 
 // class java.util.Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry
-pub struct CollectionsUnmodifiableMapEntry;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
+    implements("java/util/Map$Entry")
+)]
+pub struct CollectionsUnmodifiableMapEntry {
+    #[field(private, final)]
+    e: ClassInstanceRef<MapEntry>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableMapEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet$UnmodifiableEntry",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map$Entry"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Map$Entry;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "setValue",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::set_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "e",
-                "Ljava/util/Map$Entry;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Map$Entry;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, entry: ClassInstanceRef<Object>) -> Result<()> {
         if entry.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "entry").await);
@@ -53,6 +34,7 @@ impl CollectionsUnmodifiableMapEntry {
         .await
     }
 
+    #[method(public)]
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry: ClassInstanceRef<Object> = jvm
             .get_field(
@@ -66,6 +48,7 @@ impl CollectionsUnmodifiableMapEntry {
             .await
     }
 
+    #[method(public)]
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry: ClassInstanceRef<Object> = jvm
             .get_field(
@@ -79,6 +62,7 @@ impl CollectionsUnmodifiableMapEntry {
             .await
     }
 
+    #[method(public)]
     async fn set_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -88,6 +72,7 @@ impl CollectionsUnmodifiableMapEntry {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable map entry").await)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
@@ -136,6 +121,7 @@ impl CollectionsUnmodifiableMapEntry {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let entry: ClassInstanceRef<Object> = jvm
             .get_field(
@@ -148,6 +134,7 @@ impl CollectionsUnmodifiableMapEntry {
         jvm.invoke_virtual(&entry, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
+    #[method(descriptor = "()Ljava/lang/String;", public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry: ClassInstanceRef<Object> = jvm
             .get_field(

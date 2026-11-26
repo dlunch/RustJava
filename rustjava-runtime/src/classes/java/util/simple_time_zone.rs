@@ -1,37 +1,21 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{lang::String, util::Date},
 };
 
 // class java.util.SimpleTimeZone
-pub struct SimpleTimeZone;
+#[java_class(name = "java/util/SimpleTimeZone", extends = "java/util/TimeZone", public)]
+pub struct SimpleTimeZone {
+    #[field(private)]
+    rawOffset: i32,
+}
 
+#[java_methods]
 impl SimpleTimeZone {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/SimpleTimeZone",
-            parent_class: Some("java/util/TimeZone"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(ILjava/lang/String;)V", Self::init_with_raw_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getOffset", "(IIIIII)I", Self::get_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getRawOffset", "()I", Self::get_raw_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setRawOffset", "(I)V", Self::set_raw_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("useDaylightTime", "()Z", Self::use_daylight_time, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("inDaylightTime", "(Ljava/util/Date;)Z", Self::in_daylight_time, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("rawOffset", "I", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, id: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.SimpleTimeZone::<init>({this:?}, {id:?})");
 
@@ -39,6 +23,7 @@ impl SimpleTimeZone {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_raw_offset(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -58,6 +43,7 @@ impl SimpleTimeZone {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[method(public)]
     async fn get_offset(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -88,19 +74,23 @@ impl SimpleTimeZone {
         jvm.get_field(&this, "java/util/SimpleTimeZone", "rawOffset", "I").await
     }
 
+    #[method(public)]
     async fn get_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/util/SimpleTimeZone", "rawOffset", "I").await
     }
 
+    #[method(public)]
     async fn set_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, offset: i32) -> Result<()> {
         tracing::debug!("java.util.SimpleTimeZone::setRawOffset({this:?}, {offset:?})");
         jvm.put_field(&mut this, "java/util/SimpleTimeZone", "rawOffset", "I", offset).await
     }
 
+    #[method(public)]
     async fn use_daylight_time(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<bool> {
         Ok(false)
     }
 
+    #[method(public)]
     async fn in_daylight_time(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, date: ClassInstanceRef<Date>) -> Result<bool> {
         if date.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "date").await);

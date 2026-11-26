@@ -1,53 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::SortedMap},
+};
 
 // class java.util.Collections$UnmodifiableSortedMap
-pub struct CollectionsUnmodifiableSortedMap;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableSortedMap",
+    extends = "java/util/Collections$UnmodifiableMap",
+    implements("java/util/SortedMap", "java/io/Serializable")
+)]
+pub struct CollectionsUnmodifiableSortedMap {
+    #[field(private, final)]
+    sm: ClassInstanceRef<SortedMap>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableSortedMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableSortedMap",
-            parent_class: Some("java/util/Collections$UnmodifiableMap"),
-            interfaces: vec!["java/util/SortedMap", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("firstKey", "()Ljava/lang/Object;", Self::first_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastKey", "()Ljava/lang/Object;", Self::last_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "subMap",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::sub_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "headMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::head_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "tailMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::tail_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "sm",
-                "Ljava/util/SortedMap;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/SortedMap;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm
             .invoke_special(
@@ -68,6 +40,7 @@ impl CollectionsUnmodifiableSortedMap {
         .await
     }
 
+    #[method(descriptor = "()Ljava/util/Comparator;", public)]
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
@@ -76,6 +49,7 @@ impl CollectionsUnmodifiableSortedMap {
             .await
     }
 
+    #[method(public)]
     async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
@@ -84,6 +58,7 @@ impl CollectionsUnmodifiableSortedMap {
             .await
     }
 
+    #[method(public)]
     async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedMap", "sm", "Ljava/util/SortedMap;")
@@ -92,6 +67,7 @@ impl CollectionsUnmodifiableSortedMap {
             .await
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn sub_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -117,6 +93,7 @@ impl CollectionsUnmodifiableSortedMap {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn head_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -141,6 +118,7 @@ impl CollectionsUnmodifiableSortedMap {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn tail_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,

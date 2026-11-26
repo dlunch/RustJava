@@ -1,50 +1,29 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMap;
 
 const DEFAULT_INITIAL_CAPACITY: i32 = 16;
 
 // class java.util.HashSet
-pub struct HashSet;
+#[java_class(
+    name = "java/util/HashSet",
+    extends = "java/util/AbstractSet",
+    implements("java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct HashSet {
+    #[field(transient)]
+    map: ClassInstanceRef<HashMap>,
+    #[field(private, final)]
+    present: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl HashSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashSet",
-            parent_class: Some("java/util/AbstractSet"),
-            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/Collection;)V",
-                    Self::init_from_collection,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("present", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashSet::<init>({this:?})");
 
@@ -55,6 +34,7 @@ impl HashSet {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.HashSet::<init>({this:?}, {capacity:?})");
 
@@ -70,6 +50,7 @@ impl HashSet {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Collection;)V", public)]
     async fn init_from_collection(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -93,6 +74,7 @@ impl HashSet {
         Ok(())
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashSet::add({this:?}, {element:?})");
 
@@ -111,6 +93,7 @@ impl HashSet {
         Ok(old.is_null())
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashSet::remove({this:?}, {element:?})");
 
@@ -122,6 +105,7 @@ impl HashSet {
         Ok(!old.is_null())
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashSet::contains({this:?}, {element:?})");
 
@@ -131,6 +115,7 @@ impl HashSet {
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.HashSet::size({this:?})");
 
@@ -139,6 +124,7 @@ impl HashSet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashSet::isEmpty({this:?})");
 
@@ -147,6 +133,7 @@ impl HashSet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "isEmpty", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashSet::clear({this:?})");
 
@@ -155,6 +142,7 @@ impl HashSet {
         jvm.invoke_virtual(&map, "java/util/HashMap", "clear", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashSet::iterator({this:?})");
 
@@ -164,6 +152,7 @@ impl HashSet {
             .await
     }
 
+    #[method(public)]
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.HashSet::toArray({this:?})");
 

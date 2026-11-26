@@ -1,74 +1,26 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::{
+        lang::{Object, String},
+        util::Date,
+    },
 };
 
 // abstract class java.util.TimeZone
-pub struct TimeZone;
+#[java_class(name = "java/util/TimeZone", implements("java/io/Serializable", "java/lang/Cloneable"), public, abstract)]
+pub struct TimeZone {
+    #[field(private)]
+    ID: ClassInstanceRef<String>,
+    #[field(private, static)]
+    defaultTimeZone: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl TimeZone {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TimeZone",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Cloneable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "getTimeZone",
-                    "(Ljava/lang/String;)Ljava/util/TimeZone;",
-                    Self::get_time_zone,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getDefault",
-                    "()Ljava/util/TimeZone;",
-                    Self::get_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "setDefault",
-                    "(Ljava/util/TimeZone;)V",
-                    Self::set_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "getAvailableIDs",
-                    "()[Ljava/lang/String;",
-                    Self::get_available_ids,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("getID", "()Ljava/lang/String;", Self::get_id, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setID", "(Ljava/lang/String;)V", Self::set_id, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("getOffset", "(IIIIII)I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("getRawOffset", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("setRawOffset", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("useDaylightTime", "()Z", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract(
-                    "inDaylightTime",
-                    "(Ljava/util/Date;)Z",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("ID", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new(
-                    "defaultTimeZone",
-                    "Ljava/util/TimeZone;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.TimeZone::<init>({this:?})");
 
@@ -77,6 +29,7 @@ impl TimeZone {
         jvm.put_field(&mut this, "java/util/TimeZone", "ID", "Ljava/lang/String;", id).await
     }
 
+    #[method(public, static)]
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, id: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.TimeZone::getTimeZone({id:?})");
 
@@ -94,6 +47,7 @@ impl TimeZone {
         Ok(result.into())
     }
 
+    #[method(public, static, synchronized)]
     async fn get_default(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.TimeZone::getDefault()");
 
@@ -116,6 +70,7 @@ impl TimeZone {
         Ok(ClassInstanceRef::new(cloned.instance))
     }
 
+    #[method(public, static, synchronized)]
     async fn set_default(jvm: &Jvm, _: &mut RuntimeContext, timezone: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.TimeZone::setDefault({timezone:?})");
 
@@ -134,6 +89,7 @@ impl TimeZone {
             .await
     }
 
+    #[method(name = "getAvailableIDs", public, static)]
     async fn get_available_ids(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<String>>> {
         let mut ids: ClassInstanceRef<Array<String>> = jvm.instantiate_array("Ljava/lang/String;", 2).await?.into();
         let gmt = JavaLangString::from_rust_string(jvm, "GMT").await?;
@@ -142,10 +98,12 @@ impl TimeZone {
         Ok(ids)
     }
 
+    #[method(name = "getID", public)]
     async fn get_id(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/util/TimeZone", "ID", "Ljava/lang/String;").await
     }
 
+    #[method(name = "setID", public)]
     async fn set_id(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, id: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.TimeZone::setID({this:?}, {id:?})");
 
@@ -155,7 +113,33 @@ impl TimeZone {
         jvm.put_field(&mut this, "java/util/TimeZone", "ID", "Ljava/lang/String;", id).await
     }
 
+    #[method(public)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         jvm.invoke_special(&this, "java/lang/Object", "clone", "()Ljava/lang/Object;", ()).await
     }
+
+    #[method(public)]
+    async fn get_offset(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        era: i32,
+        year: i32,
+        month: i32,
+        day: i32,
+        day_of_week: i32,
+        millis: i32,
+    ) -> Result<i32>;
+
+    #[method(public)]
+    async fn get_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32>;
+
+    #[method(public)]
+    async fn set_raw_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, offset: i32) -> Result<()>;
+
+    #[method(public)]
+    async fn use_daylight_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool>;
+
+    #[method(public)]
+    async fn in_daylight_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, date: ClassInstanceRef<Date>) -> Result<bool>;
 }

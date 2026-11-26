@@ -1,34 +1,18 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{String, Throwable},
 };
 
 // class java.lang.ExceptionInInitializerError
+#[java_class(name = "java/lang/ExceptionInInitializerError", extends = "java/lang/LinkageError", public)]
 pub struct ExceptionInInitializerError;
 
+#[java_methods]
 impl ExceptionInInitializerError {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/ExceptionInInitializerError",
-            parent_class: Some("java/lang/LinkageError"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Throwable;)V", Self::init_with_cause, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getException", "()Ljava/lang/Throwable;", Self::get_exception, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.ExceptionInInitializerError::<init>({this:?})");
 
@@ -37,6 +21,7 @@ impl ExceptionInInitializerError {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.ExceptionInInitializerError::<init>({this:?}, {message:?})");
 
@@ -47,6 +32,7 @@ impl ExceptionInInitializerError {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_cause(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, cause: ClassInstanceRef<Throwable>) -> Result<()> {
         tracing::debug!("java.lang.ExceptionInInitializerError::<init>({this:?}, {cause:?})");
 
@@ -65,6 +51,7 @@ impl ExceptionInInitializerError {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_exception(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Throwable>> {
         tracing::debug!("java.lang.ExceptionInInitializerError::getException({this:?})");
 

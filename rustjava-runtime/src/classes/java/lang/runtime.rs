@@ -1,49 +1,24 @@
-use alloc::{format, vec};
+use alloc::format;
 
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // class java.lang.Runtime
+#[java_class(name = "java/lang/Runtime", public, final)]
 pub struct Runtime;
 
+#[java_methods]
 impl Runtime {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Runtime",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new("getRuntime", "()Ljava/lang/Runtime;", Self::get_runtime, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "totalMemory",
-                    "()J",
-                    Self::total_memory,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
-                ),
-                JavaMethodProto::new(
-                    "freeMemory",
-                    "()J",
-                    Self::free_memory,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
-                ),
-                JavaMethodProto::new("gc", "()V", Self::gc, MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE),
-                JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, private)]
     async fn init(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
         tracing::warn!("stub java.lang.Runtime::<init>({this:?})");
 
         Ok(())
     }
 
+    #[method(static)]
     async fn get_runtime(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Runtime::getRuntime");
 
@@ -52,18 +27,21 @@ impl Runtime {
         Ok(instance.into())
     }
 
+    #[method(public, native)]
     async fn total_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<i64> {
         tracing::warn!("stub java.lang.Runtime::totalMemory({this:?})");
 
         Ok(0x100000) // TODO: hardcoded
     }
 
+    #[method(public, native)]
     async fn free_memory(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<i64> {
         tracing::warn!("stub java.lang.Runtime::freeMemory({this:?})");
 
         Ok(0x100000) // TODO: hardcoded
     }
 
+    #[method(public, native)]
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Runtime>) -> Result<()> {
         tracing::debug!("java.lang.Runtime::gc({this:?})");
 
@@ -76,6 +54,7 @@ impl Runtime {
         Ok(())
     }
 
+    #[method(public)]
     async fn exit(_: &Jvm, context: &mut RuntimeContext, _: ClassInstanceRef<Self>, status: i32) -> Result<()> {
         tracing::debug!("java.lang.Runtime::exit({status})");
 

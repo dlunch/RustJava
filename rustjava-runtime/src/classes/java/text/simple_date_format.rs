@@ -1,12 +1,11 @@
-use alloc::{format, string::String as RustString, vec, vec::Vec};
+use alloc::{format, string::String as RustString, vec::Vec};
 
 use jiff::{Timestamp, civil, tz::Offset};
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{String, StringBuffer},
         text::{FieldPosition, NumberFormat, ParsePosition},
@@ -32,43 +31,14 @@ impl From<usize> for DateParseError {
 }
 
 // public class java.text.SimpleDateFormat
-pub struct SimpleDateFormat;
+#[java_class(name = "java/text/SimpleDateFormat", extends = "java/text/DateFormat", public)]
+pub struct SimpleDateFormat {
+    #[field(private)]
+    pattern: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl SimpleDateFormat {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/SimpleDateFormat",
-            parent_class: Some("java/text/DateFormat"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/util/Locale;)V",
-                    Self::init_with_pattern_and_locale,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/util/Date;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    Self::format,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "parse",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/util/Date;",
-                    Self::parse,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("applyPattern", "(Ljava/lang/String;)V", Self::apply_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toPattern", "()Ljava/lang/String;", Self::to_pattern, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("pattern", "Ljava/lang/String;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
     fn tokenize_pattern(pattern: &str) -> Option<Vec<DateToken>> {
         let characters: Vec<char> = pattern.chars().collect();
         let mut tokens = Vec::new();
@@ -391,12 +361,14 @@ impl SimpleDateFormat {
         }
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let pattern = JavaLangString::from_rust_string(jvm, "M/d/yy h:mm a").await?;
         jvm.invoke_special(&this, "java/text/SimpleDateFormat", "<init>", "(Ljava/lang/String;)V", (pattern,))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
         let locale: ClassInstanceRef<Locale> = jvm.invoke_static("java/util/Locale", "getDefault", "()Ljava/util/Locale;", ()).await?;
         jvm.invoke_special(
@@ -409,6 +381,7 @@ impl SimpleDateFormat {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_pattern_and_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -428,6 +401,7 @@ impl SimpleDateFormat {
             .await
     }
 
+    #[method(public)]
     async fn apply_pattern(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
         if pattern.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "pattern").await);
@@ -440,10 +414,12 @@ impl SimpleDateFormat {
             .await
     }
 
+    #[method(public)]
     async fn to_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/text/SimpleDateFormat", "pattern", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn format(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -590,6 +566,7 @@ impl SimpleDateFormat {
         .await
     }
 
+    #[method(public)]
     async fn parse(
         jvm: &Jvm,
         _: &mut RuntimeContext,

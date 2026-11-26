@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{PrintStream, PrintWriter},
         lang::String,
@@ -13,73 +12,19 @@ use crate::{
 };
 
 // class java.lang.Throwable
-pub struct Throwable;
+#[java_class(name = "java/lang/Throwable", implements("java/io/Serializable"), public)]
+pub struct Throwable {
+    #[field(private)]
+    detailMessage: ClassInstanceRef<String>,
+    #[field(private)]
+    cause: ClassInstanceRef<Self>,
+    #[field(private)]
+    stackTrace: ClassInstanceRef<Array<String>>,
+}
 
+#[java_methods]
 impl Throwable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Throwable",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Throwable;)V", Self::init_with_cause, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-                    Self::init_with_message_and_cause,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getCause",
-                    "()Ljava/lang/Throwable;",
-                    Self::get_cause,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getLocalizedMessage",
-                    "()Ljava/lang/String;",
-                    Self::get_localized_message,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "initCause",
-                    "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
-                    Self::init_cause,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "fillInStackTrace",
-                    "()Ljava/lang/Throwable;",
-                    Self::fill_in_stack_trace,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("printStackTrace", "()V", Self::print_stack_trace, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "printStackTrace",
-                    "(Ljava/io/PrintStream;)V",
-                    Self::print_stack_trace_to_print_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "printStackTrace",
-                    "(Ljava/io/PrintWriter;)V",
-                    Self::print_stack_trace_to_print_writer,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("detailMessage", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("cause", "Ljava/lang/Throwable;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("stackTrace", "[Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::<init>({this:?})");
 
@@ -92,6 +37,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::<init>({this:?}, {message:?})");
 
@@ -107,6 +53,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_cause(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, cause: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::<init>({this:?}, {cause:?})");
 
@@ -130,6 +77,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_message_and_cause(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -153,18 +101,21 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn get_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::getCause({this:?})");
 
         jvm.get_field(&this, "java/lang/Throwable", "cause", "Ljava/lang/Throwable;").await
     }
 
+    #[method(public)]
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::getMessage({this:?})");
 
         jvm.get_field(&this, "java/lang/Throwable", "detailMessage", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn get_localized_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::getLocalizedMessage({this:?})");
 
@@ -172,6 +123,7 @@ impl Throwable {
             .await
     }
 
+    #[method(public, synchronized)]
     async fn init_cause(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -186,6 +138,7 @@ impl Throwable {
         Ok(this)
     }
 
+    #[method(public, synchronized)]
     async fn fill_in_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.Throwable::fillInStackTrace({this:?})");
 
@@ -201,6 +154,7 @@ impl Throwable {
         Ok(this)
     }
 
+    #[method(public)]
     async fn print_stack_trace(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.Throwable::printStackTrace({this:?})");
 
@@ -213,6 +167,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(name = "printStackTrace", public)]
     async fn print_stack_trace_to_print_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -230,6 +185,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(name = "printStackTrace", public)]
     async fn print_stack_trace_to_print_writer(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -247,6 +203,7 @@ impl Throwable {
         Ok(())
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.Throwable::toString({this:?})");
 

@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::OutputStreamWriter,
         lang::{Exception, String},
@@ -15,64 +12,21 @@ use crate::{
 use super::{Filter, Formatter, Level, LogRecord};
 
 // public abstract class java.util.logging.Handler
-pub struct Handler;
+#[java_class(name = "java/util/logging/Handler", public, abstract)]
+pub struct Handler {
+    #[field(private)]
+    level: ClassInstanceRef<Level>,
+    #[field(private)]
+    filter: ClassInstanceRef<Filter>,
+    #[field(private)]
+    formatter: ClassInstanceRef<Formatter>,
+    #[field(private)]
+    encoding: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl Handler {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/Handler",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("close", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("flush", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract(
-                    "publish",
-                    "(Ljava/util/logging/LogRecord;)V",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new("getEncoding", "()Ljava/lang/String;", Self::get_encoding, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getFilter", "()Ljava/util/logging/Filter;", Self::get_filter, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getFormatter",
-                    "()Ljava/util/logging/Formatter;",
-                    Self::get_formatter,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getLevel", "()Ljava/util/logging/Level;", Self::get_level, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isLoggable",
-                    "(Ljava/util/logging/LogRecord;)Z",
-                    Self::is_loggable,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "reportError",
-                    "(Ljava/lang/String;Ljava/lang/Exception;I)V",
-                    Self::report_error,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new("setEncoding", "(Ljava/lang/String;)V", Self::set_encoding, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setFilter", "(Ljava/util/logging/Filter;)V", Self::set_filter, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "setFormatter",
-                    "(Ljava/util/logging/Formatter;)V",
-                    Self::set_formatter,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("setLevel", "(Ljava/util/logging/Level;)V", Self::set_level, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("level", "Ljava/util/logging/Level;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("filter", "Ljava/util/logging/Filter;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("formatter", "Ljava/util/logging/Formatter;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("encoding", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.Handler::<init>({this:?})");
 
@@ -84,12 +38,23 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
+
+    #[method(public)]
+    async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
+
+    #[method(public)]
+    async fn publish(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<()>;
+
+    #[method(public)]
     async fn get_encoding(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.logging.Handler::getEncoding({this:?})");
 
         jvm.get_field(&this, "java/util/logging/Handler", "encoding", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn get_filter(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Filter>> {
         tracing::debug!("java.util.logging.Handler::getFilter({this:?})");
 
@@ -97,6 +62,7 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
     async fn get_formatter(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Formatter>> {
         tracing::debug!("java.util.logging.Handler::getFormatter({this:?})");
 
@@ -104,6 +70,7 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
     async fn get_level(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Level>> {
         tracing::debug!("java.util.logging.Handler::getLevel({this:?})");
 
@@ -111,6 +78,7 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
     async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<bool> {
         tracing::debug!("java.util.logging.Handler::isLoggable({this:?}, {record:?})");
 
@@ -151,6 +119,7 @@ impl Handler {
         .await
     }
 
+    #[method(protected)]
     async fn report_error(
         _: &Jvm,
         _: &mut RuntimeContext,
@@ -164,6 +133,7 @@ impl Handler {
         Ok(())
     }
 
+    #[method(public)]
     async fn set_encoding(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, encoding: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.logging.Handler::setEncoding({this:?}, {encoding:?})");
 
@@ -174,6 +144,7 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
     async fn set_filter(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, filter: ClassInstanceRef<Filter>) -> Result<()> {
         tracing::debug!("java.util.logging.Handler::setFilter({this:?}, {filter:?})");
 
@@ -181,6 +152,7 @@ impl Handler {
             .await
     }
 
+    #[method(public)]
     async fn set_formatter(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -202,6 +174,7 @@ impl Handler {
         .await
     }
 
+    #[method(public)]
     async fn set_level(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, level: ClassInstanceRef<Level>) -> Result<()> {
         tracing::debug!("java.util.logging.Handler::setLevel({this:?}, {level:?})");
 

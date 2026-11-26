@@ -1,7 +1,9 @@
-use alloc::boxed::Box;
+use alloc::{boxed::Box, string::String};
 use core::{future::Future, marker::PhantomData};
 
 use jvm::{ClassInstanceRef, JavaChar, JavaValue, Jvm};
+
+use crate::descriptor::JavaDescriptor;
 
 macro_rules! __impl_fn_helper {
     ($($arg: ident),*) => {
@@ -61,8 +63,40 @@ macro_rules! __impl_method_impl {
     };
 }
 
+macro_rules! __impl_method_signature {
+    ($($arg: ident),*) => {
+        impl<C, R, E, $($arg),*> StaticMethodSignature for fn(&Jvm, &mut C, $($arg),*) -> Result<R, E>
+        where
+            C: ?Sized,
+            R: JavaDescriptor,
+            $($arg: JavaDescriptor),*
+        {
+            fn descriptor() -> String {
+                let mut descriptor = String::from("(");
+                $(descriptor.push_str(&$arg::descriptor());)*
+                descriptor.push(')');
+                descriptor.push_str(&R::descriptor());
+
+                descriptor
+            }
+        }
+
+        impl<C, R, E, T, $($arg),*> InstanceMethodSignature for fn(&Jvm, &mut C, ClassInstanceRef<T>, $($arg),*) -> Result<R, E>
+        where
+            C: ?Sized,
+            R: JavaDescriptor,
+            $($arg: JavaDescriptor),*
+        {
+            fn descriptor() -> String {
+                <fn(&Jvm, &mut C, $($arg),*) -> Result<R, E> as StaticMethodSignature>::descriptor()
+            }
+        }
+    };
+}
+
 macro_rules! __generate {
     ($($arg: ident),*) => {
+        __impl_method_signature!($($arg),*);
         __impl_fn_helper!($($arg),*);
         __impl_method_body!($($arg),*);
         __impl_method_impl!($($arg),*);
@@ -90,6 +124,17 @@ struct MethodHolder<F, R, P>(pub F, PhantomData<(R, P)>);
 pub trait TypeConverter<T> {
     fn to_rust(jvm: &Jvm, raw: JavaValue) -> T;
     fn from_rust(jvm: &Jvm, rust: T) -> JavaValue;
+}
+
+/// Derives the descriptor of a static Java method from the function pointer type of the Rust function that implements it.
+pub trait StaticMethodSignature {
+    fn descriptor() -> String;
+}
+
+/// Derives the descriptor of an instance Java method from the function pointer type of the Rust function that implements or declares it.
+/// The function receives `this` as its first Java parameter, which the descriptor does not include.
+pub trait InstanceMethodSignature {
+    fn descriptor() -> String;
 }
 
 pub trait MethodImpl<F, C, R, E, P>

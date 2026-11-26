@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::OutputStream,
         lang::{String, System},
@@ -13,36 +12,21 @@ use crate::{
 };
 
 // class java.io.OutputStreamWriter
-pub struct OutputStreamWriter;
+#[java_class(name = "java/io/OutputStreamWriter", extends = "java/io/Writer", public)]
+pub struct OutputStreamWriter {
+    #[field(private)]
+    out: ClassInstanceRef<OutputStream>,
+    #[field(private)]
+    encoding: ClassInstanceRef<String>,
+    #[field(private)]
+    pendingHighSurrogate: JavaChar,
+    #[field(private)]
+    hasPendingHighSurrogate: bool,
+}
 
+#[java_methods]
 impl OutputStreamWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/OutputStreamWriter",
-            parent_class: Some("java/io/Writer"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;Ljava/lang/String;)V",
-                    Self::init_with_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("write", "([CII)V", Self::write, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("out", "Ljava/io/OutputStream;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("encoding", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("pendingHighSurrogate", "C", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("hasPendingHighSurrogate", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::<init>({this:?}, {out:?})");
 
@@ -58,6 +42,7 @@ impl OutputStreamWriter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -97,6 +82,7 @@ impl OutputStreamWriter {
         Ok(())
     }
 
+    #[method(public)]
     async fn write(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -156,6 +142,7 @@ impl OutputStreamWriter {
         jvm.invoke_virtual(&out, "java/io/OutputStream", "write", "([B)V", (java_bytes,)).await
     }
 
+    #[method(public)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::flush({this:?})");
         let out: Box<dyn ClassInstance> = jvm
@@ -164,6 +151,7 @@ impl OutputStreamWriter {
         jvm.invoke_virtual(&out, "java/io/OutputStream", "flush", "()V", ()).await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStreamWriter::close({this:?})");
 

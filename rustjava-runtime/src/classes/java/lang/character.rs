@@ -1,338 +1,89 @@
 use core::char;
 
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangClass};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::lang::{Class, Object, String},
 };
 
 // public final class java.lang.Character
-pub struct Character;
+#[java_class(name = "java/lang/Character", implements("java/io/Serializable", "java/lang/Comparable"), public, final)]
+pub struct Character {
+    #[field(public, static, final)]
+    MIN_VALUE: JavaChar,
+    #[field(public, static, final)]
+    MAX_VALUE: JavaChar,
+    #[field(public, static, final)]
+    MIN_RADIX: i32,
+    #[field(public, static, final)]
+    MAX_RADIX: i32,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(public, static, final)]
+    UNASSIGNED: i8,
+    #[field(public, static, final)]
+    UPPERCASE_LETTER: i8,
+    #[field(public, static, final)]
+    LOWERCASE_LETTER: i8,
+    #[field(public, static, final)]
+    TITLECASE_LETTER: i8,
+    #[field(public, static, final)]
+    MODIFIER_LETTER: i8,
+    #[field(public, static, final)]
+    OTHER_LETTER: i8,
+    #[field(public, static, final)]
+    NON_SPACING_MARK: i8,
+    #[field(public, static, final)]
+    ENCLOSING_MARK: i8,
+    #[field(public, static, final)]
+    COMBINING_SPACING_MARK: i8,
+    #[field(public, static, final)]
+    DECIMAL_DIGIT_NUMBER: i8,
+    #[field(public, static, final)]
+    LETTER_NUMBER: i8,
+    #[field(public, static, final)]
+    OTHER_NUMBER: i8,
+    #[field(public, static, final)]
+    SPACE_SEPARATOR: i8,
+    #[field(public, static, final)]
+    LINE_SEPARATOR: i8,
+    #[field(public, static, final)]
+    PARAGRAPH_SEPARATOR: i8,
+    #[field(public, static, final)]
+    CONTROL: i8,
+    #[field(public, static, final)]
+    FORMAT: i8,
+    #[field(public, static, final)]
+    PRIVATE_USE: i8,
+    #[field(public, static, final)]
+    SURROGATE: i8,
+    #[field(public, static, final)]
+    DASH_PUNCTUATION: i8,
+    #[field(public, static, final)]
+    START_PUNCTUATION: i8,
+    #[field(public, static, final)]
+    END_PUNCTUATION: i8,
+    #[field(public, static, final)]
+    CONNECTOR_PUNCTUATION: i8,
+    #[field(public, static, final)]
+    OTHER_PUNCTUATION: i8,
+    #[field(public, static, final)]
+    MATH_SYMBOL: i8,
+    #[field(public, static, final)]
+    CURRENCY_SYMBOL: i8,
+    #[field(public, static, final)]
+    MODIFIER_SYMBOL: i8,
+    #[field(public, static, final)]
+    OTHER_SYMBOL: i8,
+    #[field(private, final)]
+    value: JavaChar,
+}
 
+#[java_methods]
 impl Character {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Character",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(C)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(C)Ljava/lang/Character;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("charValue", "()C", Self::char_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Character;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isLowerCase",
-                    "(C)Z",
-                    Self::is_lower_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isUpperCase",
-                    "(C)Z",
-                    Self::is_upper_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isTitleCase",
-                    "(C)Z",
-                    Self::is_title_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isDigit", "(C)Z", Self::is_digit, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "isDefined",
-                    "(C)Z",
-                    Self::is_defined,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isLetter", "(C)Z", Self::is_letter, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "isLetterOrDigit",
-                    "(C)Z",
-                    Self::is_letter_or_digit,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isJavaLetter",
-                    "(C)Z",
-                    Self::is_java_identifier_start,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isJavaLetterOrDigit",
-                    "(C)Z",
-                    Self::is_java_identifier_part,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isJavaIdentifierStart",
-                    "(C)Z",
-                    Self::is_java_identifier_start,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isJavaIdentifierPart",
-                    "(C)Z",
-                    Self::is_java_identifier_part,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isUnicodeIdentifierStart",
-                    "(C)Z",
-                    Self::is_unicode_identifier_start,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isUnicodeIdentifierPart",
-                    "(C)Z",
-                    Self::is_unicode_identifier_part,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isIdentifierIgnorable",
-                    "(C)Z",
-                    Self::is_identifier_ignorable,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isSpace", "(C)Z", Self::is_space, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "isSpaceChar",
-                    "(C)Z",
-                    Self::is_space_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isWhitespace",
-                    "(C)Z",
-                    Self::is_whitespace,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "isISOControl",
-                    "(C)Z",
-                    Self::is_iso_control,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toLowerCase",
-                    "(C)C",
-                    Self::to_lower_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toUpperCase",
-                    "(C)C",
-                    Self::to_upper_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "toTitleCase",
-                    "(C)C",
-                    Self::to_title_case,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("digit", "(CI)I", Self::digit, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "forDigit",
-                    "(II)C",
-                    Self::for_digit,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getNumericValue",
-                    "(C)I",
-                    Self::get_numeric_value,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("getType", "(C)I", Self::get_type, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "MIN_VALUE",
-                    "C",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MAX_VALUE",
-                    "C",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MIN_RADIX",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MAX_RADIX",
-                    "I",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "UNASSIGNED",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "UPPERCASE_LETTER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "LOWERCASE_LETTER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TITLECASE_LETTER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MODIFIER_LETTER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "OTHER_LETTER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "NON_SPACING_MARK",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "ENCLOSING_MARK",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "COMBINING_SPACING_MARK",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DECIMAL_DIGIT_NUMBER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "LETTER_NUMBER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "OTHER_NUMBER",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SPACE_SEPARATOR",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "LINE_SEPARATOR",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "PARAGRAPH_SEPARATOR",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CONTROL",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FORMAT",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "PRIVATE_USE",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SURROGATE",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "DASH_PUNCTUATION",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "START_PUNCTUATION",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "END_PUNCTUATION",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CONNECTOR_PUNCTUATION",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "OTHER_PUNCTUATION",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MATH_SYMBOL",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CURRENCY_SYMBOL",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MODIFIER_SYMBOL",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "OTHER_SYMBOL",
-                    "B",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "C", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Character", "MIN_VALUE", "C", JavaChar::MIN).await?;
         jvm.put_static_field("java/lang/Character", "MAX_VALUE", "C", JavaChar::MAX).await?;
@@ -382,29 +133,35 @@ impl Character {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Character", "value", "C", value).await
     }
 
+    #[method(public)]
     async fn char_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         jvm.get_field(&this, "java/lang/Character", "value", "C").await
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Character", "(C)V", (value,)).await?.into())
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
         jvm.invoke_static("java/lang/String", "valueOf", "(C)Ljava/lang/String;", (value,)).await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: JavaChar = jvm.invoke_virtual(&this, "java/lang/Character", "charValue", "()C", ()).await?;
         Ok(i32::from(value))
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Character") {
             return Ok(false);
@@ -415,6 +172,7 @@ impl Character {
         Ok(this_value == other_value)
     }
 
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -428,6 +186,7 @@ impl Character {
         Ok(this_value.cmp(&other_value) as i32)
     }
 
+    #[method(name = "compareTo", public)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -442,14 +201,17 @@ impl Character {
         Ok(this_value.cmp(&other_value) as i32)
     }
 
+    #[method(public, static)]
     async fn is_lower_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(char::from_u32(u32::from(value)).is_some_and(char::is_lowercase))
     }
 
+    #[method(public, static)]
     async fn is_upper_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(char::from_u32(u32::from(value)).is_some_and(char::is_uppercase))
     }
 
+    #[method(public, static)]
     async fn is_title_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(matches!(
             value,
@@ -457,30 +219,38 @@ impl Character {
         ))
     }
 
+    #[method(public, static)]
     async fn is_digit(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(Self::decimal_digit_value(value).is_some())
     }
 
+    #[method(public, static)]
     async fn is_defined(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok(category != 0)
     }
 
+    #[method(public, static)]
     async fn is_letter(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=5).contains(&category))
     }
 
+    #[method(public, static)]
     async fn is_letter_or_digit(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=5).contains(&category) || category == 9)
     }
 
+    #[method(name = "isJavaLetter", public, static)]
+    #[method(public, static)]
     async fn is_java_identifier_start(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=5).contains(&category) || matches!(category, 10 | 23 | 26))
     }
 
+    #[method(name = "isJavaLetterOrDigit", public, static)]
+    #[method(public, static)]
     async fn is_java_identifier_part(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=10).contains(&category)
@@ -491,11 +261,13 @@ impl Character {
             ))
     }
 
+    #[method(public, static)]
     async fn is_unicode_identifier_start(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=5).contains(&category) || category == 10)
     }
 
+    #[method(public, static)]
     async fn is_unicode_identifier_part(jvm: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let category: i32 = jvm.invoke_static("java/lang/Character", "getType", "(C)I", (value,)).await?;
         Ok((1..=10).contains(&category)
@@ -506,6 +278,7 @@ impl Character {
             ))
     }
 
+    #[method(public, static)]
     async fn is_identifier_ignorable(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(matches!(
             value,
@@ -513,10 +286,12 @@ impl Character {
         ))
     }
 
+    #[method(public, static)]
     async fn is_space(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(matches!(value, 0x0009 | 0x000a | 0x000c | 0x000d | 0x0020))
     }
 
+    #[method(public, static)]
     async fn is_space_char(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(matches!(
             value,
@@ -524,6 +299,7 @@ impl Character {
         ))
     }
 
+    #[method(public, static)]
     async fn is_whitespace(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         let Some(value) = char::from_u32(u32::from(value)) else {
             return Ok(false);
@@ -531,10 +307,12 @@ impl Character {
         Ok((value.is_whitespace() && !matches!(value, '\u{00a0}' | '\u{2007}' | '\u{202f}')) || matches!(value, '\u{001c}'..='\u{001f}'))
     }
 
+    #[method(name = "isISOControl", public, static)]
     async fn is_iso_control(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<bool> {
         Ok(matches!(value, 0x0000..=0x001f | 0x007f..=0x009f))
     }
 
+    #[method(public, static)]
     async fn to_lower_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<JavaChar> {
         let Some(character) = char::from_u32(u32::from(value)) else {
             return Ok(value);
@@ -549,6 +327,7 @@ impl Character {
         Ok(first as JavaChar)
     }
 
+    #[method(public, static)]
     async fn to_upper_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<JavaChar> {
         let Some(character) = char::from_u32(u32::from(value)) else {
             return Ok(value);
@@ -563,6 +342,7 @@ impl Character {
         Ok(first as JavaChar)
     }
 
+    #[method(public, static)]
     async fn to_title_case(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<JavaChar> {
         let title = match value {
             0x01c4..=0x01c6 => 0x01c5,
@@ -586,6 +366,7 @@ impl Character {
         Ok(title)
     }
 
+    #[method(public, static)]
     async fn digit(_: &Jvm, _: &mut RuntimeContext, value: JavaChar, radix: i32) -> Result<i32> {
         Ok(Self::digit_value(value, radix))
     }
@@ -612,6 +393,7 @@ impl Character {
         if numeric < radix { numeric } else { -1 }
     }
 
+    #[method(public, static)]
     async fn for_digit(_: &Jvm, _: &mut RuntimeContext, digit: i32, radix: i32) -> Result<JavaChar> {
         if !(2..=36).contains(&radix) || !(0..radix).contains(&digit) {
             return Ok(0);
@@ -624,6 +406,7 @@ impl Character {
         })
     }
 
+    #[method(public, static)]
     async fn get_numeric_value(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<i32> {
         if let Some(value) = Self::decimal_digit_value(value) {
             return Ok(value);
@@ -652,6 +435,7 @@ impl Character {
         })
     }
 
+    #[method(public, static)]
     async fn get_type(_: &Jvm, _: &mut RuntimeContext, value: JavaChar) -> Result<i32> {
         if char::from_u32(u32::from(value)).is_none() || matches!(value, 0xfdd0..=0xfdef | 0xfffe | 0xffff) {
             return Ok(0);
