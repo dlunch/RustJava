@@ -1,50 +1,28 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // final class java.util.TreeMap$Entry
-pub struct TreeMapEntry;
+#[java_class(name = "java/util/TreeMap$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"), final)]
+pub struct TreeMapEntry {
+    #[field(private)]
+    key: ClassInstanceRef<Object>,
+    #[field(private)]
+    value: ClassInstanceRef<Object>,
+    #[field(private)]
+    left: ClassInstanceRef<Self>,
+    #[field(private)]
+    right: ClassInstanceRef<Self>,
+    #[field(private)]
+    parent: ClassInstanceRef<Self>,
+    #[field(private)]
+    color: bool,
+}
 
+#[java_methods]
 impl TreeMapEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TreeMap$Entry",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map$Entry"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/Object;Ljava/lang/Object;Ljava/util/TreeMap$Entry;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "setValue",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::set_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("left", "Ljava/util/TreeMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("right", "Ljava/util/TreeMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("parent", "Ljava/util/TreeMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("color", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -63,14 +41,17 @@ impl TreeMapEntry {
         jvm.put_field(&mut this, "java/util/TreeMap$Entry", "color", "Z", true).await
     }
 
+    #[method(public)]
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         jvm.get_field(&this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn set_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -83,6 +64,7 @@ impl TreeMapEntry {
         Ok(old_value)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
@@ -113,6 +95,7 @@ impl TreeMapEntry {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await?;
         let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await?;

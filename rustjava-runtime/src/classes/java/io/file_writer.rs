@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, FileDescriptor},
         lang::String,
@@ -13,37 +10,19 @@ use crate::{
 };
 
 // class java.io.FileWriter
+#[java_class(name = "java/io/FileWriter", extends = "java/io/OutputStreamWriter", public)]
 pub struct FileWriter;
 
+#[java_methods]
 impl FileWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FileWriter",
-            parent_class: Some("java/io/OutputStreamWriter"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_path, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;Z)V", Self::init_with_path_append, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init_with_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;Z)V", Self::init_with_file_append, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/FileDescriptor;)V",
-                    Self::init_with_file_descriptor,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init_with_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, path: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.FileWriter::<init>({this:?}, {path:?})");
         jvm.invoke_special(&this, "java/io/FileWriter", "<init>", "(Ljava/lang/String;Z)V", (path, false))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_path_append(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -61,12 +40,14 @@ impl FileWriter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileWriter::<init>({this:?}, {file:?})");
         jvm.invoke_special(&this, "java/io/FileWriter", "<init>", "(Ljava/io/File;Z)V", (file, false))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_append(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -85,6 +66,7 @@ impl FileWriter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_descriptor(
         jvm: &Jvm,
         _: &mut RuntimeContext,

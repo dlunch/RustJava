@@ -1,49 +1,29 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::{lang::String, net::URL, util::jar::Attributes},
+    RuntimeContext,
+    classes::java::{
+        lang::String,
+        net::URL,
+        util::jar::{Attributes, JarFile},
+    },
 };
 
 // abstract class java.net.JarURLConnection
-pub struct JarURLConnection;
+#[java_class(name = "java/net/JarURLConnection", extends = "java/net/URLConnection", abstract)]
+pub struct JarURLConnection {
+    #[field(private)]
+    fileUrl: ClassInstanceRef<URL>,
+    #[field(private)]
+    entry: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl JarURLConnection {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/net/JarURLConnection",
-            parent_class: Some("java/net/URLConnection"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("getJarFile", "()Ljava/util/jar/JarFile;", MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getEntryName", "()Ljava/lang/String;", Self::get_entry_name, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getJarFileURL", "()Ljava/net/URL;", Self::get_jar_file_url, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getJarEntry",
-                    "()Ljava/util/jar/JarEntry;",
-                    Self::get_jar_entry,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getMainAttributes",
-                    "()Ljava/util/jar/Attributes;",
-                    Self::get_main_attributes,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("fileUrl", "Ljava/net/URL;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("entry", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("java.net.JarURLConnection::<init>({this:?}, {url:?})");
 
@@ -74,6 +54,10 @@ impl JarURLConnection {
         Ok(())
     }
 
+    #[method(public)]
+    async fn get_jar_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<JarFile>>;
+
+    #[method(public)]
     async fn get_entry_name(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.JarURLConnection::getEntryName({this:?})");
 
@@ -82,6 +66,7 @@ impl JarURLConnection {
         Ok(entry)
     }
 
+    #[method(name = "getJarFileURL", public)]
     async fn get_jar_file_url(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.JarURLConnection::getJarFileURL({this:?})");
 
@@ -90,6 +75,7 @@ impl JarURLConnection {
         Ok(file_url)
     }
 
+    #[method(descriptor = "()Ljava/util/jar/JarEntry;", public)]
     async fn get_jar_entry(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URL>> {
         tracing::debug!("java.net.JarURLConnection::getJarEntry({this:?})");
 
@@ -113,6 +99,7 @@ impl JarURLConnection {
         Ok(entry)
     }
 
+    #[method(public)]
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
         tracing::debug!("java.net.JarURLConnection::getMainAttributes({this:?})");
 

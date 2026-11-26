@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String, StringBuffer},
         text::{FieldPosition, ParseException, ParsePosition},
@@ -13,49 +10,23 @@ use crate::{
 };
 
 // public abstract class java.text.Format
+#[java_class(
+    name = "java/text/Format",
+    extends = "java/lang/Object",
+    implements("java/io/Serializable", "java/lang/Cloneable"),
+    public,
+    abstract
+)]
 pub struct Format;
 
+#[java_methods]
 impl Format {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/Format",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Cloneable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/lang/Object;)Ljava/lang/String;",
-                    Self::format,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new_abstract(
-                    "format",
-                    "(Ljava/lang/Object;Ljava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new(
-                    "parseObject",
-                    "(Ljava/lang/String;)Ljava/lang/Object;",
-                    Self::parse_object,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new_abstract(
-                    "parseObject",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Object;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }
 
+    #[method(public, final)]
     async fn format(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -77,6 +48,17 @@ impl Format {
             .await
     }
 
+    #[method(name = "format", public)]
+    async fn format_object(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        object: ClassInstanceRef<Object>,
+        buffer: ClassInstanceRef<StringBuffer>,
+        position: ClassInstanceRef<FieldPosition>,
+    ) -> Result<ClassInstanceRef<StringBuffer>>;
+
+    #[method(public)]
     async fn parse_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -112,6 +94,16 @@ impl Format {
         Ok(result)
     }
 
+    #[method(name = "parseObject", public)]
+    async fn parse_object_with_position(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        source: ClassInstanceRef<String>,
+        position: ClassInstanceRef<ParsePosition>,
+    ) -> Result<ClassInstanceRef<Object>>;
+
+    #[method(public)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm.shallow_clone(&this)?.into())
     }

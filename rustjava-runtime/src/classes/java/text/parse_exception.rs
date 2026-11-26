@@ -1,29 +1,18 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
+use crate::{RuntimeContext, classes::java::lang::String};
 
 // public class java.text.ParseException
-pub struct ParseException;
+#[java_class(name = "java/text/ParseException", extends = "java/lang/Exception", public)]
+pub struct ParseException {
+    #[field(private)]
+    errorOffset: i32,
+}
 
+#[java_methods]
 impl ParseException {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/ParseException",
-            parent_class: Some("java/lang/Exception"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;I)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getErrorOffset", "()I", Self::get_error_offset, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("errorOffset", "I", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -38,6 +27,7 @@ impl ParseException {
             .await
     }
 
+    #[method(public)]
     async fn get_error_offset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/ParseException", "errorOffset", "I").await
     }

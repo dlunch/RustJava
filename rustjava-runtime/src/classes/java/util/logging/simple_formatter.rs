@@ -1,11 +1,10 @@
-use alloc::{format, string::String as RustString, vec};
+use alloc::{format, string::String as RustString};
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{PrintWriter, StringWriter},
         lang::{String, Throwable},
@@ -15,34 +14,19 @@ use crate::{
 use super::{Level, LogRecord};
 
 // public class java.util.logging.SimpleFormatter
+#[java_class(name = "java/util/logging/SimpleFormatter", extends = "java/util/logging/Formatter", public)]
 pub struct SimpleFormatter;
 
+#[java_methods]
 impl SimpleFormatter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/SimpleFormatter",
-            parent_class: Some("java/util/logging/Formatter"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/util/logging/LogRecord;)Ljava/lang/String;",
-                    Self::format,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.SimpleFormatter::<init>({this:?})");
 
         jvm.invoke_special(&this, "java/util/logging/Formatter", "<init>", "()V", ()).await
     }
 
+    #[method(public)]
     async fn format(
         jvm: &Jvm,
         _: &mut RuntimeContext,

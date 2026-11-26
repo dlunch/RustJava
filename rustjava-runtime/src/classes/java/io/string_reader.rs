@@ -1,46 +1,29 @@
 use core::future::Future;
 
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 // class java.io.StringReader
-pub struct StringReader;
+#[java_class(name = "java/io/StringReader", extends = "java/io/Reader", public)]
+pub struct StringReader {
+    #[field(private)]
+    str: ClassInstanceRef<String>,
+    #[field(private)]
+    length: i32,
+    #[field(private)]
+    next: i32,
+    #[field(private)]
+    mark: i32,
+}
 
+#[java_methods]
 impl StringReader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/StringReader",
-            parent_class: Some("java/io/Reader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "()I", Self::read_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([CII)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("str", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("length", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("next", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("mark", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.StringReader::<init>({this:?}, {value:?})");
 
@@ -75,6 +58,7 @@ impl StringReader {
         }
     }
 
+    #[method(name = "read", public)]
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
@@ -97,6 +81,7 @@ impl StringReader {
         Ok(result as i32)
     }
 
+    #[method(public)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -146,6 +131,7 @@ impl StringReader {
         Ok(copied)
     }
 
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, amount)).await
@@ -169,6 +155,7 @@ impl StringReader {
         Ok(skipped)
     }
 
+    #[method(public)]
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
@@ -184,11 +171,13 @@ impl StringReader {
         Ok(true)
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.StringReader::markSupported({this:?})");
         Ok(true)
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         tracing::debug!("java.io.StringReader::mark({this:?}, {read_ahead_limit})");
 
@@ -208,6 +197,7 @@ impl StringReader {
         jvm.put_field(&mut this, "java/io/StringReader", "mark", "I", next).await
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
@@ -224,6 +214,7 @@ impl StringReader {
         jvm.put_field(&mut this, "java/io/StringReader", "next", "I", mark).await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/StringReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await

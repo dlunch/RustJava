@@ -1,50 +1,27 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{String, StringBuffer},
 };
 
 // public class java.util.regex.PatternSyntaxException
-pub struct PatternSyntaxException;
+#[java_class(name = "java/util/regex/PatternSyntaxException", extends = "java/lang/IllegalArgumentException", public)]
+pub struct PatternSyntaxException {
+    #[field(private, final)]
+    desc: ClassInstanceRef<String>,
+    #[field(private, final)]
+    pattern: ClassInstanceRef<String>,
+    #[field(private, final)]
+    index: i32,
+    #[field(private, static, final)]
+    nl: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl PatternSyntaxException {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/regex/PatternSyntaxException",
-            parent_class: Some("java/lang/IllegalArgumentException"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;I)V",
-                    Self::init,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getDescription", "()Ljava/lang/String;", Self::get_description, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getPattern", "()Ljava/lang/String;", Self::get_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getIndex", "()I", Self::get_index, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("desc", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("pattern", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("index", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "nl",
-                    "Ljava/lang/String;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.util.regex.PatternSyntaxException::<clinit>()");
 
@@ -56,6 +33,7 @@ impl PatternSyntaxException {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -89,6 +67,7 @@ impl PatternSyntaxException {
             .await
     }
 
+    #[method(public)]
     async fn get_description(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getDescription({this:?})");
 
@@ -96,6 +75,7 @@ impl PatternSyntaxException {
             .await
     }
 
+    #[method(public)]
     async fn get_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getPattern({this:?})");
 
@@ -103,12 +83,14 @@ impl PatternSyntaxException {
             .await
     }
 
+    #[method(public)]
     async fn get_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getIndex({this:?})");
 
         jvm.get_field(&this, "java/util/regex/PatternSyntaxException", "index", "I").await
     }
 
+    #[method(public)]
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.PatternSyntaxException::getMessage({this:?})");
 

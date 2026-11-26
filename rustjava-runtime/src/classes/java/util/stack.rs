@@ -1,48 +1,15 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Stack
+#[java_class(name = "java/util/Stack", extends = "java/util/Vector", public)]
 pub struct Stack;
 
+#[java_methods]
 impl Stack {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Stack",
-            parent_class: Some("java/util/Vector"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("empty", "()Z", Self::empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "peek",
-                    "()Ljava/lang/Object;",
-                    Self::peek,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "pop",
-                    "()Ljava/lang/Object;",
-                    Self::pop,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("push", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::push, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "search",
-                    "(Ljava/lang/Object;)I",
-                    Self::search,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::warn!("java.util.Stack::<init>({this:?})");
 
@@ -51,6 +18,7 @@ impl Stack {
         Ok(())
     }
 
+    #[method(public)]
     async fn empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::warn!("java.util.Stack::size({this:?})");
 
@@ -60,6 +28,7 @@ impl Stack {
         Ok(is_empty)
     }
 
+    #[method(public, synchronized)]
     async fn peek(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::warn!("java.util.Stack::peek({this:?})");
 
@@ -74,6 +43,7 @@ impl Stack {
         Ok(element)
     }
 
+    #[method(public, synchronized)]
     async fn pop(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::warn!("java.util.Stack::pop({this:?})");
 
@@ -86,6 +56,7 @@ impl Stack {
         Ok(element)
     }
 
+    #[method(public)]
     async fn push(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -101,6 +72,7 @@ impl Stack {
         Ok(element)
     }
 
+    #[method(public, synchronized)]
     async fn search(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::warn!("java.util.Stack::search({this:?}, {element:?})");
 

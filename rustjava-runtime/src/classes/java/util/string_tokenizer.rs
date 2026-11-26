@@ -1,60 +1,34 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 // class java.util.StringTokenizer
-pub struct StringTokenizer;
+#[java_class(
+    name = "java/util/StringTokenizer",
+    extends = "java/lang/Object",
+    implements("java/util/Enumeration"),
+    public
+)]
+pub struct StringTokenizer {
+    #[field(private)]
+    str: ClassInstanceRef<String>,
+    #[field(private)]
+    delimiters: ClassInstanceRef<String>,
+    #[field(private)]
+    currentPosition: i32,
+    #[field(private)]
+    maxPosition: i32,
+    #[field(private)]
+    returnDelimiters: bool,
+}
 
+#[java_methods]
 impl StringTokenizer {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/StringTokenizer",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Enumeration"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init_with_delimiters,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;Z)V",
-                    Self::init_with_delimiters_and_return,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("hasMoreTokens", "()Z", Self::has_more_tokens, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextToken", "()Ljava/lang/String;", Self::next_token, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "nextToken",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::next_token_with_delimiters,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("countTokens", "()I", Self::count_tokens, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hasMoreElements", "()Z", Self::has_more_elements, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextElement", "()Ljava/lang/Object;", Self::next_element, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("str", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("delimiters", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("currentPosition", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("maxPosition", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("returnDelimiters", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.StringTokenizer::<init>({this:?}, {string:?})");
 
@@ -69,6 +43,7 @@ impl StringTokenizer {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_delimiters(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -88,6 +63,7 @@ impl StringTokenizer {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_delimiters_and_return(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -115,6 +91,7 @@ impl StringTokenizer {
             .await
     }
 
+    #[method(public)]
     async fn has_more_tokens(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.StringTokenizer::hasMoreTokens({this:?})");
 
@@ -132,6 +109,7 @@ impl StringTokenizer {
         )
     }
 
+    #[method(public)]
     async fn next_token(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.StringTokenizer::nextToken({this:?})");
 
@@ -161,6 +139,7 @@ impl StringTokenizer {
         Ok(token)
     }
 
+    #[method(name = "nextToken", public)]
     async fn next_token_with_delimiters(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -175,6 +154,7 @@ impl StringTokenizer {
             .await
     }
 
+    #[method(public)]
     async fn count_tokens(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.StringTokenizer::countTokens({this:?})");
 
@@ -193,10 +173,12 @@ impl StringTokenizer {
         Ok(count)
     }
 
+    #[method(public)]
     async fn has_more_elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         jvm.invoke_virtual(&this, "java/util/StringTokenizer", "hasMoreTokens", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn next_element(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let token: ClassInstanceRef<String> = jvm
             .invoke_virtual(&this, "java/util/StringTokenizer", "nextToken", "()Ljava/lang/String;", ())

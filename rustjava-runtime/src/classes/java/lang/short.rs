@@ -1,106 +1,32 @@
-use alloc::{boxed::Box, format, vec};
+use alloc::{boxed::Box, format};
 
 use jvm::{
     ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::lang::{Class, Object, String},
 };
 
 // public final class java.lang.Short
-pub struct Short;
+#[java_class(name = "java/lang/Short", extends = "java/lang/Number", implements("java/lang/Comparable"), public, final)]
+pub struct Short {
+    #[field(public, static, final)]
+    MIN_VALUE: i16,
+    #[field(public, static, final)]
+    MAX_VALUE: i16,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(private, final)]
+    value: i16,
+}
 
+#[java_methods]
 impl Short {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Short",
-            parent_class: Some("java/lang/Number"),
-            interfaces: vec!["java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(S)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "parseShort",
-                    "(Ljava/lang/String;)S",
-                    Self::parse_short,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "parseShort",
-                    "(Ljava/lang/String;I)S",
-                    Self::parse_short_radix,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(S)Ljava/lang/Short;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Short;",
-                    Self::value_of_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;I)Ljava/lang/Short;",
-                    Self::value_of_string_radix,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "decode",
-                    "(Ljava/lang/String;)Ljava/lang/Short;",
-                    Self::decode,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("byteValue", "()B", Self::byte_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("shortValue", "()S", Self::short_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("longValue", "()J", Self::long_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("floatValue", "()F", Self::float_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("doubleValue", "()D", Self::double_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "(S)Ljava/lang/String;",
-                    Self::to_string_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Short;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "MIN_VALUE",
-                    "S",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MAX_VALUE",
-                    "S",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "S", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Short", "MIN_VALUE", "S", i16::MIN).await?;
         jvm.put_static_field("java/lang/Short", "MAX_VALUE", "S", i16::MAX).await?;
@@ -113,11 +39,13 @@ impl Short {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: i16) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Short", "value", "S", value).await
     }
 
+    #[method(constructor, public)]
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         let value: i16 = jvm
             .invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;)S", (value,))
@@ -127,6 +55,7 @@ impl Short {
         jvm.put_field(&mut this, "java/lang/Short", "value", "S", value).await
     }
 
+    #[method(public, static)]
     async fn parse_short(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<i16> {
         let parsed: i32 = jvm
             .invoke_static("java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", (value,))
@@ -137,6 +66,7 @@ impl Short {
         Ok(parsed as i16)
     }
 
+    #[method(name = "parseShort", public, static)]
     async fn parse_short_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<i16> {
         let parsed: i32 = jvm
             .invoke_static("java/lang/Integer", "parseInt", "(Ljava/lang/String;I)I", (value, radix))
@@ -147,6 +77,7 @@ impl Short {
         Ok(parsed as i16)
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let value: i16 = jvm
             .invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;)S", (value,))
@@ -154,10 +85,12 @@ impl Short {
         Ok(jvm.new_class("java/lang/Short", "(S)V", (value,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: i16) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Short", "(S)V", (value,)).await?.into())
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string_radix(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>, radix: i32) -> Result<ClassInstanceRef<Self>> {
         let value: i16 = jvm
             .invoke_static("java/lang/Short", "parseShort", "(Ljava/lang/String;I)S", (value, radix))
@@ -165,6 +98,7 @@ impl Short {
         Ok(jvm.new_class("java/lang/Short", "(S)V", (value,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let integer: Box<dyn ClassInstance> = jvm
             .invoke_static("java/lang/Integer", "decode", "(Ljava/lang/String;)Ljava/lang/Integer;", (value,))
@@ -176,35 +110,45 @@ impl Short {
         Ok(jvm.new_class("java/lang/Short", "(S)V", (value as i16,)).await?.into())
     }
 
+    #[method(public)]
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         Ok((jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await?) as i8)
     }
+    #[method(public)]
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         jvm.get_field(&this, "java/lang/Short", "value", "S").await
     }
+    #[method(public)]
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i32)
     }
+    #[method(public)]
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i64)
     }
+    #[method(public)]
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as f32)
     }
+    #[method(public)]
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as f64)
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: i16 = jvm.invoke_virtual(&this, "java/lang/Short", "shortValue", "()S", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &format!("{value}")).await?.into())
     }
+    #[method(name = "toString", public, static)]
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: i16) -> Result<ClassInstanceRef<String>> {
         Ok(JavaLangString::from_rust_string(jvm, &format!("{value}")).await?.into())
     }
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         Ok(jvm.get_field::<i16>(&this, "java/lang/Short", "value", "S").await? as i32)
     }
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Short") {
             return Ok(false);
@@ -212,6 +156,7 @@ impl Short {
         Ok(jvm.invoke_virtual::<_, i16>(&this, "java/lang/Short", "shortValue", "()S", ()).await?
             == jvm.invoke_virtual::<_, i16>(&other, "java/lang/Short", "shortValue", "()S", ()).await?)
     }
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -220,6 +165,7 @@ impl Short {
         let right: i16 = jvm.invoke_virtual(&other, "java/lang/Short", "shortValue", "()S", ()).await?;
         Ok(left.cmp(&right) as i32)
     }
+    #[method(name = "compareTo", public)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);

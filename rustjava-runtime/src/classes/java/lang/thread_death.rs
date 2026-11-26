@@ -1,26 +1,15 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // class java.lang.ThreadDeath
+#[java_class(name = "java/lang/ThreadDeath", extends = "java/lang/Error", public)]
 pub struct ThreadDeath;
 
+#[java_methods]
 impl ThreadDeath {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/ThreadDeath",
-            parent_class: Some("java/lang/Error"),
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC)],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.ThreadDeath::<init>({this:?})");
 

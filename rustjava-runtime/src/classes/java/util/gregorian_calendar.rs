@@ -3,31 +3,17 @@ use alloc::{boxed::Box, vec, vec::Vec};
 use jiff::{Timestamp, civil, tz::Offset};
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::TimeZone};
+use crate::{RuntimeContext, classes::java::util::TimeZone};
 
 // class java.util.GregorianCalendar
+#[java_class(name = "java/util/GregorianCalendar", extends = "java/util/Calendar", public)]
 pub struct GregorianCalendar;
 
+#[java_methods]
 impl GregorianCalendar {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/GregorianCalendar",
-            parent_class: Some("java/util/Calendar"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/TimeZone;)V", Self::init_with_time_zone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("computeTime", "()V", Self::compute_time, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("computeFields", "()V", Self::compute_fields, MethodAccessFlags::PROTECTED),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.GregorianCalendar::<init>({this:?})");
 
@@ -37,6 +23,7 @@ impl GregorianCalendar {
         jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
+    #[method(constructor, public)]
     async fn init_with_time_zone(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -57,6 +44,7 @@ impl GregorianCalendar {
         jvm.invoke_virtual(&this, "java/util/GregorianCalendar", "computeFields", "()V", ()).await
     }
 
+    #[method(protected)]
     async fn compute_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.GregorianCalendar::computeTime({this:?})");
 
@@ -109,6 +97,7 @@ impl GregorianCalendar {
         Ok(())
     }
 
+    #[method(protected)]
     async fn compute_fields(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.GregorianCalendar::computeFields({this:?})");
 

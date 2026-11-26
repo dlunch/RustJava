@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::util::{TimerTask, TimerTaskQueue},
 };
 
@@ -16,26 +13,16 @@ enum WorkerAction {
 }
 
 // class java.util.Timer$TimerThread
-pub struct TimerThread;
+#[java_class(name = "java/util/Timer$TimerThread", extends = "java/lang/Thread")]
+pub struct TimerThread {
+    #[field(private)]
+    queue: ClassInstanceRef<TimerTaskQueue>,
+    newTasksMayBeScheduled: bool,
+}
 
+#[java_methods]
 impl TimerThread {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Timer$TimerThread",
-            parent_class: Some("java/lang/Thread"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Timer$TaskQueue;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("run", "()V", Self::run, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("queue", "Ljava/util/Timer$TaskQueue;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("newTasksMayBeScheduled", "Z", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, queue: ClassInstanceRef<TimerTaskQueue>) -> Result<()> {
         tracing::debug!("java.util.Timer$TimerThread::<init>({this:?})");
 
@@ -47,6 +34,7 @@ impl TimerThread {
         Ok(())
     }
 
+    #[method(public)]
     async fn run(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Timer$TimerThread::run({this:?})");
 

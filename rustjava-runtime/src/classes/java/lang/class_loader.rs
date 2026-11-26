@@ -1,11 +1,10 @@
 use alloc::{boxed::Box, format, vec, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Class, String},
         net::URL,
@@ -13,73 +12,17 @@ use crate::{
 };
 
 // class java.lang.ClassLoader
-pub struct ClassLoader;
+#[java_class(name = "java/lang/ClassLoader", extends = "java/lang/Object", public, abstract)]
+pub struct ClassLoader {
+    #[field(static)]
+    systemClassLoader: ClassInstanceRef<Self>,
+    #[field(private, final)]
+    parent: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl ClassLoader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/ClassLoader",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/ClassLoader;)V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "loadClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::load_class,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "findClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::find_class,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new(
-                    "findLoadedClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::find_loaded_class,
-                    MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getSystemClassLoader",
-                    "()Ljava/lang/ClassLoader;",
-                    Self::get_system_class_loader,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getResource",
-                    "(Ljava/lang/String;)Ljava/net/URL;",
-                    Self::get_resource,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getResourceAsStream",
-                    "(Ljava/lang/String;)Ljava/io/InputStream;",
-                    Self::get_resource_as_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "findResource",
-                    "(Ljava/lang/String;)Ljava/net/URL;",
-                    Self::find_resource,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new(
-                    "defineClass",
-                    "(Ljava/lang/String;[BII)Ljava/lang/Class;",
-                    Self::define_class,
-                    MethodAccessFlags::PROTECTED | MethodAccessFlags::FINAL,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("systemClassLoader", "Ljava/lang/ClassLoader;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("parent", "Ljava/lang/ClassLoader;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, parent: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.ClassLoader::<init>({this:?}, {parent:?})");
 
@@ -91,6 +34,7 @@ impl ClassLoader {
         Ok(())
     }
 
+    #[method(public, static)]
     async fn get_system_class_loader(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.lang.ClassLoader::getSystemClassLoader()");
 
@@ -184,6 +128,7 @@ impl ClassLoader {
         Ok(system_class_loader)
     }
 
+    #[method(public)]
     async fn load_class(
         jvm: &Jvm,
         runtime: &mut RuntimeContext,
@@ -269,6 +214,7 @@ impl ClassLoader {
         Ok(class)
     }
 
+    #[method(protected)]
     async fn find_class(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -280,6 +226,7 @@ impl ClassLoader {
         Err(jvm.exception("java/lang/ClassNotFoundException", "class not found").await)
     }
 
+    #[method(protected, final)]
     async fn find_loaded_class(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -302,6 +249,7 @@ impl ClassLoader {
         Ok(class.java_class().into())
     }
 
+    #[method(public)]
     async fn get_resource(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -346,6 +294,7 @@ impl ClassLoader {
         Ok(result)
     }
 
+    #[method(descriptor = "(Ljava/lang/String;)Ljava/io/InputStream;", public)]
     async fn get_resource_as_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -375,6 +324,7 @@ impl ClassLoader {
         Ok(stream)
     }
 
+    #[method(protected)]
     async fn find_resource(
         _: &Jvm,
         _: &mut RuntimeContext,
@@ -386,6 +336,7 @@ impl ClassLoader {
         Ok(None.into())
     }
 
+    #[method(protected, final)]
     async fn define_class(
         jvm: &Jvm,
         runtime: &mut RuntimeContext,

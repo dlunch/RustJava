@@ -1,39 +1,18 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{String, Throwable},
 };
 
 // class java.lang.RuntimeException
+#[java_class(name = "java/lang/RuntimeException", extends = "java/lang/Exception", public)]
 pub struct RuntimeException;
 
+#[java_methods]
 impl RuntimeException {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/RuntimeException",
-            parent_class: Some("java/lang/Exception"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_message, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Throwable;)V", Self::init_with_cause, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/Throwable;)V",
-                    Self::init_with_message_and_cause,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.lang.RuntimeException::<init>({this:?})");
 
@@ -42,6 +21,7 @@ impl RuntimeException {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, message: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.lang.RuntimeException::<init>({this:?}, {message:?})");
 
@@ -52,6 +32,7 @@ impl RuntimeException {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_cause(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, cause: ClassInstanceRef<Throwable>) -> Result<()> {
         tracing::debug!("java.lang.RuntimeException::<init>({this:?}, {cause:?})");
 
@@ -62,6 +43,7 @@ impl RuntimeException {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_message_and_cause(
         jvm: &Jvm,
         _: &mut RuntimeContext,

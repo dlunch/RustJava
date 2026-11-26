@@ -3,50 +3,32 @@ use alloc::{boxed::Box, vec};
 use bytemuck::cast_slice;
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    FileOpenOptions, RuntimeClassProto, RuntimeContext,
+    FileOpenOptions, RuntimeContext,
     classes::java::io::{File, FileDescriptor},
 };
 
 // class java.io.FileOutputStream
-pub struct FileOutputStream;
+#[java_class(name = "java/io/FileOutputStream", extends = "java/io/OutputStream", public)]
+pub struct FileOutputStream {
+    #[field(private, final)]
+    fd: ClassInstanceRef<FileDescriptor>,
+    #[field(private, final)]
+    append: bool,
+}
 
+#[java_methods]
 impl FileOutputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FileOutputStream",
-            parent_class: Some("java/io/OutputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;Z)V", Self::init_with_append, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/FileDescriptor;)V",
-                    Self::init_with_file_descriptor,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("fd", "Ljava/io/FileDescriptor;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("append", "Z", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::<init>({this:?}, {file:?})");
         jvm.invoke_special(&this, "java/io/FileOutputStream", "<init>", "(Ljava/io/File;Z)V", (file, false))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_append(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -85,6 +67,7 @@ impl FileOutputStream {
         jvm.put_field(&mut this, "java/io/FileOutputStream", "append", "Z", append).await
     }
 
+    #[method(constructor, public)]
     async fn init_with_file_descriptor(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -105,6 +88,7 @@ impl FileOutputStream {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_bytes_offset(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -137,6 +121,7 @@ impl FileOutputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn write(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, byte: i32) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::write({this:?}, {byte:?})");
 
@@ -150,6 +135,7 @@ impl FileOutputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FileOutputStream::close({this:?})");
 

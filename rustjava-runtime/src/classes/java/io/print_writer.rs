@@ -1,13 +1,10 @@
 use core::future::Future;
 
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, OutputStream, OutputStreamWriter, Writer},
         lang::{Appendable, CharSequence, Object, String},
@@ -16,155 +13,26 @@ use crate::{
 };
 
 // class java.io.PrintWriter
-pub struct PrintWriter;
+#[java_class(name = "java/io/PrintWriter", extends = "java/io/Writer", public)]
+pub struct PrintWriter {
+    #[field(protected)]
+    out: ClassInstanceRef<Writer>,
+    #[field(private)]
+    autoFlush: bool,
+    #[field(private)]
+    trouble: bool,
+}
 
+#[java_methods]
 impl PrintWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/PrintWriter",
-            parent_class: Some("java/io/Writer"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/Writer;)V", Self::init_writer, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/Writer;Z)V", Self::init_writer_auto_flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/OutputStream;)V", Self::init_output_stream, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;Z)V",
-                    Self::init_output_stream_auto_flush,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_path, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init_path_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/File;Ljava/lang/String;)V",
-                    Self::init_file_encoding,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("write", "(I)V", Self::write_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([C)V", Self::write_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([CII)V", Self::write_chars_range, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(Ljava/lang/String;)V", Self::write_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(Ljava/lang/String;II)V", Self::write_string_range, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(Z)V", Self::print_boolean, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(C)V", Self::print_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(I)V", Self::print_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(J)V", Self::print_long, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(F)V", Self::print_float, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(D)V", Self::print_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "([C)V", Self::print_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(Ljava/lang/String;)V", Self::print_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("print", "(Ljava/lang/Object;)V", Self::print_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "()V", Self::println, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(Z)V", Self::println_boolean, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(C)V", Self::println_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(I)V", Self::println_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(J)V", Self::println_long, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(F)V", Self::println_float, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(D)V", Self::println_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "([C)V", Self::println_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(Ljava/lang/String;)V", Self::println_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("println", "(Ljava/lang/Object;)V", Self::println_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("checkError", "()Z", Self::check_error, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setError", "()V", Self::set_error, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "printf",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;",
-                    Self::printf,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-                JavaMethodProto::new(
-                    "printf",
-                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;",
-                    Self::printf_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;",
-                    Self::format,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/io/PrintWriter;",
-                    Self::format_with_locale,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::VARARGS,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/io/PrintWriter;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/io/PrintWriter;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("append", "(C)Ljava/io/PrintWriter;", Self::append_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/io/Writer;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/io/Writer;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(C)Ljava/io/Writer;",
-                    Self::append_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(C)Ljava/lang/Appendable;",
-                    Self::append_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("out", "Ljava/io/Writer;", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("autoFlush", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("trouble", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init_writer(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<Writer>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::<init>({this:?}, {out:?})");
         jvm.invoke_special(&this, "java/io/PrintWriter", "<init>", "(Ljava/io/Writer;Z)V", (out, false))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_writer_auto_flush(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -186,12 +54,14 @@ impl PrintWriter {
         jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", false).await
     }
 
+    #[method(constructor, public)]
     async fn init_output_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<OutputStream>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::<init>({this:?}, {out:?})");
         jvm.invoke_special(&this, "java/io/PrintWriter", "<init>", "(Ljava/io/OutputStream;Z)V", (out, false))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_output_stream_auto_flush(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -213,6 +83,7 @@ impl PrintWriter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, path: ClassInstanceRef<String>) -> Result<()> {
         if path.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "file name is null").await);
@@ -222,6 +93,7 @@ impl PrintWriter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_path_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -244,6 +116,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         if file.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "file is null").await);
@@ -258,6 +131,7 @@ impl PrintWriter {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_file_encoding(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -302,6 +176,7 @@ impl PrintWriter {
         }
     }
 
+    #[method(name = "write", public)]
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {value})");
 
@@ -320,6 +195,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "write", public)]
     async fn write_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, chars: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {chars:?})");
 
@@ -335,6 +211,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "write", public)]
     async fn write_chars_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -370,6 +247,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "write", public)]
     async fn write_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::write({this:?}, {string:?})");
 
@@ -385,6 +263,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "write", public)]
     async fn write_string_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -420,6 +299,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "print", public)]
     async fn print_boolean(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         let value: ClassInstanceRef<String> = jvm
@@ -428,11 +308,13 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(name = "print", public)]
     async fn print_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         jvm.invoke_virtual(&this, "java/io/PrintWriter", "write", "(I)V", (value as i32,)).await
     }
 
+    #[method(name = "print", public)]
     async fn print_int(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         let value: ClassInstanceRef<String> = jvm
@@ -441,6 +323,7 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(name = "print", public)]
     async fn print_long(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         let value: ClassInstanceRef<String> = jvm
@@ -449,6 +332,7 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(name = "print", public)]
     async fn print_float(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         let value: ClassInstanceRef<String> = jvm
@@ -457,6 +341,7 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(name = "print", public)]
     async fn print_double(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value})");
         let value: ClassInstanceRef<String> = jvm
@@ -465,11 +350,13 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(name = "print", public)]
     async fn print_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value:?})");
         jvm.invoke_virtual(&this, "java/io/PrintWriter", "write", "([C)V", (value,)).await
     }
 
+    #[method(name = "print", public)]
     async fn print_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value:?})");
         let value = if value.is_null() {
@@ -481,6 +368,7 @@ impl PrintWriter {
             .await
     }
 
+    #[method(name = "print", public)]
     async fn print_object(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::print({this:?}, {value:?})");
         let value: ClassInstanceRef<String> = jvm
@@ -489,6 +377,7 @@ impl PrintWriter {
         Self::print_string(jvm, context, this, value).await
     }
 
+    #[method(public)]
     async fn println(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::println({this:?})");
 
@@ -533,6 +422,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -542,6 +432,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: JavaChar) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -551,6 +442,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -560,6 +452,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -569,6 +462,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -578,6 +472,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -587,6 +482,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_chars(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -596,6 +492,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -607,6 +504,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "println", public)]
     async fn println_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/PrintWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, async {
@@ -618,6 +516,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(public)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::flush({this:?})");
 
@@ -636,6 +535,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.PrintWriter::close({this:?})");
 
@@ -662,6 +562,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(public)]
     async fn check_error(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.PrintWriter::checkError({this:?})");
 
@@ -679,10 +580,12 @@ impl PrintWriter {
         .await
     }
 
+    #[method(protected)]
     async fn set_error(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.put_field(&mut this, "java/io/PrintWriter", "trouble", "Z", true).await
     }
 
+    #[method(public, varargs)]
     async fn printf(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -700,6 +603,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "printf", public, varargs)]
     async fn printf_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -718,6 +622,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(public, varargs)]
     async fn format(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -736,6 +641,7 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "format", public, varargs)]
     async fn format_with_locale(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -768,6 +674,15 @@ impl PrintWriter {
         .await
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(Ljava/lang/CharSequence;)Ljava/io/Writer;", public, bridge, synthetic)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_char_sequence(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -786,6 +701,15 @@ impl PrintWriter {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(Ljava/lang/CharSequence;II)Ljava/io/Writer;", public, bridge, synthetic)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_char_sequence_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -806,6 +730,9 @@ impl PrintWriter {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(C)Ljava/io/Writer;", public, bridge, synthetic)]
+    #[method(name = "append", descriptor = "(C)Ljava/lang/Appendable;", public, bridge, synthetic)]
     async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<Writer> = jvm
             .invoke_special(&this, "java/io/Writer", "append", "(C)Ljava/io/Writer;", (character,))

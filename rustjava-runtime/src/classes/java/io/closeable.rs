@@ -1,26 +1,14 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::RuntimeContext;
 
 // public interface java.io.Closeable
+#[java_class(name = "java/io/Closeable", public, interface, abstract)]
 pub struct Closeable;
 
+#[java_methods]
 impl Closeable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/Closeable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new_abstract(
-                "close",
-                "()V",
-                MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-            )],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
 }

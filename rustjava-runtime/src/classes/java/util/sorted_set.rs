@@ -1,45 +1,48 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::Comparator},
+};
 
 // interface java.util.SortedSet
+#[java_class(name = "java/util/SortedSet", implements("java/util/Set"), public, interface, abstract)]
 pub struct SortedSet;
 
+#[java_methods]
 impl SortedSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/SortedSet",
-            parent_class: None,
-            interfaces: vec!["java/util/Set"],
-            methods: vec![
-                JavaMethodProto::new_abstract(
-                    "comparator",
-                    "()Ljava/util/Comparator;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "subSet",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "headSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "tailSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract("first", "()Ljava/lang/Object;", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("last", "()Ljava/lang/Object;", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Comparator>>;
+
+    #[method(public)]
+    async fn sub_set(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        from: ClassInstanceRef<Object>,
+        to: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn head_set(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        to: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn tail_set(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        from: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>>;
+
+    #[method(public)]
+    async fn last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>>;
 }

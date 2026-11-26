@@ -1,26 +1,14 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::RuntimeContext;
 
 // public interface java.io.Flushable
+#[java_class(name = "java/io/Flushable", public, interface, abstract)]
 pub struct Flushable;
 
+#[java_methods]
 impl Flushable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/Flushable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new_abstract(
-                "flush",
-                "()V",
-                MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-            )],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
 }

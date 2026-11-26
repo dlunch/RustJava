@@ -1,43 +1,32 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{HashMap, HashMapEntry};
 
 // abstract class java.util.HashMap$HashIterator
-pub struct HashMapHashIterator;
+#[java_class(
+    name = "java/util/HashMap$HashIterator",
+    extends = "java/lang/Object",
+    implements("java/util/Iterator"),
+    abstract
+)]
+pub struct HashMapHashIterator {
+    #[field(private)]
+    map: ClassInstanceRef<HashMap>,
+    #[field(private)]
+    lastReturned: ClassInstanceRef<HashMapEntry>,
+    #[field(private)]
+    elements: ClassInstanceRef<Array<Object>>,
+    index: i32,
+}
 
+#[java_methods]
 impl HashMapHashIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap$HashIterator",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Iterator"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-            ],
-            fields: vec![
-                JavaFieldProto::new("map", "Ljava/util/HashMap;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lastReturned", "Ljava/util/HashMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("elements", "[Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("index", "I", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -58,6 +47,7 @@ impl HashMapHashIterator {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap$HashIterator::hasNext({this:?})");
 
@@ -72,6 +62,7 @@ impl HashMapHashIterator {
         Ok((index as usize) < jvm.array_length(&elements).await?)
     }
 
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$HashIterator::next({this:?})");
 
@@ -101,6 +92,7 @@ impl HashMapHashIterator {
         Ok(element)
     }
 
+    #[method(public, final)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap$HashIterator::remove({this:?})");
 

@@ -1,29 +1,22 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::util::TimerTask};
+use crate::{RuntimeContext, classes::java::util::TimerTask};
 
 // class java.util.Timer$TaskQueue
-pub struct TimerTaskQueue;
+#[java_class(name = "java/util/Timer$TaskQueue", extends = "java/lang/Object")]
+pub struct TimerTaskQueue {
+    #[field(private)]
+    queue: ClassInstanceRef<Array<TimerTask>>,
+    #[field(private)]
+    size: i32,
+}
 
+#[java_methods]
 impl TimerTaskQueue {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Timer$TaskQueue",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::empty())],
-            fields: vec![
-                JavaFieldProto::new("queue", "[Ljava/util/TimerTask;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Timer$TaskQueue::<init>({this:?})");
 

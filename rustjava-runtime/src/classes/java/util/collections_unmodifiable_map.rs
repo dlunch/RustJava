@@ -1,62 +1,34 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{
+        lang::Object,
+        util::{Collection, Map, Set},
+    },
+};
 
 // class java.util.Collections$UnmodifiableMap
-pub struct CollectionsUnmodifiableMap;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableMap",
+    extends = "java/lang/Object",
+    implements("java/util/Map", "java/io/Serializable")
+)]
+pub struct CollectionsUnmodifiableMap {
+    #[field(private, final)]
+    m: ClassInstanceRef<Map>,
+    #[field(private, transient)]
+    keySet: ClassInstanceRef<Set>,
+    #[field(private, transient)]
+    entrySet: ClassInstanceRef<Set>,
+    #[field(private, transient)]
+    values: ClassInstanceRef<Collection>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableMap",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "put",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::put,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "remove",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::remove,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("m", "Ljava/util/Map;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("keySet", "Ljava/util/Set;", FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("entrySet", "Ljava/util/Set;", FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new(
-                    "values",
-                    "Ljava/util/Collection;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT,
-                ),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Map;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
@@ -66,6 +38,7 @@ impl CollectionsUnmodifiableMap {
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -73,6 +46,7 @@ impl CollectionsUnmodifiableMap {
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -80,6 +54,7 @@ impl CollectionsUnmodifiableMap {
         jvm.invoke_virtual(&map, &map.class_definition().name(), "isEmpty", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -88,6 +63,7 @@ impl CollectionsUnmodifiableMap {
             .await
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -96,6 +72,7 @@ impl CollectionsUnmodifiableMap {
             .await
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -110,6 +87,7 @@ impl CollectionsUnmodifiableMap {
         .await
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let cached: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "keySet", "Ljava/util/Set;")
@@ -138,6 +116,7 @@ impl CollectionsUnmodifiableMap {
         Ok(wrapped)
     }
 
+    #[method(descriptor = "()Ljava/util/Collection;", public)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let cached: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "values", "Ljava/util/Collection;")
@@ -166,6 +145,7 @@ impl CollectionsUnmodifiableMap {
         Ok(wrapped)
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let cached: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "entrySet", "Ljava/util/Set;")
@@ -198,6 +178,7 @@ impl CollectionsUnmodifiableMap {
         Ok(wrapped)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if !other.is_null() && this.identity() == other.identity() {
             return Ok(true);
@@ -209,6 +190,7 @@ impl CollectionsUnmodifiableMap {
             .await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -216,6 +198,7 @@ impl CollectionsUnmodifiableMap {
         jvm.invoke_virtual(&map, "java/lang/Object", "hashCode", "()I", ()).await
     }
 
+    #[method(descriptor = "()Ljava/lang/String;", public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableMap", "m", "Ljava/util/Map;")
@@ -223,6 +206,7 @@ impl CollectionsUnmodifiableMap {
         jvm.invoke_virtual(&map, "java/lang/Object", "toString", "()Ljava/lang/String;", ()).await
     }
 
+    #[method(public)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -233,14 +217,17 @@ impl CollectionsUnmodifiableMap {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable map").await)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable map").await)
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)V", public)]
     async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable map").await)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable map").await)
     }

@@ -1,48 +1,22 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Hashtable$Entry
-pub struct HashtableEntry;
+#[java_class(name = "java/util/Hashtable$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"))]
+pub struct HashtableEntry {
+    #[field(final)]
+    hash: i32,
+    #[field(final)]
+    key: ClassInstanceRef<Object>,
+    value: ClassInstanceRef<Object>,
+    next: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl HashtableEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Hashtable$Entry",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map$Entry"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/Hashtable$Entry;)V",
-                    Self::init,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "setValue",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::set_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("hash", "I", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::empty()),
-                JavaFieldProto::new("next", "Ljava/util/Hashtable$Entry;", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -67,18 +41,21 @@ impl HashtableEntry {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Entry::getKey({this:?})");
 
         jvm.get_field(&this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable$Entry::getValue({this:?})");
 
         jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn set_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -98,6 +75,7 @@ impl HashtableEntry {
         Ok(old_value)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
@@ -129,6 +107,7 @@ impl HashtableEntry {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "key", "Ljava/lang/Object;").await?;
         let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/Hashtable$Entry", "value", "Ljava/lang/Object;").await?;

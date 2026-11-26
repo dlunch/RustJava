@@ -1,13 +1,10 @@
 use core::future::Future;
 
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::Writer,
         lang::{Object, String},
@@ -17,42 +14,24 @@ use crate::{
 const DEFAULT_INITIAL_BUFFER_SIZE: i32 = 32;
 
 // class java.io.CharArrayWriter
-pub struct CharArrayWriter;
+#[java_class(name = "java/io/CharArrayWriter", extends = "java/io/Writer", public)]
+pub struct CharArrayWriter {
+    #[field(protected)]
+    buf: ClassInstanceRef<Array<JavaChar>>,
+    #[field(protected)]
+    count: i32,
+}
 
+#[java_methods]
 impl CharArrayWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/CharArrayWriter",
-            parent_class: Some("java/io/Writer"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([CII)V", Self::write_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(Ljava/lang/String;II)V", Self::write_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("writeTo", "(Ljava/io/Writer;)V", Self::write_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toCharArray", "()[C", Self::to_char_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[C", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::<init>({this:?})");
         jvm.invoke_special(&this, "java/io/CharArrayWriter", "<init>", "(I)V", (DEFAULT_INITIAL_BUFFER_SIZE,))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, size: i32) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::<init>({this:?}, {size})");
 
@@ -104,6 +83,7 @@ impl CharArrayWriter {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_char_locked(jvm, this, value)).await
@@ -119,6 +99,7 @@ impl CharArrayWriter {
         jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + 1).await
     }
 
+    #[method(name = "write", public)]
     async fn write_chars(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -161,6 +142,7 @@ impl CharArrayWriter {
         jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + length).await
     }
 
+    #[method(name = "write", public)]
     async fn write_string(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -204,6 +186,7 @@ impl CharArrayWriter {
         jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", count + length).await
     }
 
+    #[method(public)]
     async fn write_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<Writer>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_to_locked(jvm, this, out)).await
@@ -220,6 +203,7 @@ impl CharArrayWriter {
         jvm.invoke_virtual(&out, "java/io/Writer", "write", "([CII)V", (buffer, 0, count)).await
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
@@ -230,6 +214,7 @@ impl CharArrayWriter {
         jvm.put_field(&mut this, "java/io/CharArrayWriter", "count", "I", 0).await
     }
 
+    #[method(public)]
     async fn to_char_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<JavaChar>>> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::to_char_array_locked(jvm, this)).await
@@ -252,6 +237,7 @@ impl CharArrayWriter {
         Ok(copy.into())
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::size_locked(jvm, this)).await
@@ -262,6 +248,7 @@ impl CharArrayWriter {
         jvm.get_field(&this, "java/io/CharArrayWriter", "count", "I").await
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/CharArrayWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::to_string_locked(jvm, this)).await
@@ -275,11 +262,13 @@ impl CharArrayWriter {
         Ok(jvm.new_class("java/lang/String", "([CII)V", (buffer, 0, count)).await?.into())
     }
 
+    #[method(public)]
     async fn flush(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::flush({this:?})");
         Ok(())
     }
 
+    #[method(public)]
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.CharArrayWriter::close({this:?})");
         Ok(())

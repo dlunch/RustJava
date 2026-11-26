@@ -1,38 +1,32 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, JavaChar, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::{RuntimeContext, classes::java::lang::CharSequence};
 
 // public interface java.lang.Appendable
+#[java_class(name = "java/lang/Appendable", public, interface, abstract)]
 pub struct Appendable;
 
+#[java_methods]
 impl Appendable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Appendable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new_abstract(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "append",
-                    "(C)Ljava/lang/Appendable;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(name = "append", public)]
+    async fn append_char_sequence(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(name = "append", public)]
+    async fn append_char_sequence_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        sequence: ClassInstanceRef<CharSequence>,
+        start: i32,
+        end: i32,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(name = "append", public)]
+    async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, character: JavaChar) -> Result<ClassInstanceRef<Self>>;
 }

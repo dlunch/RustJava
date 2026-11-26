@@ -1,51 +1,35 @@
-use alloc::vec;
-
 use jvm::{Array, AsClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // private static class java.util.Arrays$ArrayList
-pub struct ArraysArrayList;
+#[java_class(
+    name = "java/util/Arrays$ArrayList",
+    extends = "java/util/AbstractList",
+    implements("java/io/Serializable")
+)]
+pub struct ArraysArrayList {
+    #[field(private, final)]
+    a: ClassInstanceRef<Array<Object>>,
+}
 
+#[java_methods]
 impl ArraysArrayList {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Arrays$ArrayList",
-            parent_class: Some("java/util/AbstractList"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "([Ljava/lang/Object;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "a",
-                "[Ljava/lang/Object;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, array: ClassInstanceRef<Array<Object>>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;", array)
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;").await?;
         Ok(jvm.array_length(&array).await? as i32)
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let array: ClassInstanceRef<Array<Object>> = jvm.get_field(&this, "java/util/Arrays$ArrayList", "a", "[Ljava/lang/Object;").await?;
         let length = jvm.array_length(&array).await?;
@@ -55,6 +39,7 @@ impl ArraysArrayList {
         Ok(jvm.load_array(&array, index as usize, 1).await?.remove(0))
     }
 
+    #[method(public)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -75,22 +60,27 @@ impl ArraysArrayList {
         Ok(previous)
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "fixed-size list").await)
     }
 
+    #[method(name = "add", public)]
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: i32, _: ClassInstanceRef<Object>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "fixed-size list").await)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_at(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: i32) -> Result<ClassInstanceRef<Object>> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "fixed-size list").await)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "fixed-size list").await)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "fixed-size list").await)
     }

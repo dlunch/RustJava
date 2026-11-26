@@ -1,44 +1,28 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::{Object, String},
         net::URL,
-        util::jar::JarFile,
+        util::{Hashtable, jar::JarFile},
     },
 };
 
 // class rustjava.net.JarURLConnection
-pub struct JarURLConnection;
+#[java_class(name = "org/rustjava/net/JarURLConnection", extends = "java/net/JarURLConnection")]
+pub struct JarURLConnection {
+    #[field(static)]
+    openedFiles: ClassInstanceRef<Hashtable>,
+}
 
+#[java_methods]
 impl JarURLConnection {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "org/rustjava/net/JarURLConnection",
-            parent_class: Some("java/net/JarURLConnection"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Ljava/net/URL;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("getJarFile", "()Ljava/util/jar/JarFile;", Self::get_jar_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getInputStream",
-                    "()Ljava/io/InputStream;",
-                    Self::get_input_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("openedFiles", "Ljava/util/Hashtable;", FieldAccessFlags::STATIC)],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("org.rustjava.net.JarURLConnection::<clinit>()");
 
@@ -49,6 +33,7 @@ impl JarURLConnection {
         Ok(())
     }
 
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, url: ClassInstanceRef<URL>) -> Result<()> {
         tracing::debug!("org.rustjava.net.JarURLConnection::<init>({this:?}, {url:?})");
 
@@ -59,6 +44,7 @@ impl JarURLConnection {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_jar_file(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<JarFile>> {
         tracing::debug!("org.rustjava.net.JarURLConnection::getJarFile({this:?})");
 
@@ -117,6 +103,7 @@ impl JarURLConnection {
         }
     }
 
+    #[method(public)]
     async fn get_input_stream(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("org.rustjava.net.JarURLConnection::getInputStream({this:?})");
 

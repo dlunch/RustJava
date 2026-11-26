@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, string::ToString, vec, vec::Vec};
+use alloc::{boxed::Box, string::ToString, vec::Vec};
 use core::iter;
 
 // XXX for zip..
@@ -8,11 +8,10 @@ use std::io::{self, Read, Seek, SeekFrom};
 use zip::ZipArchive;
 
 use jvm::{Array, ArrayRawBuffer, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{File, InputStream},
         lang::String,
@@ -21,35 +20,14 @@ use crate::{
 };
 
 // class java.util.zip.ZipFile
-pub struct ZipFile;
+#[java_class(name = "java/util/zip/ZipFile", extends = "java/lang/Object", public)]
+pub struct ZipFile {
+    #[field(private)]
+    zipData: ClassInstanceRef<Array<i8>>,
+}
 
+#[java_methods]
 impl ZipFile {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/zip/ZipFile",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/File;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getEntry",
-                    "(Ljava/lang/String;)Ljava/util/zip/ZipEntry;",
-                    Self::get_entry,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getInputStream",
-                    "(Ljava/util/zip/ZipEntry;)Ljava/io/InputStream;",
-                    Self::get_input_stream,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("entries", "()Ljava/util/Enumeration;", Self::entries, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("zipData", "[B", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
     pub(crate) async fn get_zip_archive(jvm: &Jvm, this: &ClassInstanceRef<Self>) -> Result<ZipArchive<ZipDataReader>> {
         let zip_data: ClassInstanceRef<Array<i8>> = jvm.get_field(this, "java/util/zip/ZipFile", "zipData", "[B").await?;
         let reader = ZipDataReader {
@@ -64,6 +42,7 @@ impl ZipFile {
         }
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, file: ClassInstanceRef<File>) -> Result<()> {
         tracing::debug!("java.util.zip.ZipFile::<init>({this:?}, {file:?})");
 
@@ -95,6 +74,7 @@ impl ZipFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -120,6 +100,7 @@ impl ZipFile {
         }
     }
 
+    #[method(public)]
     async fn entries(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Enumeration>> {
         tracing::debug!("java.util.zip.ZipFile::entries({this:?})");
 
@@ -146,6 +127,7 @@ impl ZipFile {
         Ok(entries.into())
     }
 
+    #[method(public)]
     async fn get_input_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,

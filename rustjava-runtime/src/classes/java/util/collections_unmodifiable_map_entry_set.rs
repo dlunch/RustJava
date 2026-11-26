@@ -1,44 +1,26 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use jvm::{Array, AsClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.Collections$UnmodifiableMap$UnmodifiableEntrySet
+#[java_class(
+    name = "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
+    extends = "java/util/Collections$UnmodifiableSet"
+)]
 pub struct CollectionsUnmodifiableMapEntrySet;
 
+#[java_methods]
 impl CollectionsUnmodifiableMapEntrySet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableMap$UnmodifiableEntrySet",
-            parent_class: Some("java/util/Collections$UnmodifiableSet"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Set;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toArray",
-                    "([Ljava/lang/Object;)[Ljava/lang/Object;",
-                    Self::to_typed_array,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsAll", "(Ljava/util/Collection;)Z", Self::contains_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Set;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, set: ClassInstanceRef<Object>) -> Result<()> {
         jvm.invoke_special(&this, "java/util/Collections$UnmodifiableSet", "<init>", "(Ljava/util/Set;)V", (set,))
             .await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(
@@ -61,6 +43,7 @@ impl CollectionsUnmodifiableMapEntrySet {
             .into())
     }
 
+    #[method(public)]
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(
@@ -93,6 +76,7 @@ impl CollectionsUnmodifiableMapEntrySet {
         Ok(result)
     }
 
+    #[method(name = "toArray", public)]
     async fn to_typed_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -149,6 +133,7 @@ impl CollectionsUnmodifiableMapEntrySet {
         Ok(result)
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, candidate: ClassInstanceRef<Object>) -> Result<bool> {
         if candidate.is_null() || !jvm.is_instance(candidate.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
@@ -173,6 +158,7 @@ impl CollectionsUnmodifiableMapEntrySet {
             .await
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
@@ -209,6 +195,7 @@ impl CollectionsUnmodifiableMapEntrySet {
         Ok(true)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if !other.is_null() && this.identity() == other.identity() {
             return Ok(true);

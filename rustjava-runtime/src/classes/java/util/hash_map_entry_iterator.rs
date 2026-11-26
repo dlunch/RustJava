@@ -1,33 +1,17 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMap;
 
 // class java.util.HashMap$EntryIterator
+#[java_class(name = "java/util/HashMap$EntryIterator", extends = "java/util/HashMap$HashIterator", final)]
 pub struct HashMapEntryIterator;
 
+#[java_methods]
 impl HashMapEntryIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap$EntryIterator",
-            parent_class: Some("java/util/HashMap$HashIterator"),
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new(
-                "<init>",
-                "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
-                Self::init,
-                MethodAccessFlags::empty(),
-            )],
-            fields: vec![],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,

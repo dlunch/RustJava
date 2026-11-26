@@ -1,13 +1,10 @@
 use core::future::Future;
 
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::Writer,
         lang::{Object, String},
@@ -17,35 +14,23 @@ use crate::{
 const DEFAULT_CHAR_BUFFER_SIZE: i32 = 8192;
 
 // class java.io.BufferedWriter
-pub struct BufferedWriter;
+#[java_class(name = "java/io/BufferedWriter", extends = "java/io/Writer", public)]
+pub struct BufferedWriter {
+    #[field(private)]
+    out: ClassInstanceRef<Writer>,
+    #[field(private)]
+    cb: ClassInstanceRef<Array<JavaChar>>,
+    #[field(private)]
+    nChars: i32,
+    #[field(private)]
+    nextChar: i32,
+    #[field(private)]
+    lineSeparator: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl BufferedWriter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/BufferedWriter",
-            parent_class: Some("java/io/Writer"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/Writer;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/Writer;I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(I)V", Self::write_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([CII)V", Self::write_chars, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "(Ljava/lang/String;II)V", Self::write_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("newLine", "()V", Self::new_line, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("out", "Ljava/io/Writer;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("cb", "[C", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nChars", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nextChar", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lineSeparator", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, out: ClassInstanceRef<Writer>) -> Result<()> {
         tracing::debug!("java.io.BufferedWriter::<init>({this:?}, {out:?})");
         jvm.invoke_special(
@@ -58,6 +43,7 @@ impl BufferedWriter {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -129,6 +115,7 @@ impl BufferedWriter {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::write_char_locked(jvm, this, value)).await
@@ -153,6 +140,7 @@ impl BufferedWriter {
         jvm.put_field(&mut this, "java/io/BufferedWriter", "nextChar", "I", next_char + 1).await
     }
 
+    #[method(name = "write", public)]
     async fn write_chars(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -221,6 +209,7 @@ impl BufferedWriter {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_string(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -280,6 +269,7 @@ impl BufferedWriter {
         Ok(())
     }
 
+    #[method(public)]
     async fn new_line(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::new_line_locked(jvm, this)).await
@@ -295,6 +285,7 @@ impl BufferedWriter {
         Self::write_string_locked(jvm, this, line_separator, 0, length).await
     }
 
+    #[method(public)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::flush_locked(jvm, this)).await
@@ -308,6 +299,7 @@ impl BufferedWriter {
         jvm.invoke_virtual(&out, "java/io/Writer", "flush", "()V", ()).await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedWriter", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await

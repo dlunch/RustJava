@@ -1,35 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::Iterator},
+};
 
 // class java.util.Collections$UnmodifiableCollection$1
-pub struct CollectionsUnmodifiableCollectionIterator;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableCollection$1",
+    extends = "java/lang/Object",
+    implements("java/util/Iterator")
+)]
+pub struct CollectionsUnmodifiableCollectionIterator {
+    #[field(private, final)]
+    i: ClassInstanceRef<Iterator>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableCollectionIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableCollection$1",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Iterator"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Iterator;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "i",
-                "Ljava/util/Iterator;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Iterator;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, iterator: ClassInstanceRef<Object>) -> Result<()> {
         if iterator.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "iterator").await);
@@ -45,6 +35,7 @@ impl CollectionsUnmodifiableCollectionIterator {
         .await
     }
 
+    #[method(public)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let iterator: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection$1", "i", "Ljava/util/Iterator;")
@@ -53,6 +44,7 @@ impl CollectionsUnmodifiableCollectionIterator {
             .await
     }
 
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection$1", "i", "Ljava/util/Iterator;")
@@ -61,6 +53,7 @@ impl CollectionsUnmodifiableCollectionIterator {
             .await
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable iterator").await)
     }

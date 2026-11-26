@@ -6,50 +6,40 @@ use bytemuck::{cast_slice, cast_vec};
 use encoding_rs::{EUC_KR, UTF_8};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::{io::InputStream, lang::System},
+    RuntimeContext,
+    classes::java::{
+        io::InputStream,
+        lang::{String, System},
+    },
 };
 
 const BUF_SIZE: usize = 10;
 
 // class java.io.InputStreamReader
-pub struct InputStreamReader;
+#[java_class(name = "java/io/InputStreamReader", extends = "java/io/Reader", public)]
+pub struct InputStreamReader {
+    #[field(private)]
+    r#in: ClassInstanceRef<InputStream>,
+    #[field(private)]
+    readBuf: ClassInstanceRef<Array<i8>>,
+    #[field(private)]
+    readBufSize: i32,
+    #[field(private)]
+    writeBuf: ClassInstanceRef<Array<JavaChar>>,
+    #[field(private)]
+    writeBufSize: i32,
+    #[field(private)]
+    charset: ClassInstanceRef<String>,
+    #[field(private)]
+    endOfInput: bool,
+}
 
+#[java_methods]
 impl InputStreamReader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/InputStreamReader",
-            parent_class: Some("java/io/Reader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/InputStream;Ljava/lang/String;)V",
-                    Self::init_with_charset,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("read", "([CII)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("in", "Ljava/io/InputStream;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("readBuf", "[B", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("readBufSize", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("writeBuf", "[C", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("writeBufSize", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("charset", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("endOfInput", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.InputStreamReader::<init>({this:?}, {:?})", &r#in);
 
@@ -65,6 +55,7 @@ impl InputStreamReader {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_charset(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -105,6 +96,7 @@ impl InputStreamReader {
         Ok(())
     }
 
+    #[method(public)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -254,6 +246,7 @@ impl InputStreamReader {
         Ok(if copied == 0 { -1 } else { copied })
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStreamReader::close({this:?})");
 
@@ -263,6 +256,7 @@ impl InputStreamReader {
         Ok(())
     }
 
+    #[method(public)]
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.InputStreamReader::ready({this:?})");
 

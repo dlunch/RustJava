@@ -1,11 +1,11 @@
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags, modified_utf8};
+use jvm_class_proto::{java_class, java_methods};
+use jvm_types::modified_utf8;
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{DataInput, InputStream},
         lang::String,
@@ -13,82 +13,17 @@ use crate::{
 };
 
 // class java.io.DataInputStream
+#[java_class(
+    name = "java/io/DataInputStream",
+    extends = "java/io/FilterInputStream",
+    implements("java/io/DataInput"),
+    public
+)]
 pub struct DataInputStream;
 
+#[java_methods]
 impl DataInputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/DataInputStream",
-            parent_class: Some("java/io/FilterInputStream"),
-            interfaces: vec!["java/io/DataInput"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "readBoolean",
-                    "()Z",
-                    Self::read_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("readByte", "()B", Self::read_byte, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("readChar", "()C", Self::read_char, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "readDouble",
-                    "()D",
-                    Self::read_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("readFloat", "()F", Self::read_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "readFully",
-                    "([B)V",
-                    Self::read_fully,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "readFully",
-                    "([BII)V",
-                    Self::read_fully_offset_length,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("readInt", "()I", Self::read_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("readLong", "()J", Self::read_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new("readShort", "()S", Self::read_short, MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL),
-                JavaMethodProto::new(
-                    "readUnsignedByte",
-                    "()I",
-                    Self::read_unsigned_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "readUnsignedShort",
-                    "()I",
-                    Self::read_unsigned_short,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "readUTF",
-                    "()Ljava/lang/String;",
-                    Self::read_utf,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "readUTF",
-                    "(Ljava/io/DataInput;)Ljava/lang/String;",
-                    Self::read_utf_from_input,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "skipBytes",
-                    "(I)I",
-                    Self::skip_bytes,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::<init>({this:?}, {:?})", &r#in);
 
@@ -99,18 +34,21 @@ impl DataInputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         tracing::debug!("java.io.DataInputStream::readByte({this:?})");
 
         Ok(Self::read_required_byte(jvm, &this).await? as i8)
     }
 
+    #[method(public, final)]
     async fn read_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.DataInputStream::readBoolean({this:?})");
 
         Ok(Self::read_required_byte(jvm, &this).await? != 0)
     }
 
+    #[method(public, final)]
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         tracing::debug!("java.io.DataInputStream::readChar({this:?})");
 
@@ -119,6 +57,7 @@ impl DataInputStream {
         Ok(JavaChar::from_be_bytes([byte1, byte2]))
     }
 
+    #[method(public, final)]
     async fn read_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         tracing::debug!("java.io.DataInputStream::readShort({this:?})");
 
@@ -127,11 +66,13 @@ impl DataInputStream {
         Ok(i16::from_be_bytes([byte1, byte2]))
     }
 
+    #[method(public, final)]
     async fn read_unsigned_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::readUnsignedByte({this:?})");
         Ok(Self::read_required_byte(jvm, &this).await? as i32)
     }
 
+    #[method(public, final)]
     async fn read_unsigned_short(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::readUnsignedShort({this:?})");
 
@@ -140,6 +81,7 @@ impl DataInputStream {
         Ok(u16::from_be_bytes([byte1, byte2]) as i32)
     }
 
+    #[method(public, final)]
     async fn read_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::readInt({this:?})");
 
@@ -151,6 +93,7 @@ impl DataInputStream {
         ]))
     }
 
+    #[method(public, final)]
     async fn read_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.io.DataInputStream::readLong({this:?})");
 
@@ -166,6 +109,7 @@ impl DataInputStream {
         ]))
     }
 
+    #[method(public, final)]
     async fn read_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         tracing::debug!("java.io.DataInputStream::readFloat({this:?})");
 
@@ -177,6 +121,7 @@ impl DataInputStream {
         ]))
     }
 
+    #[method(public, final)]
     async fn read_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.io.DataInputStream::readDouble({this:?})");
 
@@ -192,6 +137,7 @@ impl DataInputStream {
         ]))
     }
 
+    #[method(name = "readUTF", public, final)]
     async fn read_utf(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.DataInputStream::readUTF({this:?})");
 
@@ -212,6 +158,7 @@ impl DataInputStream {
         Ok(JavaLangString::from_utf16(jvm, chars).await?.into())
     }
 
+    #[method(name = "readUTF", static)]
     async fn read_utf_from_input(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<DataInput>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.DataInputStream::readUTF({input:?})");
         if input.is_null() {
@@ -221,6 +168,7 @@ impl DataInputStream {
             .await
     }
 
+    #[method(public, final)]
     async fn read_fully(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.DataInputStream::readFully({this:?}, {b:?})");
         if b.is_null() {
@@ -236,6 +184,7 @@ impl DataInputStream {
         Ok(())
     }
 
+    #[method(name = "readFully", public, final)]
     async fn read_fully_offset_length(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -263,6 +212,7 @@ impl DataInputStream {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn skip_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i32) -> Result<i32> {
         tracing::debug!("java.io.DataInputStream::skipBytes({this:?}, {n:?})");
 

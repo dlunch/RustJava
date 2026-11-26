@@ -1,44 +1,33 @@
-use alloc::vec;
-
 use jvm::{AsClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{TreeMap, TreeMapEntry};
 
 // abstract class java.util.TreeMap$PrivateEntryIterator
-pub struct TreeMapPrivateEntryIterator;
+#[java_class(
+    name = "java/util/TreeMap$PrivateEntryIterator",
+    extends = "java/lang/Object",
+    implements("java/util/Iterator"),
+    abstract
+)]
+pub struct TreeMapPrivateEntryIterator {
+    #[field(private)]
+    map: ClassInstanceRef<TreeMap>,
+    #[field(private)]
+    next: ClassInstanceRef<TreeMapEntry>,
+    #[field(private)]
+    lastReturned: ClassInstanceRef<TreeMapEntry>,
+    #[field(private)]
+    upper: ClassInstanceRef<Object>,
+    #[field(private)]
+    toEnd: bool,
+}
 
+#[java_methods]
 impl TreeMapPrivateEntryIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TreeMap$PrivateEntryIterator",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Iterator"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/TreeMap;Ljava/util/TreeMap$Entry;Ljava/lang/Object;Z)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("next", "()Ljava/lang/Object;", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("map", "Ljava/util/TreeMap;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("next", "Ljava/util/TreeMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lastReturned", "Ljava/util/TreeMap$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("upper", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("toEnd", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -65,6 +54,7 @@ impl TreeMapPrivateEntryIterator {
             .await
     }
 
+    #[method(public)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let next: ClassInstanceRef<TreeMapEntry> = jvm
             .get_field(&this, "java/util/TreeMap$PrivateEntryIterator", "next", "Ljava/util/TreeMap$Entry;")
@@ -88,6 +78,10 @@ impl TreeMapPrivateEntryIterator {
         Ok(TreeMap::compare(jvm, &map, &key, &upper).await? < 0)
     }
 
+    #[method(public)]
+    async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>>;
+
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let last_returned: ClassInstanceRef<TreeMapEntry> = jvm
             .get_field(

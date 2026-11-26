@@ -1,167 +1,28 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{
+        lang::Object,
+        util::{List, Random, Set},
+    },
+};
 
 // class java.util.Collections
-pub struct Collections;
+#[java_class(name = "java/util/Collections", extends = "java/lang/Object", public)]
+pub struct Collections {
+    #[field(public, static, final)]
+    EMPTY_LIST: ClassInstanceRef<List>,
+    #[field(public, static, final)]
+    EMPTY_SET: ClassInstanceRef<Set>,
+    #[field(private, static)]
+    r: ClassInstanceRef<Random>,
+}
 
+#[java_methods]
 impl Collections {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new(
-                    "sort",
-                    "(Ljava/util/List;)V",
-                    Self::sort,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "sort",
-                    "(Ljava/util/List;Ljava/util/Comparator;)V",
-                    Self::sort_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "(Ljava/util/List;Ljava/lang/Object;)I",
-                    Self::binary_search,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "(Ljava/util/List;Ljava/lang/Object;Ljava/util/Comparator;)I",
-                    Self::binary_search_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "reverse",
-                    "(Ljava/util/List;)V",
-                    Self::reverse,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "fill",
-                    "(Ljava/util/List;Ljava/lang/Object;)V",
-                    Self::fill,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "copy",
-                    "(Ljava/util/List;Ljava/util/List;)V",
-                    Self::copy,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "shuffle",
-                    "(Ljava/util/List;)V",
-                    Self::shuffle,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "shuffle",
-                    "(Ljava/util/List;Ljava/util/Random;)V",
-                    Self::shuffle_random,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "min",
-                    "(Ljava/util/Collection;)Ljava/lang/Object;",
-                    Self::min,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "min",
-                    "(Ljava/util/Collection;Ljava/util/Comparator;)Ljava/lang/Object;",
-                    Self::min_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "max",
-                    "(Ljava/util/Collection;)Ljava/lang/Object;",
-                    Self::max,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "max",
-                    "(Ljava/util/Collection;Ljava/util/Comparator;)Ljava/lang/Object;",
-                    Self::max_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "nCopies",
-                    "(ILjava/lang/Object;)Ljava/util/List;",
-                    Self::n_copies,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "singleton",
-                    "(Ljava/lang/Object;)Ljava/util/Set;",
-                    Self::singleton,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableCollection",
-                    "(Ljava/util/Collection;)Ljava/util/Collection;",
-                    Self::unmodifiable_collection,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableList",
-                    "(Ljava/util/List;)Ljava/util/List;",
-                    Self::unmodifiable_list,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableSet",
-                    "(Ljava/util/Set;)Ljava/util/Set;",
-                    Self::unmodifiable_set,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableMap",
-                    "(Ljava/util/Map;)Ljava/util/Map;",
-                    Self::unmodifiable_map,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableSortedSet",
-                    "(Ljava/util/SortedSet;)Ljava/util/SortedSet;",
-                    Self::unmodifiable_sorted_set,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "unmodifiableSortedMap",
-                    "(Ljava/util/SortedMap;)Ljava/util/SortedMap;",
-                    Self::unmodifiable_sorted_map,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "EMPTY_LIST",
-                    "Ljava/util/List;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "EMPTY_SET",
-                    "Ljava/util/Set;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("r", "Ljava/util/Random;", FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         let empty_list = jvm.new_class("java/util/Collections$EmptyList", "()V", ()).await?;
         jvm.put_static_field("java/util/Collections", "EMPTY_LIST", "Ljava/util/List;", empty_list)
@@ -175,6 +36,7 @@ impl Collections {
         jvm.put_static_field("java/util/Collections", "r", "Ljava/util/Random;", random).await
     }
 
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }
@@ -254,10 +116,12 @@ impl Collections {
         Self::write_list(jvm, &list, elements).await
     }
 
+    #[method(descriptor = "(Ljava/util/List;)V", public, static)]
     async fn sort(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>) -> Result<()> {
         Self::sort_values(jvm, list, None.into()).await
     }
 
+    #[method(name = "sort", descriptor = "(Ljava/util/List;Ljava/util/Comparator;)V", public, static)]
     async fn sort_comparator(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>, comparator: ClassInstanceRef<Object>) -> Result<()> {
         Self::sort_values(jvm, list, comparator).await
     }
@@ -286,10 +150,17 @@ impl Collections {
         Ok(-low - 1)
     }
 
+    #[method(descriptor = "(Ljava/util/List;Ljava/lang/Object;)I", public, static)]
     async fn binary_search(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>, key: ClassInstanceRef<Object>) -> Result<i32> {
         Self::search(jvm, list, key, None.into()).await
     }
 
+    #[method(
+        name = "binarySearch",
+        descriptor = "(Ljava/util/List;Ljava/lang/Object;Ljava/util/Comparator;)I",
+        public,
+        static
+    )]
     async fn binary_search_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -300,6 +171,7 @@ impl Collections {
         Self::search(jvm, list, key, comparator).await
     }
 
+    #[method(descriptor = "(Ljava/util/List;)V", public, static)]
     async fn reverse(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>) -> Result<()> {
         if list.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
@@ -338,6 +210,7 @@ impl Collections {
         Ok(())
     }
 
+    #[method(descriptor = "(Ljava/util/List;Ljava/lang/Object;)V", public, static)]
     async fn fill(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>, element: ClassInstanceRef<Object>) -> Result<()> {
         if list.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "list").await);
@@ -366,6 +239,7 @@ impl Collections {
         Ok(())
     }
 
+    #[method(descriptor = "(Ljava/util/List;Ljava/util/List;)V", public, static)]
     async fn copy(jvm: &Jvm, _: &mut RuntimeContext, destination: ClassInstanceRef<Object>, source: ClassInstanceRef<Object>) -> Result<()> {
         if source.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "source").await);
@@ -438,11 +312,13 @@ impl Collections {
         Self::write_list(jvm, &list, shuffled).await
     }
 
+    #[method(descriptor = "(Ljava/util/List;)V", public, static)]
     async fn shuffle(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>) -> Result<()> {
         let random: ClassInstanceRef<Object> = jvm.get_static_field("java/util/Collections", "r", "Ljava/util/Random;").await?;
         Self::shuffle_values(jvm, list, random).await
     }
 
+    #[method(name = "shuffle", descriptor = "(Ljava/util/List;Ljava/util/Random;)V", public, static)]
     async fn shuffle_random(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>, random: ClassInstanceRef<Object>) -> Result<()> {
         Self::shuffle_values(jvm, list, random).await
     }
@@ -491,10 +367,17 @@ impl Collections {
         Ok(candidate)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Ljava/lang/Object;", public, static)]
     async fn min(jvm: &Jvm, _: &mut RuntimeContext, collection: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Self::extreme(jvm, collection, None.into(), true).await
     }
 
+    #[method(
+        name = "min",
+        descriptor = "(Ljava/util/Collection;Ljava/util/Comparator;)Ljava/lang/Object;",
+        public,
+        static
+    )]
     async fn min_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -504,10 +387,17 @@ impl Collections {
         Self::extreme(jvm, collection, comparator, true).await
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Ljava/lang/Object;", public, static)]
     async fn max(jvm: &Jvm, _: &mut RuntimeContext, collection: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Self::extreme(jvm, collection, None.into(), false).await
     }
 
+    #[method(
+        name = "max",
+        descriptor = "(Ljava/util/Collection;Ljava/util/Comparator;)Ljava/lang/Object;",
+        public,
+        static
+    )]
     async fn max_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -517,6 +407,7 @@ impl Collections {
         Self::extreme(jvm, collection, comparator, false).await
     }
 
+    #[method(descriptor = "(ILjava/lang/Object;)Ljava/util/List;", public, static)]
     async fn n_copies(jvm: &Jvm, _: &mut RuntimeContext, count: i32, element: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         if count < 0 {
             return Err(jvm.exception("java/lang/IllegalArgumentException", "List length = negative").await);
@@ -527,6 +418,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/Set;", public, static)]
     async fn singleton(jvm: &Jvm, _: &mut RuntimeContext, element: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$SingletonSet", "(Ljava/lang/Object;)V", (element,))
@@ -534,6 +426,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Ljava/util/Collection;", public, static)]
     async fn unmodifiable_collection(jvm: &Jvm, _: &mut RuntimeContext, collection: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableCollection", "(Ljava/util/Collection;)V", (collection,))
@@ -541,6 +434,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/List;)Ljava/util/List;", public, static)]
     async fn unmodifiable_list(jvm: &Jvm, _: &mut RuntimeContext, list: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableList", "(Ljava/util/List;)V", (list,))
@@ -548,6 +442,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/Set;)Ljava/util/Set;", public, static)]
     async fn unmodifiable_set(jvm: &Jvm, _: &mut RuntimeContext, set: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSet", "(Ljava/util/Set;)V", (set,))
@@ -555,6 +450,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)Ljava/util/Map;", public, static)]
     async fn unmodifiable_map(jvm: &Jvm, _: &mut RuntimeContext, map: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableMap", "(Ljava/util/Map;)V", (map,))
@@ -562,6 +458,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/SortedSet;)Ljava/util/SortedSet;", public, static)]
     async fn unmodifiable_sorted_set(jvm: &Jvm, _: &mut RuntimeContext, set: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSortedSet", "(Ljava/util/SortedSet;)V", (set,))
@@ -569,6 +466,7 @@ impl Collections {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/util/SortedMap;)Ljava/util/SortedMap;", public, static)]
     async fn unmodifiable_sorted_map(jvm: &Jvm, _: &mut RuntimeContext, map: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/Collections$UnmodifiableSortedMap", "(Ljava/util/SortedMap;)V", (map,))

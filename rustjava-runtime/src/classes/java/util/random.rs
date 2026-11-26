@@ -1,53 +1,22 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // class java.util.Random
-pub struct Random;
+#[java_class(name = "java/util/Random", extends = "java/lang/Object", implements("java/io/Serializable"), public)]
+pub struct Random {
+    #[field(private)]
+    seed: i64,
+    #[field(private)]
+    nextNextGaussian: f64,
+    #[field(private)]
+    haveNextNextGaussian: bool,
+}
 
+#[java_methods]
 impl Random {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Random",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(J)V", Self::init_with_seed, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("next", "(I)I", Self::next, MethodAccessFlags::PROTECTED | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("nextBoolean", "()Z", Self::next_boolean, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextBytes", "([B)V", Self::next_bytes, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextInt", "()I", Self::next_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextInt", "(I)I", Self::next_int_with_bound, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextLong", "()J", Self::next_long, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextFloat", "()F", Self::next_float, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextDouble", "()D", Self::next_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "nextGaussian",
-                    "()D",
-                    Self::next_gaussian,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "setSeed",
-                    "(J)V",
-                    Self::set_seed,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("seed", "J", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nextNextGaussian", "D", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("haveNextNextGaussian", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Random::<init>({this:?})");
 
@@ -57,6 +26,7 @@ impl Random {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_seed(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
         tracing::debug!("java.util.Random::<init>({this:?}, {seed:?})");
 
@@ -67,6 +37,7 @@ impl Random {
         Ok(())
     }
 
+    #[method(protected, synchronized)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, bits: i32) -> Result<i32> {
         tracing::debug!("java.util.Random::next({this:?}, {bits:?})");
 
@@ -80,6 +51,7 @@ impl Random {
         Ok(value)
     }
 
+    #[method(public)]
     async fn next_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Random::nextBoolean({this:?})");
 
@@ -87,6 +59,7 @@ impl Random {
         Ok(value != 0)
     }
 
+    #[method(public)]
     async fn next_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, mut bytes: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.util.Random::nextBytes({this:?}, {bytes:?})");
 
@@ -111,11 +84,13 @@ impl Random {
         Ok(())
     }
 
+    #[method(public)]
     async fn next_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Random::nextInt({this:?})");
         jvm.invoke_virtual(&this, "java/util/Random", "next", "(I)I", (32,)).await
     }
 
+    #[method(name = "nextInt", public)]
     async fn next_int_with_bound(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, bound: i32) -> Result<i32> {
         tracing::debug!("java.util.Random::nextInt({this:?}, {bound:?})");
 
@@ -137,6 +112,7 @@ impl Random {
         }
     }
 
+    #[method(public)]
     async fn next_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.Random::nextLong({this:?})");
 
@@ -145,6 +121,7 @@ impl Random {
         Ok((high as i64).wrapping_shl(32).wrapping_add(low as i64))
     }
 
+    #[method(public)]
     async fn next_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         tracing::debug!("java.util.Random::nextFloat({this:?})");
 
@@ -152,6 +129,7 @@ impl Random {
         Ok(bits as f32 / (1u32 << 24) as f32)
     }
 
+    #[method(public)]
     async fn next_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.util.Random::nextDouble({this:?})");
 
@@ -160,6 +138,7 @@ impl Random {
         Ok(((high as i64) << 27 | low as i64) as f64 / (1u64 << 53) as f64)
     }
 
+    #[method(public, synchronized)]
     async fn next_gaussian(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<f64> {
         tracing::debug!("java.util.Random::nextGaussian({this:?})");
 
@@ -185,6 +164,7 @@ impl Random {
         Ok(first * multiplier)
     }
 
+    #[method(public, synchronized)]
     async fn set_seed(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, seed: i64) -> Result<()> {
         tracing::debug!("java.util.Random::setSeed({this:?}, {seed:?})");
 

@@ -1,67 +1,21 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::util::{Date, TimerTask, TimerTaskQueue, TimerThread},
 };
 
 // class java.util.Timer
-pub struct Timer;
+#[java_class(name = "java/util/Timer", extends = "java/lang/Object", public)]
+pub struct Timer {
+    #[field(private, final)]
+    thread: ClassInstanceRef<TimerThread>,
+}
 
+#[java_methods]
 impl Timer {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Timer",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("schedule", "(Ljava/util/TimerTask;J)V", Self::schedule_once, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "schedule",
-                    "(Ljava/util/TimerTask;Ljava/util/Date;)V",
-                    Self::schedule_date,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "schedule",
-                    "(Ljava/util/TimerTask;JJ)V",
-                    Self::schedule_repeated,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "schedule",
-                    "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
-                    Self::schedule_date_repeated,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "scheduleAtFixedRate",
-                    "(Ljava/util/TimerTask;JJ)V",
-                    Self::schedule_at_fixed_rate,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "scheduleAtFixedRate",
-                    "(Ljava/util/TimerTask;Ljava/util/Date;J)V",
-                    Self::schedule_date_at_fixed_rate,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("cancel", "()V", Self::cancel, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "thread",
-                "Ljava/util/Timer$TimerThread;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Timer::<init>({this:?})");
 
@@ -84,6 +38,7 @@ impl Timer {
         Ok(())
     }
 
+    #[method(name = "schedule", public)]
     async fn schedule_once(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -108,6 +63,7 @@ impl Timer {
         Self::sched(jvm, this, task, time, 0).await
     }
 
+    #[method(name = "schedule", public)]
     async fn schedule_date(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -130,6 +86,7 @@ impl Timer {
         Self::sched(jvm, this, task, time, 0).await
     }
 
+    #[method(name = "schedule", public)]
     async fn schedule_repeated(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -158,6 +115,7 @@ impl Timer {
         Self::sched(jvm, this, task, time, -period).await
     }
 
+    #[method(name = "schedule", public)]
     async fn schedule_date_repeated(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -184,6 +142,7 @@ impl Timer {
         Self::sched(jvm, this, task, time, -period).await
     }
 
+    #[method(public)]
     async fn schedule_at_fixed_rate(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -212,6 +171,7 @@ impl Timer {
         Self::sched(jvm, this, task, time, period).await
     }
 
+    #[method(name = "scheduleAtFixedRate", public)]
     async fn schedule_date_at_fixed_rate(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -315,6 +275,7 @@ impl Timer {
         }
     }
 
+    #[method(public)]
     async fn cancel(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Timer::cancel({this:?})");
 

@@ -2,363 +2,17 @@ use alloc::vec;
 use core::cmp::Ordering;
 
 use jvm::{Array, AsClassInstance, ClassInstanceRef, JavaChar, JavaValue, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
-
-macro_rules! primitive_sort_methods {
-    ($whole:ident, $range:ident, $ty:ty, $compare:expr) => {
-        async fn $whole(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<$ty>>) -> Result<()> {
-            if array.is_null() {
-                return Err(jvm.exception("java/lang/NullPointerException", "array").await);
-            }
-            let length = jvm.array_length(&array).await?;
-            Self::sort_primitive(jvm, array, 0, length, $compare).await
-        }
-
-        async fn $range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<$ty>>, from_index: i32, to_index: i32) -> Result<()> {
-            let (from_index, to_index) = Self::checked_range(jvm, &array, from_index, to_index).await?;
-            Self::sort_primitive(jvm, array, from_index, to_index, $compare).await
-        }
-    };
-}
-
-macro_rules! primitive_binary_search_method {
-    ($name:ident, $ty:ty, $compare:expr) => {
-        async fn $name(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<$ty>>, key: $ty) -> Result<i32> {
-            if array.is_null() {
-                return Err(jvm.exception("java/lang/NullPointerException", "array").await);
-            }
-            let length = jvm.array_length(&array).await?;
-            let values = jvm.load_array::<$ty>(&array, 0, length).await?;
-            Ok(Self::binary_search_primitive(&values, &key, $compare))
-        }
-    };
-}
-
-macro_rules! primitive_equals_method {
-    ($name:ident, $ty:ty) => {
-        async fn $name(jvm: &Jvm, _: &mut RuntimeContext, first: ClassInstanceRef<Array<$ty>>, second: ClassInstanceRef<Array<$ty>>) -> Result<bool> {
-            if first.is_null() || second.is_null() {
-                return Ok(first.is_null() && second.is_null());
-            }
-            let first_length = jvm.array_length(&first).await?;
-            if first_length != jvm.array_length(&second).await? {
-                return Ok(false);
-            }
-            Ok(jvm.load_array::<$ty>(&first, 0, first_length).await? == jvm.load_array::<$ty>(&second, 0, first_length).await?)
-        }
-    };
-}
-
-macro_rules! primitive_fill_methods {
-    ($whole:ident, $range:ident, $ty:ty) => {
-        async fn $whole(jvm: &Jvm, _: &mut RuntimeContext, mut array: ClassInstanceRef<Array<$ty>>, value: $ty) -> Result<()> {
-            if array.is_null() {
-                return Err(jvm.exception("java/lang/NullPointerException", "array").await);
-            }
-            let length = jvm.array_length(&array).await?;
-            if length != 0 {
-                jvm.store_array(&mut array, 0, vec![value; length]).await?;
-            }
-            Ok(())
-        }
-
-        async fn $range(
-            jvm: &Jvm,
-            _: &mut RuntimeContext,
-            mut array: ClassInstanceRef<Array<$ty>>,
-            from_index: i32,
-            to_index: i32,
-            value: $ty,
-        ) -> Result<()> {
-            let (from_index, to_index) = Self::checked_range(jvm, &array, from_index, to_index).await?;
-            if from_index != to_index {
-                jvm.store_array(&mut array, from_index, vec![value; to_index - from_index]).await?;
-            }
-            Ok(())
-        }
-    };
-}
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // public final class java.util.Arrays
+#[java_class(name = "java/util/Arrays", extends = "java/lang/Object", public, final)]
 pub struct Arrays;
 
+#[java_methods]
 impl Arrays {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Arrays",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PRIVATE),
-                JavaMethodProto::new("sort", "([B)V", Self::sort_byte, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([BII)V",
-                    Self::sort_byte_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([C)V", Self::sort_char, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([CII)V",
-                    Self::sort_char_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([S)V", Self::sort_short, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([SII)V",
-                    Self::sort_short_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([I)V", Self::sort_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([III)V",
-                    Self::sort_int_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([J)V", Self::sort_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([JII)V",
-                    Self::sort_long_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([F)V", Self::sort_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([FII)V",
-                    Self::sort_float_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("sort", "([D)V", Self::sort_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "sort",
-                    "([DII)V",
-                    Self::sort_double_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "sort",
-                    "([Ljava/lang/Object;)V",
-                    Self::sort_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "sort",
-                    "([Ljava/lang/Object;II)V",
-                    Self::sort_object_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "sort",
-                    "([Ljava/lang/Object;Ljava/util/Comparator;)V",
-                    Self::sort_object_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "sort",
-                    "([Ljava/lang/Object;IILjava/util/Comparator;)V",
-                    Self::sort_object_range_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([BB)I",
-                    Self::binary_search_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([CC)I",
-                    Self::binary_search_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([SS)I",
-                    Self::binary_search_short,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([II)I",
-                    Self::binary_search_int,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([JJ)I",
-                    Self::binary_search_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([FF)I",
-                    Self::binary_search_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([DD)I",
-                    Self::binary_search_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([Ljava/lang/Object;Ljava/lang/Object;)I",
-                    Self::binary_search_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "binarySearch",
-                    "([Ljava/lang/Object;Ljava/lang/Object;Ljava/util/Comparator;)I",
-                    Self::binary_search_object_comparator,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([Z[Z)Z",
-                    Self::equals_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([B[B)Z",
-                    Self::equals_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([C[C)Z",
-                    Self::equals_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([S[S)Z",
-                    Self::equals_short,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([I[I)Z",
-                    Self::equals_int,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([J[J)Z",
-                    Self::equals_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([F[F)Z",
-                    Self::equals_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([D[D)Z",
-                    Self::equals_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "equals",
-                    "([Ljava/lang/Object;[Ljava/lang/Object;)Z",
-                    Self::equals_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "fill",
-                    "([ZZ)V",
-                    Self::fill_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "fill",
-                    "([ZIIZ)V",
-                    Self::fill_boolean_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([BB)V", Self::fill_byte, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([BIIB)V",
-                    Self::fill_byte_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([CC)V", Self::fill_char, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([CIIC)V",
-                    Self::fill_char_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([SS)V", Self::fill_short, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([SIIS)V",
-                    Self::fill_short_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([II)V", Self::fill_int, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([IIII)V",
-                    Self::fill_int_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([JJ)V", Self::fill_long, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([JIIJ)V",
-                    Self::fill_long_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([FF)V", Self::fill_float, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([FIIF)V",
-                    Self::fill_float_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("fill", "([DD)V", Self::fill_double, MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "fill",
-                    "([DIID)V",
-                    Self::fill_double_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "fill",
-                    "([Ljava/lang/Object;Ljava/lang/Object;)V",
-                    Self::fill_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "fill",
-                    "([Ljava/lang/Object;IILjava/lang/Object;)V",
-                    Self::fill_object_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "asList",
-                    "([Ljava/lang/Object;)Ljava/util/List;",
-                    Self::as_list,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, private)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }
@@ -414,13 +68,102 @@ impl Arrays {
         }
     }
 
-    primitive_sort_methods!(sort_byte, sort_byte_range, i8, Ord::cmp);
-    primitive_sort_methods!(sort_char, sort_char_range, JavaChar, Ord::cmp);
-    primitive_sort_methods!(sort_short, sort_short_range, i16, Ord::cmp);
-    primitive_sort_methods!(sort_int, sort_int_range, i32, Ord::cmp);
-    primitive_sort_methods!(sort_long, sort_long_range, i64, Ord::cmp);
-    primitive_sort_methods!(sort_float, sort_float_range, f32, Self::float_order);
-    primitive_sort_methods!(sort_double, sort_double_range, f64, Self::double_order);
+    async fn sort_primitive_array<T, F>(jvm: &Jvm, array: ClassInstanceRef<Array<T>>, compare: F) -> Result<()>
+    where
+        T: From<JavaValue> + Into<JavaValue> + Send,
+        F: FnMut(&T, &T) -> Ordering + Send,
+    {
+        if array.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "array").await);
+        }
+        let length = jvm.array_length(array.as_class_instance()).await?;
+        Self::sort_primitive(jvm, array, 0, length, compare).await
+    }
+
+    async fn sort_primitive_range<T, F>(jvm: &Jvm, array: ClassInstanceRef<Array<T>>, from_index: i32, to_index: i32, compare: F) -> Result<()>
+    where
+        T: From<JavaValue> + Into<JavaValue> + Send,
+        F: FnMut(&T, &T) -> Ordering + Send,
+    {
+        let (from_index, to_index) = Self::checked_range(jvm, &array, from_index, to_index).await?;
+        Self::sort_primitive(jvm, array, from_index, to_index, compare).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_byte(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i8>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_byte_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i8>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_char(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<JavaChar>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_char_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<JavaChar>>,
+        from_index: i32,
+        to_index: i32,
+    ) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_short(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i16>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_short_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i16>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_int(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i32>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_int_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i32>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_long(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i64>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_long_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i64>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Ord::cmp).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_float(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f32>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Self::float_order).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_float_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f32>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Self::float_order).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_double(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f64>>) -> Result<()> {
+        Self::sort_primitive_array(jvm, array, Self::double_order).await
+    }
+
+    #[method(name = "sort", public, static)]
+    async fn sort_double_range(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f64>>, from_index: i32, to_index: i32) -> Result<()> {
+        Self::sort_primitive_range(jvm, array, from_index, to_index, Self::double_order).await
+    }
 
     async fn compare_objects(
         jvm: &Jvm,
@@ -510,6 +253,7 @@ impl Arrays {
         Ok(())
     }
 
+    #[method(name = "sort", public, static)]
     async fn sort_object(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<Object>>) -> Result<()> {
         if array.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "array").await);
@@ -518,6 +262,7 @@ impl Arrays {
         Self::sort_objects(jvm, array, 0, length, None.into()).await
     }
 
+    #[method(name = "sort", public, static)]
     async fn sort_object_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -529,6 +274,7 @@ impl Arrays {
         Self::sort_objects(jvm, array, from_index, to_index, None.into()).await
     }
 
+    #[method(name = "sort", descriptor = "([Ljava/lang/Object;Ljava/util/Comparator;)V", public, static)]
     async fn sort_object_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -542,6 +288,7 @@ impl Arrays {
         Self::sort_objects(jvm, array, 0, length, comparator).await
     }
 
+    #[method(name = "sort", descriptor = "([Ljava/lang/Object;IILjava/util/Comparator;)V", public, static)]
     async fn sort_object_range_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -571,13 +318,53 @@ impl Arrays {
         -(low as i32) - 1
     }
 
-    primitive_binary_search_method!(binary_search_byte, i8, Ord::cmp);
-    primitive_binary_search_method!(binary_search_char, JavaChar, Ord::cmp);
-    primitive_binary_search_method!(binary_search_short, i16, Ord::cmp);
-    primitive_binary_search_method!(binary_search_int, i32, Ord::cmp);
-    primitive_binary_search_method!(binary_search_long, i64, Ord::cmp);
-    primitive_binary_search_method!(binary_search_float, f32, Self::float_order);
-    primitive_binary_search_method!(binary_search_double, f64, Self::double_order);
+    async fn binary_search_primitive_array<T, F>(jvm: &Jvm, array: ClassInstanceRef<Array<T>>, key: T, compare: F) -> Result<i32>
+    where
+        T: From<JavaValue> + Send,
+        F: FnMut(&T, &T) -> Ordering + Send,
+    {
+        if array.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "array").await);
+        }
+        let length = jvm.array_length(array.as_class_instance()).await?;
+        let values = jvm.load_array::<T>(array.as_class_instance(), 0, length).await?;
+        Ok(Self::binary_search_primitive(&values, &key, compare))
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_byte(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i8>>, key: i8) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Ord::cmp).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_char(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<JavaChar>>, key: JavaChar) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Ord::cmp).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_short(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i16>>, key: i16) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Ord::cmp).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_int(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i32>>, key: i32) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Ord::cmp).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_long(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i64>>, key: i64) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Ord::cmp).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_float(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f32>>, key: f32) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Self::float_order).await
+    }
+
+    #[method(name = "binarySearch", public, static)]
+    async fn binary_search_double(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f64>>, key: f64) -> Result<i32> {
+        Self::binary_search_primitive_array(jvm, array, key, Self::double_order).await
+    }
 
     async fn binary_search_objects(
         jvm: &Jvm,
@@ -606,6 +393,7 @@ impl Arrays {
         Ok(-(low as i32) - 1)
     }
 
+    #[method(name = "binarySearch", public, static)]
     async fn binary_search_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -615,6 +403,12 @@ impl Arrays {
         Self::binary_search_objects(jvm, array, key, None.into()).await
     }
 
+    #[method(
+        name = "binarySearch",
+        descriptor = "([Ljava/lang/Object;Ljava/lang/Object;Ljava/util/Comparator;)I",
+        public,
+        static
+    )]
     async fn binary_search_object_comparator(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -625,13 +419,77 @@ impl Arrays {
         Self::binary_search_objects(jvm, array, key, comparator).await
     }
 
-    primitive_equals_method!(equals_boolean, bool);
-    primitive_equals_method!(equals_byte, i8);
-    primitive_equals_method!(equals_char, JavaChar);
-    primitive_equals_method!(equals_short, i16);
-    primitive_equals_method!(equals_int, i32);
-    primitive_equals_method!(equals_long, i64);
+    async fn equals_primitive<T>(jvm: &Jvm, first: ClassInstanceRef<Array<T>>, second: ClassInstanceRef<Array<T>>) -> Result<bool>
+    where
+        T: From<JavaValue> + PartialEq + Send,
+    {
+        if first.is_null() || second.is_null() {
+            return Ok(first.is_null() && second.is_null());
+        }
+        let first_length = jvm.array_length(first.as_class_instance()).await?;
+        if first_length != jvm.array_length(second.as_class_instance()).await? {
+            return Ok(false);
+        }
+        Ok(jvm.load_array::<T>(first.as_class_instance(), 0, first_length).await?
+            == jvm.load_array::<T>(second.as_class_instance(), 0, first_length).await?)
+    }
 
+    #[method(name = "equals", public, static)]
+    async fn equals_boolean(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        first: ClassInstanceRef<Array<bool>>,
+        second: ClassInstanceRef<Array<bool>>,
+    ) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
+    async fn equals_byte(jvm: &Jvm, _: &mut RuntimeContext, first: ClassInstanceRef<Array<i8>>, second: ClassInstanceRef<Array<i8>>) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
+    async fn equals_char(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        first: ClassInstanceRef<Array<JavaChar>>,
+        second: ClassInstanceRef<Array<JavaChar>>,
+    ) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
+    async fn equals_short(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        first: ClassInstanceRef<Array<i16>>,
+        second: ClassInstanceRef<Array<i16>>,
+    ) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
+    async fn equals_int(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        first: ClassInstanceRef<Array<i32>>,
+        second: ClassInstanceRef<Array<i32>>,
+    ) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
+    async fn equals_long(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        first: ClassInstanceRef<Array<i64>>,
+        second: ClassInstanceRef<Array<i64>>,
+    ) -> Result<bool> {
+        Self::equals_primitive(jvm, first, second).await
+    }
+
+    #[method(name = "equals", public, static)]
     async fn equals_float(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -654,6 +512,7 @@ impl Arrays {
         }))
     }
 
+    #[method(name = "equals", public, static)]
     async fn equals_double(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -676,6 +535,7 @@ impl Arrays {
         }))
     }
 
+    #[method(name = "equals", public, static)]
     async fn equals_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -706,15 +566,168 @@ impl Arrays {
         Ok(true)
     }
 
-    primitive_fill_methods!(fill_boolean, fill_boolean_range, bool);
-    primitive_fill_methods!(fill_byte, fill_byte_range, i8);
-    primitive_fill_methods!(fill_char, fill_char_range, JavaChar);
-    primitive_fill_methods!(fill_short, fill_short_range, i16);
-    primitive_fill_methods!(fill_int, fill_int_range, i32);
-    primitive_fill_methods!(fill_long, fill_long_range, i64);
-    primitive_fill_methods!(fill_float, fill_float_range, f32);
-    primitive_fill_methods!(fill_double, fill_double_range, f64);
+    async fn fill_primitive_array<T>(jvm: &Jvm, mut array: ClassInstanceRef<Array<T>>, value: T) -> Result<()>
+    where
+        T: Into<JavaValue> + Clone + Send,
+    {
+        if array.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "array").await);
+        }
+        let length = jvm.array_length(array.as_class_instance()).await?;
+        if length != 0 {
+            jvm.store_array(&mut array, 0, vec![value; length]).await?;
+        }
+        Ok(())
+    }
 
+    async fn fill_primitive_range<T>(jvm: &Jvm, mut array: ClassInstanceRef<Array<T>>, from_index: i32, to_index: i32, value: T) -> Result<()>
+    where
+        T: Into<JavaValue> + Clone + Send,
+    {
+        let (from_index, to_index) = Self::checked_range(jvm, &array, from_index, to_index).await?;
+        if from_index != to_index {
+            jvm.store_array(&mut array, from_index, vec![value; to_index - from_index]).await?;
+        }
+        Ok(())
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_boolean(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<bool>>, value: bool) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_boolean_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<bool>>,
+        from_index: i32,
+        to_index: i32,
+        value: bool,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_byte(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i8>>, value: i8) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_byte_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<i8>>,
+        from_index: i32,
+        to_index: i32,
+        value: i8,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_char(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<JavaChar>>, value: JavaChar) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_char_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<JavaChar>>,
+        from_index: i32,
+        to_index: i32,
+        value: JavaChar,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_short(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i16>>, value: i16) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_short_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<i16>>,
+        from_index: i32,
+        to_index: i32,
+        value: i16,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_int(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i32>>, value: i32) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_int_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<i32>>,
+        from_index: i32,
+        to_index: i32,
+        value: i32,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_long(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<i64>>, value: i64) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_long_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<i64>>,
+        from_index: i32,
+        to_index: i32,
+        value: i64,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_float(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f32>>, value: f32) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_float_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<f32>>,
+        from_index: i32,
+        to_index: i32,
+        value: f32,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_double(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<f64>>, value: f64) -> Result<()> {
+        Self::fill_primitive_array(jvm, array, value).await
+    }
+
+    #[method(name = "fill", public, static)]
+    async fn fill_double_range(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        array: ClassInstanceRef<Array<f64>>,
+        from_index: i32,
+        to_index: i32,
+        value: f64,
+    ) -> Result<()> {
+        Self::fill_primitive_range(jvm, array, from_index, to_index, value).await
+    }
+
+    #[method(name = "fill", public, static)]
     async fn fill_object(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<Object>>, value: ClassInstanceRef<Object>) -> Result<()> {
         if array.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "array").await);
@@ -723,6 +736,7 @@ impl Arrays {
         Self::fill_objects(jvm, array, 0, length, value).await
     }
 
+    #[method(name = "fill", public, static)]
     async fn fill_object_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -751,6 +765,7 @@ impl Arrays {
         Ok(())
     }
 
+    #[method(descriptor = "([Ljava/lang/Object;)Ljava/util/List;", public, static)]
     async fn as_list(jvm: &Jvm, _: &mut RuntimeContext, array: ClassInstanceRef<Array<Object>>) -> Result<ClassInstanceRef<Object>> {
         if array.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "array").await);

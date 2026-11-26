@@ -1,13 +1,12 @@
 use core::{cmp::min, future::Future};
 
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::Reader,
         lang::{Object, String},
@@ -19,41 +18,29 @@ const INVALIDATED: i32 = -2;
 const UNMARKED: i32 = -1;
 
 // class java.io.BufferedReader
-pub struct BufferedReader;
+#[java_class(name = "java/io/BufferedReader", extends = "java/io/Reader", public)]
+pub struct BufferedReader {
+    #[field(private)]
+    r#in: ClassInstanceRef<Reader>,
+    #[field(private)]
+    cb: ClassInstanceRef<Array<JavaChar>>,
+    #[field(private)]
+    nChars: i32,
+    #[field(private)]
+    nextChar: i32,
+    #[field(private)]
+    markedChar: i32,
+    #[field(private)]
+    readAheadLimit: i32,
+    #[field(private)]
+    skipLF: bool,
+    #[field(private)]
+    markedSkipLF: bool,
+}
 
+#[java_methods]
 impl BufferedReader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/BufferedReader",
-            parent_class: Some("java/io/Reader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/Reader;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/Reader;I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "()I", Self::read_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([CII)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("readLine", "()Ljava/lang/String;", Self::read_line, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("in", "Ljava/io/Reader;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("cb", "[C", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nChars", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("nextChar", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("markedChar", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("readAheadLimit", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("skipLF", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("markedSkipLF", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<Reader>) -> Result<()> {
         tracing::debug!("java.io.BufferedReader::<init>({this:?}, {in:?})", in = &r#in);
 
@@ -67,6 +54,7 @@ impl BufferedReader {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -192,6 +180,7 @@ impl BufferedReader {
         Ok(read)
     }
 
+    #[method(name = "read", public)]
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_char_locked(jvm, this)).await
@@ -235,6 +224,7 @@ impl BufferedReader {
         }
     }
 
+    #[method(public)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -317,6 +307,7 @@ impl BufferedReader {
         if total == 0 { Ok(-1) } else { Ok(total) }
     }
 
+    #[method(public)]
     async fn read_line(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::read_line_locked(jvm, this)).await
@@ -379,6 +370,7 @@ impl BufferedReader {
         }
     }
 
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, count: i64) -> Result<i64> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::skip_locked(jvm, this, count)).await
@@ -428,6 +420,7 @@ impl BufferedReader {
         Ok(count - remaining)
     }
 
+    #[method(public)]
     async fn ready(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::ready_locked(jvm, this)).await
@@ -466,11 +459,13 @@ impl BufferedReader {
         jvm.invoke_virtual(&r#in, "java/io/Reader", "ready", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.BufferedReader::markSupported({this:?})");
         Ok(true)
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::mark_locked(jvm, this, read_ahead_limit)).await
@@ -496,6 +491,7 @@ impl BufferedReader {
         Ok(())
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::reset_locked(jvm, this)).await
@@ -525,6 +521,7 @@ impl BufferedReader {
         Ok(())
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let lock: ClassInstanceRef<Object> = jvm.get_field(&this, "java/io/BufferedReader", "lock", "Ljava/lang/Object;").await?;
         Self::with_lock(jvm, &lock, Self::close_locked(jvm, this)).await

@@ -1,10 +1,7 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{HashMap, HashMapEntry, LinkedHashMapEntry};
 
@@ -12,73 +9,17 @@ const DEFAULT_INITIAL_CAPACITY: i32 = 16;
 const DEFAULT_LOAD_FACTOR: f32 = 0.75;
 
 // public class java.util.LinkedHashMap
-pub struct LinkedHashMap;
+#[java_class(name = "java/util/LinkedHashMap", extends = "java/util/HashMap", implements("java/util/Map"), public)]
+pub struct LinkedHashMap {
+    #[field(private, transient)]
+    header: ClassInstanceRef<LinkedHashMapEntry>,
+    #[field(private, final)]
+    accessOrder: bool,
+}
 
+#[java_methods]
 impl LinkedHashMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedHashMap",
-            parent_class: Some("java/util/HashMap"),
-            interfaces: vec!["java/util/Map"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init_default, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(IF)V", Self::init_with_capacity_and_load_factor, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(IFZ)V",
-                    Self::init_with_capacity_load_factor_and_order,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "removeEldestEntry",
-                    "(Ljava/util/Map$Entry;)Z",
-                    Self::remove_eldest_entry,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new("initializeMap", "()V", Self::initialize_map, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "storeNewEntry",
-                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
-                    Self::store_new_entry,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new(
-                    "insertNewEntry",
-                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
-                    Self::insert_new_entry,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "valueIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::value_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new(
-                    "entryIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::entry_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "header",
-                    "Ljava/util/LinkedHashMap$Entry;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT,
-                ),
-                JavaFieldProto::new("accessOrder", "Z", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init_default(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(
             &this,
@@ -90,6 +31,7 @@ impl LinkedHashMap {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         jvm.invoke_special(
             &this,
@@ -101,6 +43,7 @@ impl LinkedHashMap {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity_and_load_factor(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -112,6 +55,7 @@ impl LinkedHashMap {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity_load_factor_and_order(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -127,6 +71,7 @@ impl LinkedHashMap {
             .await
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Map;)V", public)]
     async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         if map.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "map").await);
@@ -164,6 +109,7 @@ impl LinkedHashMap {
         Ok(())
     }
 
+    #[method]
     async fn initialize_map(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let null: ClassInstanceRef<Object> = None.into();
         let next: ClassInstanceRef<HashMapEntry> = None.into();
@@ -197,6 +143,7 @@ impl LinkedHashMap {
             .await
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let header: ClassInstanceRef<LinkedHashMapEntry> = jvm
             .get_field(&this, "java/util/LinkedHashMap", "header", "Ljava/util/LinkedHashMap$Entry;")
@@ -227,6 +174,7 @@ impl LinkedHashMap {
         Ok(false)
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<HashMap> = ClassInstanceRef::new(this.instance.clone());
         let entry = HashMap::find_entry(jvm, &map, &key).await?;
@@ -240,6 +188,7 @@ impl LinkedHashMap {
         jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/HashMap", "clear", "()V", ()).await?;
         let mut header: ClassInstanceRef<LinkedHashMapEntry> = jvm
@@ -265,6 +214,7 @@ impl LinkedHashMap {
         .await
     }
 
+    #[method]
     async fn store_new_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -335,6 +285,7 @@ impl LinkedHashMap {
         jvm.put_field(&mut this, "java/util/LinkedHashMap", "size", "I", size + 1).await
     }
 
+    #[method]
     async fn insert_new_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -398,10 +349,12 @@ impl LinkedHashMap {
         Ok(())
     }
 
+    #[method(descriptor = "(Ljava/util/Map$Entry;)Z", protected)]
     async fn remove_eldest_entry(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Ok(false)
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/LinkedHashMap$KeyIterator", "(Ljava/util/LinkedHashMap;)V", (this,))
@@ -409,6 +362,7 @@ impl LinkedHashMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/LinkedHashMap$ValueIterator", "(Ljava/util/LinkedHashMap;)V", (this,))
@@ -416,6 +370,7 @@ impl LinkedHashMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/LinkedHashMap$EntryIterator", "(Ljava/util/LinkedHashMap;)V", (this,))

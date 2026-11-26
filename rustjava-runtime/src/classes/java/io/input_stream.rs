@@ -1,37 +1,15 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // abstract class java.io.InputStream
+#[java_class(name = "java/io/InputStream", extends = "java/lang/Object", abstract)]
 pub struct InputStream;
 
+#[java_methods]
 impl InputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/InputStream",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("available", "()I", Self::available, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([BII)I", Self::read_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([B)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("read", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStream::<init>({this:?})");
 
@@ -40,6 +18,7 @@ impl InputStream {
         Ok(())
     }
 
+    #[method(public)]
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, b: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.InputStream::read({this:?}, {b:?})");
 
@@ -52,6 +31,7 @@ impl InputStream {
             .await
     }
 
+    #[method(name = "read", public)]
     async fn read_offset(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -92,16 +72,22 @@ impl InputStream {
         Ok(count)
     }
 
+    #[method(public)]
     async fn available(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.InputStream::available({this:?})");
         Ok(0)
     }
 
+    #[method(name = "read", public)]
+    async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32>;
+
+    #[method(public)]
     async fn close(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStream::close({this:?})");
         Ok(())
     }
 
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.InputStream::skip({this:?}, {n:?})");
 
@@ -128,18 +114,21 @@ impl InputStream {
         Ok(n - remaining)
     }
 
+    #[method(public)]
     async fn mark(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, readlimit: i32) -> Result<()> {
         tracing::debug!("java.io.InputStream::mark({this:?}, {readlimit:?})");
 
         Ok(())
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.InputStream::reset({this:?})");
 
         Err(jvm.exception("java/io/IOException", "reset not supported").await)
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.InputStream::markSupported({this:?})");
         Ok(false)

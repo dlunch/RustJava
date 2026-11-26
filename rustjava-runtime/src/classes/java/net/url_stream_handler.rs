@@ -1,46 +1,25 @@
-use alloc::{borrow::ToOwned, string::ToString, vec};
+use alloc::{borrow::ToOwned, string::ToString};
 
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
 use url::Url;
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::{lang::String, net::URL},
+    RuntimeContext,
+    classes::java::{
+        lang::String,
+        net::{URL, URLConnection},
+    },
 };
 
 // abstract class java.net.URLStreamHandler
+#[java_class(name = "java/net/URLStreamHandler", extends = "java/lang/Object", abstract)]
 pub struct URLStreamHandler;
 
+#[java_methods]
 impl URLStreamHandler {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/net/URLStreamHandler",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("openConnection", "(Ljava/net/URL;)Ljava/net/URLConnection;", MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "parseURL",
-                    "(Ljava/net/URL;Ljava/lang/String;II)V",
-                    Self::parse_url,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new(
-                    "setURL",
-                    "(Ljava/net/URL;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-                    Self::set_url,
-                    MethodAccessFlags::PROTECTED,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.net.URLStreamHandler::<init>({this:?})");
 
@@ -50,6 +29,7 @@ impl URLStreamHandler {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[method(name = "setURL", protected)]
     async fn set_url(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -83,6 +63,15 @@ impl URLStreamHandler {
         Ok(())
     }
 
+    #[method(protected)]
+    async fn open_connection(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        url: ClassInstanceRef<URL>,
+    ) -> Result<ClassInstanceRef<URLConnection>>;
+
+    #[method(name = "parseURL", protected)]
     async fn parse_url(
         jvm: &Jvm,
         _: &mut RuntimeContext,

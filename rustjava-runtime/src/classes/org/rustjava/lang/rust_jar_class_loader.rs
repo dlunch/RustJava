@@ -1,42 +1,23 @@
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Class, ClassLoader, String},
 };
 
 // class org.rustjava.lang.RustJarClassLoader
-pub struct RustJarClassLoader;
+#[java_class(name = "org/rustjava/lang/RustJarClassLoader", extends = "java/lang/ClassLoader", public)]
+pub struct RustJarClassLoader {
+    #[field(private)]
+    classPaths: ClassInstanceRef<Array<String>>,
+}
 
+#[java_methods]
 impl RustJarClassLoader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "org/rustjava/lang/RustJarClassLoader",
-            parent_class: Some("java/lang/ClassLoader"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "([Ljava/lang/String;Ljava/lang/ClassLoader;)V",
-                    Self::init,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "findClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    Self::find_class,
-                    MethodAccessFlags::PROTECTED,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("classPaths", "[Ljava/lang/String;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -66,6 +47,7 @@ impl RustJarClassLoader {
         Ok(())
     }
 
+    #[method(protected)]
     async fn find_class(
         jvm: &Jvm,
         runtime: &mut RuntimeContext,

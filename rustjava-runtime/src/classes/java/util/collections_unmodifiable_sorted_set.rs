@@ -1,53 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::SortedSet},
+};
 
 // class java.util.Collections$UnmodifiableSortedSet
-pub struct CollectionsUnmodifiableSortedSet;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableSortedSet",
+    extends = "java/util/Collections$UnmodifiableSet",
+    implements("java/util/SortedSet", "java/io/Serializable")
+)]
+pub struct CollectionsUnmodifiableSortedSet {
+    #[field(private, final)]
+    ss: ClassInstanceRef<SortedSet>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableSortedSet {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableSortedSet",
-            parent_class: Some("java/util/Collections$UnmodifiableSet"),
-            interfaces: vec!["java/util/SortedSet", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedSet;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("first", "()Ljava/lang/Object;", Self::first, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("last", "()Ljava/lang/Object;", Self::last, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "subSet",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::sub_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "headSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::head_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "tailSet",
-                    "(Ljava/lang/Object;)Ljava/util/SortedSet;",
-                    Self::tail_set,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "ss",
-                "Ljava/util/SortedSet;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/SortedSet;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, set: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm
             .invoke_special(
@@ -68,6 +40,7 @@ impl CollectionsUnmodifiableSortedSet {
         .await
     }
 
+    #[method(descriptor = "()Ljava/util/Comparator;", public)]
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedSet", "ss", "Ljava/util/SortedSet;")
@@ -76,6 +49,7 @@ impl CollectionsUnmodifiableSortedSet {
             .await
     }
 
+    #[method(public)]
     async fn first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedSet", "ss", "Ljava/util/SortedSet;")
@@ -84,6 +58,7 @@ impl CollectionsUnmodifiableSortedSet {
             .await
     }
 
+    #[method(public)]
     async fn last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let set: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableSortedSet", "ss", "Ljava/util/SortedSet;")
@@ -92,6 +67,7 @@ impl CollectionsUnmodifiableSortedSet {
             .await
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn sub_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -117,6 +93,7 @@ impl CollectionsUnmodifiableSortedSet {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn head_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -141,6 +118,7 @@ impl CollectionsUnmodifiableSortedSet {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedSet;", public)]
     async fn tail_set(
         jvm: &Jvm,
         _: &mut RuntimeContext,

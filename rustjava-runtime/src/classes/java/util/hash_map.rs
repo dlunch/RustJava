@@ -1,10 +1,9 @@
-use alloc::{format, vec, vec::Vec};
+use alloc::{format, vec::Vec};
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMapEntry;
 
@@ -12,79 +11,27 @@ const DEFAULT_INITIAL_CAPACITY: i32 = 16;
 const DEFAULT_LOAD_FACTOR: f32 = 0.75;
 
 // class java.util.HashMap
-pub struct HashMap;
+#[java_class(
+    name = "java/util/HashMap",
+    extends = "java/util/AbstractMap",
+    implements("java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct HashMap {
+    #[field(transient)]
+    table: ClassInstanceRef<Array<HashMapEntry>>,
+    #[field(transient)]
+    size: i32,
+    threshold: i32,
+    #[field(final)]
+    loadFactor: f32,
+    #[field(transient)]
+    modCount: i32,
+}
 
+#[java_methods]
 impl HashMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap",
-            parent_class: Some("java/util/AbstractMap"),
-            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(IF)V", Self::init_with_capacity_and_load_factor, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "put",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::put,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "remove",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::remove,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("initializeMap", "()V", Self::initialize_map, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "storeNewEntry",
-                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
-                    Self::store_new_entry,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new(
-                    "insertNewEntry",
-                    "(ILjava/lang/Object;Ljava/lang/Object;I)V",
-                    Self::insert_new_entry,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "valueIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::value_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new(
-                    "entryIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::entry_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("table", "[Ljava/util/HashMap$Entry;", FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("size", "I", FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("threshold", "I", FieldAccessFlags::empty()),
-                JavaFieldProto::new("loadFactor", "F", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("modCount", "I", FieldAccessFlags::TRANSIENT),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?})");
 
@@ -101,6 +48,7 @@ impl HashMap {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap::keySet({this:?})");
 
@@ -109,6 +57,7 @@ impl HashMap {
         Ok(key_set.into())
     }
 
+    #[method(descriptor = "()Ljava/util/Collection;", public)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap::values({this:?})");
 
@@ -117,6 +66,7 @@ impl HashMap {
         Ok(values.into())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap::entrySet({this:?})");
 
@@ -125,6 +75,7 @@ impl HashMap {
         Ok(entry_set.into())
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?}, {capacity:?})");
 
@@ -132,6 +83,7 @@ impl HashMap {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity_and_load_factor(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -173,6 +125,7 @@ impl HashMap {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Map;)V", public)]
     async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.HashMap::<init>({this:?}, {map:?})");
 
@@ -204,12 +157,14 @@ impl HashMap {
         Ok(())
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.HashMap::size({this:?})");
 
         jvm.get_field(&this, "java/util/HashMap", "size", "I").await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.HashMap::isEmpty({this:?})");
 
@@ -218,6 +173,7 @@ impl HashMap {
         Ok(size == 0)
     }
 
+    #[method(public)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap::containsKey({this:?}, {key:?})");
 
@@ -226,6 +182,7 @@ impl HashMap {
         Ok(!entry.is_null())
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.HashMap::containsValue({this:?}, {value:?})");
 
@@ -248,6 +205,7 @@ impl HashMap {
         Ok(false)
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap::get({this:?}, {key:?})");
 
@@ -259,6 +217,7 @@ impl HashMap {
         jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -309,6 +268,7 @@ impl HashMap {
         Ok(None.into())
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)V", public)]
     async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.HashMap::putAll({this:?}, {map:?})");
 
@@ -316,6 +276,7 @@ impl HashMap {
             .await
     }
 
+    #[method(public)]
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -383,6 +344,7 @@ impl HashMap {
         Ok(None.into())
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.HashMap::clear({this:?})");
 
@@ -401,10 +363,12 @@ impl HashMap {
         Ok(())
     }
 
+    #[method]
     async fn initialize_map(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Ok(())
     }
 
+    #[method]
     async fn store_new_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -430,6 +394,7 @@ impl HashMap {
         jvm.put_field(&mut this, "java/util/HashMap", "size", "I", size + 1).await
     }
 
+    #[method]
     async fn insert_new_entry(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -460,6 +425,7 @@ impl HashMap {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let snapshot = Self::snapshot_entries(jvm, &this).await?;
 
@@ -473,6 +439,7 @@ impl HashMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let snapshot = Self::snapshot_entries(jvm, &this).await?;
 
@@ -486,6 +453,7 @@ impl HashMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let snapshot = Self::snapshot_entries(jvm, &this).await?;
 

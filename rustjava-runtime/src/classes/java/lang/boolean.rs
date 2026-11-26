@@ -1,75 +1,36 @@
-use alloc::vec;
-
 use jvm::{
     ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::lang::{Class, Object, String},
 };
 
 // public final class java.lang.Boolean
-pub struct Boolean;
+#[java_class(
+    name = "java/lang/Boolean",
+    extends = "java/lang/Object",
+    implements("java/io/Serializable"),
+    public,
+    final
+)]
+pub struct Boolean {
+    #[field(public, static, final)]
+    TRUE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FALSE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(private, final)]
+    value: bool,
+}
 
+#[java_methods]
 impl Boolean {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Boolean",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Z)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("booleanValue", "()Z", Self::boolean_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Z)Ljava/lang/Boolean;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Boolean;",
-                    Self::value_of_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getBoolean",
-                    "(Ljava/lang/String;)Z",
-                    Self::get_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "TRUE",
-                    "Ljava/lang/Boolean;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FALSE",
-                    "Ljava/lang/Boolean;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "Z", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         let value = jvm.new_class("java/lang/Boolean", "(Z)V", (true,)).await?;
         jvm.put_static_field("java/lang/Boolean", "TRUE", "Ljava/lang/Boolean;", value).await?;
@@ -86,11 +47,13 @@ impl Boolean {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: bool) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Boolean", "value", "Z", value).await
     }
 
+    #[method(constructor, public)]
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         let parsed = if value.is_null() {
             false
@@ -102,10 +65,12 @@ impl Boolean {
         jvm.put_field(&mut this, "java/lang/Boolean", "value", "Z", parsed).await
     }
 
+    #[method(public)]
     async fn boolean_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         jvm.get_field(&this, "java/lang/Boolean", "value", "Z").await
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         let parsed = if value.is_null() {
             false
@@ -120,21 +85,25 @@ impl Boolean {
         }
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: bool) -> Result<ClassInstanceRef<Self>> {
         jvm.get_static_field("java/lang/Boolean", if value { "TRUE" } else { "FALSE" }, "Ljava/lang/Boolean;")
             .await
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: bool = jvm.invoke_virtual(&this, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, if value { "true" } else { "false" }).await?.into())
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: bool = jvm.invoke_virtual(&this, "java/lang/Boolean", "booleanValue", "()Z", ()).await?;
         Ok(if value { 1231 } else { 1237 })
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Boolean") {
             return Ok(false);
@@ -145,6 +114,7 @@ impl Boolean {
         Ok(this_value == other_value)
     }
 
+    #[method(public, static)]
     async fn get_boolean(jvm: &Jvm, _: &mut RuntimeContext, name: ClassInstanceRef<String>) -> Result<bool> {
         if name.is_null() {
             return Ok(false);

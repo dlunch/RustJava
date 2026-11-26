@@ -1,31 +1,21 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{LinkedHashMap, LinkedHashMapEntry};
 
 // class java.util.LinkedHashMap$KeyIterator
+#[java_class(
+    name = "java/util/LinkedHashMap$KeyIterator",
+    extends = "java/util/LinkedHashMap$LinkedHashIterator",
+    final
+)]
 pub struct LinkedHashMapKeyIterator;
 
+#[java_methods]
 impl LinkedHashMapKeyIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedHashMap$KeyIterator",
-            parent_class: Some("java/util/LinkedHashMap$LinkedHashIterator"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/LinkedHashMap;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<LinkedHashMap>) -> Result<()> {
         jvm.invoke_special(
             &this,
@@ -37,6 +27,7 @@ impl LinkedHashMapKeyIterator {
         .await
     }
 
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry: ClassInstanceRef<LinkedHashMapEntry> = jvm
             .invoke_special(

@@ -1,41 +1,25 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::LinkedList},
+};
 
 // class java.util.LinkedList$ListItr
-pub struct LinkedListItr;
+#[java_class(name = "java/util/LinkedList$ListItr", extends = "java/lang/Object", implements("java/util/ListIterator"))]
+pub struct LinkedListItr {
+    #[field(private)]
+    list: ClassInstanceRef<LinkedList>,
+    #[field(private)]
+    cursor: i32,
+    #[field(private)]
+    lastReturned: i32,
+}
 
+#[java_methods]
 impl LinkedListItr {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedList$ListItr",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/ListIterator"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/LinkedList;I)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("hasNext", "()Z", Self::has_next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hasPrevious", "()Z", Self::has_previous, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("previous", "()Ljava/lang/Object;", Self::previous, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("nextIndex", "()I", Self::next_index, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("previousIndex", "()I", Self::previous_index, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "()V", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(Ljava/lang/Object;)V", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)V", Self::add, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("list", "Ljava/util/LinkedList;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("cursor", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lastReturned", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/LinkedList;I)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, list: ClassInstanceRef<Object>, index: i32) -> Result<()> {
         let size: i32 = jvm.invoke_virtual(&list, "java/util/LinkedList", "size", "()I", ()).await?;
         if index < 0 || index > size {
@@ -48,6 +32,7 @@ impl LinkedListItr {
         jvm.put_field(&mut this, "java/util/LinkedList$ListItr", "lastReturned", "I", -1).await
     }
 
+    #[method(public)]
     async fn has_next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let list: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/LinkedList$ListItr", "list", "Ljava/util/LinkedList;")
@@ -56,6 +41,7 @@ impl LinkedListItr {
         Ok(cursor < jvm.invoke_virtual::<_, i32>(&list, "java/util/LinkedList", "size", "()I", ()).await?)
     }
 
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let list: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/LinkedList$ListItr", "list", "Ljava/util/LinkedList;")
@@ -74,10 +60,12 @@ impl LinkedListItr {
         Ok(value)
     }
 
+    #[method(public)]
     async fn has_previous(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         Ok(jvm.get_field::<i32>(&this, "java/util/LinkedList$ListItr", "cursor", "I").await? > 0)
     }
 
+    #[method(public)]
     async fn previous(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let cursor: i32 = jvm.get_field(&this, "java/util/LinkedList$ListItr", "cursor", "I").await?;
         if cursor <= 0 {
@@ -96,14 +84,17 @@ impl LinkedListItr {
         Ok(value)
     }
 
+    #[method(public)]
     async fn next_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/util/LinkedList$ListItr", "cursor", "I").await
     }
 
+    #[method(public)]
     async fn previous_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         Ok(jvm.get_field::<i32>(&this, "java/util/LinkedList$ListItr", "cursor", "I").await? - 1)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let last_returned: i32 = jvm.get_field(&this, "java/util/LinkedList$ListItr", "lastReturned", "I").await?;
         if last_returned < 0 {
@@ -123,6 +114,7 @@ impl LinkedListItr {
         jvm.put_field(&mut this, "java/util/LinkedList$ListItr", "lastReturned", "I", -1).await
     }
 
+    #[method(public)]
     async fn set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let last_returned: i32 = jvm.get_field(&this, "java/util/LinkedList$ListItr", "lastReturned", "I").await?;
         if last_returned < 0 {
@@ -143,6 +135,7 @@ impl LinkedListItr {
         Ok(())
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let cursor: i32 = jvm.get_field(&this, "java/util/LinkedList$ListItr", "cursor", "I").await?;
         let list: ClassInstanceRef<Object> = jvm

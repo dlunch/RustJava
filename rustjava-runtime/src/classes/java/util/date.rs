@@ -1,43 +1,30 @@
-use alloc::{format, vec};
+use alloc::format;
 
 use jiff::{Timestamp, tz::Offset};
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 // class java.util.Date
-pub struct Date;
+#[java_class(
+    name = "java/util/Date",
+    extends = "java/lang/Object",
+    implements("java/io/Serializable", "java/lang/Cloneable", "java/lang/Comparable"),
+    public
+)]
+pub struct Date {
+    #[field(private)]
+    value: i64,
+}
 
+#[java_methods]
 impl Date {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Date",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Cloneable", "java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(J)V", Self::init_with_time, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getTime", "()J", Self::get_time, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setTime", "(J)V", Self::set_time, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("before", "(Ljava/util/Date;)Z", Self::before, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("after", "(Ljava/util/Date;)Z", Self::after, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/util/Date;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("value", "J", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Date::<init>({this:?})");
 
@@ -48,6 +35,7 @@ impl Date {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Date::<init>({this:?}, {time:?})");
 
@@ -58,6 +46,7 @@ impl Date {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.Date::getTime({this:?})");
 
@@ -66,6 +55,7 @@ impl Date {
         Ok(time)
     }
 
+    #[method(public)]
     async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Date::setTime({this:?}, {time:?})");
 
@@ -74,6 +64,7 @@ impl Date {
         Ok(())
     }
 
+    #[method(descriptor = "(Ljava/util/Date;)Z", public)]
     async fn before(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, when: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Date::before({this:?}, {when:?})");
 
@@ -87,6 +78,7 @@ impl Date {
         Ok(time < when_time)
     }
 
+    #[method(descriptor = "(Ljava/util/Date;)Z", public)]
     async fn after(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, when: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Date::after({this:?}, {when:?})");
 
@@ -100,6 +92,8 @@ impl Date {
         Ok(time > when_time)
     }
 
+    #[method(descriptor = "(Ljava/util/Date;)I", public)]
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.util.Date::compareTo({this:?}, {other:?})");
 
@@ -122,6 +116,7 @@ impl Date {
         })
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Date::equals({this:?}, {other:?})");
 
@@ -135,6 +130,7 @@ impl Date {
         Ok(time == other_time)
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Date::hashCode({this:?})");
 
@@ -142,6 +138,7 @@ impl Date {
         Ok((time ^ ((time as u64 >> 32) as i64)) as i32)
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Date::toString({this:?})");
 

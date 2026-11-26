@@ -1,42 +1,27 @@
-use alloc::{borrow::Cow, string::String as RustString, vec};
+use alloc::{borrow::Cow, string::String as RustString};
 use core::iter;
 
 use jvm::{
     ClassInstanceRef, JavaError, Jvm, Result,
     runtime::{JavaIoInputStream, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{io::InputStream, lang::String, util::jar::Attributes},
 };
 
 // class java.util.jar.Manifest
-pub struct Manifest;
+#[java_class(name = "java/util/jar/Manifest", extends = "java/lang/Object", implements("java/lang/Cloneable"), public)]
+pub struct Manifest {
+    #[field(private)]
+    attrs: ClassInstanceRef<Attributes>,
+}
 
+#[java_methods]
 impl Manifest {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/jar/Manifest",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Cloneable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "(Ljava/io/InputStream;)V", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getMainAttributes",
-                    "()Ljava/util/jar/Attributes;",
-                    Self::get_main_attributes,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![JavaFieldProto::new("attrs", "Ljava/util/jar/Attributes;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.util.jar.Manifest::<init>({this:?}, {is:?})");
 
@@ -49,6 +34,7 @@ impl Manifest {
         Ok(())
     }
 
+    #[method(public)]
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, is: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.util.jar.Manifest::read({this:?}, {is:?})");
 
@@ -104,6 +90,7 @@ impl Manifest {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_main_attributes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Attributes>> {
         tracing::debug!("java.util.jar.Manifest::getMainAttributes({this:?})");
 

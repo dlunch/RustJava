@@ -1,14 +1,15 @@
-use alloc::{string::ToString, vec};
+use alloc::string::ToString;
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 use percent_encoding::{AsciiSet, CONTROLS, percent_decode_str, utf8_percent_encode};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::String};
+use crate::{RuntimeContext, classes::java::lang::String};
 
+#[java_class(name = "org/rustjava/net/URLPath", extends = "java/lang/Object", public, final)]
 pub struct URLPath;
 
+#[java_methods]
 impl URLPath {
     const ESCAPED: &AsciiSet = &CONTROLS
         .add(b' ')
@@ -23,30 +24,7 @@ impl URLPath {
         .add(b'}')
         .add(b'!');
 
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "org/rustjava/net/URLPath",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "encode",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::encode,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "decode",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::decode,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(public, static)]
     async fn encode(jvm: &Jvm, _: &mut RuntimeContext, path: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
         if path.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "path is null").await);
@@ -59,6 +37,7 @@ impl URLPath {
         )
     }
 
+    #[method(public, static)]
     async fn decode(jvm: &Jvm, _: &mut RuntimeContext, path: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
         if path.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "path is null").await);

@@ -1,49 +1,48 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::Comparator},
+};
 
 // interface java.util.SortedMap
+#[java_class(name = "java/util/SortedMap", implements("java/util/Map"), public, interface, abstract)]
 pub struct SortedMap;
 
+#[java_methods]
 impl SortedMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/SortedMap",
-            parent_class: None,
-            interfaces: vec!["java/util/Map"],
-            methods: vec![
-                JavaMethodProto::new_abstract(
-                    "comparator",
-                    "()Ljava/util/Comparator;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "subMap",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "headMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "tailMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract(
-                    "firstKey",
-                    "()Ljava/lang/Object;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new_abstract("lastKey", "()Ljava/lang/Object;", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Comparator>>;
+
+    #[method(public)]
+    async fn sub_map(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        from_key: ClassInstanceRef<Object>,
+        to_key: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn head_map(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        to_key: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn tail_map(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        from_key: ClassInstanceRef<Object>,
+    ) -> Result<ClassInstanceRef<Self>>;
+
+    #[method(public)]
+    async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>>;
+
+    #[method(public)]
+    async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>>;
 }

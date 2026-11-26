@@ -1,36 +1,19 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMap;
 
 // class java.util.HashMap$ValueIterator
+#[java_class(name = "java/util/HashMap$ValueIterator", extends = "java/util/HashMap$HashIterator", final)]
 pub struct HashMapValueIterator;
 
+#[java_methods]
 impl HashMapValueIterator {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap$ValueIterator",
-            parent_class: Some("java/util/HashMap$HashIterator"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/HashMap;[Ljava/lang/Object;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("next", "()Ljava/lang/Object;", Self::next, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(public)]
     async fn next(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry: Box<dyn ClassInstance> = jvm
             .invoke_special(&this, "java/util/HashMap$HashIterator", "next", "()Ljava/lang/Object;", ())
@@ -38,6 +21,7 @@ impl HashMapValueIterator {
         jvm.get_field(&entry, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,

@@ -1,11 +1,8 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, JavaError, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{OutputStream, OutputStreamWriter},
         lang::{Exception, String},
@@ -15,58 +12,19 @@ use crate::{
 use super::{Formatter, Level, LogRecord, SimpleFormatter};
 
 // public class java.util.logging.StreamHandler
-pub struct StreamHandler;
+#[java_class(name = "java/util/logging/StreamHandler", extends = "java/util/logging/Handler", public)]
+pub struct StreamHandler {
+    #[field(private)]
+    output: ClassInstanceRef<OutputStream>,
+    #[field(private)]
+    writer: ClassInstanceRef<OutputStreamWriter>,
+    #[field(private)]
+    headerWritten: bool,
+}
 
+#[java_methods]
 impl StreamHandler {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/StreamHandler",
-            parent_class: Some("java/util/logging/Handler"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/OutputStream;Ljava/util/logging/Formatter;)V",
-                    Self::init_with_output,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "isLoggable",
-                    "(Ljava/util/logging/LogRecord;)Z",
-                    Self::is_loggable,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "publish",
-                    "(Ljava/util/logging/LogRecord;)V",
-                    Self::publish,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "setEncoding",
-                    "(Ljava/lang/String;)V",
-                    Self::set_encoding,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "setOutputStream",
-                    "(Ljava/io/OutputStream;)V",
-                    Self::set_output_stream,
-                    MethodAccessFlags::PROTECTED | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("output", "Ljava/io/OutputStream;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("writer", "Ljava/io/OutputStreamWriter;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("headerWritten", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.StreamHandler::<init>({this:?})");
 
@@ -91,6 +49,7 @@ impl StreamHandler {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_output(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -127,6 +86,7 @@ impl StreamHandler {
         .await
     }
 
+    #[method(public, synchronized)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.StreamHandler::close({this:?})");
 
@@ -156,6 +116,7 @@ impl StreamHandler {
             .await
     }
 
+    #[method(public, synchronized)]
     async fn flush(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.StreamHandler::flush({this:?})");
 
@@ -168,6 +129,7 @@ impl StreamHandler {
         jvm.invoke_virtual(&writer, "java/io/OutputStreamWriter", "flush", "()V", ()).await
     }
 
+    #[method(public, synchronized)]
     async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<bool> {
         tracing::debug!("java.util.logging.StreamHandler::isLoggable({this:?}, {record:?})");
 
@@ -188,6 +150,7 @@ impl StreamHandler {
         .await
     }
 
+    #[method(public, synchronized)]
     async fn publish(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<()> {
         tracing::debug!("java.util.logging.StreamHandler::publish({this:?}, {record:?})");
 
@@ -278,6 +241,7 @@ impl StreamHandler {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn set_encoding(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, encoding: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.logging.StreamHandler::setEncoding({this:?}, {encoding:?})");
 
@@ -325,6 +289,7 @@ impl StreamHandler {
         .await
     }
 
+    #[method(protected, synchronized)]
     async fn set_output_stream(
         jvm: &Jvm,
         _: &mut RuntimeContext,

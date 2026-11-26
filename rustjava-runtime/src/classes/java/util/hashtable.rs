@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, string::String as RustString, vec::Vec};
 
 use jvm::{Array, ClassInstance, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
@@ -15,112 +14,26 @@ const DEFAULT_INITIAL_CAPACITY: i32 = 11;
 const DEFAULT_LOAD_FACTOR: f32 = 0.75;
 
 // class java.util.Hashtable
-pub struct Hashtable;
+#[java_class(
+    name = "java/util/Hashtable",
+    extends = "java/util/Dictionary",
+    implements("java/util/Map", "java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct Hashtable {
+    #[field(private, transient)]
+    table: ClassInstanceRef<Array<HashtableEntry>>,
+    #[field(private, transient)]
+    count: i32,
+    #[field(private)]
+    threshold: i32,
+    #[field(private)]
+    loadFactor: f32,
+}
 
+#[java_methods]
 impl Hashtable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Hashtable",
-            parent_class: Some("java/util/Dictionary"),
-            interfaces: vec!["java/util/Map", "java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Map;)V", Self::init_from_map, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "isEmpty",
-                    "()Z",
-                    Self::is_empty,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "contains",
-                    "(Ljava/lang/Object;)Z",
-                    Self::contains,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "containsKey",
-                    "(Ljava/lang/Object;)Z",
-                    Self::contains_key,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "keys",
-                    "()Ljava/util/Enumeration;",
-                    Self::keys,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "elements",
-                    "()Ljava/util/Enumeration;",
-                    Self::elements,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "put",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::put,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "putAll",
-                    "(Ljava/util/Map;)V",
-                    Self::put_all,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "get",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::get,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "remove",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::remove,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("rehash", "()V", Self::rehash, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "equals",
-                    "(Ljava/lang/Object;)Z",
-                    Self::equals,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "hashCode",
-                    "()I",
-                    Self::hash_code,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new(
-                    "toString",
-                    "()Ljava/lang/String;",
-                    Self::to_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "table",
-                    "[Ljava/util/Hashtable$Entry;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT,
-                ),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::TRANSIENT),
-                JavaFieldProto::new("threshold", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("loadFactor", "F", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::<init>({this:?})");
 
@@ -128,6 +41,7 @@ impl Hashtable {
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, initial_capacity: i32) -> Result<()> {
         tracing::debug!("java.util.Hashtable::<init>({this:?}, {initial_capacity:?})");
 
@@ -156,6 +70,7 @@ impl Hashtable {
         Ok(())
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Map;)V", public)]
     async fn init_from_map(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::<init>({this:?}, {map:?})");
 
@@ -172,12 +87,14 @@ impl Hashtable {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::contains({this:?}, {value:?})");
         jvm.invoke_virtual(&this, "java/util/Hashtable", "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
     }
 
+    #[method(descriptor = "()Ljava/util/Enumeration;", public, synchronized)]
     async fn keys(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::keys({this:?})");
 
@@ -188,6 +105,7 @@ impl Hashtable {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Enumeration;", public, synchronized)]
     async fn elements(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::elements({this:?})");
 
@@ -198,12 +116,14 @@ impl Hashtable {
             .into())
     }
 
+    #[method(public, synchronized)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable::size({this:?})");
 
         jvm.get_field(&this, "java/util/Hashtable", "count", "I").await
     }
 
+    #[method(public, synchronized)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::isEmpty({this:?})");
 
@@ -212,6 +132,7 @@ impl Hashtable {
         Ok(count == 0)
     }
 
+    #[method(public, synchronized)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::containsKey({this:?}, {key:?})");
 
@@ -242,6 +163,7 @@ impl Hashtable {
         Ok(false)
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::containsValue({this:?}, {value:?})");
 
@@ -270,6 +192,7 @@ impl Hashtable {
         Ok(false)
     }
 
+    #[method(public, synchronized)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::get({this:?}, {key:?})");
 
@@ -300,6 +223,7 @@ impl Hashtable {
         Ok(None.into())
     }
 
+    #[method(public, synchronized)]
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -351,6 +275,7 @@ impl Hashtable {
         Ok(None.into())
     }
 
+    #[method(public, synchronized)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -429,6 +354,7 @@ impl Hashtable {
         Ok(None.into())
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)V", public, synchronized)]
     async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::putAll({this:?}, {map:?})");
 
@@ -478,6 +404,7 @@ impl Hashtable {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::clear({this:?})");
 
@@ -494,6 +421,7 @@ impl Hashtable {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::keySet({this:?})");
 
@@ -502,6 +430,7 @@ impl Hashtable {
         Ok(key_set.into())
     }
 
+    #[method(descriptor = "()Ljava/util/Collection;", public)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::values({this:?})");
 
@@ -510,6 +439,7 @@ impl Hashtable {
         Ok(values.into())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Hashtable::entrySet({this:?})");
 
@@ -563,6 +493,7 @@ impl Hashtable {
         Ok(None.into())
     }
 
+    #[method(protected)]
     async fn rehash(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Hashtable::rehash({this:?})");
         Self::rehash_table(jvm, &mut this).await
@@ -609,6 +540,7 @@ impl Hashtable {
         Ok(())
     }
 
+    #[method(public, synchronized)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Hashtable::equals({this:?}, {other:?})");
 
@@ -679,6 +611,7 @@ impl Hashtable {
         }
     }
 
+    #[method(public, synchronized)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Hashtable::hashCode({this:?})");
 
@@ -712,6 +645,7 @@ impl Hashtable {
         result
     }
 
+    #[method(public, synchronized)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Hashtable::toString({this:?})");
 

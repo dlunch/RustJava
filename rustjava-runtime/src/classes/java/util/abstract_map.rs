@@ -1,34 +1,21 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaError, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.util.AbstractMap
+#[java_class(
+    name = "java/util/AbstractMap",
+    extends = "java/lang/Object",
+    implements("java/util/Map"),
+    public,
+    abstract
+)]
 pub struct AbstractMap;
 
+#[java_methods]
 impl AbstractMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/AbstractMap",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("size", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.AbstractMap::<init>({this:?})");
 
@@ -37,6 +24,10 @@ impl AbstractMap {
         Ok(())
     }
 
+    #[method(public)]
+    async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32>;
+
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.AbstractMap::isEmpty({this:?})");
 
@@ -45,6 +36,7 @@ impl AbstractMap {
         Ok(size == 0)
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)V", public)]
     async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.util.AbstractMap::putAll({this:?}, {map:?})");
 
@@ -83,6 +75,7 @@ impl AbstractMap {
         Ok(())
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map") {
             return Ok(false);
@@ -154,6 +147,7 @@ impl AbstractMap {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let entries: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&this, "java/util/AbstractMap", "entrySet", "()Ljava/util/Set;", ())
@@ -174,6 +168,7 @@ impl AbstractMap {
         Ok(hash)
     }
 
+    #[method(descriptor = "()Ljava/lang/String;", public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let buffer: ClassInstanceRef<Object> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let open = JavaLangString::from_rust_string(jvm, "{").await?;

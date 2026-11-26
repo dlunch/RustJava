@@ -1,11 +1,11 @@
-use alloc::{boxed::Box, format, string::String as RustString, vec, vec::Vec};
+use alloc::{boxed::Box, format, string::String as RustString, vec::Vec};
 
 use jvm::{ClassInstance, ClassInstanceRef, JavaValue, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, JavaType, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
+use jvm_types::JavaType;
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::{FileDescriptor, InputStream, PrintStream},
         lang::{Object, String},
@@ -14,101 +14,21 @@ use crate::{
 };
 
 // class java.lang.System
-pub struct System;
+#[java_class(name = "java/lang/System", extends = "java/lang/Object", public, final)]
+pub struct System {
+    #[field(public, static, final)]
+    r#in: ClassInstanceRef<InputStream>,
+    #[field(public, static, final)]
+    out: ClassInstanceRef<PrintStream>,
+    #[field(public, static, final)]
+    err: ClassInstanceRef<PrintStream>,
+    #[field(private, static)]
+    props: ClassInstanceRef<Properties>,
+}
 
+#[java_methods]
 impl System {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/System",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "currentTimeMillis",
-                    "()J",
-                    Self::current_time_millis,
-                    MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("gc", "()V", Self::gc, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "arraycopy",
-                    "(Ljava/lang/Object;ILjava/lang/Object;II)V",
-                    Self::arraycopy,
-                    MethodAccessFlags::NATIVE | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getProperty",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::get_property,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setProperty",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
-                    Self::set_property,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("exit", "(I)V", Self::exit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "identityHashCode",
-                    "(Ljava/lang/Object;)I",
-                    Self::identity_hash_code,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setIn",
-                    "(Ljava/io/InputStream;)V",
-                    Self::set_in,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setOut",
-                    "(Ljava/io/PrintStream;)V",
-                    Self::set_out,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setErr",
-                    "(Ljava/io/PrintStream;)V",
-                    Self::set_err,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getProperties",
-                    "()Ljava/util/Properties;",
-                    Self::get_properties,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getProperty",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-                    Self::get_property_with_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "in",
-                    "Ljava/io/InputStream;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "out",
-                    "Ljava/io/PrintStream;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "err",
-                    "Ljava/io/PrintStream;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("props", "Ljava/util/Properties;", FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn cl_init(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::<clinit>()");
 
@@ -146,12 +66,14 @@ impl System {
         Ok(())
     }
 
+    #[method(native, static)]
     async fn current_time_millis(_: &Jvm, context: &mut RuntimeContext) -> Result<i64> {
         tracing::debug!("java.lang.System::currentTimeMillis()");
 
         Ok(context.now() as _)
     }
 
+    #[method(static)]
     async fn gc(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.lang.System::gc()");
 
@@ -164,6 +86,7 @@ impl System {
         Ok(())
     }
 
+    #[method(native, static)]
     async fn arraycopy(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -207,6 +130,7 @@ impl System {
         jvm.store_array(&mut dest, dest_pos as usize, values).await
     }
 
+    #[method(static)]
     async fn get_property(jvm: &Jvm, _: &mut RuntimeContext, key: ClassInstanceRef<String>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.lang.System::getProperty({key:?})");
 
@@ -228,6 +152,7 @@ impl System {
         Ok(value)
     }
 
+    #[method(name = "getProperty", public, static)]
     async fn get_property_with_default(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -251,30 +176,35 @@ impl System {
         .await
     }
 
+    #[method(public, static)]
     async fn get_properties(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Properties>> {
         tracing::debug!("java.lang.System::getProperties()");
 
         jvm.get_static_field("java/lang/System", "props", "Ljava/util/Properties;").await
     }
 
+    #[method(public, static)]
     async fn set_in(jvm: &Jvm, _: &mut RuntimeContext, input: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.lang.System::setIn({input:?})");
 
         jvm.put_static_field("java/lang/System", "in", "Ljava/io/InputStream;", input).await
     }
 
+    #[method(public, static)]
     async fn set_out(jvm: &Jvm, _: &mut RuntimeContext, output: ClassInstanceRef<PrintStream>) -> Result<()> {
         tracing::debug!("java.lang.System::setOut({output:?})");
 
         jvm.put_static_field("java/lang/System", "out", "Ljava/io/PrintStream;", output).await
     }
 
+    #[method(public, static)]
     async fn set_err(jvm: &Jvm, _: &mut RuntimeContext, error: ClassInstanceRef<PrintStream>) -> Result<()> {
         tracing::debug!("java.lang.System::setErr({error:?})");
 
         jvm.put_static_field("java/lang/System", "err", "Ljava/io/PrintStream;", error).await
     }
 
+    #[method(public, static)]
     async fn identity_hash_code(_: &Jvm, _: &mut RuntimeContext, object: ClassInstanceRef<Object>) -> Result<i32> {
         tracing::debug!("java.lang.System::identityHashCode({object:?})");
 
@@ -285,6 +215,7 @@ impl System {
         Ok(Object::identity_hash_code(&object))
     }
 
+    #[method(descriptor = "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", static)]
     async fn set_property(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -307,6 +238,7 @@ impl System {
         Ok(value)
     }
 
+    #[method(static)]
     async fn exit(_jvm: &Jvm, context: &mut RuntimeContext, status: i32) -> Result<()> {
         tracing::debug!("java.lang.System::exit({status})");
 

@@ -1,45 +1,46 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // abstract class java.lang.Number
+#[java_class(
+    name = "java/lang/Number",
+    extends = "java/lang/Object",
+    implements("java/io/Serializable"),
+    public,
+    abstract
+)]
 pub struct Number;
 
+#[java_methods]
 impl Number {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Number",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("byteValue", "()B", Self::byte_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("shortValue", "()S", Self::short_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("intValue", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("longValue", "()J", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("floatValue", "()F", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("doubleValue", "()D", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/Object", "<init>", "()V", ()).await
     }
 
+    #[method(public)]
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Number", "intValue", "()I", ()).await?;
         Ok(value as i8)
     }
 
+    #[method(public)]
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         let value: i32 = jvm.invoke_virtual(&this, "java/lang/Number", "intValue", "()I", ()).await?;
         Ok(value as i16)
     }
+
+    #[method(public)]
+    async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32>;
+
+    #[method(public)]
+    async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64>;
+
+    #[method(public)]
+    async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32>;
+
+    #[method(public)]
+    async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64>;
 }

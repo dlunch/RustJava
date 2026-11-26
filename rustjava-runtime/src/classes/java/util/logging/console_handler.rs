@@ -1,32 +1,17 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::OutputStream};
+use crate::{RuntimeContext, classes::java::io::OutputStream};
 
 use super::LogRecord;
 
 // public class java.util.logging.ConsoleHandler
+#[java_class(name = "java/util/logging/ConsoleHandler", extends = "java/util/logging/StreamHandler", public)]
 pub struct ConsoleHandler;
 
+#[java_methods]
 impl ConsoleHandler {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/ConsoleHandler",
-            parent_class: Some("java/util/logging/StreamHandler"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("publish", "(Ljava/util/logging/LogRecord;)V", Self::publish, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.ConsoleHandler::<init>({this:?})");
 
@@ -42,12 +27,14 @@ impl ConsoleHandler {
         .await
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.logging.ConsoleHandler::close({this:?})");
 
         jvm.invoke_special(&this, "java/util/logging/StreamHandler", "flush", "()V", ()).await
     }
 
+    #[method(public)]
     async fn publish(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<()> {
         tracing::debug!("java.util.logging.ConsoleHandler::publish({this:?}, {record:?})");
 

@@ -3,11 +3,10 @@ use alloc::vec;
 use bytemuck::cast_vec;
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    FileOpenOptions, RuntimeClassProto, RuntimeContext,
+    FileOpenOptions, RuntimeContext,
     classes::java::{
         io::{File, FileDescriptor},
         lang::String,
@@ -15,47 +14,20 @@ use crate::{
 };
 
 // class java.io.RandomAccessFile
-pub struct RandomAccessFile;
+#[java_class(
+    name = "java/io/RandomAccessFile",
+    extends = "java/lang/Object",
+    implements("java/io/DataInput", "java/io/DataOutput"),
+    public
+)]
+pub struct RandomAccessFile {
+    #[field(private, final)]
+    fd: ClassInstanceRef<FileDescriptor>,
+}
 
+#[java_methods]
 impl RandomAccessFile {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/RandomAccessFile",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/DataInput", "java/io/DataOutput"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/io/File;Ljava/lang/String;)V",
-                    Self::init_with_file,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("read", "([B)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([BII)I", Self::read_offset_length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([B)V", Self::write, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([BII)V", Self::write_offset_length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("length", "()J", Self::length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getFilePointer", "()J", Self::get_file_pointer, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getFD",
-                    "()Ljava/io/FileDescriptor;",
-                    Self::get_fd,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("seek", "(J)V", Self::seek, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setLength", "(J)V", Self::set_length, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new(
-                "fd",
-                "Ljava/io/FileDescriptor;",
-                FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-            )],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -96,6 +68,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_file(
         jvm: &Jvm,
         _context: &mut RuntimeContext,
@@ -123,6 +96,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<i32> {
         tracing::debug!("java.io.RandomAccessFile::read({this:?}, {buf:?})");
         if buf.is_null() {
@@ -137,6 +111,7 @@ impl RandomAccessFile {
         Ok(read)
     }
 
+    #[method(name = "read", public)]
     async fn read_offset_length(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -163,6 +138,7 @@ impl RandomAccessFile {
         Ok(read as i32)
     }
 
+    #[method(public)]
     async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::write({this:?}, {buf:?})");
         if buf.is_null() {
@@ -177,6 +153,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_offset_length(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -208,6 +185,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn seek(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, pos: i64) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::seek({this:?}, {pos:?})");
 
@@ -221,6 +199,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn set_length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>, new_length: i64) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::setLength({this:?}, {new_length:?})");
 
@@ -234,6 +213,7 @@ impl RandomAccessFile {
         Ok(())
     }
 
+    #[method(public)]
     async fn length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.io.RandomAccessFile::length({this:?})");
 
@@ -248,6 +228,7 @@ impl RandomAccessFile {
         Ok(len as i64)
     }
 
+    #[method(public)]
     async fn get_file_pointer(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.io.RandomAccessFile::getFilePointer({this:?})");
 
@@ -261,6 +242,7 @@ impl RandomAccessFile {
         Ok(pos as i64)
     }
 
+    #[method(name = "getFD", descriptor = "()Ljava/io/FileDescriptor;", public, final)]
     async fn get_fd(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<File>> {
         tracing::debug!("java.io.RandomAccessFile::getFD({this:?})");
 
@@ -269,6 +251,7 @@ impl RandomAccessFile {
         Ok(fd)
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.RandomAccessFile::close({this:?})");
 

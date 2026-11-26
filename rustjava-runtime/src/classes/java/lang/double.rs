@@ -1,125 +1,44 @@
-use alloc::{format, string::String as RustString, vec};
+use alloc::{format, string::String as RustString};
 
 use jvm::{
     ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::lang::{Class, Object, String},
 };
 
 // public final class java.lang.Double
-pub struct Double;
+#[java_class(
+    name = "java/lang/Double",
+    extends = "java/lang/Number",
+    implements("java/lang/Comparable"),
+    public,
+    final
+)]
+pub struct Double {
+    #[field(public, static, final)]
+    POSITIVE_INFINITY: f64,
+    #[field(public, static, final)]
+    NEGATIVE_INFINITY: f64,
+    #[field(public, static, final)]
+    NaN: f64,
+    #[field(public, static, final)]
+    MAX_VALUE: f64,
+    #[field(public, static, final)]
+    MIN_VALUE: f64,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(private, final)]
+    value: f64,
+}
 
+#[java_methods]
 impl Double {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Double",
-            parent_class: Some("java/lang/Number"),
-            interfaces: vec!["java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(D)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "parseDouble",
-                    "(Ljava/lang/String;)D",
-                    Self::parse_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(D)Ljava/lang/Double;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Double;",
-                    Self::value_of_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("byteValue", "()B", Self::byte_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("shortValue", "()S", Self::short_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("longValue", "()J", Self::long_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("floatValue", "()F", Self::float_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("doubleValue", "()D", Self::double_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "(D)Ljava/lang/String;",
-                    Self::to_string_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isNaN", "()Z", Self::is_nan, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isNaN",
-                    "(D)Z",
-                    Self::is_nan_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isInfinite", "()Z", Self::is_infinite, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isInfinite",
-                    "(D)Z",
-                    Self::is_infinite_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "doubleToLongBits",
-                    "(D)J",
-                    Self::double_to_long_bits,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "longBitsToDouble",
-                    "(J)D",
-                    Self::long_bits_to_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Double;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "POSITIVE_INFINITY",
-                    "D",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "NEGATIVE_INFINITY",
-                    "D",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("NaN", "D", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "MAX_VALUE",
-                    "D",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MIN_VALUE",
-                    "D",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "D", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Double", "POSITIVE_INFINITY", "D", f64::INFINITY).await?;
         jvm.put_static_field("java/lang/Double", "NEGATIVE_INFINITY", "D", f64::NEG_INFINITY)
@@ -136,11 +55,13 @@ impl Double {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Double", "value", "D", value).await
     }
 
+    #[method(constructor, public)]
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -210,6 +131,7 @@ impl Double {
         }
     }
 
+    #[method(public, static)]
     async fn parse_double(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<f64> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -218,6 +140,7 @@ impl Double {
         Self::parse_value(jvm, &value).await
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -227,35 +150,42 @@ impl Double {
         Ok(jvm.new_class("java/lang/Double", "(D)V", (value,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Double", "(D)V", (value,)).await?.into())
     }
 
+    #[method(public)]
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok((value as i32) as i8)
     }
 
+    #[method(public)]
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok((value as i32) as i16)
     }
 
+    #[method(public)]
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as i32)
     }
 
+    #[method(public)]
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as i64)
     }
 
+    #[method(public)]
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value as f32)
     }
 
+    #[method(public)]
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         jvm.get_field(&this, "java/lang/Double", "value", "D").await
     }
@@ -297,47 +227,57 @@ impl Double {
         result
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
+    #[method(name = "toString", public, static)]
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<ClassInstanceRef<String>> {
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
+    #[method(name = "isNaN", public)]
     async fn is_nan(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value.is_nan())
     }
 
+    #[method(name = "isNaN", public, static)]
     async fn is_nan_static(_: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<bool> {
         Ok(value.is_nan())
     }
 
+    #[method(public)]
     async fn is_infinite(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         Ok(value.is_infinite())
     }
 
+    #[method(name = "isInfinite", public, static)]
     async fn is_infinite_static(_: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<bool> {
         Ok(value.is_infinite())
     }
 
+    #[method(public, static)]
     async fn double_to_long_bits(_: &Jvm, _: &mut RuntimeContext, value: f64) -> Result<i64> {
         Ok(if value.is_nan() { 0x7ff8_0000_0000_0000 } else { value.to_bits() as i64 })
     }
 
+    #[method(public, static)]
     async fn long_bits_to_double(_: &Jvm, _: &mut RuntimeContext, bits: i64) -> Result<f64> {
         Ok(f64::from_bits(bits as u64))
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: f64 = jvm.invoke_virtual(&this, "java/lang/Double", "doubleValue", "()D", ()).await?;
         let bits = if value.is_nan() { 0x7ff8_0000_0000_0000 } else { value.to_bits() };
         Ok((bits ^ (bits >> 32)) as i32)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Double") {
             return Ok(false);
@@ -349,6 +289,7 @@ impl Double {
         Ok(left_bits == right_bits)
     }
 
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -366,6 +307,7 @@ impl Double {
         Ok(left_bits.cmp(&right_bits) as i32)
     }
 
+    #[method(name = "compareTo", public)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);

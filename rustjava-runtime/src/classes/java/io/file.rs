@@ -1,57 +1,28 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{ClassInstance, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{FileType, RuntimeClassProto, RuntimeContext, classes::java::lang::String};
+use crate::{FileType, RuntimeContext, classes::java::lang::String};
 
 // class java.io.File
-pub struct File;
+#[java_class(name = "java/io/File", extends = "java/lang/Object", implements("java/io/Serializable"), public)]
+pub struct File {
+    #[field(public, static, final)]
+    separatorChar: JavaChar,
+    #[field(public, static, final)]
+    separator: ClassInstanceRef<String>,
+    #[field(public, static, final)]
+    pathSeparatorChar: JavaChar,
+    #[field(public, static, final)]
+    pathSeparator: ClassInstanceRef<String>,
+    #[field(private, final)]
+    path: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl File {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/File",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getPath", "()Ljava/lang/String;", Self::get_path, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("exists", "()Z", Self::exists, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isDirectory", "()Z", Self::is_directory, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isFile", "()Z", Self::is_file, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("delete", "()Z", Self::delete, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("length", "()J", Self::length, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "separatorChar",
-                    "C",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "separator",
-                    "Ljava/lang/String;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "pathSeparatorChar",
-                    "C",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "pathSeparator",
-                    "Ljava/lang/String;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("path", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.io.File::<clinit>()");
 
@@ -82,6 +53,7 @@ impl File {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pathname: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.io.File::<init>({this:?}, {pathname:?})");
         if pathname.is_null() {
@@ -95,12 +67,14 @@ impl File {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_path(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.io.File::getPath({this:?})");
 
         jvm.get_field(&this, "java/io/File", "path", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn exists(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.File::exists({this:?})");
 
@@ -110,6 +84,7 @@ impl File {
         Ok(context.metadata(&path).await.is_ok())
     }
 
+    #[method(public)]
     async fn is_directory(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.File::isDirectory({this:?})");
 
@@ -119,6 +94,7 @@ impl File {
         Ok(context.metadata(&path).await.is_ok_and(|x| x.r#type == FileType::Directory))
     }
 
+    #[method(public)]
     async fn is_file(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.File::isFile({this:?})");
 
@@ -128,6 +104,7 @@ impl File {
         Ok(context.metadata(&path).await.is_ok_and(|x| x.r#type == FileType::File))
     }
 
+    #[method(public)]
     async fn delete(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.File::delete({this:?})");
 
@@ -137,6 +114,7 @@ impl File {
         Ok(context.unlink(&path).await.is_ok())
     }
 
+    #[method(public)]
     async fn length(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.io.File::length({this:?})");
 

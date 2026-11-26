@@ -1,55 +1,28 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::io::InputStream};
+use crate::{RuntimeContext, classes::java::io::InputStream};
 
 const DEFAULT_BUFFER_SIZE: i32 = 8192;
 
 // class java.io.BufferedInputStream
-pub struct BufferedInputStream;
+#[java_class(name = "java/io/BufferedInputStream", extends = "java/io/FilterInputStream", public)]
+pub struct BufferedInputStream {
+    #[field(protected, volatile)]
+    buf: ClassInstanceRef<Array<i8>>,
+    #[field(protected)]
+    count: i32,
+    #[field(protected)]
+    pos: i32,
+    #[field(protected)]
+    markpos: i32,
+    #[field(protected)]
+    marklimit: i32,
+}
 
+#[java_methods]
 impl BufferedInputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/BufferedInputStream",
-            parent_class: Some("java/io/FilterInputStream"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/io/InputStream;I)V", Self::init_with_size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "read",
-                    "()I",
-                    Self::read_byte,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("read", "([BII)I", Self::read, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new(
-                    "available",
-                    "()I",
-                    Self::available,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED,
-                ),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC | MethodAccessFlags::SYNCHRONIZED),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("buf", "[B", FieldAccessFlags::PROTECTED | FieldAccessFlags::VOLATILE),
-                JavaFieldProto::new("count", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("pos", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("markpos", "I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("marklimit", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, r#in: ClassInstanceRef<InputStream>) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::<init>({this:?}, {in:?})", in = &r#in);
 
@@ -63,6 +36,7 @@ impl BufferedInputStream {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_size(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -156,6 +130,7 @@ impl BufferedInputStream {
         Ok(read)
     }
 
+    #[method(name = "read", public, synchronized)]
     async fn read_byte(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.BufferedInputStream::read({this:?})");
 
@@ -184,6 +159,7 @@ impl BufferedInputStream {
         Ok(value as u8 as i32)
     }
 
+    #[method(public, synchronized)]
     async fn read(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -250,6 +226,7 @@ impl BufferedInputStream {
         if total == 0 { Ok(-1) } else { Ok(total) }
     }
 
+    #[method(public, synchronized)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, amount: i64) -> Result<i64> {
         tracing::debug!("java.io.BufferedInputStream::skip({this:?}, {amount})");
 
@@ -282,6 +259,7 @@ impl BufferedInputStream {
         Ok(skipped)
     }
 
+    #[method(public, synchronized)]
     async fn available(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.BufferedInputStream::available({this:?})");
 
@@ -296,6 +274,7 @@ impl BufferedInputStream {
         Ok((count - position).saturating_add(underlying))
     }
 
+    #[method(public, synchronized)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, read_limit: i32) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::mark({this:?}, {read_limit})");
 
@@ -305,6 +284,7 @@ impl BufferedInputStream {
         jvm.put_field(&mut this, "java/io/BufferedInputStream", "markpos", "I", position).await
     }
 
+    #[method(public, synchronized)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::reset({this:?})");
 
@@ -320,11 +300,13 @@ impl BufferedInputStream {
         jvm.put_field(&mut this, "java/io/BufferedInputStream", "pos", "I", mark_position).await
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.BufferedInputStream::markSupported({this:?})");
         Ok(true)
     }
 
+    #[method(public)]
     async fn close(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.BufferedInputStream::close({this:?})");
 

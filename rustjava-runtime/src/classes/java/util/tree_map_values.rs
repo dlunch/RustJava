@@ -1,50 +1,41 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::SortedMap},
+};
 
 // class java.util.TreeMap$Values
-pub struct TreeMapValues;
+#[java_class(name = "java/util/TreeMap$Values", extends = "java/util/AbstractCollection")]
+pub struct TreeMapValues {
+    #[field(private)]
+    map: ClassInstanceRef<SortedMap>,
+}
 
+#[java_methods]
 impl TreeMapValues {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TreeMap$Values",
-            parent_class: Some("java/util/AbstractCollection"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/SortedMap;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/SortedMap;", FieldAccessFlags::PRIVATE)],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/SortedMap;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, map: ClassInstanceRef<Object>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractCollection", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;", map)
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;").await?;
         let iterator: ClassInstanceRef<Object> = jvm
@@ -73,11 +64,13 @@ impl TreeMapValues {
         Ok(false)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "clear", "()V", ()).await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/TreeMap$Values", "map", "Ljava/util/SortedMap;").await?;
         jvm.invoke_virtual(&map, &map.class_definition().name(), "valueIterator", "()Ljava/util/Iterator;", ())

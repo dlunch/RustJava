@@ -1,52 +1,24 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::HashMap;
 
 // class java.util.HashMap$Entry
-pub struct HashMapEntry;
+#[java_class(name = "java/util/HashMap$Entry", extends = "java/lang/Object", implements("java/util/Map$Entry"))]
+pub struct HashMapEntry {
+    #[field(final)]
+    hash: i32,
+    #[field(final)]
+    key: ClassInstanceRef<Object>,
+    value: ClassInstanceRef<Object>,
+    next: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl HashMapEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/HashMap$Entry",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Map$Entry"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(ILjava/lang/Object;Ljava/lang/Object;Ljava/util/HashMap$Entry;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("getKey", "()Ljava/lang/Object;", Self::get_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getValue", "()Ljava/lang/Object;", Self::get_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "setValue",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::set_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("onAccess", "(Ljava/util/HashMap;)V", Self::on_access, MethodAccessFlags::empty()),
-                JavaMethodProto::new("onRemoval", "(Ljava/util/HashMap;)V", Self::on_removal, MethodAccessFlags::empty()),
-            ],
-            fields: vec![
-                JavaFieldProto::new("hash", "I", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("key", "Ljava/lang/Object;", FieldAccessFlags::FINAL),
-                JavaFieldProto::new("value", "Ljava/lang/Object;", FieldAccessFlags::empty()),
-                JavaFieldProto::new("next", "Ljava/util/HashMap$Entry;", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -71,18 +43,21 @@ impl HashMapEntry {
         Ok(())
     }
 
+    #[method(public)]
     async fn get_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$Entry::getKey({this:?})");
 
         jvm.get_field(&this, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn get_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.HashMap$Entry::getValue({this:?})");
 
         jvm.get_field(&this, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn set_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -98,6 +73,7 @@ impl HashMapEntry {
         Ok(old_value)
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(other.as_ref(), "java/util/Map$Entry") {
             return Ok(false);
@@ -129,6 +105,7 @@ impl HashMapEntry {
         }
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let key: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/HashMap$Entry", "key", "Ljava/lang/Object;").await?;
         let value: ClassInstanceRef<Object> = jvm.get_field(&this, "java/util/HashMap$Entry", "value", "Ljava/lang/Object;").await?;
@@ -145,10 +122,12 @@ impl HashMapEntry {
         Ok(key_hash ^ value_hash)
     }
 
+    #[method]
     async fn on_access(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
         Ok(())
     }
 
+    #[method]
     async fn on_removal(_: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<HashMap>) -> Result<()> {
         Ok(())
     }

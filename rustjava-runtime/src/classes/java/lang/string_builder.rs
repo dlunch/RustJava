@@ -1,367 +1,36 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{AbstractStringBuilder, CharSequence, Object, String, StringBuffer},
 };
 
 // public final class java.lang.StringBuilder
+#[java_class(
+    name = "java/lang/StringBuilder",
+    extends = "java/lang/AbstractStringBuilder",
+    implements("java/io/Serializable", "java/lang/CharSequence"),
+    public,
+    final
+)]
 pub struct StringBuilder;
 
+#[java_methods]
 impl StringBuilder {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/StringBuilder",
-            parent_class: Some("java/lang/AbstractStringBuilder"),
-            interfaces: vec!["java/io/Serializable", "java/lang/CharSequence"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(I)V", Self::init_with_capacity, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/CharSequence;)V",
-                    Self::init_with_char_sequence,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/Object;)Ljava/lang/StringBuilder;",
-                    Self::append_object,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
-                    Self::append_string,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/StringBuffer;)Ljava/lang/StringBuilder;",
-                    Self::append_string_buffer,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/lang/StringBuilder;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/lang/StringBuilder;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "([C)Ljava/lang/StringBuilder;",
-                    Self::append_char_array,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "([CII)Ljava/lang/StringBuilder;",
-                    Self::append_char_array_range,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("append", "(Z)Ljava/lang/StringBuilder;", Self::append_boolean, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("append", "(C)Ljava/lang/StringBuilder;", Self::append_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("append", "(I)Ljava/lang/StringBuilder;", Self::append_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("append", "(J)Ljava/lang/StringBuilder;", Self::append_long, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("append", "(F)Ljava/lang/StringBuilder;", Self::append_float, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("append", "(D)Ljava/lang/StringBuilder;", Self::append_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "appendCodePoint",
-                    "(I)Ljava/lang/StringBuilder;",
-                    Self::append_code_point,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("delete", "(II)Ljava/lang/StringBuilder;", Self::delete, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "deleteCharAt",
-                    "(I)Ljava/lang/StringBuilder;",
-                    Self::delete_char_at,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "replace",
-                    "(IILjava/lang/String;)Ljava/lang/StringBuilder;",
-                    Self::replace,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(I[CII)Ljava/lang/StringBuilder;",
-                    Self::insert_char_array_range,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/Object;)Ljava/lang/StringBuilder;",
-                    Self::insert_object,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/String;)Ljava/lang/StringBuilder;",
-                    Self::insert_string,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(I[C)Ljava/lang/StringBuilder;",
-                    Self::insert_char_array,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/CharSequence;)Ljava/lang/StringBuilder;",
-                    Self::insert_char_sequence,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/CharSequence;II)Ljava/lang/StringBuilder;",
-                    Self::insert_char_sequence_range,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("insert", "(IZ)Ljava/lang/StringBuilder;", Self::insert_boolean, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("insert", "(IC)Ljava/lang/StringBuilder;", Self::insert_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("insert", "(II)Ljava/lang/StringBuilder;", Self::insert_int, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("insert", "(IJ)Ljava/lang/StringBuilder;", Self::insert_long, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("insert", "(IF)Ljava/lang/StringBuilder;", Self::insert_float, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("insert", "(ID)Ljava/lang/StringBuilder;", Self::insert_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/String;)I", Self::index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/String;I)I", Self::index_of_from, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastIndexOf", "(Ljava/lang/String;)I", Self::last_index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "lastIndexOf",
-                    "(Ljava/lang/String;I)I",
-                    Self::last_index_of_from,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("reverse", "()Ljava/lang/StringBuilder;", Self::reverse, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/Object;)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/StringBuffer;)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_string_buffer,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "([C)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_char_array,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "([CII)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_char_array_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Z)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(C)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(I)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_int,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(J)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(F)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(D)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "appendCodePoint",
-                    "(I)Ljava/lang/AbstractStringBuilder;",
-                    Self::append_code_point,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "delete",
-                    "(II)Ljava/lang/AbstractStringBuilder;",
-                    Self::delete,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "deleteCharAt",
-                    "(I)Ljava/lang/AbstractStringBuilder;",
-                    Self::delete_char_at,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "replace",
-                    "(IILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
-                    Self::replace,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(I[CII)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_char_array_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/Object;)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_object,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(I[C)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_char_array,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/CharSequence;)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_char_sequence,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ILjava/lang/CharSequence;II)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_char_sequence_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(IZ)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_boolean,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(IC)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(II)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_int,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(IJ)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_long,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(IF)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "insert",
-                    "(ID)Ljava/lang/AbstractStringBuilder;",
-                    Self::insert_double,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "reverse",
-                    "()Ljava/lang/AbstractStringBuilder;",
-                    Self::reverse,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
-                    Self::append_char_sequence,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
-                    Self::append_char_sequence_range,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-                JavaMethodProto::new(
-                    "append",
-                    "(C)Ljava/lang/Appendable;",
-                    Self::append_char,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::BRIDGE | MethodAccessFlags::SYNTHETIC,
-                ),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/AbstractStringBuilder", "<init>", "(I)V", (16,))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_capacity(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, capacity: i32) -> Result<()> {
         jvm.invoke_special(&this, "java/lang/AbstractStringBuilder", "<init>", "(I)V", (capacity,))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<()> {
         if string.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "str is null").await);
@@ -388,6 +57,7 @@ impl StringBuilder {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_char_sequence(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -415,6 +85,14 @@ impl StringBuilder {
         Ok(())
     }
 
+    #[method(name = "append", public)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/Object;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -433,6 +111,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_string(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -451,6 +137,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/StringBuffer;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_string_buffer(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -469,6 +163,21 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;)Ljava/lang/Appendable;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_char_sequence(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -487,6 +196,21 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;II)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
+    #[method(
+        name = "append",
+        descriptor = "(Ljava/lang/CharSequence;II)Ljava/lang/Appendable;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn append_char_sequence_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -507,6 +231,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "([C)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_char_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -525,6 +251,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "([CII)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_char_array_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -545,6 +273,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(Z)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_boolean(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: bool) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -558,6 +288,9 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(C)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
+    #[method(name = "append", descriptor = "(C)Ljava/lang/Appendable;", public, bridge, synthetic)]
     async fn append_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: JavaChar) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -571,6 +304,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(I)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -584,6 +319,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(J)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i64) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -597,6 +334,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(F)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_float(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -610,6 +349,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "append", public)]
+    #[method(name = "append", descriptor = "(D)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_double(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: f64) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -623,6 +364,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
+    #[method(descriptor = "(I)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn append_code_point(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, code_point: i32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -636,6 +379,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
+    #[method(descriptor = "(II)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn delete(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, start: i32, end: i32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -649,6 +394,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
+    #[method(descriptor = "(I)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn delete_char_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -662,6 +409,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
+    #[method(descriptor = "(IILjava/lang/String;)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn replace(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -682,6 +431,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(I[CII)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_char_array_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -703,6 +454,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(
+        name = "insert",
+        descriptor = "(ILjava/lang/Object;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn insert_object(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -722,6 +481,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(
+        name = "insert",
+        descriptor = "(ILjava/lang/String;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn insert_string(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -741,6 +508,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(I[C)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_char_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -760,6 +529,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(
+        name = "insert",
+        descriptor = "(ILjava/lang/CharSequence;)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn insert_char_sequence(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -779,6 +556,14 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(
+        name = "insert",
+        descriptor = "(ILjava/lang/CharSequence;II)Ljava/lang/AbstractStringBuilder;",
+        public,
+        bridge,
+        synthetic
+    )]
     async fn insert_char_sequence_range(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -800,6 +585,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(IZ)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_boolean(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -819,6 +606,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(IC)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_char(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -838,6 +627,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(II)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_int(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, offset: i32, value: i32) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -851,6 +642,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(IJ)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_long(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, offset: i32, value: i64) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -864,6 +657,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(IF)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_float(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -883,6 +678,8 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(name = "insert", public)]
+    #[method(name = "insert", descriptor = "(ID)Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn insert_double(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -902,11 +699,13 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<i32> {
         jvm.invoke_special(&this, "java/lang/AbstractStringBuilder", "indexOf", "(Ljava/lang/String;)I", (string,))
             .await
     }
 
+    #[method(name = "indexOf", public)]
     async fn index_of_from(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -924,6 +723,7 @@ impl StringBuilder {
         .await
     }
 
+    #[method(public)]
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, string: ClassInstanceRef<String>) -> Result<i32> {
         jvm.invoke_special(
             &this,
@@ -935,6 +735,7 @@ impl StringBuilder {
         .await
     }
 
+    #[method(name = "lastIndexOf", public)]
     async fn last_index_of_from(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -952,6 +753,8 @@ impl StringBuilder {
         .await
     }
 
+    #[method(public)]
+    #[method(descriptor = "()Ljava/lang/AbstractStringBuilder;", public, bridge, synthetic)]
     async fn reverse(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         let _: ClassInstanceRef<AbstractStringBuilder> = jvm
             .invoke_special(
@@ -965,6 +768,7 @@ impl StringBuilder {
         Ok(this)
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let count: i32 = jvm.get_field(&this, "java/lang/StringBuilder", "count", "I").await?;
         let value: ClassInstanceRef<Array<JavaChar>> = jvm.get_field(&this, "java/lang/StringBuilder", "value", "[C").await?;

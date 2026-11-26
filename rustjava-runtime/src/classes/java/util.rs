@@ -115,12 +115,12 @@ mod vector_itr;
 
 pub use self::{
     abstract_collection::AbstractCollection,
-    abstract_list::{AbstractList, AbstractListItr},
+    abstract_list::{AbstractList, AbstractListItr, AbstractListListItr},
     abstract_list_sub_list::AbstractListSubList,
     abstract_map::AbstractMap,
     abstract_set::AbstractSet,
     array_list::ArrayList,
-    array_list_itr::ArrayListItr,
+    array_list_itr::{ArrayListItr, ArrayListListItr},
     arrays::Arrays,
     arrays_array_list::ArraysArrayList,
     calendar::Calendar,
@@ -222,5 +222,5 @@ pub use self::{
     unknown_format_conversion_exception::UnknownFormatConversionException,
     unknown_format_flags_exception::UnknownFormatFlagsException,
     vector::Vector,
-    vector_itr::VectorItr,
+    vector_itr::{VectorItr, VectorListItr},
 };

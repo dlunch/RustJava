@@ -1,51 +1,26 @@
 use alloc::vec;
 
 use jvm::{Array, AsClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::Iterator},
+};
 
 // abstract class java.util.AbstractCollection
+#[java_class(
+    name = "java/util/AbstractCollection",
+    extends = "java/lang/Object",
+    implements("java/util/Collection"),
+    public,
+    abstract
+)]
 pub struct AbstractCollection;
 
+#[java_methods]
 impl AbstractCollection {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/AbstractCollection",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Collection"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new_abstract("size", "()I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract(
-                    "iterator",
-                    "()Ljava/util/Iterator;",
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-                ),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toArray",
-                    "([Ljava/lang/Object;)[Ljava/lang/Object;",
-                    Self::to_typed_array,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsAll", "(Ljava/util/Collection;)Z", Self::contains_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addAll", "(Ljava/util/Collection;)Z", Self::add_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("removeAll", "(Ljava/util/Collection;)Z", Self::remove_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("retainAll", "(Ljava/util/Collection;)Z", Self::retain_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.AbstractCollection::<init>({this:?})");
 
@@ -54,6 +29,10 @@ impl AbstractCollection {
         Ok(())
     }
 
+    #[method(public)]
+    async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32>;
+
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::isEmpty({this:?})");
 
@@ -62,6 +41,7 @@ impl AbstractCollection {
         Ok(size == 0)
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::contains({this:?}, {element:?})");
 
@@ -85,6 +65,10 @@ impl AbstractCollection {
         }
     }
 
+    #[method(public)]
+    async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Iterator>>;
+
+    #[method(public)]
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         tracing::debug!("java.util.AbstractCollection::toArray({this:?})");
 
@@ -114,6 +98,7 @@ impl AbstractCollection {
         Ok(array)
     }
 
+    #[method(name = "toArray", public)]
     async fn to_typed_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -159,12 +144,14 @@ impl AbstractCollection {
         Ok(result)
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::add({this:?}, {element:?})");
 
         Err(jvm.exception("java/lang/UnsupportedOperationException", "AbstractCollection.add").await)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::remove({this:?}, {element:?})");
 
@@ -173,6 +160,7 @@ impl AbstractCollection {
             .await)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::containsAll({this:?}, {collection:?})");
 
@@ -196,6 +184,7 @@ impl AbstractCollection {
         Ok(true)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::addAll({this:?}, {collection:?})");
 
@@ -217,6 +206,7 @@ impl AbstractCollection {
         Ok(modified)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn remove_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::removeAll({this:?}, {collection:?})");
 
@@ -262,6 +252,7 @@ impl AbstractCollection {
         Ok(modified)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn retain_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.AbstractCollection::retainAll({this:?}, {collection:?})");
 
@@ -306,12 +297,14 @@ impl AbstractCollection {
         Ok(modified)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.AbstractCollection::clear({this:?})");
 
         Err(jvm.exception("java/lang/UnsupportedOperationException", "AbstractCollection.clear").await)
     }
 
+    #[method(descriptor = "()Ljava/lang/String;", public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let buffer: ClassInstanceRef<Object> = jvm.new_class("java/lang/StringBuffer", "()V", ()).await?.into();
         let open = JavaLangString::from_rust_string(jvm, "[").await?;

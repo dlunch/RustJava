@@ -1,26 +1,14 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // interface java.lang.Comparable
+#[java_class(name = "java/lang/Comparable", public, interface, abstract)]
 pub struct Comparable;
 
+#[java_methods]
 impl Comparable {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Comparable",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new_abstract(
-                "compareTo",
-                "(Ljava/lang/Object;)I",
-                MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-            )],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32>;
 }

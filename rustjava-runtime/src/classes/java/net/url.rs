@@ -1,11 +1,10 @@
-use alloc::{boxed::Box, format, vec};
+use alloc::{boxed::Box, format};
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         io::InputStream,
         lang::String,
@@ -14,74 +13,23 @@ use crate::{
 };
 
 // class java.net.URL
-pub struct URL;
+#[java_class(name = "java/net/URL", extends = "java/lang/Object", implements("java/io/Serializable"), public, final)]
+pub struct URL {
+    #[field(private)]
+    protocol: ClassInstanceRef<String>,
+    #[field(private)]
+    host: ClassInstanceRef<String>,
+    #[field(private)]
+    port: i32,
+    #[field(private)]
+    file: ClassInstanceRef<String>,
+    #[field(transient)]
+    handler: ClassInstanceRef<URLStreamHandler>,
+}
 
+#[java_methods]
 impl URL {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/net/URL",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_spec, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/net/URL;Ljava/lang/String;)V",
-                    Self::init_with_context_spec,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/net/URL;Ljava/lang/String;Ljava/net/URLStreamHandler;)V",
-                    Self::init_with_context_spec_handler,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init_with_protocol_host_file,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/net/URLStreamHandler;)V",
-                    Self::init_with_protocol_host_port_file_handler,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "openConnection",
-                    "()Ljava/net/URLConnection;",
-                    Self::open_connection,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "openStream",
-                    "()Ljava/io/InputStream;",
-                    Self::open_stream,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "set",
-                    "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;)V",
-                    Self::set,
-                    MethodAccessFlags::PROTECTED,
-                ),
-                JavaMethodProto::new("getPort", "()I", Self::get_port, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getProtocol", "()Ljava/lang/String;", Self::get_protocol, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getHost", "()Ljava/lang/String;", Self::get_host, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getFile", "()Ljava/lang/String;", Self::get_file, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("protocol", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("host", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("port", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("file", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("handler", "Ljava/net/URLStreamHandler;", FieldAccessFlags::TRANSIENT),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init_with_spec(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, spec: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.net.URL::<init>({this:?}, {spec:?})");
 
@@ -92,6 +40,7 @@ impl URL {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_context_spec(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -114,6 +63,7 @@ impl URL {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_context_spec_handler(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -152,6 +102,7 @@ impl URL {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_protocol_host_file(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -176,6 +127,7 @@ impl URL {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[method(constructor, public)]
     async fn init_with_protocol_host_port_file_handler(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -219,6 +171,7 @@ impl URL {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[method(protected)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -240,6 +193,7 @@ impl URL {
         Ok(())
     }
 
+    #[method(public)]
     async fn open_connection(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<URLConnection>> {
         tracing::debug!("java.net.URL::openConnection({this:?})");
 
@@ -257,6 +211,7 @@ impl URL {
         Ok(connection)
     }
 
+    #[method(public, final)]
     async fn open_stream(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.net.URL::openStream({this:?})");
 
@@ -271,6 +226,7 @@ impl URL {
         Ok(stream)
     }
 
+    #[method(public)]
     async fn get_port(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.net.URL::getPort({this:?})");
 
@@ -279,6 +235,7 @@ impl URL {
         Ok(port)
     }
 
+    #[method(public)]
     async fn get_protocol(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getProtocol({this:?})");
 
@@ -287,6 +244,7 @@ impl URL {
         Ok(protocol)
     }
 
+    #[method(public)]
     async fn get_host(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getHost({this:?})");
 
@@ -295,6 +253,7 @@ impl URL {
         Ok(host)
     }
 
+    #[method(public)]
     async fn get_file(jvm: &Jvm, _runtime: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.net.URL::getFile({this:?})");
 

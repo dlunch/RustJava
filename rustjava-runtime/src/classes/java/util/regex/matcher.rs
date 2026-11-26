@@ -1,11 +1,10 @@
 use alloc::{string::String as RustString, vec, vec::Vec};
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{CharSequence, String, StringBuffer},
 };
 
@@ -19,81 +18,25 @@ enum MatchMode {
 }
 
 // public final class java.util.regex.Matcher
-pub struct Matcher;
+#[java_class(name = "java/util/regex/Matcher", extends = "java/lang/Object", public, final)]
+pub struct Matcher {
+    #[field(private, final)]
+    parentPattern: ClassInstanceRef<Pattern>,
+    #[field(private)]
+    text: ClassInstanceRef<CharSequence>,
+    #[field(private, final)]
+    groups: ClassInstanceRef<Array<i32>>,
+    #[field(private)]
+    searchPosition: i32,
+    #[field(private)]
+    appendPosition: i32,
+    #[field(private)]
+    hasMatch: bool,
+}
 
+#[java_methods]
 impl Matcher {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/regex/Matcher",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/regex/Pattern;Ljava/lang/CharSequence;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("pattern", "()Ljava/util/regex/Pattern;", Self::pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()Ljava/util/regex/Matcher;", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "reset",
-                    "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
-                    Self::reset_with_input,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("matches", "()Z", Self::matches, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lookingAt", "()Z", Self::looking_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("find", "()Z", Self::find, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("find", "(I)Z", Self::find_from, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("start", "()I", Self::start, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("start", "(I)I", Self::start_group, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("end", "()I", Self::end, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("end", "(I)I", Self::end_group, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("group", "()Ljava/lang/String;", Self::group, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("group", "(I)Ljava/lang/String;", Self::group_index, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("groupCount", "()I", Self::group_count, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "appendReplacement",
-                    "(Ljava/lang/StringBuffer;Ljava/lang/String;)Ljava/util/regex/Matcher;",
-                    Self::append_replacement,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "appendTail",
-                    "(Ljava/lang/StringBuffer;)Ljava/lang/StringBuffer;",
-                    Self::append_tail,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "replaceAll",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::replace_all,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "replaceFirst",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::replace_first,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "parentPattern",
-                    "Ljava/util/regex/Pattern;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("text", "Ljava/lang/CharSequence;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("groups", "[I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("searchPosition", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("appendPosition", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("hasMatch", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -133,6 +76,7 @@ impl Matcher {
         jvm.put_field(&mut this, "java/util/regex/Matcher", "hasMatch", "Z", false).await
     }
 
+    #[method(public)]
     async fn pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Pattern>> {
         tracing::debug!("java.util.regex.Matcher::pattern({this:?})");
 
@@ -140,6 +84,7 @@ impl Matcher {
             .await
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.regex.Matcher::reset({this:?})");
 
@@ -152,6 +97,7 @@ impl Matcher {
         Ok(this)
     }
 
+    #[method(name = "reset", public)]
     async fn reset_with_input(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -175,18 +121,21 @@ impl Matcher {
         Ok(this)
     }
 
+    #[method(public)]
     async fn matches(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.regex.Matcher::matches({this:?})");
 
         Self::execute_match(jvm, &mut this, MatchMode::Full).await
     }
 
+    #[method(public)]
     async fn looking_at(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.regex.Matcher::lookingAt({this:?})");
 
         Self::execute_match(jvm, &mut this, MatchMode::Prefix).await
     }
 
+    #[method(public)]
     async fn find(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.regex.Matcher::find({this:?})");
 
@@ -220,6 +169,7 @@ impl Matcher {
         .await
     }
 
+    #[method(name = "find", public)]
     async fn find_from(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, start: i32) -> Result<bool> {
         tracing::debug!("java.util.regex.Matcher::find({this:?}, {start})");
 
@@ -237,6 +187,7 @@ impl Matcher {
         Self::execute_match(jvm, &mut this, MatchMode::Find { start, reset: true }).await
     }
 
+    #[method(public)]
     async fn start(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::start({this:?})");
 
@@ -244,6 +195,7 @@ impl Matcher {
         Ok(start)
     }
 
+    #[method(name = "start", public)]
     async fn start_group(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, group: i32) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::start({this:?}, {group})");
 
@@ -251,6 +203,7 @@ impl Matcher {
         Ok(start)
     }
 
+    #[method(public)]
     async fn end(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::end({this:?})");
 
@@ -258,6 +211,7 @@ impl Matcher {
         Ok(end)
     }
 
+    #[method(name = "end", public)]
     async fn end_group(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, group: i32) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::end({this:?}, {group})");
 
@@ -265,6 +219,7 @@ impl Matcher {
         Ok(end)
     }
 
+    #[method(public)]
     async fn group(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.Matcher::group({this:?})");
 
@@ -285,6 +240,7 @@ impl Matcher {
             .await
     }
 
+    #[method(name = "group", public)]
     async fn group_index(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, group: i32) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.regex.Matcher::group({this:?}, {group})");
 
@@ -308,6 +264,7 @@ impl Matcher {
             .await
     }
 
+    #[method(public)]
     async fn group_count(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.regex.Matcher::groupCount({this:?})");
 
@@ -315,6 +272,7 @@ impl Matcher {
         Ok(jvm.array_length(&groups).await? as i32 / 2 - 1)
     }
 
+    #[method(public)]
     async fn append_replacement(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -376,6 +334,7 @@ impl Matcher {
         Ok(this)
     }
 
+    #[method(public)]
     async fn append_tail(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -415,6 +374,7 @@ impl Matcher {
         .await
     }
 
+    #[method(public)]
     async fn replace_all(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -463,6 +423,7 @@ impl Matcher {
             .await
     }
 
+    #[method(public)]
     async fn replace_first(
         jvm: &Jvm,
         _: &mut RuntimeContext,

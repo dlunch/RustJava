@@ -3,250 +3,77 @@ use core::iter;
 use alloc::{format, string::ToString, vec};
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Object, String},
 };
 
 // class java.util.Locale
-pub struct Locale;
+#[java_class(
+    name = "java/util/Locale",
+    extends = "java/lang/Object",
+    implements("java/lang/Cloneable", "java/io/Serializable"),
+    public,
+    final
+)]
+pub struct Locale {
+    #[field(public, static, final)]
+    ENGLISH: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FRENCH: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    GERMAN: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    ITALIAN: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    JAPANESE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    KOREAN: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    CHINESE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    SIMPLIFIED_CHINESE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    TRADITIONAL_CHINESE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    FRANCE: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    GERMANY: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    ITALY: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    JAPAN: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    KOREA: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    CHINA: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    PRC: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    TAIWAN: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    UK: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    US: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    CANADA: ClassInstanceRef<Self>,
+    #[field(public, static, final)]
+    CANADA_FRENCH: ClassInstanceRef<Self>,
+    #[field(private, static)]
+    defaultLocale: ClassInstanceRef<Self>,
+    #[field(private, final)]
+    language: ClassInstanceRef<String>,
+    #[field(private, final)]
+    country: ClassInstanceRef<String>,
+    #[field(private, final)]
+    variant: ClassInstanceRef<String>,
+}
 
+#[java_methods]
 impl Locale {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Locale",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_language, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init_with_language_country,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
-                    Self::init,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getDefault", "()Ljava/util/Locale;", Self::get_default, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("setDefault", "(Ljava/util/Locale;)V", Self::set_default, MethodAccessFlags::STATIC),
-                JavaMethodProto::new(
-                    "getAvailableLocales",
-                    "()[Ljava/util/Locale;",
-                    Self::get_available_locales,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getISOCountries",
-                    "()[Ljava/lang/String;",
-                    Self::get_iso_countries,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getISOLanguages",
-                    "()[Ljava/lang/String;",
-                    Self::get_iso_languages,
-                    MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("getLanguage", "()Ljava/lang/String;", Self::get_language, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getCountry", "()Ljava/lang/String;", Self::get_country, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getVariant", "()Ljava/lang/String;", Self::get_variant, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getISO3Language",
-                    "()Ljava/lang/String;",
-                    Self::get_iso3_language,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getISO3Country",
-                    "()Ljava/lang/String;",
-                    Self::get_iso3_country,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayLanguage",
-                    "()Ljava/lang/String;",
-                    Self::get_display_language_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayLanguage",
-                    "(Ljava/util/Locale;)Ljava/lang/String;",
-                    Self::get_display_language,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayCountry",
-                    "()Ljava/lang/String;",
-                    Self::get_display_country_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayCountry",
-                    "(Ljava/util/Locale;)Ljava/lang/String;",
-                    Self::get_display_country,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayVariant",
-                    "()Ljava/lang/String;",
-                    Self::get_display_variant_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayVariant",
-                    "(Ljava/util/Locale;)Ljava/lang/String;",
-                    Self::get_display_variant,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayName",
-                    "()Ljava/lang/String;",
-                    Self::get_display_name_default,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getDisplayName",
-                    "(Ljava/util/Locale;)Ljava/lang/String;",
-                    Self::get_display_name,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clone", "()Ljava/lang/Object;", Self::clone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "()Ljava/lang/String;",
-                    Self::to_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "ENGLISH",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FRENCH",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "GERMAN",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "ITALIAN",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "JAPANESE",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "KOREAN",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CHINESE",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "SIMPLIFIED_CHINESE",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TRADITIONAL_CHINESE",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "FRANCE",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "GERMANY",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "ITALY",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "JAPAN",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "KOREA",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CHINA",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "PRC",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TAIWAN",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "UK",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "US",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CANADA",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "CANADA_FRENCH",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "defaultLocale",
-                    "Ljava/util/Locale;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::STATIC,
-                ),
-                JavaFieldProto::new("language", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("country", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("variant", "Ljava/lang/String;", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.util.Locale::<clinit>()");
 
@@ -505,6 +332,7 @@ impl Locale {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init_with_language(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, language: ClassInstanceRef<String>) -> Result<()> {
         tracing::debug!("java.util.Locale::<init>({this:?}, {language:?})");
 
@@ -520,6 +348,7 @@ impl Locale {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_language_country(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -540,6 +369,7 @@ impl Locale {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -574,12 +404,14 @@ impl Locale {
         Ok(())
     }
 
+    #[method(static)]
     async fn get_default(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Self>> {
         tracing::debug!("java.util.Locale::getDefault()");
 
         jvm.get_static_field("java/util/Locale", "defaultLocale", "Ljava/util/Locale;").await
     }
 
+    #[method(static)]
     async fn set_default(jvm: &Jvm, _: &mut RuntimeContext, locale: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Locale::setDefault({locale:?})");
 
@@ -591,6 +423,7 @@ impl Locale {
             .await
     }
 
+    #[method(static)]
     async fn get_available_locales(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<Self>>> {
         tracing::debug!("java.util.Locale::getAvailableLocales()");
 
@@ -627,12 +460,14 @@ impl Locale {
         Ok(array)
     }
 
+    #[method(name = "getISOCountries", static)]
     async fn get_iso_countries(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<String>>> {
         tracing::debug!("java.util.Locale::getISOCountries()");
 
         Self::string_array(jvm, &["US", "GB", "CA", "FR", "DE", "IT", "JP", "KR", "CN", "TW"]).await
     }
 
+    #[method(name = "getISOLanguages", static)]
     async fn get_iso_languages(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Array<String>>> {
         tracing::debug!("java.util.Locale::getISOLanguages()");
 
@@ -648,24 +483,28 @@ impl Locale {
         Ok(array)
     }
 
+    #[method(public)]
     async fn get_language(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getLanguage({this:?})");
 
         jvm.get_field(&this, "java/util/Locale", "language", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn get_country(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getCountry({this:?})");
 
         jvm.get_field(&this, "java/util/Locale", "country", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn get_variant(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getVariant({this:?})");
 
         jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await
     }
 
+    #[method(name = "getISO3Language", public)]
     async fn get_iso3_language(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getISO3Language({this:?})");
 
@@ -686,6 +525,7 @@ impl Locale {
         Ok(JavaLangString::from_rust_string(jvm, iso3).await?.into())
     }
 
+    #[method(name = "getISO3Country", public)]
     async fn get_iso3_country(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::getISO3Country({this:?})");
 
@@ -709,11 +549,13 @@ impl Locale {
         Ok(JavaLangString::from_rust_string(jvm, iso3).await?.into())
     }
 
+    #[method(name = "getDisplayLanguage", public, final)]
     async fn get_display_language_default(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let default = Self::get_default(jvm, context).await?;
         Self::get_display_language(jvm, context, this, default).await
     }
 
+    #[method(public)]
     async fn get_display_language(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -732,11 +574,13 @@ impl Locale {
         Ok(JavaLangString::from_rust_string(jvm, Self::display_language(&language)).await?.into())
     }
 
+    #[method(name = "getDisplayCountry", public, final)]
     async fn get_display_country_default(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let default = Self::get_default(jvm, context).await?;
         Self::get_display_country(jvm, context, this, default).await
     }
 
+    #[method(public)]
     async fn get_display_country(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -755,11 +599,13 @@ impl Locale {
         Ok(JavaLangString::from_rust_string(jvm, Self::display_country(&country)).await?.into())
     }
 
+    #[method(name = "getDisplayVariant", public, final)]
     async fn get_display_variant_default(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let default = Self::get_default(jvm, context).await?;
         Self::get_display_variant(jvm, context, this, default).await
     }
 
+    #[method(public)]
     async fn get_display_variant(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -775,11 +621,13 @@ impl Locale {
         jvm.get_field(&this, "java/util/Locale", "variant", "Ljava/lang/String;").await
     }
 
+    #[method(name = "getDisplayName", public, final)]
     async fn get_display_name_default(jvm: &Jvm, context: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let default = Self::get_default(jvm, context).await?;
         Self::get_display_name(jvm, context, this, default).await
     }
 
+    #[method(public)]
     async fn get_display_name(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -856,6 +704,7 @@ impl Locale {
         }
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Locale::equals({this:?}, {other:?})");
 
@@ -882,6 +731,7 @@ impl Locale {
         Ok(this_language == other_language && this_country == other_country && this_variant == other_variant)
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Locale::hashCode({this:?})");
 
@@ -900,6 +750,7 @@ impl Locale {
         value.encode_utf16().fold(0i32, |acc, ch| acc.wrapping_mul(31).wrapping_add(ch as i32))
     }
 
+    #[method(public)]
     async fn clone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         tracing::debug!("java.util.Locale::clone({this:?})");
 
@@ -925,6 +776,7 @@ impl Locale {
             .into())
     }
 
+    #[method(public, final)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         tracing::debug!("java.util.Locale::toString({this:?})");
 

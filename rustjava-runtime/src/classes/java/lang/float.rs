@@ -1,126 +1,38 @@
-use alloc::{format, string::String as RustString, vec};
+use alloc::{format, string::String as RustString};
 
 use jvm::{
     ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangString},
 };
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
-    classes::java::lang::{Object, String},
+    RuntimeContext,
+    classes::java::lang::{Class, Object, String},
 };
 
 // public final class java.lang.Float
-pub struct Float;
+#[java_class(name = "java/lang/Float", extends = "java/lang/Number", implements("java/lang/Comparable"), public, final)]
+pub struct Float {
+    #[field(public, static, final)]
+    POSITIVE_INFINITY: f32,
+    #[field(public, static, final)]
+    NEGATIVE_INFINITY: f32,
+    #[field(public, static, final)]
+    NaN: f32,
+    #[field(public, static, final)]
+    MAX_VALUE: f32,
+    #[field(public, static, final)]
+    MIN_VALUE: f32,
+    #[field(public, static, final)]
+    TYPE: ClassInstanceRef<Class>,
+    #[field(private, final)]
+    value: f32,
+}
 
+#[java_methods]
 impl Float {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/lang/Float",
-            parent_class: Some("java/lang/Number"),
-            interfaces: vec!["java/lang/Comparable"],
-            methods: vec![
-                JavaMethodProto::new("<clinit>", "()V", Self::clinit, MethodAccessFlags::STATIC),
-                JavaMethodProto::new("<init>", "(F)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(D)V", Self::init_double, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "parseFloat",
-                    "(Ljava/lang/String;)F",
-                    Self::parse_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(F)Ljava/lang/Float;",
-                    Self::value_of,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "valueOf",
-                    "(Ljava/lang/String;)Ljava/lang/Float;",
-                    Self::value_of_string,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("byteValue", "()B", Self::byte_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("shortValue", "()S", Self::short_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("intValue", "()I", Self::int_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("longValue", "()J", Self::long_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("floatValue", "()F", Self::float_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("doubleValue", "()D", Self::double_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toString",
-                    "(F)Ljava/lang/String;",
-                    Self::to_string_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isNaN", "()Z", Self::is_nan, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isNaN",
-                    "(F)Z",
-                    Self::is_nan_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("isInfinite", "()Z", Self::is_infinite, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "isInfinite",
-                    "(F)Z",
-                    Self::is_infinite_static,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "floatToIntBits",
-                    "(F)I",
-                    Self::float_to_int_bits,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "intBitsToFloat",
-                    "(I)F",
-                    Self::int_bits_to_float,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Float;)I", Self::compare_to, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("compareTo", "(Ljava/lang/Object;)I", Self::compare_to_object, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new(
-                    "POSITIVE_INFINITY",
-                    "F",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "NEGATIVE_INFINITY",
-                    "F",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("NaN", "F", FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL),
-                JavaFieldProto::new(
-                    "MAX_VALUE",
-                    "F",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "MIN_VALUE",
-                    "F",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new(
-                    "TYPE",
-                    "Ljava/lang/Class;",
-                    FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("value", "F", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn clinit(jvm: &Jvm, _: &mut RuntimeContext) -> Result<()> {
         jvm.put_static_field("java/lang/Float", "POSITIVE_INFINITY", "F", f32::INFINITY).await?;
         jvm.put_static_field("java/lang/Float", "NEGATIVE_INFINITY", "F", f32::NEG_INFINITY)
@@ -137,16 +49,19 @@ impl Float {
         .await
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f32) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Float", "value", "F", value).await
     }
 
+    #[method(constructor, public)]
     async fn init_double(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: f64) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/lang/Number", "<init>", "()V", ()).await?;
         jvm.put_field(&mut this, "java/lang/Float", "value", "F", value as f32).await
     }
 
+    #[method(constructor, public)]
     async fn init_string(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, value: ClassInstanceRef<String>) -> Result<()> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -216,6 +131,7 @@ impl Float {
         }
     }
 
+    #[method(public, static)]
     async fn parse_float(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<f32> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -224,6 +140,7 @@ impl Float {
         Self::parse_value(jvm, &value).await
     }
 
+    #[method(name = "valueOf", public, static)]
     async fn value_of_string(jvm: &Jvm, _: &mut RuntimeContext, value: ClassInstanceRef<String>) -> Result<ClassInstanceRef<Self>> {
         if value.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "value").await);
@@ -233,34 +150,41 @@ impl Float {
         Ok(jvm.new_class("java/lang/Float", "(F)V", (value,)).await?.into())
     }
 
+    #[method(public, static)]
     async fn value_of(jvm: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<ClassInstanceRef<Self>> {
         Ok(jvm.new_class("java/lang/Float", "(F)V", (value,)).await?.into())
     }
 
+    #[method(public)]
     async fn byte_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i8> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok((value as i32) as i8)
     }
 
+    #[method(public)]
     async fn short_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i16> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok((value as i32) as i16)
     }
 
+    #[method(public)]
     async fn int_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as i32)
     }
 
+    #[method(public)]
     async fn long_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as i64)
     }
 
+    #[method(public)]
     async fn float_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f32> {
         jvm.get_field(&this, "java/lang/Float", "value", "F").await
     }
 
+    #[method(public)]
     async fn double_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<f64> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value as f64)
@@ -303,46 +227,56 @@ impl Float {
         result
     }
 
+    #[method(public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
+    #[method(name = "toString", public, static)]
     async fn to_string_static(jvm: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<ClassInstanceRef<String>> {
         Ok(JavaLangString::from_rust_string(jvm, &Self::format_value(value)).await?.into())
     }
 
+    #[method(name = "isNaN", public)]
     async fn is_nan(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value.is_nan())
     }
 
+    #[method(name = "isNaN", public, static)]
     async fn is_nan_static(_: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<bool> {
         Ok(value.is_nan())
     }
 
+    #[method(public)]
     async fn is_infinite(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(value.is_infinite())
     }
 
+    #[method(name = "isInfinite", public, static)]
     async fn is_infinite_static(_: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<bool> {
         Ok(value.is_infinite())
     }
 
+    #[method(public, static)]
     async fn float_to_int_bits(_: &Jvm, _: &mut RuntimeContext, value: f32) -> Result<i32> {
         Ok(if value.is_nan() { 0x7fc0_0000 } else { value.to_bits() as i32 })
     }
 
+    #[method(public, static)]
     async fn int_bits_to_float(_: &Jvm, _: &mut RuntimeContext, bits: i32) -> Result<f32> {
         Ok(f32::from_bits(bits as u32))
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let value: f32 = jvm.invoke_virtual(&this, "java/lang/Float", "floatValue", "()F", ()).await?;
         Ok(if value.is_nan() { 0x7fc0_0000 } else { value.to_bits() as i32 })
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         if other.is_null() || !jvm.is_instance(&**other, "java/lang/Float") {
             return Ok(false);
@@ -354,6 +288,7 @@ impl Float {
         Ok(left_bits == right_bits)
     }
 
+    #[method(public)]
     async fn compare_to(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Self>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);
@@ -371,6 +306,7 @@ impl Float {
         Ok(left_bits.cmp(&right_bits) as i32)
     }
 
+    #[method(name = "compareTo", public)]
     async fn compare_to_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<i32> {
         if other.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "other").await);

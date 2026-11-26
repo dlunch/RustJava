@@ -1,68 +1,27 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::List},
+};
 
 // class java.util.AbstractList$SubList
-pub struct AbstractListSubList;
+#[java_class(name = "java/util/AbstractList$SubList", extends = "java/util/AbstractList")]
+pub struct AbstractListSubList {
+    #[field(private)]
+    root: ClassInstanceRef<List>,
+    #[field(private, final)]
+    parent: ClassInstanceRef<Self>,
+    #[field(private, final)]
+    offset: i32,
+    #[field(protected)]
+    size: i32,
+}
 
+#[java_methods]
 impl AbstractListSubList {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/AbstractList$SubList",
-            parent_class: Some("java/util/AbstractList"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/List;Ljava/util/AbstractList$SubList;II)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addAll", "(Ljava/util/Collection;)Z", Self::add_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addAll", "(ILjava/util/Collection;)Z", Self::add_all_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "()Ljava/util/ListIterator;",
-                    Self::list_iterator,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "(I)Ljava/util/ListIterator;",
-                    Self::list_iterator_at,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("subList", "(II)Ljava/util/List;", Self::sub_list, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("root", "Ljava/util/List;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new(
-                    "parent",
-                    "Ljava/util/AbstractList$SubList;",
-                    FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL,
-                ),
-                JavaFieldProto::new("offset", "I", FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL),
-                JavaFieldProto::new("size", "I", FieldAccessFlags::PROTECTED),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/List;Ljava/util/AbstractList$SubList;II)V")]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -87,10 +46,12 @@ impl AbstractListSubList {
         jvm.put_field(&mut this, "java/util/AbstractList$SubList", "size", "I", size).await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index >= size {
@@ -102,6 +63,7 @@ impl AbstractListSubList {
             .await
     }
 
+    #[method(public)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -125,6 +87,7 @@ impl AbstractListSubList {
         .await
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         let _: () = jvm
@@ -133,6 +96,7 @@ impl AbstractListSubList {
         Ok(true)
     }
 
+    #[method(name = "add", public)]
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, element: ClassInstanceRef<Object>) -> Result<()> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index > size {
@@ -152,6 +116,7 @@ impl AbstractListSubList {
         Self::update_sizes(jvm, this, 1).await
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         jvm.invoke_virtual(
@@ -164,6 +129,7 @@ impl AbstractListSubList {
         .await
     }
 
+    #[method(name = "addAll", descriptor = "(ILjava/util/Collection;)Z", public)]
     async fn add_all_at(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -204,6 +170,7 @@ impl AbstractListSubList {
         Ok(modified)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if index < 0 || index >= size {
@@ -224,6 +191,7 @@ impl AbstractListSubList {
         Ok(removed)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let index: i32 = jvm
             .invoke_virtual(&this, "java/util/AbstractList$SubList", "indexOf", "(Ljava/lang/Object;)I", (element,))
@@ -237,6 +205,7 @@ impl AbstractListSubList {
         Ok(true)
     }
 
+    #[method(public)]
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         for index in 0..size {
@@ -255,6 +224,7 @@ impl AbstractListSubList {
         Ok(-1)
     }
 
+    #[method(public)]
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         for index in (0..size).rev() {
@@ -273,6 +243,7 @@ impl AbstractListSubList {
         Ok(-1)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         while jvm.get_field::<i32>(&this, "java/util/AbstractList$SubList", "size", "I").await? > 0 {
             let _: ClassInstanceRef<Object> = jvm
@@ -282,16 +253,19 @@ impl AbstractListSubList {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm.new_class("java/util/AbstractList$Itr", "(Ljava/util/List;I)V", (this, 0)).await?;
         Ok(iterator.into())
     }
 
+    #[method(descriptor = "()Ljava/util/ListIterator;", public)]
     async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm.new_class("java/util/AbstractList$ListItr", "(Ljava/util/List;I)V", (this, 0)).await?;
         Ok(iterator.into())
     }
 
+    #[method(name = "listIterator", descriptor = "(I)Ljava/util/ListIterator;", public)]
     async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm
             .new_class("java/util/AbstractList$ListItr", "(Ljava/util/List;I)V", (this, index))
@@ -299,6 +273,7 @@ impl AbstractListSubList {
         Ok(iterator.into())
     }
 
+    #[method(descriptor = "(II)Ljava/util/List;", public)]
     async fn sub_list(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, from: i32, to: i32) -> Result<ClassInstanceRef<Object>> {
         let size: i32 = jvm.get_field(&this, "java/util/AbstractList$SubList", "size", "I").await?;
         if from < 0 || to > size {

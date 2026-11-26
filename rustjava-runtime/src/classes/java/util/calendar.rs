@@ -1,11 +1,10 @@
 use alloc::{boxed::Box, vec};
 
-use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm::{Array, ClassInstance, ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String},
         util::{Date, TimeZone},
@@ -13,65 +12,27 @@ use crate::{
 };
 
 // abstract class java.util.Calendar
-pub struct Calendar;
+#[java_class(
+    name = "java/util/Calendar",
+    extends = "java/lang/Object",
+    implements("java/io/Serializable", "java/lang/Cloneable"),
+    public,
+    abstract
+)]
+pub struct Calendar {
+    #[field(protected)]
+    time: i64,
+    #[field(protected)]
+    fields: ClassInstanceRef<Array<i32>>,
+    #[field(private)]
+    timeZone: ClassInstanceRef<TimeZone>,
+    #[field(private)]
+    lenient: bool,
+}
 
+#[java_methods]
 impl Calendar {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Calendar",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Serializable", "java/lang/Cloneable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new(
-                    "getInstance",
-                    "()Ljava/util/Calendar;",
-                    Self::get_instance,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "getInstance",
-                    "(Ljava/util/TimeZone;)Ljava/util/Calendar;",
-                    Self::get_instance_with_time_zone,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
-                ),
-                JavaMethodProto::new(
-                    "setTime",
-                    "(Ljava/util/Date;)V",
-                    Self::set_time,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new(
-                    "getTime",
-                    "()Ljava/util/Date;",
-                    Self::get_time,
-                    MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL,
-                ),
-                JavaMethodProto::new("setTimeInMillis", "(J)V", Self::set_time_in_millis, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getTimeInMillis", "()J", Self::get_time_in_millis, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getTimeZone", "()Ljava/util/TimeZone;", Self::get_time_zone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setTimeZone", "(Ljava/util/TimeZone;)V", Self::set_time_zone, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isLenient", "()Z", Self::is_lenient, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setLenient", "(Z)V", Self::set_lenient, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("before", "(Ljava/lang/Object;)Z", Self::before, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("after", "(Ljava/lang/Object;)Z", Self::after, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(II)V", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)I", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("computeTime", "()V", MethodAccessFlags::PROTECTED | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new_abstract("computeFields", "()V", MethodAccessFlags::PROTECTED | MethodAccessFlags::ABSTRACT),
-            ],
-            fields: vec![
-                JavaFieldProto::new("time", "J", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("fields", "[I", FieldAccessFlags::PROTECTED),
-                JavaFieldProto::new("timeZone", "Ljava/util/TimeZone;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("lenient", "Z", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(public, static)]
     async fn get_instance(jvm: &Jvm, _: &mut RuntimeContext) -> Result<ClassInstanceRef<Calendar>> {
         tracing::debug!("java.util.Calendar::getInstance()");
 
@@ -80,6 +41,7 @@ impl Calendar {
         Ok(instance.into())
     }
 
+    #[method(name = "getInstance", public, static)]
     async fn get_instance_with_time_zone(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -98,6 +60,7 @@ impl Calendar {
         Ok(instance.into())
     }
 
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.Calendar::<init>({this:?})");
 
@@ -116,6 +79,7 @@ impl Calendar {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn set_time(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, date: ClassInstanceRef<Date>) -> Result<()> {
         tracing::debug!("java.util.Calendar::setTime({this:?}, {date:?})");
 
@@ -131,6 +95,7 @@ impl Calendar {
         Ok(())
     }
 
+    #[method(public, final)]
     async fn get_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Date>> {
         tracing::debug!("java.util.Calendar::getTime({this:?})");
 
@@ -140,6 +105,7 @@ impl Calendar {
         Ok(date.into())
     }
 
+    #[method(public)]
     async fn set_time_in_millis(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time: i64) -> Result<()> {
         tracing::debug!("java.util.Calendar::setTimeInMillis({this:?}, {time:?})");
 
@@ -147,16 +113,19 @@ impl Calendar {
         jvm.invoke_virtual(&this, "java/util/Calendar", "computeFields", "()V", ()).await
     }
 
+    #[method(public)]
     async fn get_time_in_millis(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i64> {
         tracing::debug!("java.util.Calendar::getTimeInMillis({this:?})");
         jvm.get_field(&this, "java/util/Calendar", "time", "J").await
     }
 
+    #[method(public)]
     async fn get_time_zone(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<TimeZone>> {
         tracing::debug!("java.util.Calendar::getTimeZone({this:?})");
         jvm.get_field(&this, "java/util/Calendar", "timeZone", "Ljava/util/TimeZone;").await
     }
 
+    #[method(public)]
     async fn set_time_zone(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, time_zone: ClassInstanceRef<TimeZone>) -> Result<()> {
         tracing::debug!("java.util.Calendar::setTimeZone({this:?}, {time_zone:?})");
         let has_time_zone = !time_zone.is_null();
@@ -168,16 +137,19 @@ impl Calendar {
         Ok(())
     }
 
+    #[method(public)]
     async fn is_lenient(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::isLenient({this:?})");
         jvm.get_field(&this, "java/util/Calendar", "lenient", "Z").await
     }
 
+    #[method(public)]
     async fn set_lenient(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, lenient: bool) -> Result<()> {
         tracing::debug!("java.util.Calendar::setLenient({this:?}, {lenient:?})");
         jvm.put_field(&mut this, "java/util/Calendar", "lenient", "Z", lenient).await
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::equals({this:?}, {other:?})");
 
@@ -224,6 +196,7 @@ impl Calendar {
             .await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.util.Calendar::hashCode({this:?})");
 
@@ -241,6 +214,7 @@ impl Calendar {
         Ok((time ^ ((time as u64 >> 32) as i64)) as i32 ^ raw_offset ^ id_hash ^ if lenient { 1 } else { 0 })
     }
 
+    #[method(public)]
     async fn before(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::before({this:?}, {other:?})");
 
@@ -254,6 +228,7 @@ impl Calendar {
         Ok(time < other_time)
     }
 
+    #[method(public)]
     async fn after(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         tracing::debug!("java.util.Calendar::after({this:?}, {other:?})");
 
@@ -267,6 +242,7 @@ impl Calendar {
         Ok(time > other_time)
     }
 
+    #[method(public)]
     async fn set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32, value: i32) -> Result<()> {
         tracing::debug!("java.util.Calendar::set({this:?}, {field:?}, {value:?})");
 
@@ -283,6 +259,7 @@ impl Calendar {
         Ok(())
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, field: i32) -> Result<i32> {
         tracing::debug!("java.util.Calendar::get({this:?}, {field:?})");
 
@@ -300,4 +277,10 @@ impl Calendar {
 
         Ok(value)
     }
+
+    #[method(protected)]
+    async fn compute_time(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
+
+    #[method(protected)]
+    async fn compute_fields(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
 }

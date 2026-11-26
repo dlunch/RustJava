@@ -1,76 +1,31 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{ClassInstance, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Object, String},
-        util::{Collection, Set, jar::AttributesName},
+        util::{Collection, Map, Set, jar::AttributesName},
     },
 };
 
 // class java.util.jar.Attributes
-pub struct Attributes;
+#[java_class(
+    name = "java/util/jar/Attributes",
+    extends = "java/lang/Object",
+    implements("java/lang/Cloneable", "java/util/Map"),
+    public
+)]
+pub struct Attributes {
+    #[field(protected)]
+    map: ClassInstanceRef<Map>,
+}
 
+#[java_methods]
 impl Attributes {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/jar/Attributes",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/lang/Cloneable", "java/util/Map"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "putValue",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-                    Self::put_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getValue",
-                    "(Ljava/lang/String;)Ljava/lang/String;",
-                    Self::get_value,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "getValue",
-                    "(Ljava/util/jar/Attributes$Name;)Ljava/lang/String;",
-                    Self::get_value_by_name,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "put",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::put,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "remove",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::remove,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("putAll", "(Ljava/util/Map;)V", Self::put_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("equals", "(Ljava/lang/Object;)Z", Self::equals, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("hashCode", "()I", Self::hash_code, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("map", "Ljava/util/Map;", FieldAccessFlags::PROTECTED)],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.util.jar.Attributes::<init>({this:?})");
 
@@ -83,6 +38,7 @@ impl Attributes {
         Ok(())
     }
 
+    #[method(public)]
     async fn put_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -106,6 +62,7 @@ impl Attributes {
         Ok(old)
     }
 
+    #[method(public)]
     async fn get_value(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -125,6 +82,7 @@ impl Attributes {
         .await
     }
 
+    #[method(name = "getValue", public)]
     async fn get_value_by_name(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -146,6 +104,7 @@ impl Attributes {
         Ok(value)
     }
 
+    #[method(public)]
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Set>> {
         tracing::debug!("java.util.jar.Attributes::entrySet({this:?})");
 
@@ -153,34 +112,40 @@ impl Attributes {
         jvm.invoke_virtual(&map, "java/util/Map", "entrySet", "()Ljava/util/Set;", ()).await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "size", "()I", ()).await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "isEmpty", "()Z", ()).await
     }
 
+    #[method(public)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "containsKey", "(Ljava/lang/Object;)Z", (key,))
             .await
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "containsValue", "(Ljava/lang/Object;)Z", (value,))
             .await
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", (key,))
             .await
     }
 
+    #[method(public)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -207,6 +172,7 @@ impl Attributes {
         .await
     }
 
+    #[method(public)]
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -218,6 +184,7 @@ impl Attributes {
             .await
     }
 
+    #[method(descriptor = "(Ljava/util/Map;)V", public)]
     async fn put_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, source: ClassInstanceRef<Object>) -> Result<()> {
         if source.is_null() || !jvm.is_instance(&**source, "java/util/jar/Attributes") {
             return Err(jvm.exception("java/lang/ClassCastException", "Source must be Attributes").await);
@@ -249,27 +216,32 @@ impl Attributes {
         Ok(())
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "clear", "()V", ()).await
     }
 
+    #[method(public)]
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Set>> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "keySet", "()Ljava/util/Set;", ()).await
     }
 
+    #[method(public)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Collection>> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/util/Map", "values", "()Ljava/util/Collection;", ()).await
     }
 
+    #[method(public)]
     async fn equals(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, other: ClassInstanceRef<Object>) -> Result<bool> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/lang/Object", "equals", "(Ljava/lang/Object;)Z", (other,))
             .await
     }
 
+    #[method(public)]
     async fn hash_code(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let map: Box<dyn ClassInstance> = jvm.get_field(&this, "java/util/jar/Attributes", "map", "Ljava/util/Map;").await?;
         jvm.invoke_virtual(&map, "java/lang/Object", "hashCode", "()I", ()).await

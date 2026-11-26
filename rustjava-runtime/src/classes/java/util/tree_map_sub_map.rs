@@ -1,96 +1,29 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 use super::{TreeMap, TreeMapEntry};
 
 // class java.util.TreeMap$SubMap
-pub struct TreeMapSubMap;
+#[java_class(name = "java/util/TreeMap$SubMap", extends = "java/util/AbstractMap", implements("java/util/SortedMap"))]
+pub struct TreeMapSubMap {
+    #[field(private)]
+    m: ClassInstanceRef<TreeMap>,
+    #[field(private)]
+    fromStart: bool,
+    #[field(private)]
+    fromKey: ClassInstanceRef<Object>,
+    #[field(private)]
+    toEnd: bool,
+    #[field(private)]
+    toKey: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl TreeMapSubMap {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/TreeMap$SubMap",
-            parent_class: Some("java/util/AbstractMap"),
-            interfaces: vec!["java/util/SortedMap"],
-            methods: vec![
-                JavaMethodProto::new(
-                    "<init>",
-                    "(Ljava/util/TreeMap;ZLjava/lang/Object;ZLjava/lang/Object;)V",
-                    Self::init,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsKey", "(Ljava/lang/Object;)Z", Self::contains_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("containsValue", "(Ljava/lang/Object;)Z", Self::contains_value, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(Ljava/lang/Object;)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "put",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::put,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "remove",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;",
-                    Self::remove,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("comparator", "()Ljava/util/Comparator;", Self::comparator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("firstKey", "()Ljava/lang/Object;", Self::first_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastKey", "()Ljava/lang/Object;", Self::last_key, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "subMap",
-                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::sub_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "headMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::head_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "tailMap",
-                    "(Ljava/lang/Object;)Ljava/util/SortedMap;",
-                    Self::tail_map,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("keySet", "()Ljava/util/Set;", Self::key_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("values", "()Ljava/util/Collection;", Self::values, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("entrySet", "()Ljava/util/Set;", Self::entry_set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("keyIterator", "()Ljava/util/Iterator;", Self::key_iterator, MethodAccessFlags::empty()),
-                JavaMethodProto::new(
-                    "valueIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::value_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-                JavaMethodProto::new(
-                    "entryIterator",
-                    "()Ljava/util/Iterator;",
-                    Self::entry_iterator,
-                    MethodAccessFlags::empty(),
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("m", "Ljava/util/TreeMap;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("fromStart", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("fromKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("toEnd", "Z", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("toKey", "Ljava/lang/Object;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
     #[allow(clippy::too_many_arguments)]
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -124,6 +57,7 @@ impl TreeMapSubMap {
             .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&this, "java/util/TreeMap$SubMap", "entryIterator", "()Ljava/util/Iterator;", ())
@@ -141,6 +75,7 @@ impl TreeMapSubMap {
         Ok(size)
     }
 
+    #[method(public)]
     async fn contains_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<bool> {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Ok(false);
@@ -149,6 +84,7 @@ impl TreeMapSubMap {
         Ok(!TreeMap::find_entry(jvm, &map, &key).await?.is_null())
     }
 
+    #[method(public)]
     async fn contains_value(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: ClassInstanceRef<Object>) -> Result<bool> {
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&this, "java/util/TreeMap$SubMap", "valueIterator", "()Ljava/util/Iterator;", ())
@@ -173,6 +109,7 @@ impl TreeMapSubMap {
         Ok(false)
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, key: ClassInstanceRef<Object>) -> Result<ClassInstanceRef<Object>> {
         if !Self::in_range(jvm, &this, &key, false).await? {
             return Ok(None.into());
@@ -185,6 +122,7 @@ impl TreeMapSubMap {
         jvm.get_field(&entry, "java/util/TreeMap$Entry", "value", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn put(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -206,6 +144,7 @@ impl TreeMapSubMap {
         .await
     }
 
+    #[method(public)]
     async fn remove(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -220,6 +159,7 @@ impl TreeMapSubMap {
             .await
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let iterator: ClassInstanceRef<Object> = jvm
             .invoke_virtual(&this, "java/util/TreeMap$SubMap", "entryIterator", "()Ljava/util/Iterator;", ())
@@ -238,12 +178,14 @@ impl TreeMapSubMap {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Comparator;", public)]
     async fn comparator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         jvm.invoke_virtual(&map, "java/util/TreeMap", "comparator", "()Ljava/util/Comparator;", ())
             .await
     }
 
+    #[method(public)]
     async fn first_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry = Self::first_entry(jvm, &this).await?;
         if entry.is_null() {
@@ -252,6 +194,7 @@ impl TreeMapSubMap {
         jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn last_key(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let entry = Self::last_entry(jvm, &this).await?;
         if entry.is_null() {
@@ -260,6 +203,7 @@ impl TreeMapSubMap {
         jvm.get_field(&entry, "java/util/TreeMap$Entry", "key", "Ljava/lang/Object;").await
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn sub_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -287,6 +231,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn head_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -309,6 +254,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "(Ljava/lang/Object;)Ljava/util/SortedMap;", public)]
     async fn tail_map(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -331,6 +277,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn key_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/TreeMap$KeySet", "(Ljava/util/SortedMap;)V", (this,))
@@ -338,6 +285,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Collection;", public)]
     async fn values(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/TreeMap$Values", "(Ljava/util/SortedMap;)V", (this,))
@@ -345,6 +293,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Set;", public)]
     async fn entry_set(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         Ok(jvm
             .new_class("java/util/TreeMap$EntrySet", "(Ljava/util/SortedMap;)V", (this,))
@@ -352,6 +301,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn key_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;
@@ -367,6 +317,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn value_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;
@@ -382,6 +333,7 @@ impl TreeMapSubMap {
             .into())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;")]
     async fn entry_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let map: ClassInstanceRef<TreeMap> = jvm.get_field(&this, "java/util/TreeMap$SubMap", "m", "Ljava/util/TreeMap;").await?;
         let first = Self::first_entry(jvm, &this).await?;

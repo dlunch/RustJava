@@ -1,47 +1,25 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{
+    RuntimeContext,
+    classes::java::{lang::Object, util::Collection},
+};
 
 // class java.util.Collections$UnmodifiableCollection
-pub struct CollectionsUnmodifiableCollection;
+#[java_class(
+    name = "java/util/Collections$UnmodifiableCollection",
+    extends = "java/lang/Object",
+    implements("java/util/Collection", "java/io/Serializable")
+)]
+pub struct CollectionsUnmodifiableCollection {
+    #[field(final)]
+    c: ClassInstanceRef<Collection>,
+}
 
+#[java_methods]
 impl CollectionsUnmodifiableCollection {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/Collections$UnmodifiableCollection",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/util/Collection", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init, MethodAccessFlags::empty()),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("isEmpty", "()Z", Self::is_empty, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("contains", "(Ljava/lang/Object;)Z", Self::contains, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toArray", "()[Ljava/lang/Object;", Self::to_array, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "toArray",
-                    "([Ljava/lang/Object;)[Ljava/lang/Object;",
-                    Self::to_typed_array,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("containsAll", "(Ljava/util/Collection;)Z", Self::contains_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toString", "()Ljava/lang/String;", Self::to_string, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addAll", "(Ljava/util/Collection;)Z", Self::add_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("removeAll", "(Ljava/util/Collection;)Z", Self::remove_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("retainAll", "(Ljava/util/Collection;)Z", Self::retain_all, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![JavaFieldProto::new("c", "Ljava/util/Collection;", FieldAccessFlags::FINAL)],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor, descriptor = "(Ljava/util/Collection;)V")]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<()> {
         if collection.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "collection").await);
@@ -57,6 +35,7 @@ impl CollectionsUnmodifiableCollection {
         .await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -65,6 +44,7 @@ impl CollectionsUnmodifiableCollection {
             .await
     }
 
+    #[method(public)]
     async fn is_empty(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -73,6 +53,7 @@ impl CollectionsUnmodifiableCollection {
             .await
     }
 
+    #[method(public)]
     async fn contains(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -87,6 +68,7 @@ impl CollectionsUnmodifiableCollection {
         .await
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -106,6 +88,7 @@ impl CollectionsUnmodifiableCollection {
             .into())
     }
 
+    #[method(public)]
     async fn to_array(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Array<Object>>> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -114,6 +97,7 @@ impl CollectionsUnmodifiableCollection {
             .await
     }
 
+    #[method(name = "toArray", public)]
     async fn to_typed_array(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -133,6 +117,7 @@ impl CollectionsUnmodifiableCollection {
         .await
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn contains_all(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, collection: ClassInstanceRef<Object>) -> Result<bool> {
         let backing: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -147,6 +132,7 @@ impl CollectionsUnmodifiableCollection {
         .await
     }
 
+    #[method(descriptor = "()Ljava/lang/String;", public)]
     async fn to_string(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let collection: ClassInstanceRef<Object> = jvm
             .get_field(&this, "java/util/Collections$UnmodifiableCollection", "c", "Ljava/util/Collection;")
@@ -155,26 +141,32 @@ impl CollectionsUnmodifiableCollection {
             .await
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }
 
+    #[method(public)]
     async fn remove(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn add_all(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn remove_all(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }
 
+    #[method(descriptor = "(Ljava/util/Collection;)Z", public)]
     async fn retain_all(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>, _: ClassInstanceRef<Object>) -> Result<bool> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, _: ClassInstanceRef<Self>) -> Result<()> {
         Err(jvm.exception("java/lang/UnsupportedOperationException", "unmodifiable collection").await)
     }

@@ -1,42 +1,25 @@
-use alloc::{format, vec};
+use alloc::format;
 
 use jvm::{ClassInstanceRef, JavaChar, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::lang::{Class, String},
 };
 
 // public class java.util.IllegalFormatConversionException
-pub struct IllegalFormatConversionException;
+#[java_class(name = "java/util/IllegalFormatConversionException", extends = "java/util/IllegalFormatException", public)]
+pub struct IllegalFormatConversionException {
+    #[field(private)]
+    conversion: JavaChar,
+    #[field(private)]
+    argumentClass: ClassInstanceRef<Class>,
+}
 
+#[java_methods]
 impl IllegalFormatConversionException {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/IllegalFormatConversionException",
-            parent_class: Some("java/util/IllegalFormatException"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "(CLjava/lang/Class;)V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getConversion", "()C", Self::get_conversion, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "getArgumentClass",
-                    "()Ljava/lang/Class;",
-                    Self::get_argument_class,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("getMessage", "()Ljava/lang/String;", Self::get_message, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("conversion", "C", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("argumentClass", "Ljava/lang/Class;", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -60,16 +43,19 @@ impl IllegalFormatConversionException {
         .await
     }
 
+    #[method(public)]
     async fn get_conversion(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<JavaChar> {
         jvm.get_field(&this, "java/util/IllegalFormatConversionException", "conversion", "C")
             .await
     }
 
+    #[method(public)]
     async fn get_argument_class(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Class>> {
         jvm.get_field(&this, "java/util/IllegalFormatConversionException", "argumentClass", "Ljava/lang/Class;")
             .await
     }
 
+    #[method(public)]
     async fn get_message(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         let conversion: JavaChar = jvm
             .get_field(&this, "java/util/IllegalFormatConversionException", "conversion", "C")

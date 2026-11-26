@@ -1,33 +1,23 @@
 use alloc::vec;
 
 use jvm::{Array, ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // abstract class java.io.OutputStream
+#[java_class(
+    name = "java/io/OutputStream",
+    extends = "java/lang/Object",
+    implements("java/io/Closeable", "java/io/Flushable"),
+    public,
+    abstract
+)]
 pub struct OutputStream;
 
+#[java_methods]
 impl OutputStream {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/OutputStream",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec!["java/io/Closeable", "java/io/Flushable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([B)V", Self::write_bytes, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("write", "([BII)V", Self::write_bytes_offset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("write", "(I)V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("flush", "()V", Self::flush, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("close", "()V", Self::close, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::<init>({this:?})");
 
@@ -36,6 +26,7 @@ impl OutputStream {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_bytes(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buffer: ClassInstanceRef<Array<i8>>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::write({this:?}, {buffer:?})");
 
@@ -51,6 +42,7 @@ impl OutputStream {
         Ok(())
     }
 
+    #[method(name = "write", public)]
     async fn write_bytes_offset(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -73,12 +65,17 @@ impl OutputStream {
         Ok(())
     }
 
+    #[method(public)]
+    async fn write(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, value: i32) -> Result<()>;
+
+    #[method(public)]
     async fn flush(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::flush({this:?})");
 
         Ok(())
     }
 
+    #[method(public)]
     async fn close(_jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.OutputStream::close({this:?})");
 

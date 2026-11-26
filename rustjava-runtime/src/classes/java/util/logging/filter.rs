@@ -1,26 +1,14 @@
-use alloc::vec;
+use jvm::{ClassInstanceRef, Jvm, Result};
+use jvm_class_proto::{java_class, java_methods};
 
-use jvm_class_proto::JavaMethodProto;
-use jvm_types::{ClassAccessFlags, MethodAccessFlags};
-
-use crate::RuntimeClassProto;
+use crate::{RuntimeContext, classes::java::util::logging::LogRecord};
 
 // public interface java.util.logging.Filter
+#[java_class(name = "java/util/logging/Filter", public, interface, abstract)]
 pub struct Filter;
 
+#[java_methods]
 impl Filter {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/logging/Filter",
-            parent_class: None,
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new_abstract(
-                "isLoggable",
-                "(Ljava/util/logging/LogRecord;)Z",
-                MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT,
-            )],
-            fields: vec![],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
-        }
-    }
+    #[method(public)]
+    async fn is_loggable(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, record: ClassInstanceRef<LogRecord>) -> Result<bool>;
 }

@@ -1,34 +1,26 @@
-use alloc::{boxed::Box, vec};
+use alloc::boxed::Box;
 
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext};
+use crate::RuntimeContext;
 
 // class java.io.FileDescriptor
-pub struct FileDescriptor;
+#[java_class(name = "java/io/FileDescriptor", extends = "java/lang/Object", public, final)]
+pub struct FileDescriptor {
+    #[field(private)]
+    fd: i32,
+    #[field(static)]
+    err: ClassInstanceRef<Self>,
+    #[field(static)]
+    r#in: ClassInstanceRef<Self>,
+    #[field(static)]
+    out: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl FileDescriptor {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/FileDescriptor",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<clinit>", "()V", Self::cl_init, MethodAccessFlags::STATIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("fd", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("err", "Ljava/io/FileDescriptor;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("in", "Ljava/io/FileDescriptor;", FieldAccessFlags::STATIC),
-                JavaFieldProto::new("out", "Ljava/io/FileDescriptor;", FieldAccessFlags::STATIC),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL,
-        }
-    }
-
+    #[method(static_initializer)]
     async fn cl_init(jvm: &Jvm, runtime: &mut RuntimeContext) -> Result<()> {
         tracing::debug!("java.io.FileDescriptor::<clinit>()");
 
@@ -45,6 +37,7 @@ impl FileDescriptor {
         Ok(())
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.FileDescriptor::<init>({this:?})");
 

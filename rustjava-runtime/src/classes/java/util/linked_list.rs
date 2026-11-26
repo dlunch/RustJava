@@ -1,64 +1,30 @@
-use alloc::{format, vec};
+use alloc::format;
 
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{lang::Object, util::LinkedListEntry},
 };
 
 // class java.util.LinkedList
-pub struct LinkedList;
+#[java_class(
+    name = "java/util/LinkedList",
+    extends = "java/util/AbstractList",
+    implements("java/util/List", "java/lang/Cloneable", "java/io/Serializable"),
+    public
+)]
+pub struct LinkedList {
+    #[field(private)]
+    header: ClassInstanceRef<LinkedListEntry>,
+    #[field(private)]
+    size: i32,
+}
 
+#[java_methods]
 impl LinkedList {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedList",
-            parent_class: Some("java/util/AbstractList"),
-            interfaces: vec!["java/util/List", "java/lang/Cloneable", "java/io/Serializable"],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/util/Collection;)V", Self::init_collection, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addFirst", "(Ljava/lang/Object;)V", Self::add_first, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("addLast", "(Ljava/lang/Object;)V", Self::add_last, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getFirst", "()Ljava/lang/Object;", Self::get_first, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getLast", "()Ljava/lang/Object;", Self::get_last, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("removeFirst", "()Ljava/lang/Object;", Self::remove_first, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("removeLast", "()Ljava/lang/Object;", Self::remove_last, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("size", "()I", Self::size, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("get", "(I)Ljava/lang/Object;", Self::get, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("set", "(ILjava/lang/Object;)Ljava/lang/Object;", Self::set, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(ILjava/lang/Object;)V", Self::add_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("add", "(Ljava/lang/Object;)Z", Self::add, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(I)Ljava/lang/Object;", Self::remove_at, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("remove", "(Ljava/lang/Object;)Z", Self::remove_object, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("indexOf", "(Ljava/lang/Object;)I", Self::index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("lastIndexOf", "(Ljava/lang/Object;)I", Self::last_index_of, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("clear", "()V", Self::clear, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("iterator", "()Ljava/util/Iterator;", Self::iterator, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "()Ljava/util/ListIterator;",
-                    Self::list_iterator,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "listIterator",
-                    "(I)Ljava/util/ListIterator;",
-                    Self::list_iterator_at,
-                    MethodAccessFlags::PUBLIC,
-                ),
-            ],
-            fields: vec![
-                JavaFieldProto::new("header", "Ljava/util/LinkedList$Entry;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("size", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>) -> Result<()> {
         let _: () = jvm.invoke_special(&this, "java/util/AbstractList", "<init>", "()V", ()).await?;
         let null_object: ClassInstanceRef<Object> = None.into();
@@ -94,6 +60,7 @@ impl LinkedList {
         jvm.put_field(&mut this, "java/util/LinkedList", "size", "I", 0).await
     }
 
+    #[method(constructor, descriptor = "(Ljava/util/Collection;)V", public)]
     async fn init_collection(
         jvm: &Jvm,
         context: &mut RuntimeContext,
@@ -110,6 +77,7 @@ impl LinkedList {
         Ok(())
     }
 
+    #[method(public)]
     async fn add_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let header: ClassInstanceRef<LinkedListEntry> = jvm
             .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
@@ -120,6 +88,7 @@ impl LinkedList {
         Self::add_before(jvm, &this, element, first).await
     }
 
+    #[method(public)]
     async fn add_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<()> {
         let header = jvm
             .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
@@ -127,6 +96,7 @@ impl LinkedList {
         Self::add_before(jvm, &this, element, header).await
     }
 
+    #[method(public)]
     async fn get_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
@@ -140,6 +110,7 @@ impl LinkedList {
         jvm.get_field(&first, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn get_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
@@ -153,6 +124,7 @@ impl LinkedList {
         jvm.get_field(&last, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn remove_first(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
@@ -166,6 +138,7 @@ impl LinkedList {
         Self::remove_entry(jvm, &this, first).await
     }
 
+    #[method(public)]
     async fn remove_last(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         if jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? == 0 {
             return Err(jvm.exception("java/util/NoSuchElementException", "LinkedList is empty").await);
@@ -179,15 +152,18 @@ impl LinkedList {
         Self::remove_entry(jvm, &this, last).await
     }
 
+    #[method(public)]
     async fn size(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/util/LinkedList", "size", "I").await
     }
 
+    #[method(public)]
     async fn get(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let entry = Self::entry_at(jvm, &this, index).await?;
         jvm.get_field(&entry, "java/util/LinkedList$Entry", "element", "Ljava/lang/Object;").await
     }
 
+    #[method(public)]
     async fn set(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -204,6 +180,7 @@ impl LinkedList {
         Ok(old)
     }
 
+    #[method(name = "add", public)]
     async fn add_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32, element: ClassInstanceRef<Object>) -> Result<()> {
         let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         if index < 0 || index > size {
@@ -220,6 +197,7 @@ impl LinkedList {
         Self::add_before(jvm, &this, element, successor).await
     }
 
+    #[method(public)]
     async fn add(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let header = jvm
             .get_field(&this, "java/util/LinkedList", "header", "Ljava/util/LinkedList$Entry;")
@@ -228,11 +206,13 @@ impl LinkedList {
         Ok(true)
     }
 
+    #[method(name = "remove", public)]
     async fn remove_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let entry = Self::entry_at(jvm, &this, index).await?;
         Self::remove_entry(jvm, &this, entry).await
     }
 
+    #[method(name = "remove", public)]
     async fn remove_object(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<bool> {
         let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in 0..size {
@@ -254,6 +234,7 @@ impl LinkedList {
         Ok(false)
     }
 
+    #[method(public)]
     async fn index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in 0..size {
@@ -273,6 +254,7 @@ impl LinkedList {
         Ok(-1)
     }
 
+    #[method(public)]
     async fn last_index_of(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, element: ClassInstanceRef<Object>) -> Result<i32> {
         let size: i32 = jvm.get_field(&this, "java/util/LinkedList", "size", "I").await?;
         for index in (0..size).rev() {
@@ -292,6 +274,7 @@ impl LinkedList {
         Ok(-1)
     }
 
+    #[method(public)]
     async fn clear(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         while jvm.get_field::<i32>(&this, "java/util/LinkedList", "size", "I").await? > 0 {
             let _: ClassInstanceRef<Object> = jvm
@@ -301,6 +284,7 @@ impl LinkedList {
         Ok(())
     }
 
+    #[method(descriptor = "()Ljava/util/Iterator;", public)]
     async fn iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm
             .new_class("java/util/LinkedList$ListItr", "(Ljava/util/LinkedList;I)V", (this, 0))
@@ -308,6 +292,7 @@ impl LinkedList {
         Ok(iterator.into())
     }
 
+    #[method(descriptor = "()Ljava/util/ListIterator;", public)]
     async fn list_iterator(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm
             .new_class("java/util/LinkedList$ListItr", "(Ljava/util/LinkedList;I)V", (this, 0))
@@ -315,6 +300,7 @@ impl LinkedList {
         Ok(iterator.into())
     }
 
+    #[method(name = "listIterator", descriptor = "(I)Ljava/util/ListIterator;", public)]
     async fn list_iterator_at(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, index: i32) -> Result<ClassInstanceRef<Object>> {
         let iterator = jvm
             .new_class("java/util/LinkedList$ListItr", "(Ljava/util/LinkedList;I)V", (this, index))

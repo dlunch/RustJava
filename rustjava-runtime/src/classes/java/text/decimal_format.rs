@@ -1,16 +1,14 @@
 use alloc::{
     format,
     string::{String as RustString, ToString},
-    vec,
     vec::Vec,
 };
 
 use jvm::{ClassInstanceRef, Jvm, Result, runtime::JavaLangString};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
 use crate::{
-    RuntimeClassProto, RuntimeContext,
+    RuntimeContext,
     classes::java::{
         lang::{Double, Long, Number, String, StringBuffer},
         text::{FieldPosition, ParsePosition},
@@ -31,53 +29,26 @@ struct DecimalPattern {
 }
 
 // public class java.text.DecimalFormat
-pub struct DecimalFormat;
+#[java_class(name = "java/text/DecimalFormat", extends = "java/text/NumberFormat", public)]
+pub struct DecimalFormat {
+    #[field(private)]
+    pattern: ClassInstanceRef<String>,
+    #[field(private)]
+    positivePrefix: ClassInstanceRef<String>,
+    #[field(private)]
+    positiveSuffix: ClassInstanceRef<String>,
+    #[field(private)]
+    negativePrefix: ClassInstanceRef<String>,
+    #[field(private)]
+    negativeSuffix: ClassInstanceRef<String>,
+    #[field(private)]
+    multiplier: i32,
+    #[field(private)]
+    groupingSize: i32,
+}
 
+#[java_methods]
 impl DecimalFormat {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/text/DecimalFormat",
-            parent_class: Some("java/text/NumberFormat"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("<init>", "(Ljava/lang/String;)V", Self::init_with_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new(
-                    "format",
-                    "(DLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    Self::format_double,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "format",
-                    "(JLjava/lang/StringBuffer;Ljava/text/FieldPosition;)Ljava/lang/StringBuffer;",
-                    Self::format_long,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new(
-                    "parse",
-                    "(Ljava/lang/String;Ljava/text/ParsePosition;)Ljava/lang/Number;",
-                    Self::parse,
-                    MethodAccessFlags::PUBLIC,
-                ),
-                JavaMethodProto::new("applyPattern", "(Ljava/lang/String;)V", Self::apply_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("toPattern", "()Ljava/lang/String;", Self::to_pattern, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("getMultiplier", "()I", Self::get_multiplier, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("setMultiplier", "(I)V", Self::set_multiplier, MethodAccessFlags::PUBLIC),
-            ],
-            fields: vec![
-                JavaFieldProto::new("pattern", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("positivePrefix", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("positiveSuffix", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("negativePrefix", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("negativeSuffix", "Ljava/lang/String;", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("multiplier", "I", FieldAccessFlags::PRIVATE),
-                JavaFieldProto::new("groupingSize", "I", FieldAccessFlags::PRIVATE),
-            ],
-            access_flags: ClassAccessFlags::PUBLIC,
-        }
-    }
-
     fn parse_affix(value: &[char]) -> Option<(RustString, bool)> {
         let mut result = RustString::new();
         let mut percent = false;
@@ -235,12 +206,14 @@ impl DecimalFormat {
         })
     }
 
+    #[method(constructor, public)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         let pattern = JavaLangString::from_rust_string(jvm, "#,##0.###").await?;
         jvm.invoke_special(&this, "java/text/DecimalFormat", "<init>", "(Ljava/lang/String;)V", (pattern,))
             .await
     }
 
+    #[method(constructor, public)]
     async fn init_with_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
         if pattern.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "pattern").await);
@@ -250,6 +223,7 @@ impl DecimalFormat {
             .await
     }
 
+    #[method(public)]
     async fn apply_pattern(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, pattern: ClassInstanceRef<String>) -> Result<()> {
         if pattern.is_null() {
             return Err(jvm.exception("java/lang/NullPointerException", "pattern").await);
@@ -443,6 +417,7 @@ impl DecimalFormat {
         .await
     }
 
+    #[method(name = "format", public)]
     async fn format_double(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -483,6 +458,7 @@ impl DecimalFormat {
         Self::append_formatted(jvm, &this, negative, integer, fraction, buffer, position).await
     }
 
+    #[method(name = "format", public)]
     async fn format_long(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -506,6 +482,7 @@ impl DecimalFormat {
         .await
     }
 
+    #[method(public)]
     async fn parse(
         jvm: &Jvm,
         _: &mut RuntimeContext,
@@ -676,14 +653,17 @@ impl DecimalFormat {
         Ok(ClassInstanceRef::new(result.instance))
     }
 
+    #[method(public)]
     async fn to_pattern(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<ClassInstanceRef<String>> {
         jvm.get_field(&this, "java/text/DecimalFormat", "pattern", "Ljava/lang/String;").await
     }
 
+    #[method(public)]
     async fn get_multiplier(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         jvm.get_field(&this, "java/text/DecimalFormat", "multiplier", "I").await
     }
 
+    #[method(public)]
     async fn set_multiplier(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, multiplier: i32) -> Result<()> {
         jvm.put_field(&mut this, "java/text/DecimalFormat", "multiplier", "I", multiplier).await
     }

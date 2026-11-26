@@ -1,35 +1,19 @@
-use alloc::vec;
-
 use jvm::{ClassInstanceRef, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // class java.util.LinkedList$Entry
-pub struct LinkedListEntry;
+#[java_class(name = "java/util/LinkedList$Entry", extends = "java/lang/Object")]
+pub struct LinkedListEntry {
+    element: ClassInstanceRef<Object>,
+    next: ClassInstanceRef<Self>,
+    previous: ClassInstanceRef<Self>,
+}
 
+#[java_methods]
 impl LinkedListEntry {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/util/LinkedList$Entry",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![JavaMethodProto::new(
-                "<init>",
-                "(Ljava/lang/Object;Ljava/util/LinkedList$Entry;Ljava/util/LinkedList$Entry;)V",
-                Self::init,
-                MethodAccessFlags::empty(),
-            )],
-            fields: vec![
-                JavaFieldProto::new("element", "Ljava/lang/Object;", FieldAccessFlags::empty()),
-                JavaFieldProto::new("next", "Ljava/util/LinkedList$Entry;", FieldAccessFlags::empty()),
-                JavaFieldProto::new("previous", "Ljava/util/LinkedList$Entry;", FieldAccessFlags::empty()),
-            ],
-            access_flags: ClassAccessFlags::empty(),
-        }
-    }
-
+    #[method(constructor)]
     async fn init(
         jvm: &Jvm,
         _: &mut RuntimeContext,

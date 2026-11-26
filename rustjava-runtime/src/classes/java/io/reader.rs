@@ -1,38 +1,18 @@
-use alloc::vec;
-
 use jvm::{Array, ClassInstanceRef, JavaChar, Jvm, Result};
-use jvm_class_proto::{JavaFieldProto, JavaMethodProto};
-use jvm_types::{ClassAccessFlags, FieldAccessFlags, MethodAccessFlags};
+use jvm_class_proto::{java_class, java_methods};
 
-use crate::{RuntimeClassProto, RuntimeContext, classes::java::lang::Object};
+use crate::{RuntimeContext, classes::java::lang::Object};
 
 // abstract class java.io.Reader
-pub struct Reader;
+#[java_class(name = "java/io/Reader", extends = "java/lang/Object", abstract)]
+pub struct Reader {
+    #[field(protected)]
+    lock: ClassInstanceRef<Object>,
+}
 
+#[java_methods]
 impl Reader {
-    pub fn as_proto() -> RuntimeClassProto {
-        RuntimeClassProto {
-            name: "java/io/Reader",
-            parent_class: Some("java/lang/Object"),
-            interfaces: vec![],
-            methods: vec![
-                JavaMethodProto::new("<init>", "()V", Self::init, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("<init>", "(Ljava/lang/Object;)V", Self::init_with_lock, MethodAccessFlags::PROTECTED),
-                JavaMethodProto::new("read", "()I", Self::read_char, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("read", "([C)I", Self::read, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("read", "([CII)I", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-                JavaMethodProto::new("skip", "(J)J", Self::skip, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("ready", "()Z", Self::ready, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("markSupported", "()Z", Self::mark_supported, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("mark", "(I)V", Self::mark, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new("reset", "()V", Self::reset, MethodAccessFlags::PUBLIC),
-                JavaMethodProto::new_abstract("close", "()V", MethodAccessFlags::PUBLIC | MethodAccessFlags::ABSTRACT),
-            ],
-            fields: vec![JavaFieldProto::new("lock", "Ljava/lang/Object;", FieldAccessFlags::PROTECTED)],
-            access_flags: ClassAccessFlags::ABSTRACT,
-        }
-    }
-
+    #[method(constructor, protected)]
     async fn init(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.Reader::<init>({this:?})");
 
@@ -43,6 +23,7 @@ impl Reader {
         Ok(())
     }
 
+    #[method(constructor, protected)]
     async fn init_with_lock(jvm: &Jvm, _: &mut RuntimeContext, mut this: ClassInstanceRef<Self>, lock: ClassInstanceRef<Object>) -> Result<()> {
         tracing::debug!("java.io.Reader::<init>({this:?}, {lock:?})");
 
@@ -56,6 +37,7 @@ impl Reader {
         Ok(())
     }
 
+    #[method(name = "read", public)]
     async fn read_char(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<i32> {
         tracing::debug!("java.io.Reader::read({this:?})");
 
@@ -71,6 +53,7 @@ impl Reader {
         Ok(value as i32)
     }
 
+    #[method(public)]
     async fn read(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, buf: ClassInstanceRef<Array<JavaChar>>) -> Result<i32> {
         tracing::debug!("java.io.Reader::read({this:?}, {buf:?})");
         if buf.is_null() {
@@ -83,6 +66,17 @@ impl Reader {
         Ok(result)
     }
 
+    #[method(name = "read", public)]
+    async fn read_offset(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        target: ClassInstanceRef<Array<JavaChar>>,
+        offset: i32,
+        length: i32,
+    ) -> Result<i32>;
+
+    #[method(public)]
     async fn skip(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, n: i64) -> Result<i64> {
         tracing::debug!("java.io.Reader::skip({this:?}, {n})");
 
@@ -112,23 +106,30 @@ impl Reader {
         Ok(n - remaining)
     }
 
+    #[method(public)]
     async fn ready(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.Reader::ready({this:?})");
         Ok(false)
     }
 
+    #[method(public)]
     async fn mark_supported(_: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<bool> {
         tracing::debug!("java.io.Reader::markSupported({this:?})");
         Ok(false)
     }
 
+    #[method(public)]
     async fn mark(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>, read_ahead_limit: i32) -> Result<()> {
         tracing::debug!("java.io.Reader::mark({this:?}, {read_ahead_limit})");
         Err(jvm.exception("java/io/IOException", "mark not supported").await)
     }
 
+    #[method(public)]
     async fn reset(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()> {
         tracing::debug!("java.io.Reader::reset({this:?})");
         Err(jvm.exception("java/io/IOException", "reset not supported").await)
     }
+
+    #[method(public)]
+    async fn close(jvm: &Jvm, _: &mut RuntimeContext, this: ClassInstanceRef<Self>) -> Result<()>;
 }
