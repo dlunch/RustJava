@@ -10,6 +10,10 @@ class ClassResource {
         System.out.println(Base.class.getResource("Payload.class") != null);
         System.out.println(Base.class.getResource("/loader/Payload.class") != null);
         System.out.println(Base.class.getResource("loader/Payload.class") != null);
+        System.out.println(Base[][].class.getResource("Payload.class") != null);
+        System.out.println(ClassResource[].class.getResource("loader/Payload.class") != null);
+        System.out.println(int.class.getResource("Hello.class") != null);
+        System.out.println(int[].class.getResource("Hello.class") != null);
 
         ClassLoader loader = ClassResource.class.getClassLoader();
         System.out.println(loader.getResourceAsStream("loader/Payload.class") != null);

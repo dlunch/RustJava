@@ -266,12 +266,28 @@ impl Class {
             return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
         }
 
+        // An array class takes the package of its element type, and primitive types belong to java.lang.
+        let class_name = JavaLangClass::name(jvm, this).await?;
+        let element_name = class_name.trim_start_matches('[');
+        let package = if class_name.starts_with('[') {
+            match element_name.strip_prefix('L') {
+                Some(element_class_name) => element_class_name.rsplit_once('/').map(|(package, _)| package),
+                None => Some("java/lang"),
+            }
+        } else if matches!(
+            class_name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double" | "void"
+        ) {
+            Some("java/lang")
+        } else {
+            class_name.rsplit_once('/').map(|(package, _)| package)
+        };
+
         // A leading '/' makes the name absolute; otherwise it is relative to this class's package.
         let name = JavaLangString::to_rust_string(jvm, name).await?;
-        let class_name = JavaLangClass::name(jvm, this).await?;
-        let name = match (name.strip_prefix('/'), class_name.rsplit_once('/')) {
+        let name = match (name.strip_prefix('/'), package) {
             (Some(absolute_name), _) => absolute_name.into(),
-            (None, Some((package, _))) => format!("{package}/{name}"),
+            (None, Some(package)) => format!("{package}/{name}"),
             (None, None) => name,
         };
         let name = JavaLangString::from_rust_string(jvm, &name).await?;
