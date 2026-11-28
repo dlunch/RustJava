@@ -282,12 +282,23 @@ impl Class {
             class_name.rsplit_once('/').map(|(package, _)| package)
         };
 
+        // Some embedded platforms look up relative names from the root instead of the class's package.
+        let mode: ClassInstanceRef<String> = jvm
+            .invoke_static(
+                "java/lang/System",
+                "getProperty",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                (JavaLangString::from_rust_string(jvm, "rustjava.class.resource.mode").await?,),
+            )
+            .await?;
+        let relative_to_root = !mode.is_null() && JavaLangString::to_rust_string(jvm, &mode).await? == "root";
+
         // A leading '/' makes the name absolute; otherwise it is relative to this class's package.
         let name = JavaLangString::to_rust_string(jvm, name).await?;
         let name = match (name.strip_prefix('/'), package) {
             (Some(absolute_name), _) => absolute_name.into(),
-            (None, Some(package)) => format!("{package}/{name}"),
-            (None, None) => name,
+            (None, Some(package)) if !relative_to_root => format!("{package}/{name}"),
+            (None, _) => name,
         };
         let name = JavaLangString::from_rust_string(jvm, &name).await?;
 
