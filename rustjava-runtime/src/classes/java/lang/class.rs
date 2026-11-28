@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::{format, vec};
 
 use jvm::{
     Array, ClassInstanceRef, Jvm, Result,
@@ -263,6 +263,20 @@ impl Class {
         name: ClassInstanceRef<String>,
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.lang.Class::getResourceAsStream({this:?}, {name:?})");
+
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
+
+        // A leading '/' makes the name absolute; otherwise it is relative to this class's package.
+        let name = JavaLangString::to_rust_string(jvm, &name).await?;
+        let class_name = JavaLangClass::name(jvm, &this).await?;
+        let name = match (name.strip_prefix('/'), class_name.rsplit_once('/')) {
+            (Some(absolute_name), _) => absolute_name.into(),
+            (None, Some((package, _))) => format!("{package}/{name}"),
+            (None, None) => name,
+        };
+        let name = JavaLangString::from_rust_string(jvm, &name).await?;
 
         let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
 
