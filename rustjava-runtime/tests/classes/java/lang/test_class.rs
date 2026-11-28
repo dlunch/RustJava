@@ -12,7 +12,7 @@ use rustjava_runtime::{
     get_bootstrap_class_loader,
 };
 
-use test_utils::{TestRuntime, test_jvm};
+use test_utils::{TestRuntime, test_jvm, test_jvm_filesystem};
 
 #[tokio::test]
 async fn cls_01_to_04_descriptors_and_standard_class_metadata() -> Result<()> {
@@ -685,6 +685,42 @@ async fn test_define_class_validates_the_byte_range() -> Result<()> {
         };
         assert!(jvm.is_instance(&*exception, expected_exception));
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_resource_mode_root_resolves_relative_names_from_root() -> Result<()> {
+    let jvm = test_jvm_filesystem([("data.txt".into(), b"data".to_vec())].into_iter().collect()).await?;
+    let class = jvm.resolve_class("java/lang/String").await?.java_class();
+    let name = JavaLangString::from_rust_string(&jvm, "data.txt").await?;
+
+    let resource: ClassInstanceRef<URL> = jvm
+        .invoke_virtual(
+            &class,
+            "java/lang/Class",
+            "getResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (name.clone(),),
+        )
+        .await?;
+    assert!(resource.is_null());
+
+    let key = JavaLangString::from_rust_string(&jvm, "rustjava.class.resource.mode").await?;
+    let value = JavaLangString::from_rust_string(&jvm, "root").await?;
+    let _: ClassInstanceRef<Object> = jvm
+        .invoke_static(
+            "java/lang/System",
+            "setProperty",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;",
+            (key, value),
+        )
+        .await?;
+
+    let resource: ClassInstanceRef<URL> = jvm
+        .invoke_virtual(&class, "java/lang/Class", "getResource", "(Ljava/lang/String;)Ljava/net/URL;", (name,))
+        .await?;
+    assert!(!resource.is_null());
 
     Ok(())
 }
