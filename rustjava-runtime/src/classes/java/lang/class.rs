@@ -268,9 +268,8 @@ impl Class {
 
         // An array class takes the package of its element type, and primitive types belong to java.lang.
         let class_name = JavaLangClass::name(jvm, this).await?;
-        let element_name = class_name.trim_start_matches('[');
         let package = if class_name.starts_with('[') {
-            match element_name.strip_prefix('L') {
+            match class_name.trim_start_matches('[').strip_prefix('L') {
                 Some(element_class_name) => element_class_name.rsplit_once('/').map(|(package, _)| package),
                 None => Some("java/lang"),
             }
