@@ -126,6 +126,10 @@ impl URLClassLoader {
         }
 
         let name_str = JavaLangString::to_rust_string(jvm, &name).await?;
+        // Resource names are relative to each search root; a leading '/' never matches.
+        if name_str.starts_with('/') {
+            return Ok(None.into());
+        }
 
         let urls: Box<dyn ClassInstance> = jvm.get_field(&this, "java/net/URLClassLoader", "urls", "[Ljava/net/URL;").await?;
         let urls: Vec<ClassInstanceRef<URL>> = jvm.load_array(&urls, 0, jvm.array_length(&urls).await? as _).await?;
@@ -182,8 +186,7 @@ impl URLClassLoader {
                 continue;
             } else {
                 // treat as jar
-                let name_str = name_str.trim_start_matches('/');
-                let entry = JavaLangString::from_rust_string(jvm, name_str).await?;
+                let entry = JavaLangString::from_rust_string(jvm, &name_str).await?;
                 let entry: Box<dyn ClassInstance> = jvm
                     .invoke_static("org/rustjava/net/URLPath", "encode", "(Ljava/lang/String;)Ljava/lang/String;", (entry,))
                     .await?;

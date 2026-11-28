@@ -1,7 +1,7 @@
-use alloc::vec;
+use alloc::{boxed::Box, format, vec};
 
 use jvm::{
-    Array, ClassInstanceRef, Jvm, Result,
+    Array, ClassInstance, ClassInstanceRef, Jvm, Result,
     runtime::{JavaLangClass, JavaLangClassLoader, JavaLangString},
 };
 use jvm_class_proto::{java_class, java_methods};
@@ -12,6 +12,7 @@ use crate::{
     classes::java::{
         io::InputStream,
         lang::{ClassLoader, Object, String},
+        net::URL,
     },
 };
 
@@ -255,6 +256,74 @@ impl Class {
         Ok(interfaces.into())
     }
 
+    // Applies the Class resource naming rule and picks the loader that searches for the resulting name.
+    async fn resolve_resource(
+        jvm: &Jvm,
+        this: &ClassInstanceRef<Self>,
+        name: &ClassInstanceRef<String>,
+    ) -> Result<(Box<dyn ClassInstance>, ClassInstanceRef<String>)> {
+        if name.is_null() {
+            return Err(jvm.exception("java/lang/NullPointerException", "name is null").await);
+        }
+
+        // An array class takes the package of its element type, and primitive types belong to java.lang.
+        let class_name = JavaLangClass::name(jvm, this).await?;
+        let package = if class_name.starts_with('[') {
+            match class_name.trim_start_matches('[').strip_prefix('L') {
+                Some(element_class_name) => element_class_name.rsplit_once('/').map(|(package, _)| package),
+                None => Some("java/lang"),
+            }
+        } else if matches!(
+            class_name.as_str(),
+            "boolean" | "byte" | "char" | "short" | "int" | "long" | "float" | "double" | "void"
+        ) {
+            Some("java/lang")
+        } else {
+            class_name.rsplit_once('/').map(|(package, _)| package)
+        };
+
+        // A leading '/' makes the name absolute; otherwise it is relative to this class's package.
+        let name = JavaLangString::to_rust_string(jvm, name).await?;
+        let name = match (name.strip_prefix('/'), package) {
+            (Some(absolute_name), _) => absolute_name.into(),
+            (None, Some(package)) => format!("{package}/{name}"),
+            (None, None) => name,
+        };
+        let name = JavaLangString::from_rust_string(jvm, &name).await?;
+
+        let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
+
+        let class_loader = if class_loader.is_null() {
+            // TODO ClassLoader.getSystemResourceAsStream?
+            JavaLangClassLoader::get_system_class_loader(jvm).await?
+        } else {
+            class_loader.into()
+        };
+
+        Ok((class_loader, name.into()))
+    }
+
+    #[method(public)]
+    async fn get_resource(
+        jvm: &Jvm,
+        _: &mut RuntimeContext,
+        this: ClassInstanceRef<Self>,
+        name: ClassInstanceRef<String>,
+    ) -> Result<ClassInstanceRef<URL>> {
+        tracing::debug!("java.lang.Class::getResource({this:?}, {name:?})");
+
+        let (class_loader, name) = Self::resolve_resource(jvm, &this, &name).await?;
+
+        jvm.invoke_virtual(
+            &class_loader,
+            "java/lang/ClassLoader",
+            "getResource",
+            "(Ljava/lang/String;)Ljava/net/URL;",
+            (name,),
+        )
+        .await
+    }
+
     #[method(public)]
     async fn get_resource_as_stream(
         jvm: &Jvm,
@@ -264,14 +333,7 @@ impl Class {
     ) -> Result<ClassInstanceRef<InputStream>> {
         tracing::debug!("java.lang.Class::getResourceAsStream({this:?}, {name:?})");
 
-        let class_loader: ClassInstanceRef<ClassLoader> = jvm.get_field(&this, "java/lang/Class", "classLoader", "Ljava/lang/ClassLoader;").await?;
-
-        let class_loader = if class_loader.is_null() {
-            // TODO ClassLoader.getSystemResourceAsStream?
-            JavaLangClassLoader::get_system_class_loader(jvm).await?
-        } else {
-            class_loader.into()
-        };
+        let (class_loader, name) = Self::resolve_resource(jvm, &this, &name).await?;
 
         jvm.invoke_virtual(
             &class_loader,
