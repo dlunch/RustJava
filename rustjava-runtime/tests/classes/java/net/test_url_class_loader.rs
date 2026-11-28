@@ -2,7 +2,10 @@ use alloc::vec;
 use std::io::{Cursor, Write};
 
 use jvm::{ClassInstance, ClassInstanceRef, Result, runtime::JavaLangString};
-use rustjava_runtime::classes::java::{lang::Class, net::URL};
+use rustjava_runtime::classes::java::{
+    lang::{Class, Object},
+    net::URL,
+};
 use zip::{ZipWriter, write::SimpleFileOptions};
 
 use test_utils::{TestRuntime, create_test_jvm, test_jvm_filesystem};
@@ -94,7 +97,7 @@ async fn test_jar_loading() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_jar_loading_with_slash() -> Result<()> {
+async fn test_jar_resource_with_leading_slash_is_not_found() -> Result<()> {
     let jar = include_bytes!("../../../../../test-data/test.jar");
     let filesystem = [("test.jar".into(), jar.to_vec())].into_iter().collect();
     let jvm = test_jvm_filesystem(filesystem).await?;
@@ -109,7 +112,7 @@ async fn test_jar_loading_with_slash() -> Result<()> {
         .await?;
 
     let resource_name = JavaLangString::from_rust_string(&jvm, "/test.txt").await?;
-    let stream: Box<dyn ClassInstance> = jvm
+    let stream: ClassInstanceRef<Object> = jvm
         .invoke_virtual(
             &class_loader,
             &class_loader.class_definition().name(),
@@ -119,15 +122,7 @@ async fn test_jar_loading_with_slash() -> Result<()> {
         )
         .await?;
 
-    let buf = jvm.instantiate_array("B", 17).await?;
-    let len: i32 = jvm
-        .invoke_virtual(&stream, &stream.class_definition().name(), "read", "([B)I", (buf.clone(),))
-        .await?;
-
-    let mut data = vec![0; len as _];
-    jvm.array_raw_buffer(&buf).await?.read(0, &mut data)?;
-
-    assert_eq!(data, b"test content\n");
+    assert!(stream.is_null());
 
     Ok(())
 }
